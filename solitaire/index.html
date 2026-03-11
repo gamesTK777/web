@@ -253,11 +253,51 @@
     font-size: 2.2em;
   }
 
-  /* Color themes for suits */
-  .suit-0 .card-rank, .suit-0 .card-suit-small { color: #e91e63; } /* 🐱 cat - pink */
-  .suit-1 .card-rank, .suit-1 .card-suit-small { color: #ff5722; } /* 🐶 dog - orange */
-  .suit-2 .card-rank, .suit-2 .card-suit-small { color: #2196f3; } /* 🐰 rabbit - blue */
-  .suit-3 .card-rank, .suit-3 .card-suit-small { color: #4caf50; } /* 🐻 bear - green */
+  /* Color themes for suits — RED group (0,1) vs DARK group (2,3) for color-blind accessibility */
+  .suit-0 .card-rank, .suit-0 .card-suit-small,
+  .suit-1 .card-rank, .suit-1 .card-suit-small { color: #c62828; } /* RED group: 🐱🐶 */
+  .suit-2 .card-rank, .suit-2 .card-suit-small,
+  .suit-3 .card-rank, .suit-3 .card-suit-small { color: #1a1a2e; } /* DARK group: 🐰🐻 */
+
+  /* Card background tint by group */
+  .suit-0, .suit-1 {
+    background: linear-gradient(160deg, #fff8f8 0%, #fff 100%);
+  }
+  .suit-2, .suit-3 {
+    background: linear-gradient(160deg, #f5f7ff 0%, #fff 100%);
+  }
+
+  /* Left-edge color stripe for instant group recognition */
+  .suit-0::before, .suit-1::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    border-radius: 14px 0 0 14px;
+    background: #c62828;
+  }
+  .suit-2::before, .suit-3::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    border-radius: 14px 0 0 14px;
+    background: #1a1a2e;
+  }
+
+  /* Group badge in top-right corner */
+  .suit-0 .card-corner.top::after,
+  .suit-1 .card-corner.top::after {
+    content: '🔴';
+    font-size: 0.5em;
+    line-height: 1;
+  }
+  .suit-2 .card-corner.top::after,
+  .suit-3 .card-corner.top::after {
+    content: '⚫';
+    font-size: 0.5em;
+    line-height: 1;
+  }
 
   /* Stock pile click */
   .slot.stock-slot {
