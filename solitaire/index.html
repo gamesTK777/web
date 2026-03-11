@@ -173,6 +173,9 @@
     padding: 6px 8px;
     border: 2px solid rgba(0,0,0,0.04);
     overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   .card:hover:not(.face-down) {
@@ -553,7 +556,8 @@ function renderWaste() {
     ce.style.position = 'relative';
     ce.style.width = '100%';
     ce.style.aspectRatio = '2.5/3.5';
-    ce.addEventListener('mousedown', e => startDrag(e, 'waste', waste.length-1));
+    ce.addEventListener('mousedown', e => startPointerDown(e, 'waste', waste.length-1));
+    ce.addEventListener('touchstart', e => startPointerDown(e, 'waste', waste.length-1), { passive: false });
     el.appendChild(ce);
   }
 }
@@ -622,13 +626,18 @@ function renderTableau() {
       ce.style.zIndex = idx + 1;
 
       if(card.faceUp) {
-        const colIdx = ci, cardIdx = idx;
-        ce.addEventListener('mousedown', e => startDrag(e, 'tableau', ci, idx));
+        ce.addEventListener('mousedown', e => startPointerDown(e, 'tableau', ci, idx));
+        ce.addEventListener('touchstart', e => startPointerDown(e, 'tableau', ci, idx), { passive: false });
         ce.ondragover = e => { e.preventDefault(); slotEl.classList.add('drop-target'); };
         ce.ondrop = e => { e.preventDefault(); slotEl.classList.remove('drop-target'); dropOnTableau(ci); };
       } else if(idx === cards.length - 1) {
         ce.style.cursor = 'pointer';
         ce.onclick = () => flipCard(ci);
+        ce.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const pt = getClientXY(e);
+          touchPending = { source: 'tableau-flip', args: [ci], startX: pt.x, startY: pt.y, cardEl: e.currentTarget };
+        }, { passive: false });
       }
 
       col.appendChild(ce);
@@ -643,18 +652,36 @@ function renderTableau() {
 }
 
 // ==============================
-//  DRAG & DROP (mouse-based)
+//  DRAG & DROP (mouse + touch unified)
 // ==============================
 let dragEl = null, dragOffset = {x:0, y:0};
+let touchPending = null; // { source, args, startX, startY, cardEl }
+let lastTapInfo = null;  // { key, time } for double-tap detection
+const DRAG_THRESHOLD = 10;
 
-function startDrag(e, source, ...args) {
-  if(e.button !== 0) return;
+function getClientXY(e) {
+  if(e.touches && e.touches.length > 0)
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  if(e.changedTouches && e.changedTouches.length > 0)
+    return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  return { x: e.clientX, y: e.clientY };
+}
+
+function startPointerDown(e, source, ...args) {
+  if(e.type === 'mousedown' && e.button !== 0) return;
   e.preventDefault();
   e.stopPropagation();
+  const {x, y} = getClientXY(e);
+  if(e.type === 'touchstart') {
+    touchPending = { source, args, startX: x, startY: y, cardEl: e.currentTarget };
+    return;
+  }
+  beginDrag(e.currentTarget, source, args, x, y);
+}
 
+function beginDrag(cardEl, source, args, clientX, clientY) {
   let cards = [];
   let originData = { source, args };
-
   if(source === 'waste') {
     if(waste.length === 0) return;
     cards = [waste[waste.length-1]];
@@ -663,19 +690,11 @@ function startDrag(e, source, ...args) {
     cards = tableau[ci].slice(cardIdx);
     if(!cards[0].faceUp) return;
   }
-
   dragState = { cards, origin: originData };
 
-  // Build drag ghost
-  const rect = e.currentTarget.getBoundingClientRect();
+  const rect = cardEl.getBoundingClientRect();
   dragEl = document.createElement('div');
-  dragEl.style.cssText = `
-    position: fixed;
-    z-index: 9999;
-    pointer-events: none;
-    width: ${rect.width}px;
-  `;
-
+  dragEl.style.cssText = `position:fixed;z-index:9999;pointer-events:none;width:${rect.width}px;`;
   cards.forEach((card, i) => {
     const ce = cardElement(card);
     ce.style.position = 'relative';
@@ -686,14 +705,9 @@ function startDrag(e, source, ...args) {
     if(i > 0) ce.style.marginTop = '-' + (rect.width * 1.4 - 30) + 'px';
     dragEl.appendChild(ce);
   });
-
   document.body.appendChild(dragEl);
-  dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-
-  moveDragEl(e.clientX, e.clientY);
-
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
+  dragOffset = { x: clientX - rect.left, y: clientY - rect.top };
+  moveDragEl(clientX, clientY);
 }
 
 function moveDragEl(cx, cy) {
@@ -703,38 +717,97 @@ function moveDragEl(cx, cy) {
 }
 
 function onMouseMove(e) {
-  moveDragEl(e.clientX, e.clientY);
+  if(dragEl) moveDragEl(e.clientX, e.clientY);
 }
 
 function onMouseUp(e) {
-  document.removeEventListener('mousemove', onMouseMove);
-  document.removeEventListener('mouseup', onMouseUp);
-
+  if(!dragEl && !dragState) return;
   if(dragEl) { document.body.removeChild(dragEl); dragEl = null; }
-
-  // Find drop target
   if(!dragState) return;
+  finalizeDrop(e.clientX, e.clientY);
+}
 
-  const target = document.elementFromPoint(e.clientX, e.clientY);
-  if(!target) { dragState = null; return; }
+function onTouchMove(e) {
+  const {x, y} = getClientXY(e);
+  if(touchPending && !dragState) {
+    const dx = x - touchPending.startX, dy = y - touchPending.startY;
+    if(Math.sqrt(dx*dx + dy*dy) >= DRAG_THRESHOLD) {
+      const tp = touchPending; touchPending = null;
+      if(tp.source !== 'tableau-flip') {
+        beginDrag(tp.cardEl, tp.source, tp.args, tp.startX, tp.startY);
+      }
+    }
+  }
+  if(dragState && dragEl) {
+    e.preventDefault();
+    moveDragEl(x, y);
+  }
+}
 
-  // Check foundation
-  const fEl = target.closest('[id^="f"]');
+function onTouchEnd(e) {
+  const {x, y} = getClientXY(e);
+  if(touchPending) {
+    const tp = touchPending; touchPending = null;
+    // Face-down card: tap to flip
+    if(tp.source === 'tableau-flip') {
+      flipCard(tp.args[0]);
+      return;
+    }
+    // Double-tap → send to foundation
+    const now = Date.now();
+    const key = tp.source + JSON.stringify(tp.args);
+    if(lastTapInfo && lastTapInfo.key === key && now - lastTapInfo.time < 350) {
+      lastTapInfo = null;
+      doubleTapToFoundation(tp.source, tp.args);
+      return;
+    }
+    lastTapInfo = { key, time: now };
+    return;
+  }
+  if(dragEl) { document.body.removeChild(dragEl); dragEl = null; }
+  if(!dragState) return;
+  finalizeDrop(x, y);
+}
+
+function finalizeDrop(cx, cy) {
+  const target = document.elementFromPoint(cx, cy);
+  if(!target) { dragState = null; render(); return; }
+  const fEl = target.closest('[data-foundation]');
   if(fEl) {
     const fi = parseInt(fEl.dataset.foundation);
     if(!isNaN(fi)) { dropOnFoundation(fi); return; }
   }
-
-  // Check tableau
   const col = target.closest('.tableau-col');
   if(col) {
     const ci = parseInt(col.dataset.col);
     if(!isNaN(ci)) { dropOnTableau(ci); return; }
   }
-
   dragState = null;
   render();
 }
+
+function doubleTapToFoundation(source, args) {
+  if(source === 'waste') {
+    if(waste.length === 0) return;
+    const card = waste[waste.length-1];
+    const fi = tryMoveToFoundation(card);
+    if(fi >= 0) { saveHistory(); waste.pop(); foundations[fi].push(card); addScore(15); moves++; render(); checkWin(); }
+  } else if(source === 'tableau') {
+    const [ci] = args;
+    const colCards = tableau[ci];
+    if(!colCards.length) return;
+    const card = colCards[colCards.length-1];
+    if(!card.faceUp) return;
+    const fi = tryMoveToFoundation(card);
+    if(fi >= 0) { saveHistory(); colCards.pop(); foundations[fi].push(card); addScore(15); moves++; render(); checkWin(); }
+  }
+}
+
+// Persistent document-level event listeners (mouse + touch)
+document.addEventListener('mousemove', onMouseMove);
+document.addEventListener('mouseup', onMouseUp);
+document.addEventListener('touchmove', onTouchMove, { passive: false });
+document.addEventListener('touchend', onTouchEnd);
 
 // ==============================
 //  GAME LOGIC
