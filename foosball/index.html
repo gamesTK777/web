@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚽ テーブルサッカー</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#1a1a2e;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none}
+
+/* Title */
+#title-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.t-logo{font-size:4rem;margin-bottom:8px}
+.t-name{font-size:2.4rem;font-weight:900;color:#4fc3f7;text-shadow:0 0 20px rgba(79,195,247,0.5);margin-bottom:4px}
+.t-sub{color:#aaa;font-size:0.95rem;margin-bottom:36px}
+.t-table-img{width:200px;height:120px;border-radius:16px;margin-bottom:30px;background:linear-gradient(145deg,#5d4037,#4e342e);padding:8px;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+.t-field-mini{width:100%;height:100%;background:#2e7d32;border-radius:10px;position:relative;overflow:hidden}
+.t-field-mini::before{content:'';position:absolute;left:50%;top:50%;width:40px;height:40px;border:2px solid rgba(255,255,255,0.25);border-radius:50%;transform:translate(-50%,-50%)}
+.t-field-mini::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.2);transform:translateX(-50%)}
+.mode-btns{display:flex;flex-direction:column;gap:14px;width:100%;max-width:300px}
+.m-btn{padding:18px 24px;border:none;border-radius:18px;font-family:'Nunito',sans-serif;font-size:1.05rem;font-weight:800;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:14px;text-align:left;box-shadow:0 6px 20px rgba(0,0,0,0.3)}
+.m-btn:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,0.4)}
+.m-btn-1p{background:linear-gradient(135deg,#43a047,#2e7d32);color:#fff}
+.m-btn-2p{background:linear-gradient(135deg,#1e88e5,#1565c0);color:#fff}
+.m-icon{font-size:2rem;flex-shrink:0}
+.m-text span{display:block;font-size:0.75rem;opacity:0.8;font-weight:600;margin-top:2px}
+
+/* Game */
+#game-screen{display:none;flex-direction:column;align-items:center;width:100%;max-width:860px;padding:8px}
+.game-hud{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:6px;padding:0 4px}
+.hud-score{display:flex;align-items:center;gap:12px;font-size:1.3rem;font-weight:900;color:#fff}
+.hud-score .s-label{font-size:0.7rem;font-weight:700;opacity:0.6;text-transform:uppercase;letter-spacing:1px}
+.hud-score .s-num{font-size:2.2rem;line-height:1}
+.p1c{color:#ef5350} .p2c{color:#42a5f5}
+.hud-center{text-align:center}
+.hud-timer{font-size:0.85rem;color:#aaa;font-weight:700}
+.hud-info{font-size:0.65rem;color:#666;margin-top:2px}
+.hud-btn{background:rgba(255,255,255,0.1);border:none;color:#aaa;padding:6px 14px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer}
+.hud-btn:hover{background:rgba(255,255,255,0.2);color:#fff}
+
+#canvas-wrap{width:100%;position:relative;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.5)}
+canvas{display:block;width:100%;height:auto;touch-action:none}
+
+/* Rod selector buttons */
+.rod-btns{display:flex;gap:4px;margin-top:6px}
+.rod-btns.left{align-self:flex-start}
+.rod-btns.right{align-self:flex-end}
+.rod-controls{display:flex;justify-content:space-between;width:100%;padding:0 4px}
+.rb{padding:8px 12px;border:2px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(255,255,255,0.05);color:#aaa;font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;min-width:48px;text-align:center}
+.rb.active{border-color:#4fc3f7;color:#4fc3f7;background:rgba(79,195,247,0.15)}
+.rb:hover{border-color:#4fc3f7;color:#fff}
+
+.kick-btn{padding:10px 20px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;transition:all 0.15s;margin-top:6px}
+.kick-btn.p1{background:linear-gradient(135deg,#ef5350,#c62828);color:#fff}
+.kick-btn.p2{background:linear-gradient(135deg,#42a5f5,#1565c0);color:#fff}
+.kick-btn:active{transform:scale(0.95)}
+.kick-row{display:flex;gap:16px;justify-content:space-between;width:100%;margin-top:6px}
+
+/* Touch pad controls */
+.touch-controls{display:flex;justify-content:space-between;width:100%;margin-top:8px;gap:8px}
+.touch-pad{position:relative;width:48%;height:120px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;touch-action:none}
+.touch-pad.p1-pad{border-color:rgba(239,83,80,0.3)}
+.touch-pad.p2-pad{border-color:rgba(66,165,245,0.3)}
+.touch-pad .pad-label{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:0.65rem;font-weight:800;color:rgba(255,255,255,0.25);pointer-events:none;text-transform:uppercase;letter-spacing:1px}
+.touch-pad .pad-arrows{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:0.8rem;color:rgba(255,255,255,0.12);pointer-events:none;text-align:center;line-height:1.8}
+.touch-pad .pad-indicator{position:absolute;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.12);left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;transition:top 0.05s}
+
+/* Controls help */
+.ctrl-help{margin-top:10px;color:#555;font-size:0.7rem;text-align:center;line-height:1.6}
+.ctrl-help kbd{background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;color:#888;font-family:inherit}
+
+/* Game Over */
+#gameover{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center}
+#gameover.show{display:flex}
+.go-card{background:#1e1e3f;border-radius:24px;padding:36px;text-align:center;max-width:320px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:popIn .4s}
+@keyframes popIn{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+.go-emoji{font-size:3.5rem;margin-bottom:8px}
+.go-title{font-size:1.8rem;font-weight:900;color:#fff;margin-bottom:4px}
+.go-sub{color:#888;font-size:1rem;font-weight:700;margin-bottom:24px}
+.go-btns{display:flex;gap:10px}
+.go-btn{flex:1;padding:14px;border:none;border-radius:14px;font-family:'Nunito',sans-serif;font-size:0.95rem;font-weight:800;cursor:pointer;transition:all .15s}
+.go-btn:hover{transform:translateY(-2px)}
+.go-btn-play{background:linear-gradient(135deg,#43a047,#2e7d32);color:#fff}
+.go-btn-back{background:rgba(255,255,255,0.08);color:#aaa}
+
+@media(max-width:600px){
+  .t-name{font-size:1.8rem} .hud-score .s-num{font-size:1.6rem}
+  .ctrl-help{display:none}
+  .touch-pad{height:100px}
+}
+</style>
+</head>
+<body>
+
+<!-- TITLE -->
+<div id="title-screen">
+  <div class="t-logo">⚽🏆</div>
+  <div class="t-name">テーブルサッカー</div>
+  <div class="t-sub">Foosball Game</div>
+  <div class="t-table-img"><div class="t-field-mini"></div></div>
+  <div class="mode-btns">
+    <button class="m-btn m-btn-1p" onclick="startGame(1)">
+      <span class="m-icon">🤖</span>
+      <span class="m-text">1人プレイ（CPU対戦）<span>コンピューターと対戦！</span></span>
+    </button>
+    <button class="m-btn m-btn-2p" onclick="startGame(2)">
+      <span class="m-icon">👫</span>
+      <span class="m-text">2人プレイ（対人対戦）<span>友だちと一緒に遊ぼう！</span></span>
+    </button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-screen">
+  <div class="game-hud">
+    <div class="hud-score">
+      <div><div class="s-label p1c">🔴 RED</div><div class="s-num p1c" id="s1">0</div></div>
+    </div>
+    <div class="hud-center">
+      <div class="hud-timer" id="timer">0:00</div>
+      <div class="hud-info" id="goal-info">先に5点取った方の勝ち！</div>
+    </div>
+    <div class="hud-score">
+      <div><div class="s-label p2c">🔵 BLUE</div><div class="s-num p2c" id="s2">0</div></div>
+    </div>
+  </div>
+  <div id="canvas-wrap"><canvas id="cv"></canvas></div>
+  <div class="rod-controls">
+    <div class="rod-btns left" id="rod-btns-p1"></div>
+    <div class="rod-btns right" id="rod-btns-p2"></div>
+  </div>
+  <!-- Touch pads for mobile -->
+  <div class="touch-controls">
+    <div class="touch-pad p1-pad" id="pad-p1">
+      <div class="pad-label">P1 ↕ 移動</div>
+      <div class="pad-arrows">▲<br>ドラッグで移動<br>タップでキック<br>▼</div>
+      <div class="pad-indicator" id="pad-ind-p1"></div>
+    </div>
+    <div class="touch-pad p2-pad" id="pad-p2">
+      <div class="pad-label">P2 ↕ 移動</div>
+      <div class="pad-arrows">▲<br>ドラッグで移動<br>タップでキック<br>▼</div>
+      <div class="pad-indicator" id="pad-ind-p2"></div>
+    </div>
+  </div>
+  <div class="kick-row">
+    <button class="kick-btn p1" id="kick-p1" ontouchstart="kickRod(1);event.preventDefault()" onmousedown="kickRod(1)">⚡ キック (P1)</button>
+    <button class="hud-btn" onclick="goTitle()">← もどる</button>
+    <button class="kick-btn p2" id="kick-p2" ontouchstart="kickRod(2);event.preventDefault()" onmousedown="kickRod(2)">⚡ キック (P2)</button>
+  </div>
+  <div class="ctrl-help">
+    P1: <kbd>W</kbd><kbd>S</kbd> 移動 / <kbd>A</kbd><kbd>D</kbd> ロッド切替 / <kbd>Space</kbd> キック &nbsp;|&nbsp;
+    P2: <kbd>↑</kbd><kbd>↓</kbd> 移動 / <kbd>←</kbd><kbd>→</kbd> ロッド切替 / <kbd>Enter</kbd> キック
+  </div>
+</div>
+
+<!-- GAMEOVER -->
+<div id="gameover">
+  <div class="go-card">
+    <div class="go-emoji" id="go-emoji">🏆</div>
+    <div class="go-title" id="go-title">勝利！</div>
+    <div class="go-sub" id="go-sub">5 - 3</div>
+    <div class="go-btns">
+      <button class="go-btn go-btn-play" onclick="restartGame()">🔄 もう一度</button>
+      <button class="go-btn go-btn-back" onclick="goTitle()">🏠 タイトル</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================
+//  CONSTANTS - サイズ大幅改善
+// ================================================
+const FW = 720, FH = 440;       // field logical size (少し狭く)
+const WALL = 16;                 // wall thickness
+const GOAL_H = 150;             // goal opening height
+const GOAL_D = 26;              // goal depth
+const BALL_R = 13;              // ボール大きく (9→13)
+const FIG_W = 22, FIG_H = 44;  // フィギュア大きく (12x30→22x44)
+const FIG_KICK_EXT = 38;       // キック延長距離大きく (20→38)
+const KICK_DUR = 200;           // kick animation ms
+const KICK_POWER = 10;          // ball speed on kick
+const MAX_BALL_SPEED = 13;
+const WIN_SCORE = 5;
+const FRICTION = 0.996;
+const BOUNCE_DAMP = 0.82;
+
+// Rod definitions: ロッド間の距離を縮めて密集配置
+const ROD_DEFS = [
+  { player:1, label:'GK',  count:1, xPct:0.08  },
+  { player:1, label:'DF',  count:2, xPct:0.20  },
+  { player:2, label:'FW',  count:3, xPct:0.32  },
+  { player:1, label:'MF',  count:5, xPct:0.42  },
+  { player:2, label:'MF',  count:5, xPct:0.58  },
+  { player:1, label:'FW',  count:3, xPct:0.68  },
+  { player:2, label:'DF',  count:2, xPct:0.80  },
+  { player:2, label:'GK',  count:1, xPct:0.92  },
+];
+
+// ================================================
+//  GAME STATE
+// ================================================
+let canvas, ctx;
+let gameMode = 1, gameActive = false, paused = false;
+let score = [0,0];
+let seconds = 0, timerInterval;
+let ball = { x:0, y:0, vx:0, vy:0 };
+let rods = [];
+let selectedRod = [0, 0];
+let goalFlash = 0;
+let goalScorer = 0;
+let serveDelay = 0;
+
+// Input state
+let keys = {};
+
+// Player rod indices
+const P1_RODS = [0,1,3,5]; // GK, DF, MF, FW
+const P2_RODS = [2,4,6,7]; // FW, MF, DF, GK
+
+// ================================================
+//  TOUCH/MOUSE STATE for pads
+// ================================================
+let padState = {
+  p1: { active: false, touchId: null, startY: 0, currentY: 0, isMouse: false, tapStart: 0 },
+  p2: { active: false, touchId: null, startY: 0, currentY: 0, isMouse: false, tapStart: 0 }
+};
+
+// Canvas touch/mouse for direct drag
+let canvasDrag = {
+  p1: { active: false, touchId: null, startY: 0, lastY: 0, isMouse: false },
+  p2: { active: false, touchId: null, startY: 0, lastY: 0, isMouse: false }
+};
+
+// ================================================
+//  ROD CLASS
+// ================================================
+function createRod(def) {
+  const x = def.xPct * FW;
+  const playH = FH - 2*WALL;
+  const spacing = playH / (def.count + 1);
+  const figYs = [];
+  for(let i=0; i<def.count; i++) figYs.push(WALL + spacing*(i+1));
+  return {
+    player: def.player,
+    label: def.label,
+    x: x,
+    count: def.count,
+    offset: 0,
+    maxOffset: spacing * 0.45,
+    figBaseYs: figYs,
+    kicking: false,
+    kickTime: 0,
+    kickDir: def.player === 1 ? 1 : -1,
+  };
+}
+
+function rodFigYs(rod) {
+  return rod.figBaseYs.map(y => y + rod.offset);
+}
+
+function rodFigRect(rod, fy, kicking) {
+  const hw = FIG_W/2, hh = FIG_H/2;
+  let x1 = rod.x - hw, x2 = rod.x + hw;
+  const y1 = fy - hh, y2 = fy + hh;
+  if(kicking) {
+    if(rod.kickDir > 0) x2 += FIG_KICK_EXT;
+    else x1 -= FIG_KICK_EXT;
+  }
+  return {x1, y1, x2, y2};
+}
+
+// ================================================
+//  INIT
+// ================================================
+function init() {
+  canvas = document.getElementById('cv');
+  ctx = canvas.getContext('2d');
+  canvas.width = FW;
+  canvas.height = FH;
+  setupInput();
+  setupPadInput();
+}
+
+function resetBall(dir) {
+  ball.x = FW/2;
+  ball.y = FH/2;
+  ball.vx = 0;
+  ball.vy = 0;
+  serveDelay = 60;
+  ball._serveDir = dir || (Math.random() < 0.5 ? 1 : -1);
+}
+
+function serveBall() {
+  const angle = (Math.random() - 0.5) * 1.2;
+  const speed = 4;
+  ball.vx = Math.cos(angle) * speed * ball._serveDir;
+  ball.vy = Math.sin(angle) * speed;
+}
+
+function initRods() {
+  rods = ROD_DEFS.map(d => createRod(d));
+}
+
+function buildRodButtons() {
+  const labels1 = ['GK','DF','MF','FW'];
+  const labels2 = ['FW','MF','DF','GK'];
+  const c1 = document.getElementById('rod-btns-p1');
+  const c2 = document.getElementById('rod-btns-p2');
+  c1.innerHTML = ''; c2.innerHTML = '';
+  labels1.forEach((l,i) => {
+    const b = document.createElement('button');
+    b.className = 'rb' + (i===selectedRod[0] ? ' active' : '');
+    b.textContent = l;
+    b.onclick = () => { selectedRod[0] = i; updateRodBtns(); };
+    b.ontouchstart = (e) => { e.preventDefault(); selectedRod[0] = i; updateRodBtns(); };
+    c1.appendChild(b);
+  });
+  labels2.forEach((l,i) => {
+    const b = document.createElement('button');
+    b.className = 'rb' + (i===selectedRod[1] ? ' active' : '');
+    b.textContent = l;
+    b.onclick = () => { selectedRod[1] = i; updateRodBtns(); };
+    b.ontouchstart = (e) => { e.preventDefault(); selectedRod[1] = i; updateRodBtns(); };
+    c2.appendChild(b);
+  });
+}
+
+function updateRodBtns() {
+  const btns1 = document.getElementById('rod-btns-p1').children;
+  const btns2 = document.getElementById('rod-btns-p2').children;
+  for(let i=0;i<4;i++) {
+    btns1[i].className = 'rb' + (i===selectedRod[0] ? ' active' : '');
+    btns2[i].className = 'rb' + (i===selectedRod[1] ? ' active' : '');
+  }
+}
+
+// ================================================
+//  INPUT - Keyboard
+// ================================================
+function setupInput() {
+  window.addEventListener('keydown', e => { keys[e.code] = true; e.preventDefault(); });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  // Canvas touch
+  canvas.addEventListener('touchstart', handleCanvasTouchStart, {passive:false});
+  canvas.addEventListener('touchmove', handleCanvasTouchMove, {passive:false});
+  canvas.addEventListener('touchend', handleCanvasTouchEnd, {passive:false});
+
+  // Canvas mouse
+  canvas.addEventListener('mousedown', handleCanvasMouseDown);
+  window.addEventListener('mousemove', handleCanvasMouseMove);
+  window.addEventListener('mouseup', handleCanvasMouseUp);
+}
+
+// ================================================
+//  INPUT - Touch Pads (below canvas)
+// ================================================
+function setupPadInput() {
+  const padP1 = document.getElementById('pad-p1');
+  const padP2 = document.getElementById('pad-p2');
+
+  // P1 pad touch
+  padP1.addEventListener('touchstart', (e) => { e.preventDefault(); padTouchStart(e, 'p1'); }, {passive:false});
+  padP1.addEventListener('touchmove', (e) => { e.preventDefault(); padTouchMove(e, 'p1'); }, {passive:false});
+  padP1.addEventListener('touchend', (e) => { e.preventDefault(); padTouchEnd(e, 'p1'); }, {passive:false});
+
+  // P2 pad touch
+  padP2.addEventListener('touchstart', (e) => { e.preventDefault(); padTouchStart(e, 'p2'); }, {passive:false});
+  padP2.addEventListener('touchmove', (e) => { e.preventDefault(); padTouchMove(e, 'p2'); }, {passive:false});
+  padP2.addEventListener('touchend', (e) => { e.preventDefault(); padTouchEnd(e, 'p2'); }, {passive:false});
+
+  // P1 pad mouse
+  padP1.addEventListener('mousedown', (e) => { padMouseDown(e, 'p1'); });
+  padP2.addEventListener('mousedown', (e) => { padMouseDown(e, 'p2'); });
+  window.addEventListener('mousemove', (e) => { padMouseMove(e); });
+  window.addEventListener('mouseup', (e) => { padMouseUp(e); });
+}
+
+function padTouchStart(e, player) {
+  const t = e.changedTouches[0];
+  padState[player].active = true;
+  padState[player].touchId = t.identifier;
+  padState[player].startY = t.clientY;
+  padState[player].currentY = t.clientY;
+  padState[player].tapStart = performance.now();
+}
+
+function padTouchMove(e, player) {
+  for(const t of e.changedTouches) {
+    if(padState[player].active && t.identifier === padState[player].touchId) {
+      padState[player].currentY = t.clientY;
+      applyPadMovement(player, t.clientY - padState[player].startY);
+      updatePadIndicator(player, t.clientY - padState[player].startY);
+    }
+  }
+}
+
+function padTouchEnd(e, player) {
+  for(const t of e.changedTouches) {
+    if(padState[player].active && t.identifier === padState[player].touchId) {
+      const elapsed = performance.now() - padState[player].tapStart;
+      const dy = Math.abs(t.clientY - padState[player].startY);
+      // Short tap = kick
+      if(elapsed < 250 && dy < 15) {
+        const pNum = player === 'p1' ? 1 : 2;
+        kickRod(pNum);
+      }
+      padState[player].active = false;
+      padState[player].touchId = null;
+      resetPadIndicator(player);
+    }
+  }
+}
+
+function padMouseDown(e, player) {
+  padState[player].active = true;
+  padState[player].isMouse = true;
+  padState[player].startY = e.clientY;
+  padState[player].currentY = e.clientY;
+  padState[player].tapStart = performance.now();
+}
+
+function padMouseMove(e) {
+  ['p1','p2'].forEach(player => {
+    if(padState[player].active && padState[player].isMouse) {
+      padState[player].currentY = e.clientY;
+      applyPadMovement(player, e.clientY - padState[player].startY);
+      updatePadIndicator(player, e.clientY - padState[player].startY);
+    }
+  });
+}
+
+function padMouseUp(e) {
+  ['p1','p2'].forEach(player => {
+    if(padState[player].active && padState[player].isMouse) {
+      const elapsed = performance.now() - padState[player].tapStart;
+      const dy = Math.abs(e.clientY - padState[player].startY);
+      if(elapsed < 250 && dy < 15) {
+        const pNum = player === 'p1' ? 1 : 2;
+        kickRod(pNum);
+      }
+      padState[player].active = false;
+      padState[player].isMouse = false;
+      resetPadIndicator(player);
+    }
+  });
+}
+
+function applyPadMovement(player, dy) {
+  if(player === 'p2' && gameMode === 1) return; // AI controls P2
+  const pIdx = player === 'p1' ? 0 : 1;
+  const rodArr = player === 'p1' ? P1_RODS : P2_RODS;
+  const rod = rods[rodArr[selectedRod[pIdx]]];
+  if(!rod) return;
+  // Scale: pad height maps to rod range
+  const sensitivity = 2.5;
+  rod.offset = Math.max(-rod.maxOffset, Math.min(rod.maxOffset, dy * sensitivity));
+}
+
+function updatePadIndicator(player, dy) {
+  const ind = document.getElementById('pad-ind-' + player);
+  if(!ind) return;
+  const maxDy = 40;
+  const clamped = Math.max(-maxDy, Math.min(maxDy, dy));
+  ind.style.top = `calc(50% + ${clamped}px)`;
+  ind.style.background = 'rgba(255,255,255,0.25)';
+}
+
+function resetPadIndicator(player) {
+  const ind = document.getElementById('pad-ind-' + player);
+  if(!ind) return;
+  ind.style.top = '50%';
+  ind.style.background = 'rgba(255,255,255,0.12)';
+}
+
+// ================================================
+//  INPUT - Canvas touch/mouse (direct on field)
+// ================================================
+function canvasToField(tx, ty) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = FW / rect.width, sy = FH / rect.height;
+  return { x: (tx - rect.left) * sx, y: (ty - rect.top) * sy };
+}
+
+function handleCanvasTouchStart(e) {
+  e.preventDefault();
+  for(const t of e.changedTouches) {
+    const p = canvasToField(t.clientX, t.clientY);
+    if(p.x < FW/2) {
+      canvasDrag.p1 = { active: true, touchId: t.identifier, startY: t.clientY, lastY: t.clientY, isMouse: false };
+    } else {
+      canvasDrag.p2 = { active: true, touchId: t.identifier, startY: t.clientY, lastY: t.clientY, isMouse: false };
+    }
+  }
+}
+
+function handleCanvasTouchMove(e) {
+  e.preventDefault();
+  for(const t of e.changedTouches) {
+    if(canvasDrag.p1.active && t.identifier === canvasDrag.p1.touchId) {
+      const dy = t.clientY - canvasDrag.p1.lastY;
+      moveRodByDelta(1, dy);
+      canvasDrag.p1.lastY = t.clientY;
+    }
+    if(canvasDrag.p2.active && t.identifier === canvasDrag.p2.touchId) {
+      if(gameMode === 2) {
+        const dy = t.clientY - canvasDrag.p2.lastY;
+        moveRodByDelta(2, dy);
+        canvasDrag.p2.lastY = t.clientY;
+      }
+    }
+  }
+}
+
+function handleCanvasTouchEnd(e) {
+  e.preventDefault();
+  for(const t of e.changedTouches) {
+    if(canvasDrag.p1.active && t.identifier === canvasDrag.p1.touchId) {
+      if(Math.abs(t.clientY - canvasDrag.p1.startY) < 12) kickRod(1);
+      canvasDrag.p1.active = false;
+    }
+    if(canvasDrag.p2.active && t.identifier === canvasDrag.p2.touchId) {
+      if(Math.abs(t.clientY - canvasDrag.p2.startY) < 12) kickRod(2);
+      canvasDrag.p2.active = false;
+    }
+  }
+}
+
+function handleCanvasMouseDown(e) {
+  const p = canvasToField(e.clientX, e.clientY);
+  if(p.x < FW/2) {
+    canvasDrag.p1 = { active: true, touchId: null, startY: e.clientY, lastY: e.clientY, isMouse: true };
+  } else {
+    canvasDrag.p2 = { active: true, touchId: null, startY: e.clientY, lastY: e.clientY, isMouse: true };
+  }
+}
+
+function handleCanvasMouseMove(e) {
+  if(canvasDrag.p1.active && canvasDrag.p1.isMouse) {
+    const dy = e.clientY - canvasDrag.p1.lastY;
+    moveRodByDelta(1, dy);
+    canvasDrag.p1.lastY = e.clientY;
+  }
+  if(canvasDrag.p2.active && canvasDrag.p2.isMouse && gameMode === 2) {
+    const dy = e.clientY - canvasDrag.p2.lastY;
+    moveRodByDelta(2, dy);
+    canvasDrag.p2.lastY = e.clientY;
+  }
+}
+
+function handleCanvasMouseUp(e) {
+  if(canvasDrag.p1.active && canvasDrag.p1.isMouse) {
+    if(Math.abs(e.clientY - canvasDrag.p1.startY) < 12) kickRod(1);
+    canvasDrag.p1.active = false;
+  }
+  if(canvasDrag.p2.active && canvasDrag.p2.isMouse) {
+    if(Math.abs(e.clientY - canvasDrag.p2.startY) < 12) kickRod(2);
+    canvasDrag.p2.active = false;
+  }
+}
+
+function moveRodByDelta(player, dy) {
+  const pIdx = player === 1 ? 0 : 1;
+  const rodArr = player === 1 ? P1_RODS : P2_RODS;
+  const rod = rods[rodArr[selectedRod[pIdx]]];
+  if(!rod) return;
+  const scale = FH / canvas.getBoundingClientRect().height;
+  rod.offset = Math.max(-rod.maxOffset, Math.min(rod.maxOffset, rod.offset + dy * scale));
+}
+
+// ================================================
+//  KICK
+// ================================================
+function kickRod(player) {
+  if(!gameActive) return;
+  const rodIdx = player === 1 ? P1_RODS[selectedRod[0]] : P2_RODS[selectedRod[1]];
+  const rod = rods[rodIdx];
+  if(!rod.kicking) {
+    rod.kicking = true;
+    rod.kickTime = performance.now();
+  }
+}
+
+function processInput(dt) {
+  const rod1 = rods[P1_RODS[selectedRod[0]]];
+  const moveSpeed = 5;
+  if(keys['KeyW']) rod1.offset = Math.max(-rod1.maxOffset, rod1.offset - moveSpeed);
+  if(keys['KeyS']) rod1.offset = Math.min(rod1.maxOffset, rod1.offset + moveSpeed);
+  if(keys['KeyA']) { switchRod(1, -1); keys['KeyA'] = false; }
+  if(keys['KeyD']) { switchRod(1, 1); keys['KeyD'] = false; }
+  if(keys['Space']) { kickRod(1); keys['Space'] = false; }
+
+  if(gameMode === 2) {
+    const rod2 = rods[P2_RODS[selectedRod[1]]];
+    if(keys['ArrowUp']) rod2.offset = Math.max(-rod2.maxOffset, rod2.offset - moveSpeed);
+    if(keys['ArrowDown']) rod2.offset = Math.min(rod2.maxOffset, rod2.offset + moveSpeed);
+    if(keys['ArrowLeft']) { switchRod(2, -1); keys['ArrowLeft'] = false; }
+    if(keys['ArrowRight']) { switchRod(2, 1); keys['ArrowRight'] = false; }
+    if(keys['Enter']) { kickRod(2); keys['Enter'] = false; }
+  }
+}
+
+function switchRod(player, dir) {
+  const idx = player === 1 ? 0 : 1;
+  selectedRod[idx] = (selectedRod[idx] + dir + 4) % 4;
+  updateRodBtns();
+}
+
+// ================================================
+//  AI
+// ================================================
+function updateAI() {
+  if(gameMode !== 1 || !gameActive) return;
+
+  // Find best P2 rod to control
+  let bestRodLocalIdx = 0;
+  let bestDist = Infinity;
+  for(let i = 0; i < 4; i++) {
+    const r = rods[P2_RODS[i]];
+    const d = Math.abs(r.x - ball.x);
+    const bonus = (r.x > ball.x && ball.vx > 0) ? -50 : 0;
+    if(d + bonus < bestDist) { bestDist = d + bonus; bestRodLocalIdx = i; }
+  }
+
+  selectedRod[1] = bestRodLocalIdx;
+  const rod = rods[P2_RODS[bestRodLocalIdx]];
+
+  // Move rod to intercept
+  const figs = rodFigYs(rod);
+  let closestFigY = figs[0];
+  let minDy = Infinity;
+  for(const fy of figs) {
+    const d = Math.abs(fy - ball.y);
+    if(d < minDy) { minDy = d; closestFigY = fy; }
+  }
+
+  const targetOffset = ball.y - (closestFigY - rod.offset);
+  const aiSpeed = 3.5 + Math.random() * 0.5;
+  if(Math.abs(targetOffset - rod.offset) > 3) {
+    rod.offset += Math.sign(targetOffset - rod.offset) * Math.min(aiSpeed, Math.abs(targetOffset - rod.offset));
+  }
+  rod.offset = Math.max(-rod.maxOffset, Math.min(rod.maxOffset, rod.offset));
+
+  // Kick when ball is near
+  const dx = ball.x - rod.x;
+  if(dx > -FIG_W - BALL_R && dx < FIG_W + FIG_KICK_EXT + BALL_R) {
+    for(const fy of rodFigYs(rod)) {
+      if(Math.abs(ball.y - fy) < FIG_H/2 + BALL_R + 5) {
+        if(!rod.kicking && Math.random() < 0.15) {
+          rod.kicking = true;
+          rod.kickTime = performance.now();
+        }
+      }
+    }
+  }
+}
+
+// ================================================
+//  PHYSICS
+// ================================================
+function updateBall() {
+  if(serveDelay > 0) { serveDelay--; if(serveDelay === 0) serveBall(); return; }
+
+  ball.vx *= FRICTION;
+  ball.vy *= FRICTION;
+
+  const spd = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+  if(spd > MAX_BALL_SPEED) { ball.vx *= MAX_BALL_SPEED/spd; ball.vy *= MAX_BALL_SPEED/spd; }
+  if(spd < 0.05) { ball.vx = 0; ball.vy = 0; }
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Wall bouncing
+  if(ball.y - BALL_R < WALL)       { ball.y = WALL + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
+  if(ball.y + BALL_R > FH - WALL)  { ball.y = FH - WALL - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+
+  const goalTop = (FH - GOAL_H) / 2;
+  const goalBot = goalTop + GOAL_H;
+  const inGoalY = ball.y > goalTop && ball.y < goalBot;
+
+  // Left wall
+  if(ball.x - BALL_R < WALL) {
+    if(inGoalY && ball.x < -GOAL_D) {
+      scoreGoal(2); return;
+    } else if(!inGoalY || ball.x - BALL_R > 0) {
+      ball.x = WALL + BALL_R;
+      ball.vx = Math.abs(ball.vx) * BOUNCE_DAMP;
+    }
+    if(inGoalY && ball.x < WALL) {
+      if(ball.y - BALL_R < goalTop) { ball.y = goalTop + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
+      if(ball.y + BALL_R > goalBot) { ball.y = goalBot - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+    }
+  }
+
+  // Right wall
+  if(ball.x + BALL_R > FW - WALL) {
+    if(inGoalY && ball.x > FW + GOAL_D) {
+      scoreGoal(1); return;
+    } else if(!inGoalY || ball.x + BALL_R < FW) {
+      ball.x = FW - WALL - BALL_R;
+      ball.vx = -Math.abs(ball.vx) * BOUNCE_DAMP;
+    }
+    if(inGoalY && ball.x > FW - WALL) {
+      if(ball.y - BALL_R < goalTop) { ball.y = goalTop + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
+      if(ball.y + BALL_R > goalBot) { ball.y = goalBot - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+    }
+  }
+
+  // Figure collisions
+  const now = performance.now();
+  for(const rod of rods) {
+    const isKicking = rod.kicking && (now - rod.kickTime < KICK_DUR);
+    if(rod.kicking && !isKicking) rod.kicking = false;
+
+    for(const fy of rodFigYs(rod)) {
+      const rect = rodFigRect(rod, fy, isKicking);
+      const cx = Math.max(rect.x1, Math.min(ball.x, rect.x2));
+      const cy = Math.max(rect.y1, Math.min(ball.y, rect.y2));
+      const dx = ball.x - cx, dy = ball.y - cy;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if(dist < BALL_R) {
+        if(dist === 0) { ball.x += rod.kickDir; continue; }
+        const nx = dx/dist, ny = dy/dist;
+        ball.x = cx + nx * BALL_R;
+        ball.y = cy + ny * BALL_R;
+
+        if(isKicking) {
+          ball.vx = rod.kickDir * KICK_POWER + (Math.random()-0.5)*1.5;
+          ball.vy = (ball.y - fy) * 0.12 + (Math.random()-0.5)*2;
+        } else {
+          const dot = ball.vx*nx + ball.vy*ny;
+          ball.vx -= 2*dot*nx;
+          ball.vy -= 2*dot*ny;
+          ball.vx *= BOUNCE_DAMP;
+          ball.vy *= BOUNCE_DAMP;
+        }
+      }
+    }
+  }
+}
+
+function scoreGoal(player) {
+  score[player-1]++;
+  goalFlash = 90;
+  goalScorer = player;
+  document.getElementById('s1').textContent = score[0];
+  document.getElementById('s2').textContent = score[1];
+  document.getElementById('goal-info').textContent = '⚽ ゴーーール！！';
+  setTimeout(() => {
+    document.getElementById('goal-info').textContent = `先に${WIN_SCORE}点取った方の勝ち！`;
+  }, 1500);
+
+  if(score[player-1] >= WIN_SCORE) {
+    endGame(player);
+    return;
+  }
+
+  resetBall(player === 1 ? -1 : 1);
+  rods.forEach(r => r.offset = 0);
+}
+
+// ================================================
+//  GAME FLOW
+// ================================================
+function startGame(mode) {
+  gameMode = mode;
+  score = [0,0];
+  seconds = 0;
+  document.getElementById('s1').textContent = '0';
+  document.getElementById('s2').textContent = '0';
+  document.getElementById('timer').textContent = '0:00';
+  document.getElementById('goal-info').textContent = `先に${WIN_SCORE}点取った方の勝ち！`;
+
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  document.getElementById('gameover').classList.remove('show');
+
+  // Show/hide P2 controls
+  document.getElementById('kick-p2').style.display = mode === 2 ? '' : 'none';
+  document.getElementById('rod-btns-p2').style.display = mode === 2 ? '' : 'none';
+  document.getElementById('pad-p2').style.display = mode === 2 ? '' : 'none';
+
+  selectedRod = [0, 0];
+  initRods();
+  resetBall();
+  buildRodButtons();
+  gameActive = true;
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if(!gameActive) return;
+    seconds++;
+    const m = Math.floor(seconds/60), s = seconds%60;
+    document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+
+  if(!window._loopStarted) { window._loopStarted = true; gameLoop(); }
+}
+
+function goTitle() {
+  gameActive = false;
+  clearInterval(timerInterval);
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('gameover').classList.remove('show');
+  document.getElementById('title-screen').style.display = 'flex';
+}
+
+function restartGame() {
+  document.getElementById('gameover').classList.remove('show');
+  startGame(gameMode);
+}
+
+function endGame(winner) {
+  gameActive = false;
+  clearInterval(timerInterval);
+  setTimeout(() => {
+    const emoji = document.getElementById('go-emoji');
+    const title = document.getElementById('go-title');
+    const sub = document.getElementById('go-sub');
+    if(gameMode === 1) {
+      if(winner === 1) {
+        emoji.textContent = '🏆'; title.textContent = 'あなたの勝ち！';
+        title.style.color = '#ef5350';
+      } else {
+        emoji.textContent = '😢'; title.textContent = 'CPUの勝ち...';
+        title.style.color = '#42a5f5';
+      }
+    } else {
+      emoji.textContent = '🏆';
+      title.textContent = winner === 1 ? 'RED の勝ち！' : 'BLUE の勝ち！';
+      title.style.color = winner === 1 ? '#ef5350' : '#42a5f5';
+    }
+    sub.textContent = `${score[0]} - ${score[1]} (${Math.floor(seconds/60)}:${(seconds%60).toString().padStart(2,'0')})`;
+    document.getElementById('gameover').classList.add('show');
+  }, 800);
+}
+
+// ================================================
+//  RENDER
+// ================================================
+function render() {
+  ctx.clearRect(0, 0, FW, FH);
+
+  // Table border
+  ctx.fillStyle = '#5d4037';
+  ctx.fillRect(0, 0, FW, FH);
+
+  // Field
+  ctx.fillStyle = '#2e7d32';
+  ctx.fillRect(WALL, WALL, FW - 2*WALL, FH - 2*WALL);
+
+  // Field markings
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(FW/2, WALL); ctx.lineTo(FW/2, FH-WALL); ctx.stroke();
+  ctx.beginPath(); ctx.arc(FW/2, FH/2, 50, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.beginPath(); ctx.arc(FW/2, FH/2, 4, 0, Math.PI*2); ctx.fill();
+
+  // Goals
+  const goalTop = (FH - GOAL_H) / 2;
+  const goalBot = goalTop + GOAL_H;
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, goalTop, WALL, GOAL_H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  for(let y=goalTop;y<goalBot;y+=12){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WALL,y);ctx.stroke();}
+
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(FW-WALL, goalTop, WALL, GOAL_H);
+  for(let y=goalTop;y<goalBot;y+=12){ctx.beginPath();ctx.moveTo(FW-WALL,y);ctx.lineTo(FW,y);ctx.stroke();}
+
+  // Goal flash
+  if(goalFlash > 0) {
+    const alpha = (goalFlash / 90) * 0.15;
+    ctx.fillStyle = goalScorer === 1 ? `rgba(239,83,80,${alpha})` : `rgba(66,165,245,${alpha})`;
+    ctx.fillRect(WALL, WALL, FW-2*WALL, FH-2*WALL);
+    goalFlash--;
+  }
+
+  // Rods and figures
+  const now = performance.now();
+  rods.forEach((rod, ri) => {
+    const isKicking = rod.kicking && (now - rod.kickTime < KICK_DUR);
+    if(rod.kicking && !isKicking) rod.kicking = false;
+    const kickProgress = isKicking ? (now - rod.kickTime) / KICK_DUR : 0;
+
+    const isP1Rod = P1_RODS.includes(ri);
+    const localIdx = isP1Rod ? P1_RODS.indexOf(ri) : P2_RODS.indexOf(ri);
+    const isSelected = isP1Rod ? (localIdx === selectedRod[0]) : (localIdx === selectedRod[1]);
+
+    // Rod line
+    ctx.strokeStyle = isSelected ? 'rgba(255,255,255,0.5)' : 'rgba(200,200,200,0.2)';
+    ctx.lineWidth = isSelected ? 7 : 5;
+    ctx.beginPath();
+    ctx.moveTo(rod.x, WALL - 8);
+    ctx.lineTo(rod.x, FH - WALL + 8);
+    ctx.stroke();
+
+    // Rod handles
+    ctx.fillStyle = rod.player === 1 ? '#ef5350' : '#42a5f5';
+    ctx.beginPath(); ctx.arc(rod.x, WALL - 2, isSelected ? 8 : 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(rod.x, FH - WALL + 2, isSelected ? 8 : 6, 0, Math.PI*2); ctx.fill();
+
+    // Figures
+    const figs = rodFigYs(rod);
+    figs.forEach(fy => {
+      const color = rod.player === 1 ? '#e53935' : '#1e88e5';
+      const darkColor = rod.player === 1 ? '#b71c1c' : '#0d47a1';
+
+      // Body
+      ctx.fillStyle = color;
+      const bw = FIG_W, bh = FIG_H;
+      const rx = rod.x - bw/2, ry = fy - bh/2;
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, bw, bh, 4);
+      ctx.fill();
+
+      // Foot / kick
+      if(isKicking) {
+        const ext = FIG_KICK_EXT * Math.sin(kickProgress * Math.PI);
+        ctx.fillStyle = darkColor;
+        if(rod.kickDir > 0) {
+          ctx.fillRect(rod.x + bw/2, fy - 7, ext, 14);
+        } else {
+          ctx.fillRect(rod.x - bw/2 - ext, fy - 7, ext, 14);
+        }
+      } else {
+        ctx.fillStyle = darkColor;
+        if(rod.kickDir > 0) {
+          ctx.fillRect(rod.x + bw/2, fy - 6, 8, 12);
+        } else {
+          ctx.fillRect(rod.x - bw/2 - 8, fy - 6, 8, 12);
+        }
+      }
+
+      // Head
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(rod.x, fy - bh/2 + 7, 7, 0, Math.PI*2); ctx.fill();
+      // Eyes
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(rod.x - 2, fy - bh/2 + 6, 1.2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(rod.x + 2, fy - bh/2 + 6, 1.2, 0, Math.PI*2); ctx.fill();
+
+      // Selected glow
+      if(isSelected) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rx - 2, ry - 2, bw + 4, bh + 4);
+      }
+    });
+  });
+
+  // Ball shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath(); ctx.arc(ball.x + 3, ball.y + 3, BALL_R, 0, Math.PI*2); ctx.fill();
+  // Ball
+  const ballGrad = ctx.createRadialGradient(ball.x - 3, ball.y - 3, 1, ball.x, ball.y, BALL_R);
+  ballGrad.addColorStop(0, '#ffffff');
+  ballGrad.addColorStop(1, '#e0e0e0');
+  ctx.fillStyle = ballGrad;
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI*2); ctx.fill();
+  // Ball pentagon pattern
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI*2); ctx.stroke();
+  // small pentagon
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.beginPath();
+  for(let i=0;i<5;i++){
+    const a = i*Math.PI*2/5 - Math.PI/2;
+    const px = ball.x + Math.cos(a)*BALL_R*0.45;
+    const py = ball.y + Math.sin(a)*BALL_R*0.45;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ================================================
+//  GAME LOOP
+// ================================================
+function gameLoop() {
+  if(gameActive) {
+    processInput();
+    updateAI();
+    updateBall();
+  }
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ================================================
+//  BOOT
+// ================================================
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
