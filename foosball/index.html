@@ -47,9 +47,9 @@ canvas{display:block;width:100%;height:auto;touch-action:none}
 .rod-btns.left{align-self:flex-start}
 .rod-btns.right{align-self:flex-end}
 .rod-controls{display:flex;justify-content:space-between;width:100%;padding:0 4px}
-.rb{padding:8px 12px;border:2px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(255,255,255,0.05);color:#aaa;font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.15s;min-width:48px;text-align:center}
-.rb.active{border-color:#4fc3f7;color:#4fc3f7;background:rgba(79,195,247,0.15)}
-.rb:hover{border-color:#4fc3f7;color:#fff}
+.rb{padding:8px 12px;border:2px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(255,255,255,0.05);color:#aaa;font-family:'Nunito',sans-serif;font-size:0.75rem;font-weight:800;cursor:pointer;transition:all 0.12s;min-width:48px;text-align:center;-webkit-tap-highlight-color:transparent}
+.rb.active{border-color:#4fc3f7;color:#4fc3f7;background:rgba(79,195,247,0.2);box-shadow:0 0 10px rgba(79,195,247,0.3)}
+.rb:hover,.rb:focus{border-color:#4fc3f7;color:#fff;background:rgba(79,195,247,0.1);outline:none}
 
 .kick-btn{padding:10px 20px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:800;cursor:pointer;transition:all 0.15s;margin-top:6px}
 .kick-btn.p1{background:linear-gradient(135deg,#ef5350,#c62828);color:#fff}
@@ -179,20 +179,20 @@ const BALL_R = 13;              // ボール大きく (9→13)
 const FIG_W = 22, FIG_H = 44;  // フィギュア大きく (12x30→22x44)
 const FIG_KICK_EXT = 38;       // キック延長距離大きく (20→38)
 const KICK_DUR = 200;           // kick animation ms
-const KICK_POWER = 10;          // ball speed on kick
-const MAX_BALL_SPEED = 13;
+const KICK_POWER = 7;           // ball speed on kick (10→7, 2/3)
+const MAX_BALL_SPEED = 9;       // max speed (13→9, 2/3)
 const WIN_SCORE = 5;
-const FRICTION = 0.996;
-const BOUNCE_DAMP = 0.82;
+const FRICTION = 0.995;         // slightly more friction for slower game
+const BOUNCE_DAMP = 0.75;      // base bounce dampening
 
 // Rod definitions: ロッド間の距離を縮めて密集配置
 const ROD_DEFS = [
   { player:1, label:'GK',  count:1, xPct:0.08  },
   { player:1, label:'DF',  count:2, xPct:0.20  },
-  { player:2, label:'FW',  count:3, xPct:0.32  },
-  { player:1, label:'MF',  count:5, xPct:0.42  },
-  { player:2, label:'MF',  count:5, xPct:0.58  },
-  { player:1, label:'FW',  count:3, xPct:0.68  },
+  { player:2, label:'FW',  count:2, xPct:0.32  },
+  { player:1, label:'MF',  count:3, xPct:0.42  },
+  { player:2, label:'MF',  count:3, xPct:0.58  },
+  { player:1, label:'FW',  count:2, xPct:0.68  },
   { player:2, label:'DF',  count:2, xPct:0.80  },
   { player:2, label:'GK',  count:1, xPct:0.92  },
 ];
@@ -222,15 +222,21 @@ const P2_RODS = [2,4,6,7]; // FW, MF, DF, GK
 //  TOUCH/MOUSE STATE for pads
 // ================================================
 let padState = {
-  p1: { active: false, touchId: null, startY: 0, currentY: 0, isMouse: false, tapStart: 0 },
-  p2: { active: false, touchId: null, startY: 0, currentY: 0, isMouse: false, tapStart: 0 }
+  p1: { active: false, touchId: null, startY: 0, currentY: 0, lastY: 0, lastTime: 0, recentVy: 0, isMouse: false, tapStart: 0 },
+  p2: { active: false, touchId: null, startY: 0, currentY: 0, lastY: 0, lastTime: 0, recentVy: 0, isMouse: false, tapStart: 0 }
 };
 
 // Canvas touch/mouse for direct drag
 let canvasDrag = {
-  p1: { active: false, touchId: null, startY: 0, lastY: 0, isMouse: false },
-  p2: { active: false, touchId: null, startY: 0, lastY: 0, isMouse: false }
+  p1: { active: false, touchId: null, startY: 0, lastY: 0, lastMoveTime: 0, recentDy: 0, isMouse: false },
+  p2: { active: false, touchId: null, startY: 0, lastY: 0, lastMoveTime: 0, recentDy: 0, isMouse: false }
 };
+
+// Flick / inertia velocity per rod (px/frame)
+let rodFlickVy = [];
+const FLICK_FRICTION = 0.82;       // deceleration per frame
+const FLICK_MIN_SPEED = 3.0;       // swipe speed threshold to trigger flick
+const FLICK_SCALE = 4.0;           // multiplier from swipe speed → rod velocity
 
 // ================================================
 //  ROD CLASS
@@ -247,7 +253,7 @@ function createRod(def) {
     x: x,
     count: def.count,
     offset: 0,
-    maxOffset: spacing * 0.45,
+    maxOffset: Math.max(0, spacing - FIG_H / 2), // full end-to-end range
     figBaseYs: figYs,
     kicking: false,
     kickTime: 0,
@@ -293,13 +299,14 @@ function resetBall(dir) {
 
 function serveBall() {
   const angle = (Math.random() - 0.5) * 1.2;
-  const speed = 4;
+  const speed = 2.8;  // serve speed reduced (4→2.8)
   ball.vx = Math.cos(angle) * speed * ball._serveDir;
   ball.vy = Math.sin(angle) * speed;
 }
 
 function initRods() {
   rods = ROD_DEFS.map(d => createRod(d));
+  rodFlickVy = new Array(rods.length).fill(0);
 }
 
 function buildRodButtons() {
@@ -308,20 +315,24 @@ function buildRodButtons() {
   const c1 = document.getElementById('rod-btns-p1');
   const c2 = document.getElementById('rod-btns-p2');
   c1.innerHTML = ''; c2.innerHTML = '';
+
   labels1.forEach((l,i) => {
     const b = document.createElement('button');
     b.className = 'rb' + (i===selectedRod[0] ? ' active' : '');
     b.textContent = l;
-    b.onclick = () => { selectedRod[0] = i; updateRodBtns(); };
-    b.ontouchstart = (e) => { e.preventDefault(); selectedRod[0] = i; updateRodBtns(); };
+    const sel = () => { selectedRod[0] = i; updateRodBtns(); };
+    b.onclick = sel;
+    b.ontouchstart = (e) => { e.preventDefault(); sel(); };
     c1.appendChild(b);
   });
+
   labels2.forEach((l,i) => {
     const b = document.createElement('button');
     b.className = 'rb' + (i===selectedRod[1] ? ' active' : '');
     b.textContent = l;
-    b.onclick = () => { selectedRod[1] = i; updateRodBtns(); };
-    b.ontouchstart = (e) => { e.preventDefault(); selectedRod[1] = i; updateRodBtns(); };
+    const sel = () => { selectedRod[1] = i; updateRodBtns(); };
+    b.onclick = sel;
+    b.ontouchstart = (e) => { e.preventDefault(); sel(); };
     c2.appendChild(b);
   });
 }
@@ -379,16 +390,26 @@ function setupPadInput() {
 
 function padTouchStart(e, player) {
   const t = e.changedTouches[0];
+  const now = performance.now();
   padState[player].active = true;
   padState[player].touchId = t.identifier;
   padState[player].startY = t.clientY;
   padState[player].currentY = t.clientY;
-  padState[player].tapStart = performance.now();
+  padState[player].lastY = t.clientY;
+  padState[player].lastTime = now;
+  padState[player].recentVy = 0;
+  padState[player].tapStart = now;
 }
 
 function padTouchMove(e, player) {
   for(const t of e.changedTouches) {
     if(padState[player].active && t.identifier === padState[player].touchId) {
+      const now = performance.now();
+      const dt = Math.max(1, now - padState[player].lastTime);
+      // Track recent velocity (px/ms)
+      padState[player].recentVy = (t.clientY - padState[player].lastY) / dt;
+      padState[player].lastY = t.clientY;
+      padState[player].lastTime = now;
       padState[player].currentY = t.clientY;
       applyPadMovement(player, t.clientY - padState[player].startY);
       updatePadIndicator(player, t.clientY - padState[player].startY);
@@ -400,11 +421,15 @@ function padTouchEnd(e, player) {
   for(const t of e.changedTouches) {
     if(padState[player].active && t.identifier === padState[player].touchId) {
       const elapsed = performance.now() - padState[player].tapStart;
-      const dy = Math.abs(t.clientY - padState[player].startY);
-      // Short tap = kick
-      if(elapsed < 250 && dy < 15) {
-        const pNum = player === 'p1' ? 1 : 2;
+      const totalDy = Math.abs(t.clientY - padState[player].startY);
+      const pNum = player === 'p1' ? 1 : 2;
+
+      if(elapsed < 250 && totalDy < 15) {
+        // Short tap = kick
         kickRod(pNum);
+      } else {
+        // Flick: if swipe speed is fast, apply inertia
+        applyFlickFromPad(player, padState[player].recentVy);
       }
       padState[player].active = false;
       padState[player].touchId = null;
@@ -414,16 +439,25 @@ function padTouchEnd(e, player) {
 }
 
 function padMouseDown(e, player) {
+  const now = performance.now();
   padState[player].active = true;
   padState[player].isMouse = true;
   padState[player].startY = e.clientY;
   padState[player].currentY = e.clientY;
-  padState[player].tapStart = performance.now();
+  padState[player].lastY = e.clientY;
+  padState[player].lastTime = now;
+  padState[player].recentVy = 0;
+  padState[player].tapStart = now;
 }
 
 function padMouseMove(e) {
   ['p1','p2'].forEach(player => {
     if(padState[player].active && padState[player].isMouse) {
+      const now = performance.now();
+      const dt = Math.max(1, now - padState[player].lastTime);
+      padState[player].recentVy = (e.clientY - padState[player].lastY) / dt;
+      padState[player].lastY = e.clientY;
+      padState[player].lastTime = now;
       padState[player].currentY = e.clientY;
       applyPadMovement(player, e.clientY - padState[player].startY);
       updatePadIndicator(player, e.clientY - padState[player].startY);
@@ -435,16 +469,31 @@ function padMouseUp(e) {
   ['p1','p2'].forEach(player => {
     if(padState[player].active && padState[player].isMouse) {
       const elapsed = performance.now() - padState[player].tapStart;
-      const dy = Math.abs(e.clientY - padState[player].startY);
-      if(elapsed < 250 && dy < 15) {
-        const pNum = player === 'p1' ? 1 : 2;
+      const totalDy = Math.abs(e.clientY - padState[player].startY);
+      const pNum = player === 'p1' ? 1 : 2;
+      if(elapsed < 250 && totalDy < 15) {
         kickRod(pNum);
+      } else {
+        applyFlickFromPad(player, padState[player].recentVy);
       }
       padState[player].active = false;
       padState[player].isMouse = false;
       resetPadIndicator(player);
     }
   });
+}
+
+// Apply flick inertia to selected rod from pad velocity (px/ms)
+function applyFlickFromPad(player, velocityPxPerMs) {
+  if(player === 'p2' && gameMode === 1) return;
+  const pIdx = player === 'p1' ? 0 : 1;
+  const rodArr = player === 'p1' ? P1_RODS : P2_RODS;
+  const rodIdx = rodArr[selectedRod[pIdx]];
+  // Convert px/ms → px/frame (at 60fps = 16.7ms/frame)
+  const flickVy = velocityPxPerMs * 16 * FLICK_SCALE;
+  if(Math.abs(flickVy) >= FLICK_MIN_SPEED) {
+    rodFlickVy[rodIdx] = flickVy;
+  }
 }
 
 function applyPadMovement(player, dy) {
@@ -485,29 +534,38 @@ function canvasToField(tx, ty) {
 
 function handleCanvasTouchStart(e) {
   e.preventDefault();
+  const now = performance.now();
   for(const t of e.changedTouches) {
     const p = canvasToField(t.clientX, t.clientY);
-    if(p.x < FW/2) {
-      canvasDrag.p1 = { active: true, touchId: t.identifier, startY: t.clientY, lastY: t.clientY, isMouse: false };
-    } else {
-      canvasDrag.p2 = { active: true, touchId: t.identifier, startY: t.clientY, lastY: t.clientY, isMouse: false };
-    }
+    // Determine which player owns the closest rod
+    const side = (gameMode === 1) ? 'p1' : (findClosestRodToX(p.x).player === 1 ? 'p1' : 'p2');
+    // Switch to nearest rod then position immediately by Y
+    switchRodByCanvasX(p.x);
+    setRodOffsetByFieldY(p.x, p.y);
+    canvasDrag[side] = { active: true, touchId: t.identifier, startY: t.clientY, lastY: t.clientY, lastTime: now, recentDy: 0, isMouse: false };
   }
 }
 
 function handleCanvasTouchMove(e) {
   e.preventDefault();
+  const now = performance.now();
   for(const t of e.changedTouches) {
     if(canvasDrag.p1.active && t.identifier === canvasDrag.p1.touchId) {
       const dy = t.clientY - canvasDrag.p1.lastY;
-      moveRodByDelta(1, dy);
+      const dt = Math.max(1, now - canvasDrag.p1.lastTime);
+      canvasDrag.p1.recentDy = dy / dt; // px/ms velocity
       canvasDrag.p1.lastY = t.clientY;
+      canvasDrag.p1.lastTime = now;
+      moveRodByDelta(1, dy);
     }
     if(canvasDrag.p2.active && t.identifier === canvasDrag.p2.touchId) {
       if(gameMode === 2) {
         const dy = t.clientY - canvasDrag.p2.lastY;
-        moveRodByDelta(2, dy);
+        const dt = Math.max(1, now - canvasDrag.p2.lastTime);
+        canvasDrag.p2.recentDy = dy / dt;
         canvasDrag.p2.lastY = t.clientY;
+        canvasDrag.p2.lastTime = now;
+        moveRodByDelta(2, dy);
       }
     }
   }
@@ -517,46 +575,143 @@ function handleCanvasTouchEnd(e) {
   e.preventDefault();
   for(const t of e.changedTouches) {
     if(canvasDrag.p1.active && t.identifier === canvasDrag.p1.touchId) {
-      if(Math.abs(t.clientY - canvasDrag.p1.startY) < 12) kickRod(1);
+      const totalDy = Math.abs(t.clientY - canvasDrag.p1.startY);
+      if(totalDy < 12) {
+        kickRod(1);
+      } else {
+        applyFlickFromCanvas(1, canvasDrag.p1.recentDy);
+      }
       canvasDrag.p1.active = false;
     }
     if(canvasDrag.p2.active && t.identifier === canvasDrag.p2.touchId) {
-      if(Math.abs(t.clientY - canvasDrag.p2.startY) < 12) kickRod(2);
+      const totalDy = Math.abs(t.clientY - canvasDrag.p2.startY);
+      if(totalDy < 12) {
+        kickRod(2);
+      } else {
+        applyFlickFromCanvas(2, canvasDrag.p2.recentDy);
+      }
       canvasDrag.p2.active = false;
     }
   }
 }
 
 function handleCanvasMouseDown(e) {
+  const now = performance.now();
   const p = canvasToField(e.clientX, e.clientY);
-  if(p.x < FW/2) {
-    canvasDrag.p1 = { active: true, touchId: null, startY: e.clientY, lastY: e.clientY, isMouse: true };
-  } else {
-    canvasDrag.p2 = { active: true, touchId: null, startY: e.clientY, lastY: e.clientY, isMouse: true };
-  }
+  const side = (gameMode === 1) ? 'p1' : (findClosestRodToX(p.x).player === 1 ? 'p1' : 'p2');
+  canvasDrag[side] = { active: true, touchId: null, startY: e.clientY, lastY: e.clientY, lastTime: now, recentDy: 0, isMouse: true };
 }
 
 function handleCanvasMouseMove(e) {
+  const now = performance.now();
+  const p = canvasToField(e.clientX, e.clientY);
+
   if(canvasDrag.p1.active && canvasDrag.p1.isMouse) {
     const dy = e.clientY - canvasDrag.p1.lastY;
-    moveRodByDelta(1, dy);
+    const dt = Math.max(1, now - canvasDrag.p1.lastTime);
+    canvasDrag.p1.recentDy = dy / dt;
     canvasDrag.p1.lastY = e.clientY;
-  }
-  if(canvasDrag.p2.active && canvasDrag.p2.isMouse && gameMode === 2) {
+    canvasDrag.p1.lastTime = now;
+    moveRodByDelta(1, dy);
+  } else if(canvasDrag.p2.active && canvasDrag.p2.isMouse && gameMode === 2) {
     const dy = e.clientY - canvasDrag.p2.lastY;
-    moveRodByDelta(2, dy);
+    const dt = Math.max(1, now - canvasDrag.p2.lastTime);
+    canvasDrag.p2.recentDy = dy / dt;
     canvasDrag.p2.lastY = e.clientY;
+    canvasDrag.p2.lastTime = now;
+    moveRodByDelta(2, dy);
+  } else if(!canvasDrag.p1.active && !canvasDrag.p2.active && gameActive) {
+    // Not dragging — check mouse is within canvas, then switch rod and move it
+    const rect = canvas.getBoundingClientRect();
+    const insideCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
+                         e.clientY >= rect.top  && e.clientY <= rect.bottom;
+    if(insideCanvas) {
+      switchRodByCanvasX(p.x);      // select nearest rod by X
+      setRodOffsetByFieldY(p.x, p.y); // move rod by mouse Y (no click needed)
+    }
   }
 }
 
 function handleCanvasMouseUp(e) {
   if(canvasDrag.p1.active && canvasDrag.p1.isMouse) {
-    if(Math.abs(e.clientY - canvasDrag.p1.startY) < 12) kickRod(1);
+    const totalDy = Math.abs(e.clientY - canvasDrag.p1.startY);
+    if(totalDy < 12) kickRod(1);
+    else applyFlickFromCanvas(1, canvasDrag.p1.recentDy);
     canvasDrag.p1.active = false;
   }
   if(canvasDrag.p2.active && canvasDrag.p2.isMouse) {
-    if(Math.abs(e.clientY - canvasDrag.p2.startY) < 12) kickRod(2);
+    const totalDy = Math.abs(e.clientY - canvasDrag.p2.startY);
+    if(totalDy < 12) kickRod(2);
+    else applyFlickFromCanvas(2, canvasDrag.p2.recentDy);
     canvasDrag.p2.active = false;
+  }
+}
+
+// Apply flick from canvas drag (velocity in px/ms screen space)
+function applyFlickFromCanvas(player, velocityPxPerMs) {
+  if(player === 2 && gameMode === 1) return;
+  const pIdx = player === 1 ? 0 : 1;
+  const rodArr = player === 1 ? P1_RODS : P2_RODS;
+  const rodIdx = rodArr[selectedRod[pIdx]];
+  const scale = FH / canvas.getBoundingClientRect().height;
+  const flickVy = velocityPxPerMs * 16 * scale * FLICK_SCALE;
+  if(Math.abs(flickVy) >= FLICK_MIN_SPEED) {
+    rodFlickVy[rodIdx] = flickVy;
+  }
+}
+
+// Find the globally closest rod to a field X position
+// Returns { player:1|2, localIdx:0-3, globalIdx:0-7 }
+function findClosestRodToX(fieldX) {
+  let bestDist = Infinity;
+  let result = { player: 1, localIdx: 0, globalIdx: P1_RODS[0] };
+  P1_RODS.forEach((globalIdx, localIdx) => {
+    const d = Math.abs(rods[globalIdx].x - fieldX);
+    if(d < bestDist) { bestDist = d; result = { player: 1, localIdx, globalIdx }; }
+  });
+  P2_RODS.forEach((globalIdx, localIdx) => {
+    const d = Math.abs(rods[globalIdx].x - fieldX);
+    if(d < bestDist) { bestDist = d; result = { player: 2, localIdx, globalIdx }; }
+  });
+  return result;
+}
+
+// Switch rod selection based on mouse/touch X — searches ALL rods, not just half-field
+function switchRodByCanvasX(fieldX) {
+  if(!rods.length) return;
+  if(gameMode === 1) {
+    // 1P: only switch among P1 rods
+    let bestLocalIdx = 0, bestDist = Infinity;
+    P1_RODS.forEach((globalIdx, localIdx) => {
+      const d = Math.abs(rods[globalIdx].x - fieldX);
+      if(d < bestDist) { bestDist = d; bestLocalIdx = localIdx; }
+    });
+    if(selectedRod[0] !== bestLocalIdx) { selectedRod[0] = bestLocalIdx; updateRodBtns(); }
+  } else {
+    // 2P: pick the globally closest rod (either player)
+    const closest = findClosestRodToX(fieldX);
+    if(closest.player === 1) {
+      if(selectedRod[0] !== closest.localIdx) { selectedRod[0] = closest.localIdx; updateRodBtns(); }
+    } else {
+      if(selectedRod[1] !== closest.localIdx) { selectedRod[1] = closest.localIdx; updateRodBtns(); }
+    }
+  }
+}
+
+// Set rod offset directly from mouse/touch Y position (no click needed)
+// fieldY − FH/2 maps to offset (center = 0)
+function setRodOffsetByFieldY(fieldX, fieldY) {
+  const targetOffset = fieldY - FH / 2;
+  if(gameMode === 1) {
+    // 1P: always move P1's currently-selected rod
+    const rod = rods[P1_RODS[selectedRod[0]]];
+    if(rod) rod.offset = Math.max(-rod.maxOffset, Math.min(rod.maxOffset, targetOffset));
+  } else {
+    // 2P: move whichever player's rod is closest to the mouse X
+    const closest = findClosestRodToX(fieldX);
+    const rodIdx = closest.player === 1 ? P1_RODS[selectedRod[0]] : P2_RODS[selectedRod[1]];
+    const rod = rods[rodIdx];
+    if(rod) rod.offset = Math.max(-rod.maxOffset, Math.min(rod.maxOffset, targetOffset));
   }
 }
 
@@ -585,19 +740,32 @@ function kickRod(player) {
 function processInput(dt) {
   const rod1 = rods[P1_RODS[selectedRod[0]]];
   const moveSpeed = 5;
-  if(keys['KeyW']) rod1.offset = Math.max(-rod1.maxOffset, rod1.offset - moveSpeed);
-  if(keys['KeyS']) rod1.offset = Math.min(rod1.maxOffset, rod1.offset + moveSpeed);
+  if(keys['KeyW']) { rod1.offset = Math.max(-rod1.maxOffset, rod1.offset - moveSpeed); rodFlickVy[P1_RODS[selectedRod[0]]] = 0; }
+  if(keys['KeyS']) { rod1.offset = Math.min(rod1.maxOffset, rod1.offset + moveSpeed); rodFlickVy[P1_RODS[selectedRod[0]]] = 0; }
   if(keys['KeyA']) { switchRod(1, -1); keys['KeyA'] = false; }
   if(keys['KeyD']) { switchRod(1, 1); keys['KeyD'] = false; }
   if(keys['Space']) { kickRod(1); keys['Space'] = false; }
 
   if(gameMode === 2) {
     const rod2 = rods[P2_RODS[selectedRod[1]]];
-    if(keys['ArrowUp']) rod2.offset = Math.max(-rod2.maxOffset, rod2.offset - moveSpeed);
-    if(keys['ArrowDown']) rod2.offset = Math.min(rod2.maxOffset, rod2.offset + moveSpeed);
+    if(keys['ArrowUp']) { rod2.offset = Math.max(-rod2.maxOffset, rod2.offset - moveSpeed); rodFlickVy[P2_RODS[selectedRod[1]]] = 0; }
+    if(keys['ArrowDown']) { rod2.offset = Math.min(rod2.maxOffset, rod2.offset + moveSpeed); rodFlickVy[P2_RODS[selectedRod[1]]] = 0; }
     if(keys['ArrowLeft']) { switchRod(2, -1); keys['ArrowLeft'] = false; }
     if(keys['ArrowRight']) { switchRod(2, 1); keys['ArrowRight'] = false; }
     if(keys['Enter']) { kickRod(2); keys['Enter'] = false; }
+  }
+
+  // Apply flick inertia to all rods
+  for(let i = 0; i < rods.length; i++) {
+    if(Math.abs(rodFlickVy[i]) > 0.3) {
+      rods[i].offset = Math.max(-rods[i].maxOffset, Math.min(rods[i].maxOffset, rods[i].offset + rodFlickVy[i]));
+      // Stop at boundaries
+      if(rods[i].offset <= -rods[i].maxOffset || rods[i].offset >= rods[i].maxOffset) {
+        rodFlickVy[i] = 0;
+      } else {
+        rodFlickVy[i] *= FLICK_FRICTION;
+      }
+    }
   }
 }
 
@@ -636,7 +804,7 @@ function updateAI() {
   }
 
   const targetOffset = ball.y - (closestFigY - rod.offset);
-  const aiSpeed = 3.5 + Math.random() * 0.5;
+  const aiSpeed = 2.8 + Math.random() * 0.5; // slower AI to match game pace
   if(Math.abs(targetOffset - rod.offset) > 3) {
     rod.offset += Math.sign(targetOffset - rod.offset) * Math.min(aiSpeed, Math.abs(targetOffset - rod.offset));
   }
@@ -659,6 +827,13 @@ function updateAI() {
 // ================================================
 //  PHYSICS
 // ================================================
+// Store previous figure positions for push detection
+let prevFigPositions = [];
+
+function storeFigPositions() {
+  prevFigPositions = rods.map(rod => rodFigYs(rod).slice());
+}
+
 function updateBall() {
   if(serveDelay > 0) { serveDelay--; if(serveDelay === 0) serveBall(); return; }
 
@@ -672,74 +847,148 @@ function updateBall() {
   ball.x += ball.vx;
   ball.y += ball.vy;
 
-  // Wall bouncing
+  // Wall bouncing (top/bottom)
   if(ball.y - BALL_R < WALL)       { ball.y = WALL + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
   if(ball.y + BALL_R > FH - WALL)  { ball.y = FH - WALL - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
 
+  // Goal detection - simplified & reliable
   const goalTop = (FH - GOAL_H) / 2;
   const goalBot = goalTop + GOAL_H;
-  const inGoalY = ball.y > goalTop && ball.y < goalBot;
+  const inGoalY = ball.y > goalTop + BALL_R && ball.y < goalBot - BALL_R;
 
-  // Left wall
+  // Left side
   if(ball.x - BALL_R < WALL) {
-    if(inGoalY && ball.x < -GOAL_D) {
-      scoreGoal(2); return;
-    } else if(!inGoalY || ball.x - BALL_R > 0) {
+    if(inGoalY) {
+      // Ball is in goal opening - let it pass through, check for goal
+      if(ball.x + BALL_R < 0) {
+        // Ball fully past the goal line = GOAL!
+        scoreGoal(2); return;
+      }
+      // Goal mouth top/bottom walls
+      if(ball.y - BALL_R < goalTop) { ball.y = goalTop + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
+      if(ball.y + BALL_R > goalBot) { ball.y = goalBot - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+      // Back wall of goal
+      if(ball.x - BALL_R < -GOAL_D) { ball.x = -GOAL_D + BALL_R; ball.vx = Math.abs(ball.vx) * BOUNCE_DAMP; }
+    } else {
+      // Not in goal opening - bounce off wall
       ball.x = WALL + BALL_R;
       ball.vx = Math.abs(ball.vx) * BOUNCE_DAMP;
-    }
-    if(inGoalY && ball.x < WALL) {
-      if(ball.y - BALL_R < goalTop) { ball.y = goalTop + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
-      if(ball.y + BALL_R > goalBot) { ball.y = goalBot - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+      // Add minimum bounce if stuck
+      if(Math.abs(ball.vx) < 0.5) ball.vx = 1.5;
     }
   }
 
-  // Right wall
+  // Right side
   if(ball.x + BALL_R > FW - WALL) {
-    if(inGoalY && ball.x > FW + GOAL_D) {
-      scoreGoal(1); return;
-    } else if(!inGoalY || ball.x + BALL_R < FW) {
+    if(inGoalY) {
+      // Ball is in goal opening - let it pass through
+      if(ball.x - BALL_R > FW) {
+        // Ball fully past the goal line = GOAL!
+        scoreGoal(1); return;
+      }
+      // Goal mouth top/bottom walls
+      if(ball.y - BALL_R < goalTop) { ball.y = goalTop + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
+      if(ball.y + BALL_R > goalBot) { ball.y = goalBot - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+      // Back wall of goal
+      if(ball.x + BALL_R > FW + GOAL_D) { ball.x = FW + GOAL_D - BALL_R; ball.vx = -Math.abs(ball.vx) * BOUNCE_DAMP; }
+    } else {
       ball.x = FW - WALL - BALL_R;
       ball.vx = -Math.abs(ball.vx) * BOUNCE_DAMP;
-    }
-    if(inGoalY && ball.x > FW - WALL) {
-      if(ball.y - BALL_R < goalTop) { ball.y = goalTop + BALL_R; ball.vy = Math.abs(ball.vy) * BOUNCE_DAMP; }
-      if(ball.y + BALL_R > goalBot) { ball.y = goalBot - BALL_R; ball.vy = -Math.abs(ball.vy) * BOUNCE_DAMP; }
+      if(Math.abs(ball.vx) < 0.5) ball.vx = -1.5;
     }
   }
 
-  // Figure collisions
+  // Figure collisions - velocity-dependent bounce (realistic physics)
   const now = performance.now();
-  for(const rod of rods) {
+  const MIN_BOUNCE = 1.5; // minimum bounce so ball never gets completely stuck
+
+  for(let ri = 0; ri < rods.length; ri++) {
+    const rod = rods[ri];
     const isKicking = rod.kicking && (now - rod.kickTime < KICK_DUR);
     if(rod.kicking && !isKicking) rod.kicking = false;
 
-    for(const fy of rodFigYs(rod)) {
-      const rect = rodFigRect(rod, fy, isKicking);
-      const cx = Math.max(rect.x1, Math.min(ball.x, rect.x2));
-      const cy = Math.max(rect.y1, Math.min(ball.y, rect.y2));
+    const currentFigYs = rodFigYs(rod);
+    const prevFigYs = prevFigPositions[ri] || currentFigYs;
+
+    for(let fi = 0; fi < currentFigYs.length; fi++) {
+      const fy = currentFigYs[fi];
+      const prevFy = prevFigYs[fi] || fy;
+      const figVy = fy - prevFy; // figure movement speed this frame
+      const figSpeed = Math.abs(figVy); // absolute movement speed
+
+      // Use expanded hitbox: include the foot area always
+      const hw = FIG_W/2 + 8;
+      const hh = FIG_H/2;
+      let x1 = rod.x - hw, x2 = rod.x + hw;
+      const y1 = fy - hh, y2 = fy + hh;
+
+      if(isKicking) {
+        if(rod.kickDir > 0) x2 += FIG_KICK_EXT;
+        else x1 -= FIG_KICK_EXT;
+      }
+
+      // Circle-rect collision
+      const cx = Math.max(x1, Math.min(ball.x, x2));
+      const cy = Math.max(y1, Math.min(ball.y, y2));
       const dx = ball.x - cx, dy = ball.y - cy;
       const dist = Math.sqrt(dx*dx + dy*dy);
 
       if(dist < BALL_R) {
-        if(dist === 0) { ball.x += rod.kickDir; continue; }
+        if(dist === 0) {
+          ball.x += rod.kickDir * (BALL_R + 2);
+          ball.vx += rod.kickDir * MIN_BOUNCE;
+          continue;
+        }
+
         const nx = dx/dist, ny = dy/dist;
-        ball.x = cx + nx * BALL_R;
-        ball.y = cy + ny * BALL_R;
+        // Push ball out
+        ball.x = cx + nx * (BALL_R + 1);
+        ball.y = cy + ny * (BALL_R + 1);
 
         if(isKicking) {
-          ball.vx = rod.kickDir * KICK_POWER + (Math.random()-0.5)*1.5;
-          ball.vy = (ball.y - fy) * 0.12 + (Math.random()-0.5)*2;
+          // Kick: strong directional hit
+          ball.vx = rod.kickDir * KICK_POWER + (Math.random()-0.5)*1.2;
+          ball.vy = (ball.y - fy) * 0.15 + (Math.random()-0.5)*1.5;
         } else {
+          // === Velocity-dependent bounce (realistic) ===
+          // Calculate impact speed: combination of ball speed + figure speed
+          const ballSpd = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+          const impactSpeed = ballSpd + figSpeed * 1.2;
+
+          // Dynamic bounce factor: faster impact = stronger bounce
+          // Slow contact (~0-1): gentle, dampFactor ~0.3
+          // Medium contact (~2-4): moderate, dampFactor ~0.6
+          // Fast contact (~5+): strong, dampFactor ~0.85
+          const dampFactor = Math.min(0.9, 0.25 + impactSpeed * 0.1);
+
+          // Reflect ball velocity
           const dot = ball.vx*nx + ball.vy*ny;
           ball.vx -= 2*dot*nx;
           ball.vy -= 2*dot*ny;
-          ball.vx *= BOUNCE_DAMP;
-          ball.vy *= BOUNCE_DAMP;
+          ball.vx *= dampFactor;
+          ball.vy *= dampFactor;
+
+          // Add push from figure movement (moving figure transfers energy)
+          if(figSpeed > 0.5) {
+            // Transfer figure's vertical momentum to ball
+            ball.vy += figVy * (0.8 + figSpeed * 0.15);
+            // Also push horizontally proportional to figure speed
+            ball.vx += nx * figSpeed * 0.6;
+          }
+
+          // Ensure minimum bounce so ball never gets permanently stuck
+          const resultSpd = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
+          if(resultSpd < MIN_BOUNCE) {
+            ball.vx += nx * MIN_BOUNCE;
+            ball.vy += ny * MIN_BOUNCE * 0.5;
+          }
         }
       }
     }
   }
+
+  // Store current positions for next frame's push detection
+  storeFigPositions();
 }
 
 function scoreGoal(player) {
@@ -787,6 +1036,7 @@ function startGame(mode) {
   initRods();
   resetBall();
   buildRodButtons();
+  storeFigPositions(); // Initialize previous positions
   gameActive = true;
 
   clearInterval(timerInterval);
@@ -860,19 +1110,35 @@ function render() {
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.beginPath(); ctx.arc(FW/2, FH/2, 4, 0, Math.PI*2); ctx.fill();
 
-  // Goals
+  // Goals - draw goal area with depth
   const goalTop = (FH - GOAL_H) / 2;
   const goalBot = goalTop + GOAL_H;
 
-  ctx.fillStyle = '#1a1a1a';
+  // Left goal opening + depth area
+  ctx.fillStyle = '#111';
   ctx.fillRect(0, goalTop, WALL, GOAL_H);
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  // Goal net pattern
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
   ctx.lineWidth = 1;
-  for(let y=goalTop;y<goalBot;y+=12){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WALL,y);ctx.stroke();}
+  for(let y=goalTop;y<goalBot;y+=10){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WALL,y);ctx.stroke();}
+  for(let x=0;x<WALL;x+=10){ctx.beginPath();ctx.moveTo(x,goalTop);ctx.lineTo(x,goalBot);ctx.stroke();}
+  // Goal posts (white lines at top/bottom of opening)
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(WALL, goalTop); ctx.lineTo(0, goalTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(WALL, goalBot); ctx.lineTo(0, goalBot); ctx.stroke();
 
-  ctx.fillStyle = '#1a1a1a';
+  // Right goal opening + depth area
+  ctx.fillStyle = '#111';
   ctx.fillRect(FW-WALL, goalTop, WALL, GOAL_H);
-  for(let y=goalTop;y<goalBot;y+=12){ctx.beginPath();ctx.moveTo(FW-WALL,y);ctx.lineTo(FW,y);ctx.stroke();}
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  for(let y=goalTop;y<goalBot;y+=10){ctx.beginPath();ctx.moveTo(FW-WALL,y);ctx.lineTo(FW,y);ctx.stroke();}
+  for(let x=FW-WALL;x<FW;x+=10){ctx.beginPath();ctx.moveTo(x,goalTop);ctx.lineTo(x,goalBot);ctx.stroke();}
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(FW-WALL, goalTop); ctx.lineTo(FW, goalTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(FW-WALL, goalBot); ctx.lineTo(FW, goalBot); ctx.stroke();
 
   // Goal flash
   if(goalFlash > 0) {
