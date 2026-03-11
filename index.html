@@ -16,6 +16,7 @@
       --accent-1: #ff6b8a;
       --accent-2: #4ecdc4;
       --accent-3: #ffd93d;
+      --accent-4: #8b5cf6;
       --text: #e8e8f0;
       --text-dim: #6a6a80;
     }
@@ -152,6 +153,9 @@
     .game-card:nth-child(3)::before {
       background: radial-gradient(circle at 50% 0%, rgba(255, 217, 61, 0.1), transparent 70%);
     }
+    .game-card:nth-child(4)::before {
+      background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.1), transparent 70%);
+    }
 
     .game-card:hover::before { opacity: 1; }
 
@@ -163,6 +167,7 @@
     .game-card:nth-child(1):hover { border-color: rgba(255, 107, 138, 0.4); }
     .game-card:nth-child(2):hover { border-color: rgba(78, 205, 196, 0.4); }
     .game-card:nth-child(3):hover { border-color: rgba(255, 217, 61, 0.4); }
+    .game-card:nth-child(4):hover { border-color: rgba(139, 92, 246, 0.4); }
 
     /* Icon area */
     .game-icon {
@@ -193,6 +198,10 @@
       background: linear-gradient(135deg, rgba(255, 217, 61, 0.15), rgba(255, 217, 61, 0.05));
       border: 1px solid rgba(255, 217, 61, 0.25);
     }
+    .game-card:nth-child(4) .game-icon {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
 
     .game-title {
       position: relative;
@@ -206,6 +215,7 @@
     .game-card:nth-child(1) .game-title { color: var(--accent-1); }
     .game-card:nth-child(2) .game-title { color: var(--accent-2); }
     .game-card:nth-child(3) .game-title { color: var(--accent-3); }
+    .game-card:nth-child(4) .game-title { color: var(--accent-4); }
 
     .game-desc {
       position: relative;
@@ -259,6 +269,7 @@
     .game-card:nth-child(1) { animation-delay: 0.15s; }
     .game-card:nth-child(2) { animation-delay: 0.3s; }
     .game-card:nth-child(3) { animation-delay: 0.45s; }
+    .game-card:nth-child(4) { animation-delay: 0.6s; }
 
     @keyframes cardIn {
       to { opacity: 1; transform: translateY(0); }
@@ -296,7 +307,7 @@
   <!-- Floating particles -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const colors = ['#ff6b8a', '#4ecdc4', '#ffd93d'];
+      const colors = ['#ff6b8a', '#4ecdc4', '#ffd93d', '#8b5cf6'];
       for (let i = 0; i < 18; i++) {
         const p = document.createElement('div');
         p.className = 'particle';
@@ -339,6 +350,13 @@
         <div class="game-icon">🧠</div>
         <div class="game-title">神経衰弱</div>
         <p class="game-desc">裏返されたカードの中からペアを見つけよう。記憶力を駆使して、最少手数でのクリアを目指せ。</p>
+        <div class="play-btn">PLAY <span class="arrow">→</span></div>
+      </a>
+
+      <a href="othello/index.html" class="game-card">
+        <div class="game-icon">⚫⚪</div>
+        <div class="game-title">オセロ</div>
+        <p class="game-desc">石をはさんでひっくり返そう。相手より多くの石を盤面に残して勝利を目指せ。</p>
         <div class="play-btn">PLAY <span class="arrow">→</span></div>
       </a>
 
