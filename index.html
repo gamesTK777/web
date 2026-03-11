@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAME$ TK777 ARCADE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-dark: #0a0a0f;
+      --card-bg: #12121c;
+      --border-glow: rgba(120, 200, 255, 0.15);
+      --accent-1: #ff6b8a;
+      --accent-2: #4ecdc4;
+      --accent-3: #ffd93d;
+      --text: #e8e8f0;
+      --text-dim: #6a6a80;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(rgba(120, 200, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120, 200, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridMove 20s linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(60px, 60px); }
+    }
+
+    /* Floating particles */
+    .particle {
+      position: fixed;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      opacity: 0.4;
+      z-index: 0;
+      animation: float linear infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 0.4; }
+      90% { opacity: 0.4; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .logo {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(1.4rem, 4vw, 2.4rem);
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .logo span:nth-child(1) { color: var(--accent-1); }
+    .logo span:nth-child(2) { color: var(--accent-2); }
+    .logo span:nth-child(3) { color: var(--accent-3); }
+
+    .logo::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-2), transparent);
+    }
+
+    .subtitle {
+      margin-top: 24px;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    /* Game Cards */
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 28px;
+    }
+
+    .game-card {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid var(--border-glow);
+      border-radius: 16px;
+      padding: 36px 28px 32px;
+      text-decoration: none;
+      color: var(--text);
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      z-index: 0;
+    }
+
+    .game-card:nth-child(1)::before {
+      background: radial-gradient(circle at 50% 0%, rgba(255, 107, 138, 0.1), transparent 70%);
+    }
+    .game-card:nth-child(2)::before {
+      background: radial-gradient(circle at 50% 0%, rgba(78, 205, 196, 0.1), transparent 70%);
+    }
+    .game-card:nth-child(3)::before {
+      background: radial-gradient(circle at 50% 0%, rgba(255, 217, 61, 0.1), transparent 70%);
+    }
+
+    .game-card:hover::before { opacity: 1; }
+
+    .game-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .game-card:nth-child(1):hover { border-color: rgba(255, 107, 138, 0.4); }
+    .game-card:nth-child(2):hover { border-color: rgba(78, 205, 196, 0.4); }
+    .game-card:nth-child(3):hover { border-color: rgba(255, 217, 61, 0.4); }
+
+    /* Icon area */
+    .game-icon {
+      position: relative;
+      z-index: 1;
+      width: 96px;
+      height: 96px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      margin-bottom: 24px;
+      transition: transform 0.3s ease;
+    }
+
+    .game-card:hover .game-icon { transform: scale(1.08) rotate(-2deg); }
+
+    .game-card:nth-child(1) .game-icon {
+      background: linear-gradient(135deg, rgba(255, 107, 138, 0.15), rgba(255, 107, 138, 0.05));
+      border: 1px solid rgba(255, 107, 138, 0.25);
+    }
+    .game-card:nth-child(2) .game-icon {
+      background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
+      border: 1px solid rgba(78, 205, 196, 0.25);
+    }
+    .game-card:nth-child(3) .game-icon {
+      background: linear-gradient(135deg, rgba(255, 217, 61, 0.15), rgba(255, 217, 61, 0.05));
+      border: 1px solid rgba(255, 217, 61, 0.25);
+    }
+
+    .game-title {
+      position: relative;
+      z-index: 1;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+
+    .game-card:nth-child(1) .game-title { color: var(--accent-1); }
+    .game-card:nth-child(2) .game-title { color: var(--accent-2); }
+    .game-card:nth-child(3) .game-title { color: var(--accent-3); }
+
+    .game-desc {
+      position: relative;
+      z-index: 1;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+
+    .play-btn {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 28px;
+      border-radius: 100px;
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      transition: all 0.3s ease;
+    }
+
+    .play-btn .arrow {
+      transition: transform 0.3s ease;
+      font-size: 1rem;
+    }
+
+    .game-card:hover .play-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .game-card:hover .play-btn .arrow {
+      transform: translateX(4px);
+    }
+
+    /* Staggered entrance animation */
+    .game-card {
+      opacity: 0;
+      transform: translateY(30px);
+      animation: cardIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .game-card:nth-child(1) { animation-delay: 0.15s; }
+    .game-card:nth-child(2) { animation-delay: 0.3s; }
+    .game-card:nth-child(3) { animation-delay: 0.45s; }
+
+    @keyframes cardIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    header {
+      opacity: 0;
+      animation: fadeIn 0.8s ease 0s forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 72px;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .container { padding: 40px 16px 60px; }
+      .games { gap: 20px; }
+      .game-card { padding: 28px 20px 24px; }
+      .game-icon { width: 80px; height: 80px; font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating particles -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const colors = ['#ff6b8a', '#4ecdc4', '#ffd93d'];
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.animationDuration = (8 + Math.random() * 14) + 's';
+        p.style.animationDelay = (Math.random() * 10) + 's';
+        document.body.appendChild(p);
+      }
+    });
+  </script>
+
+  <div class="container">
+    <header>
+      <div class="logo">
+        <span>GAME$</span>&nbsp;
+        <span>TK777</span>&nbsp;
+        <span>ARCADE</span>
+      </div>
+      <p class="subtitle">— ブラウザで遊べるクラシックゲーム —</p>
+    </header>
+
+    <div class="games">
+
+      <a href="solitaire/index.html" class="game-card">
+        <div class="game-icon">🃏</div>
+        <div class="game-title">ソリティア</div>
+        <p class="game-desc">定番のカードゲーム。カードを並べ替えて、すべてのカードをホームセルに移動させよう。</p>
+        <div class="play-btn">PLAY <span class="arrow">→</span></div>
+      </a>
+
+      <a href="minesweeper/index.html" class="game-card">
+        <div class="game-icon">💣</div>
+        <div class="game-title">マインスイーパー</div>
+        <p class="game-desc">地雷を避けてすべてのマスを開こう。数字のヒントを頼りに、論理的に安全なマスを見つけ出せ。</p>
+        <div class="play-btn">PLAY <span class="arrow">→</span></div>
+      </a>
+
+      <a href="memory/index.html" class="game-card">
+        <div class="game-icon">🧠</div>
+        <div class="game-title">神経衰弱</div>
+        <p class="game-desc">裏返されたカードの中からペアを見つけよう。記憶力を駆使して、最少手数でのクリアを目指せ。</p>
+        <div class="play-btn">PLAY <span class="arrow">→</span></div>
+      </a>
+
+    </div>
+
+    <footer>&copy; 2026 GAME$ TK777 ARCADE</footer>
+  </div>
+
+</body>
+</html>
