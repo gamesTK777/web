@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🎀 オセロで遊ぼう 🎀</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(135deg, #fce4ec 0%, #f3e5f5 40%, #ede7f6 70%, #e8eaf6 100%);
+  min-height: 100vh;
+  user-select: none;
+  overflow-x: hidden;
+}
+
+/* ── FLOATING BG ── */
+.bg-float {
+  position: fixed; pointer-events: none; z-index: 0;
+  font-size: 1.8rem; opacity: 0.07;
+  animation: floatUp 18s linear infinite;
+}
+@keyframes floatUp {
+  0%   { transform: translateY(110vh) rotate(0deg); }
+  100% { transform: translateY(-15vh) rotate(360deg); }
+}
+
+/* ── TITLE SCREEN ── */
+#title-screen {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; padding: 24px;
+  text-align: center; position: relative; z-index: 1;
+}
+.title-logo { font-size: 3.2rem; margin-bottom: 4px; }
+.title-text {
+  font-size: 2.4rem; font-weight: 900;
+  background: linear-gradient(135deg, #e91e8c 0%, #9c27b0 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+}
+.title-sub { font-size: 0.95rem; color: #b06090; margin-bottom: 36px; font-weight: 700; }
+
+.chars-preview { display: flex; gap: 24px; align-items: center; margin-bottom: 40px; }
+.char-wrap { text-align: center; }
+.char-canvas {
+  width: 88px; height: 88px; border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  display: block; margin: 0 auto 8px;
+}
+.char-label { font-size: 0.8rem; font-weight: 800; color: #8a4070; line-height: 1.3; }
+.vs-badge {
+  background: linear-gradient(135deg, #e91e8c, #9c27b0);
+  color: white; border-radius: 50%; width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 900;
+  box-shadow: 0 4px 12px rgba(233,30,140,0.4);
+}
+
+.mode-buttons { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 310px; }
+.mode-btn {
+  padding: 20px 28px; border: none; border-radius: 22px;
+  font-family: 'Nunito', sans-serif; font-size: 1.05rem; font-weight: 800;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  text-align: left; display: flex; align-items: center; gap: 14px;
+}
+.mode-btn-1p { background: linear-gradient(135deg, #f8bbd0, #e91e8c); color: white; }
+.mode-btn-2p { background: linear-gradient(135deg, #b3e5fc, #0288d1); color: white; }
+.mode-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.18); }
+.mode-btn:active { transform: translateY(0); }
+.btn-icon-big { font-size: 2rem; flex-shrink: 0; }
+.btn-text-wrap { display: flex; flex-direction: column; }
+.btn-main { font-size: 1.05rem; }
+.btn-sub { font-size: 0.75rem; opacity: 0.85; font-weight: 600; margin-top: 2px; }
+
+/* ── GAME SCREEN ── */
+#game-screen {
+  display: none; flex-direction: column;
+  align-items: center; padding: 14px 12px 30px;
+  width: 100%; max-width: 500px;
+  margin: 0 auto; position: relative; z-index: 1;
+}
+
+.game-header {
+  display: flex; align-items: center;
+  justify-content: space-between; width: 100%; margin-bottom: 12px;
+}
+.back-btn {
+  background: rgba(255,255,255,0.8); border: none;
+  border-radius: 12px; padding: 8px 16px;
+  font-family: 'Nunito', sans-serif; font-size: 0.9rem; font-weight: 800;
+  cursor: pointer; color: #e91e8c; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.15s;
+}
+.back-btn:hover { transform: translateY(-1px); }
+.game-title-text {
+  font-size: 1.15rem; font-weight: 900;
+  background: linear-gradient(135deg, #e91e8c, #9c27b0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.mode-pill {
+  background: linear-gradient(135deg, #e91e8c, #9c27b0);
+  color: white; border-radius: 12px; padding: 6px 14px;
+  font-size: 0.8rem; font-weight: 800;
+}
+
+/* Score panels */
+.score-row {
+  display: flex; gap: 10px; width: 100%; margin-bottom: 12px;
+}
+.player-panel {
+  flex: 1; background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(12px); border-radius: 18px;
+  padding: 10px 14px; display: flex; align-items: center;
+  gap: 10px; box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+  transition: all 0.25s; position: relative; overflow: hidden;
+}
+.player-panel::before {
+  content: ''; position: absolute; inset: 0;
+  border-radius: 18px; border: 2.5px solid transparent;
+  transition: border-color 0.25s;
+}
+.player-panel.active::before { border-color: #e91e8c; }
+.player-panel.active.blue-turn::before { border-color: #0288d1; }
+.player-panel.active {
+  box-shadow: 0 0 0 2px rgba(233,30,140,0.2), 0 6px 20px rgba(233,30,140,0.15);
+  transform: scale(1.02);
+}
+.player-panel.active.blue-turn {
+  box-shadow: 0 0 0 2px rgba(2,136,209,0.2), 0 6px 20px rgba(2,136,209,0.15);
+}
+.disc-sm {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+}
+.pinfo { flex: 1; min-width: 0; }
+.pname {
+  font-size: 0.7rem; font-weight: 700; color: #aaa;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pscore { font-size: 2rem; font-weight: 900; color: #333; line-height: 1; }
+
+.turn-arrow {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 1.2rem; opacity: 0; transition: opacity 0.2s;
+}
+.player-panel.active .turn-arrow { opacity: 1; }
+
+/* Board */
+#board {
+  display: grid; grid-template-columns: repeat(8, 1fr);
+  gap: 3px; padding: 10px;
+  background: linear-gradient(145deg, #2e7d32, #1b5e20);
+  border-radius: 18px; width: 100%;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25),
+              inset 0 2px 0 rgba(255,255,255,0.1),
+              inset 0 -2px 0 rgba(0,0,0,0.2);
+}
+.cell {
+  background: radial-gradient(circle at 35% 35%, #4caf50, #2e7d32);
+  border-radius: 7px; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: default; position: relative; transition: background 0.12s;
+}
+.cell.clickable { cursor: pointer; }
+.cell.clickable:hover { background: radial-gradient(circle at 35% 35%, #66bb6a, #43a047); }
+.cell.valid-hint::after {
+  content: ''; position: absolute;
+  width: 34%; height: 34%; border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  animation: hint-pulse 1.4s ease-in-out infinite;
+}
+@keyframes hint-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50%       { transform: scale(1.35); opacity: 0.7; }
+}
+
+.disc-canvas {
+  width: 84%; height: 84%; border-radius: 50%;
+  display: block;
+}
+/* Flip animation */
+.disc-canvas.flip {
+  animation: discFlip 0.38s ease-in-out;
+}
+@keyframes discFlip {
+  0%   { transform: scale(1) scaleX(1); }
+  40%  { transform: scale(0.85) scaleX(0.1); }
+  100% { transform: scale(1) scaleX(1); }
+}
+/* Place animation */
+.disc-canvas.place {
+  animation: discPlace 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes discPlace {
+  0%   { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+/* Status bar */
+.status-bar {
+  margin-top: 12px; width: 100%;
+  background: rgba(255,255,255,0.78); backdrop-filter: blur(12px);
+  border-radius: 16px; padding: 12px 20px;
+  font-size: 0.95rem; font-weight: 700; color: #666;
+  text-align: center; box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+  min-height: 46px; display: flex; align-items: center; justify-content: center;
+}
+
+/* Game Over overlay */
+#gameover-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 500;
+  align-items: center; justify-content: center; padding: 20px;
+}
+#gameover-overlay.show { display: flex; }
+.gameover-card {
+  background: white; border-radius: 28px; padding: 36px 36px;
+  text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+  animation: bounceIn 0.5s; max-width: 300px; width: 100%;
+}
+@keyframes bounceIn {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.go-emoji   { font-size: 3.8rem; margin-bottom: 8px; }
+.go-title   { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+.go-score   { font-size: 1rem; color: #999; margin-bottom: 26px; font-weight: 700; }
+.go-buttons { display: flex; gap: 10px; }
+.go-btn {
+  flex: 1; padding: 14px; border: none; border-radius: 16px;
+  font-family: 'Nunito', sans-serif; font-size: 0.95rem; font-weight: 800;
+  cursor: pointer; transition: all 0.15s;
+}
+.go-btn-primary { background: linear-gradient(135deg, #f48fb1, #e91e8c); color: white; }
+.go-btn-secondary { background: #f3f3f3; color: #888; }
+.go-btn:hover { transform: translateY(-2px); }
+
+/* Confetti */
+.confetti { position: fixed; width: 10px; height: 10px; border-radius: 2px;
+  pointer-events: none; z-index: 600; animation: cFall 3s ease-in forwards; }
+@keyframes cFall {
+  0%   { transform: translateY(-40px) rotate(0); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+@media (max-width: 380px) {
+  #board { gap: 2px; padding: 7px; border-radius: 12px; }
+  .cell { border-radius: 4px; }
+  .player-panel { padding: 8px 10px; gap: 7px; }
+  .disc-sm { width: 38px; height: 38px; }
+  .pscore { font-size: 1.7rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Floating BG emojis -->
+<script>
+  ['🎀','🌸','⭐','💜','🍓','🖤','💕','🌷','✨','🎀'].forEach((e,i) => {
+    const d = document.createElement('div');
+    d.className = 'bg-float'; d.textContent = e;
+    d.style.left = (i*11+Math.random()*5)+'vw';
+    d.style.animationDelay = -(Math.random()*18)+'s';
+    d.style.animationDuration = (14+Math.random()*10)+'s';
+    document.body.appendChild(d);
+  });
+</script>
+
+<!-- TITLE SCREEN -->
+<div id="title-screen">
+  <div class="title-logo">🎀💜🖤</div>
+  <div class="title-text">オセロで遊ぼう</div>
+  <div class="title-sub">マイメロディ × クロミ</div>
+
+  <div class="chars-preview">
+    <div class="char-wrap">
+      <canvas id="prev-p1" class="char-canvas" width="88" height="88"></canvas>
+      <div class="char-label">🎀 マイメロ<br>ディ</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="char-wrap">
+      <canvas id="prev-p2" class="char-canvas" width="88" height="88"></canvas>
+      <div class="char-label">🖤 クロミ</div>
+    </div>
+  </div>
+
+  <div class="mode-buttons">
+    <button class="mode-btn mode-btn-1p" onclick="startGame(1)">
+      <span class="btn-icon-big">🤖</span>
+      <span class="btn-text-wrap">
+        <span class="btn-main">1人プレイ（CPU対戦）</span>
+        <span class="btn-sub">コンピューターと対戦しよう！</span>
+      </span>
+    </button>
+    <button class="mode-btn mode-btn-2p" onclick="startGame(2)">
+      <span class="btn-icon-big">👫</span>
+      <span class="btn-text-wrap">
+        <span class="btn-main">2人プレイ（対人対戦）</span>
+        <span class="btn-sub">友だちと一緒に遊ぼう！</span>
+      </span>
+    </button>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen">
+  <div class="game-header">
+    <button class="back-btn" onclick="goTitle()">← もどる</button>
+    <div class="game-title-text">🎀 オセロで遊ぼう</div>
+    <div class="mode-pill" id="mode-pill">1P</div>
+  </div>
+
+  <div class="score-row">
+    <div class="player-panel" id="panel-p1">
+      <canvas class="disc-sm" id="disc-p1" width="46" height="46"></canvas>
+      <div class="pinfo">
+        <div class="pname">マイメロディ</div>
+        <div class="pscore" id="score-p1">2</div>
+      </div>
+      <div class="turn-arrow">▶</div>
+    </div>
+    <div class="player-panel" id="panel-p2">
+      <canvas class="disc-sm" id="disc-p2" width="46" height="46"></canvas>
+      <div class="pinfo">
+        <div class="pname" id="p2-label">CPU（クロミ）</div>
+        <div class="pscore" id="score-p2">2</div>
+      </div>
+      <div class="turn-arrow">▶</div>
+    </div>
+  </div>
+
+  <div id="board"></div>
+  <div class="status-bar" id="status-bar">🎀 ゲーム開始！</div>
+</div>
+
+<!-- Game Over -->
+<div id="gameover-overlay">
+  <div class="gameover-card">
+    <div class="go-emoji" id="go-emoji">🎉</div>
+    <div class="go-title" id="go-title">引き分け！</div>
+    <div class="go-score" id="go-score"></div>
+    <div class="go-buttons">
+      <button class="go-btn go-btn-primary" onclick="restartGame()">🔄 もう一度</button>
+      <button class="go-btn go-btn-secondary" onclick="goTitle()">🏠 タイトル</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+//  CHARACTER ART (Canvas drawing)
+// =============================================
+
+// ── マイメロディ (My Melody) ──
+// 特徴: 大きなピンクのフード（ボンネット）、2本のうさ耳、シンプルな丸顔
+function drawMyMelody(canvas, size) {
+  const s = size || canvas.width;
+  canvas.width = s; canvas.height = s;
+  const ctx = canvas.getContext('2d');
+  const cx = s/2, cy = s/2, r = s * 0.46;
+
+  // ① 背景: 淡いピンク
+  ctx.beginPath(); ctx.arc(cx, cy, s*0.49, 0, Math.PI*2);
+  ctx.fillStyle = '#ffb3cc'; ctx.fill();
+
+  // ② うさ耳（フードの後ろに隠れる形）
+  // 左耳 外側
+  ctx.fillStyle = '#f48fb1';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.3, cy - r*0.68, r*0.16, r*0.42, -0.08, 0, Math.PI*2); ctx.fill();
+  // 左耳 内側
+  ctx.fillStyle = '#ffd6e7';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.3, cy - r*0.68, r*0.08, r*0.28, -0.08, 0, Math.PI*2); ctx.fill();
+  // 右耳 外側
+  ctx.fillStyle = '#f48fb1';
+  ctx.beginPath(); ctx.ellipse(cx + r*0.3, cy - r*0.68, r*0.16, r*0.42, 0.08, 0, Math.PI*2); ctx.fill();
+  // 右耳 内側
+  ctx.fillStyle = '#ffd6e7';
+  ctx.beginPath(); ctx.ellipse(cx + r*0.3, cy - r*0.68, r*0.08, r*0.28, 0.08, 0, Math.PI*2); ctx.fill();
+
+  // ③ フード本体（頭全体を覆う大きな丸みのある帽子形）
+  // フードの形: 頭の上から両側・顎まで包むベル型
+  ctx.fillStyle = '#f8bbd0';
+  ctx.beginPath();
+  ctx.moveTo(cx - r*0.78, cy + r*0.38);
+  ctx.quadraticCurveTo(cx - r*0.95, cy - r*0.1,  cx - r*0.62, cy - r*0.62);
+  ctx.quadraticCurveTo(cx - r*0.18, cy - r*0.92, cx,          cy - r*0.9);
+  ctx.quadraticCurveTo(cx + r*0.18, cy - r*0.92, cx + r*0.62, cy - r*0.62);
+  ctx.quadraticCurveTo(cx + r*0.95, cy - r*0.1,  cx + r*0.78, cy + r*0.38);
+  ctx.quadraticCurveTo(cx + r*0.6,  cy + r*0.72, cx,          cy + r*0.76);
+  ctx.quadraticCurveTo(cx - r*0.6,  cy + r*0.72, cx - r*0.78, cy + r*0.38);
+  ctx.closePath(); ctx.fill();
+
+  // ④ フードの縁取り（顔の開口部をぐるっと線で示す）
+  ctx.strokeStyle = '#f06292'; ctx.lineWidth = s * 0.025; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(cx, cy + r*0.1, r*0.54, Math.PI*0.88, Math.PI*0.12, false);
+  ctx.stroke();
+
+  // ⑤ 顔（白い楕円: フードの開口部）
+  ctx.beginPath(); ctx.ellipse(cx, cy + r*0.14, r*0.5, r*0.48, 0, 0, Math.PI*2);
+  ctx.fillStyle = '#fffbfc'; ctx.fill();
+
+  // ⑥ 目（小さな黒丸）
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(cx - r*0.17, cy + r*0.08, r*0.068, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r*0.17, cy + r*0.08, r*0.068, 0, Math.PI*2); ctx.fill();
+  // 目のハイライト
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.arc(cx - r*0.145, cy + r*0.05, r*0.024, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r*0.192, cy + r*0.05, r*0.024, 0, Math.PI*2); ctx.fill();
+
+  // ⑦ 鼻（ピンクの小さな丸）
+  ctx.fillStyle = '#f48fb1';
+  ctx.beginPath(); ctx.arc(cx, cy + r*0.21, r*0.052, 0, Math.PI*2); ctx.fill();
+
+  // ⑧ ほっぺ
+  ctx.fillStyle = 'rgba(244,143,177,0.32)';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.32, cy + r*0.22, r*0.15, r*0.09, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + r*0.32, cy + r*0.22, r*0.15, r*0.09, 0, 0, Math.PI*2); ctx.fill();
+
+  // ⑨ リボン（フードの左上に小さなリボン飾り）
+  const rx = cx + r*0.5, ry = cy - r*0.54;
+  ctx.save(); ctx.translate(rx, ry);
+  ctx.fillStyle = '#e91e8c';
+  ctx.beginPath(); ctx.ellipse(-r*0.15, 0, r*0.15, r*0.09,  0.3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( r*0.15, 0, r*0.15, r*0.09, -0.3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff80ab';
+  ctx.beginPath(); ctx.arc(0, 0, r*0.07, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// ── クロミ (Kuromi) ──
+// 特徴: 黒いジェスター帽（ドクロ付き）、白い丸顔、大きな目と長いまつ毛、小さなキバ
+function drawKuromi(canvas, size) {
+  const s = size || canvas.width;
+  canvas.width = s; canvas.height = s;
+  const ctx = canvas.getContext('2d');
+  const cx = s/2, cy = s/2, r = s * 0.46;
+
+  // ① 背景: 深い紫
+  ctx.beginPath(); ctx.arc(cx, cy, s*0.49, 0, Math.PI*2);
+  ctx.fillStyle = '#2d1b4e'; ctx.fill();
+
+  // ② 黒いうさ耳（帽子の後ろ）
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.29, cy - r*0.62, r*0.17, r*0.43, -0.08, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + r*0.29, cy - r*0.62, r*0.17, r*0.43,  0.08, 0, Math.PI*2); ctx.fill();
+  // 耳内側 (紫)
+  ctx.fillStyle = '#7b1fa2';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.29, cy - r*0.62, r*0.08, r*0.28, -0.08, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + r*0.29, cy - r*0.62, r*0.08, r*0.28,  0.08, 0, Math.PI*2); ctx.fill();
+
+  // ③ 黒いジェスター帽（下端がギザギザ波形）
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  // 帽子の上部: 半円
+  ctx.arc(cx, cy - r*0.16, r*0.74, Math.PI, 0, false);
+  // 帽子の下端: ギザギザ（6つの山）
+  const hY0 = cy - r*0.16 + r*0.02; // 帽子の付け根Y
+  const hL  = cx - r*0.74;
+  const hR  = cx + r*0.74;
+  ctx.lineTo(hR, hY0);
+  const teeth = 6;
+  for(let i = 0; i <= teeth; i++) {
+    const px = hR - (i / teeth) * (hR - hL);
+    const py = hY0 + (i % 2 === 0 ? r*0.16 : r*0.0);
+    ctx.lineTo(px, py);
+  }
+  ctx.lineTo(hL, hY0);
+  ctx.closePath(); ctx.fill();
+
+  // 帽子のツヤ（左上に薄いハイライト）
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.2, cy - r*0.55, r*0.26, r*0.15, -0.4, 0, Math.PI*2); ctx.fill();
+
+  // ④ 帽子の中央に大きなピンクのドクロバッジ
+  const skx = cx, sky = cy - r*0.44;
+  // ドクロの頭部
+  ctx.fillStyle = '#f48fb1';
+  ctx.beginPath(); ctx.arc(skx, sky, r*0.185, 0, Math.PI*2); ctx.fill();
+  // ドクロの顎
+  ctx.beginPath();
+  ctx.roundRect
+    ? ctx.roundRect(skx - r*0.12, sky + r*0.1, r*0.24, r*0.12, r*0.04)
+    : ctx.rect(skx - r*0.12, sky + r*0.1, r*0.24, r*0.12);
+  ctx.fill();
+  // ドクロの目（黒い丸）
+  ctx.fillStyle = '#2d1b4e';
+  ctx.beginPath(); ctx.arc(skx - r*0.075, sky - r*0.02, r*0.052, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(skx + r*0.075, sky - r*0.02, r*0.052, 0, Math.PI*2); ctx.fill();
+  // ドクロの歯（横線2本）
+  ctx.strokeStyle = '#2d1b4e'; ctx.lineWidth = s * 0.018;
+  ctx.beginPath(); ctx.moveTo(skx - r*0.08, sky + r*0.14); ctx.lineTo(skx + r*0.08, sky + r*0.14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(skx, sky + r*0.1); ctx.lineTo(skx, sky + r*0.22); ctx.stroke();
+
+  // ⑤ 白い丸顔
+  ctx.beginPath(); ctx.arc(cx, cy + r*0.18, r*0.66, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+
+  // ⑥ 目（大きめ、少しつり目）
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.22, cy + r*0.1,  r*0.105, r*0.115, 0.12, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + r*0.22, cy + r*0.1, r*0.105, r*0.115, -0.12, 0, Math.PI*2); ctx.fill();
+  // 目のハイライト
+  ctx.fillStyle = 'white';
+  ctx.beginPath(); ctx.arc(cx - r*0.185, cy + r*0.06, r*0.034, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + r*0.255, cy + r*0.06, r*0.034, 0, Math.PI*2); ctx.fill();
+
+  // ⑦ まつ毛（各目の上に3本）
+  ctx.strokeStyle = '#111'; ctx.lineWidth = s * 0.024; ctx.lineCap = 'round';
+  // 左目
+  [[-r*0.31, cy+r*0.02, -r*0.38, cy-r*0.06],
+   [-r*0.22, cy-r*0.01, -r*0.22, cy-r*0.12],
+   [-r*0.13, cy+r*0.02, -r*0.07, cy-r*0.06]
+  ].forEach(([x1,y1,x2,y2]) => {
+    ctx.beginPath(); ctx.moveTo(cx+x1,y1); ctx.lineTo(cx+x2,y2); ctx.stroke();
+  });
+  // 右目
+  [[ r*0.31, cy+r*0.02,  r*0.38, cy-r*0.06],
+   [ r*0.22, cy-r*0.01,  r*0.22, cy-r*0.12],
+   [ r*0.13, cy+r*0.02,  r*0.07, cy-r*0.06]
+  ].forEach(([x1,y1,x2,y2]) => {
+    ctx.beginPath(); ctx.moveTo(cx+x1,y1); ctx.lineTo(cx+x2,y2); ctx.stroke();
+  });
+
+  // ⑧ 小さな鼻（紫の点）
+  ctx.fillStyle = '#9c27b0';
+  ctx.beginPath(); ctx.arc(cx, cy + r*0.26, r*0.048, 0, Math.PI*2); ctx.fill();
+
+  // ⑨ いたずらっぽいスマイル＋キバ
+  ctx.strokeStyle = '#333'; ctx.lineWidth = s * 0.023;
+  ctx.beginPath();
+  ctx.arc(cx, cy + r*0.3, r*0.22, Math.PI*0.14, Math.PI*0.86, false);
+  ctx.stroke();
+  // キバ（白い三角形2本）
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.moveTo(cx - r*0.11, cy + r*0.36);
+  ctx.lineTo(cx - r*0.07, cy + r*0.47);
+  ctx.lineTo(cx - r*0.03, cy + r*0.36);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + r*0.03, cy + r*0.36);
+  ctx.lineTo(cx + r*0.07, cy + r*0.47);
+  ctx.lineTo(cx + r*0.11, cy + r*0.36);
+  ctx.fill();
+
+  // ⑩ ほっぺ（薄ピンク）
+  ctx.fillStyle = 'rgba(244,143,177,0.2)';
+  ctx.beginPath(); ctx.ellipse(cx - r*0.44, cy + r*0.24, r*0.17, r*0.1, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + r*0.44, cy + r*0.24, r*0.17, r*0.1, 0, 0, Math.PI*2); ctx.fill();
+}
+
+// Draw previews on page load
+window.addEventListener('DOMContentLoaded', () => {
+  drawMyMelody(document.getElementById('prev-p1'), 88);
+  drawKuromi(document.getElementById('prev-p2'), 88);
+  drawMyMelody(document.getElementById('disc-p1'), 46);
+  drawKuromi(document.getElementById('disc-p2'), 46);
+});
+
+// =============================================
+//  GAME CONSTANTS & STATE
+// =============================================
+const P1 = 1, P2 = 2, EMPTY = 0;
+const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+// Positional weight table (classic Othello strategy)
+const WEIGHTS = [
+  [120,-20, 20,  5,  5, 20,-20,120],
+  [-20,-40, -5, -5, -5, -5,-40,-20],
+  [ 20, -5, 15,  3,  3, 15, -5, 20],
+  [  5, -5,  3,  3,  3,  3, -5,  5],
+  [  5, -5,  3,  3,  3,  3, -5,  5],
+  [ 20, -5, 15,  3,  3, 15, -5, 20],
+  [-20,-40, -5, -5, -5, -5,-40,-20],
+  [120,-20, 20,  5,  5, 20,-20,120]
+];
+
+let board = [];
+let currentPlayer = P1;
+let gameMode = 1;         // 1 = vs CPU, 2 = 2 players
+let gameActive = false;
+let cpuThinking = false;
+
+// =============================================
+//  BOARD LOGIC
+// =============================================
+function initBoard() {
+  board = Array.from({length: 8}, () => new Array(8).fill(EMPTY));
+  board[3][3] = P1; board[3][4] = P2;
+  board[4][3] = P2; board[4][4] = P1;
+}
+
+function getFlips(bd, row, col, player) {
+  if(bd[row][col] !== EMPTY) return [];
+  const opp = player === P1 ? P2 : P1;
+  const flips = [];
+  for(const [dr,dc] of DIRS) {
+    let r = row+dr, c = col+dc;
+    const line = [];
+    while(r>=0 && r<8 && c>=0 && c<8 && bd[r][c] === opp) {
+      line.push([r,c]); r += dr; c += dc;
+    }
+    if(line.length > 0 && r>=0 && r<8 && c>=0 && c<8 && bd[r][c] === player)
+      flips.push(...line);
+  }
+  return flips;
+}
+
+function getValidMoves(bd, player) {
+  const moves = [];
+  for(let r = 0; r < 8; r++)
+    for(let c = 0; c < 8; c++)
+      if(getFlips(bd, r, c, player).length > 0) moves.push([r,c]);
+  return moves;
+}
+
+function countPieces(bd) {
+  let p1=0, p2=0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) {
+    if(bd[r][c]===P1) p1++; else if(bd[r][c]===P2) p2++;
+  }
+  return {p1, p2};
+}
+
+// =============================================
+//  AI — Minimax with α-β pruning
+// =============================================
+function evalBoard(bd, aiPlayer) {
+  const opp = aiPlayer === P1 ? P2 : P1;
+  let score = 0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) {
+    if(bd[r][c] === aiPlayer)  score += WEIGHTS[r][c];
+    else if(bd[r][c] === opp)  score -= WEIGHTS[r][c];
+  }
+  score += (getValidMoves(bd, aiPlayer).length - getValidMoves(bd, opp).length) * 5;
+  return score;
+}
+
+function minimax(bd, depth, alpha, beta, isMax, aiPlayer) {
+  const mover = isMax ? aiPlayer : (aiPlayer===P1 ? P2 : P1);
+  const moves = getValidMoves(bd, mover);
+
+  if(depth === 0 || moves.length === 0) {
+    if(moves.length === 0) {
+      const otherMoves = getValidMoves(bd, mover===P1 ? P2 : P1);
+      if(otherMoves.length === 0) {
+        const {p1, p2} = countPieces(bd);
+        const d = aiPlayer===P1 ? p1-p2 : p2-p1;
+        return d > 0 ? 10000 : d < 0 ? -10000 : 0;
+      }
+    }
+    return evalBoard(bd, aiPlayer);
+  }
+
+  if(isMax) {
+    let best = -Infinity;
+    for(const [r,c] of moves) {
+      const nb = bd.map(row => [...row]);
+      const fl = getFlips(nb, r, c, mover);
+      nb[r][c] = mover; fl.forEach(([fr,fc]) => nb[fr][fc] = mover);
+      best = Math.max(best, minimax(nb, depth-1, alpha, beta, false, aiPlayer));
+      alpha = Math.max(alpha, best);
+      if(beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for(const [r,c] of moves) {
+      const nb = bd.map(row => [...row]);
+      const fl = getFlips(nb, r, c, mover);
+      nb[r][c] = mover; fl.forEach(([fr,fc]) => nb[fr][fc] = mover);
+      best = Math.min(best, minimax(nb, depth-1, alpha, beta, true, aiPlayer));
+      beta = Math.min(beta, best);
+      if(beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+function getBestMove(bd, player) {
+  const moves = getValidMoves(bd, player);
+  if(!moves.length) return null;
+  let empty = 0;
+  for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(bd[r][c]===EMPTY) empty++;
+  const depth = empty <= 12 ? 8 : 5;
+  let bestVal = -Infinity, bestMove = moves[0];
+  for(const [r,c] of moves) {
+    const nb = bd.map(row => [...row]);
+    const fl = getFlips(nb, r, c, player);
+    nb[r][c] = player; fl.forEach(([fr,fc]) => nb[fr][fc] = player);
+    const val = minimax(nb, depth-1, -Infinity, Infinity, false, player);
+    if(val > bestVal) { bestVal = val; bestMove = [r,c]; }
+  }
+  return bestMove;
+}
+
+// =============================================
+//  RENDERING
+// =============================================
+function renderBoard(flippedCells, placedCell) {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+
+  const showHints = gameActive && !(gameMode===1 && currentPlayer===P2);
+  const validMoves = showHints ? getValidMoves(board, currentPlayer) : [];
+  const validSet = new Set(validMoves.map(([r,c]) => r*8+c));
+
+  for(let r=0; r<8; r++) {
+    for(let c=0; c<8; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+
+      if(board[r][c] !== EMPTY) {
+        const cvs = document.createElement('canvas');
+        cvs.className = 'disc-canvas';
+        cvs.width = 60; cvs.height = 60;
+        if(board[r][c] === P1) drawMyMelody(cvs, 60);
+        else drawKuromi(cvs, 60);
+        // Animation
+        if(flippedCells && flippedCells.some(([fr,fc]) => fr===r && fc===c)) {
+          cvs.classList.add('flip');
+        } else if(placedCell && placedCell[0]===r && placedCell[1]===c) {
+          cvs.classList.add('place');
+        }
+        cell.appendChild(cvs);
+      } else if(validSet.has(r*8+c)) {
+        cell.classList.add('valid-hint', 'clickable');
+        const _r=r, _c=c;
+        cell.addEventListener('click', () => handleClick(_r, _c));
+      }
+
+      boardEl.appendChild(cell);
+    }
+  }
+
+  // Scores
+  const {p1, p2} = countPieces(board);
+  document.getElementById('score-p1').textContent = p1;
+  document.getElementById('score-p2').textContent = p2;
+
+  // Turn highlight
+  const pp1 = document.getElementById('panel-p1');
+  const pp2 = document.getElementById('panel-p2');
+  pp1.classList.toggle('active', currentPlayer===P1 && gameActive);
+  pp2.classList.toggle('active', currentPlayer===P2 && gameActive);
+  pp2.classList.toggle('blue-turn', currentPlayer===P2 && gameActive);
+}
+
+function setStatus(html) {
+  document.getElementById('status-bar').innerHTML = html;
+}
+
+// =============================================
+//  GAME FLOW
+// =============================================
+function startGame(mode) {
+  gameMode = mode;
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'flex';
+  document.getElementById('gameover-overlay').classList.remove('show');
+  document.getElementById('mode-pill').textContent = mode===1 ? '1P' : '2P';
+  document.getElementById('p2-label').textContent = mode===1 ? 'CPU（クロミ）' : 'クロミ';
+
+  initBoard();
+  currentPlayer = P1;
+  cpuThinking = false;
+  gameActive = true;
+
+  renderBoard();
+  setStatus('🎀 マイメロディの番だよ！');
+}
+
+function goTitle() {
+  gameActive = false; cpuThinking = false;
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('title-screen').style.display = 'flex';
+  document.getElementById('gameover-overlay').classList.remove('show');
+}
+
+function restartGame() {
+  document.getElementById('gameover-overlay').classList.remove('show');
+  startGame(gameMode);
+}
+
+function handleClick(r, c) {
+  if(!gameActive || cpuThinking) return;
+  if(gameMode===1 && currentPlayer===P2) return;
+  const flips = getFlips(board, r, c, currentPlayer);
+  if(!flips.length) return;
+  executeMove(r, c, flips);
+}
+
+function executeMove(r, c, flips) {
+  board[r][c] = currentPlayer;
+  flips.forEach(([fr,fc]) => board[fr][fc] = currentPlayer);
+  renderBoard(flips, [r,c]);
+  advanceTurn();
+}
+
+function advanceTurn() {
+  const next = currentPlayer===P1 ? P2 : P1;
+  const nextMoves = getValidMoves(board, next);
+  const curMoves  = getValidMoves(board, currentPlayer);
+
+  if(nextMoves.length===0 && curMoves.length===0) {
+    setTimeout(endGame, 400);
+    return;
+  }
+
+  if(nextMoves.length===0) {
+    // Next player must pass
+    const passName = next===P1 ? 'マイメロディ' : (gameMode===1 ? 'CPU（クロミ）' : 'クロミ');
+    setStatus(`⏭️ ${passName}はパス！もう一度あなたの番です`);
+    // currentPlayer stays the same
+    renderBoard();
+    if(gameMode===1 && currentPlayer===P2) {
+      setTimeout(doCpuMove, 1200);
+    }
+    return;
+  }
+
+  currentPlayer = next;
+
+  if(gameMode===1 && currentPlayer===P2) {
+    renderBoard();
+    setStatus('🤖 クロミCPUが考え中... 💭');
+    setTimeout(doCpuMove, 700);
+  } else {
+    renderBoard();
+    if(currentPlayer===P1) setStatus('🎀 マイメロディの番だよ！');
+    else setStatus('🖤 クロミの番だよ！');
+  }
+}
+
+function doCpuMove() {
+  if(!gameActive) return;
+  cpuThinking = true;
+  // Use setTimeout to allow UI to update before heavy computation
+  setTimeout(() => {
+    const move = getBestMove(board, P2);
+    cpuThinking = false;
+    if(!gameActive) return;
+    if(move) {
+      const [r,c] = move;
+      const flips = getFlips(board, r, c, P2);
+      executeMove(r, c, flips);
+    } else {
+      // CPU must pass
+      setStatus('⏭️ CPUはパス！マイメロディの番です');
+      currentPlayer = P1;
+      renderBoard();
+      setStatus('🎀 マイメロディの番だよ！');
+    }
+  }, 50);
+}
+
+function endGame() {
+  gameActive = false;
+  renderBoard();
+  const {p1, p2} = countPieces(board);
+  const emojiEl  = document.getElementById('go-emoji');
+  const titleEl  = document.getElementById('go-title');
+  const scoreEl  = document.getElementById('go-score');
+
+  scoreEl.textContent = `マイメロディ ${p1} 対 クロミ ${p2}`;
+
+  if(p1 > p2) {
+    emojiEl.textContent = '🎀✨';
+    titleEl.textContent = 'マイメロディの勝ち！';
+    titleEl.style.color = '#e91e8c';
+    launchConfetti();
+  } else if(p2 > p1) {
+    if(gameMode===1) {
+      emojiEl.textContent = '😢';
+      titleEl.textContent = 'CPUの勝ち…';
+    } else {
+      emojiEl.textContent = '🖤✨';
+      titleEl.textContent = 'クロミの勝ち！';
+      launchConfetti();
+    }
+    titleEl.style.color = '#7b1fa2';
+  } else {
+    emojiEl.textContent = '🌸';
+    titleEl.textContent = '引き分け！';
+    titleEl.style.color = '#9e9e9e';
+  }
+
+  setTimeout(() => {
+    document.getElementById('gameover-overlay').classList.add('show');
+  }, 600);
+}
+
+function launchConfetti() {
+  const colors = ['#f48fb1','#f06292','#ce93d8','#9c27b0','#fff176','#e040fb','#f8bbd0','#ffcc02'];
+  for(let i=0; i<70; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = Math.random()*100+'vw';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.animationDuration = (2+Math.random()*2)+'s';
+      el.style.animationDelay = '0s';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4500);
+    }, i*45);
+  }
+}
+</script>
+</body>
+</html>
