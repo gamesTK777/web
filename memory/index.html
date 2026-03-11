@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>❄️ アナ雪 神経衰弱 ❄️</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Nunito:wght@400;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--card-w:94px;--card-h:132px;--gap:8px;}
+body{font-family:'Nunito',sans-serif;min-height:100vh;
+  background:radial-gradient(ellipse at 30% 0%,#0a2a5e 0%,#050e28 55%,#000310 100%);
+  color:#fff;display:flex;flex-direction:column;align-items:center;
+  overflow-x:hidden;padding-bottom:40px;user-select:none;}
+
+/* Stars */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.star{position:absolute;background:#fff;border-radius:50%;
+  animation:twinkle var(--d,3s) ease-in-out infinite;opacity:0;}
+@keyframes twinkle{0%,100%{opacity:0;}50%{opacity:var(--o,.8);}}
+.flake{position:fixed;pointer-events:none;z-index:1;color:rgba(180,230,255,.18);
+  animation:flakefall var(--fd,12s) linear infinite;font-size:var(--fs,1.2rem);}
+@keyframes flakefall{0%{transform:translateY(-5vh) translateX(0) rotate(0);}
+  100%{transform:translateY(110vh) translateX(var(--fx,20px)) rotate(360deg);}}
+
+/* Header */
+header{position:relative;z-index:10;width:100%;text-align:center;padding:18px 14px 12px;}
+.hdr-icon{font-size:2.4rem;display:block;margin-bottom:2px;
+  animation:hglow 2.5s ease-in-out infinite;}
+@keyframes hglow{0%,100%{filter:drop-shadow(0 0 6px #a5d8ff);}
+  50%{filter:drop-shadow(0 0 22px #a5d8ff) drop-shadow(0 0 50px rgba(100,180,255,.4));}}
+h1{font-family:'Cinzel',serif;font-size:1.55rem;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(180deg,#e0f4ff 0%,#a5d8ff 45%,#5bb0e8 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 1px 6px rgba(100,180,255,.5));}
+.subtitle{font-size:.7rem;letter-spacing:4px;color:rgba(165,216,255,.5);
+  font-family:'Cinzel',serif;margin-top:1px;}
+
+/* Diff tabs */
+.diff-tabs{display:flex;justify-content:center;gap:7px;margin:10px 0 12px;}
+.diff-tab{padding:5px 15px;border:1.5px solid rgba(165,216,255,.3);border-radius:30px;
+  font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;cursor:pointer;
+  transition:all .18s;background:rgba(255,255,255,.04);color:rgba(165,216,255,.7);}
+.diff-tab:hover{background:rgba(165,216,255,.12);border-color:rgba(165,216,255,.6);}
+.diff-tab.active{background:linear-gradient(135deg,#5bb0e8,#2980b9);
+  border-color:transparent;color:#fff;box-shadow:0 3px 14px rgba(91,176,232,.45);}
+
+/* ── PLAYER PANELS ── */
+.players-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 12px;}
+.player-panel{
+  background:rgba(255,255,255,.06);border:2px solid rgba(165,216,255,.2);
+  border-radius:18px;padding:10px 18px;min-width:140px;text-align:center;
+  transition:all .3s;cursor:pointer;position:relative;}
+.player-panel.active{
+  background:rgba(91,176,232,.18);border-color:#5bb0e8;
+  box-shadow:0 0 24px rgba(91,176,232,.4),inset 0 0 20px rgba(91,176,232,.1);}
+.player-panel.active::after{
+  content:'▼ あなたのターン！';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);
+  font-size:.68rem;font-weight:900;color:#5bb0e8;white-space:nowrap;
+  animation:turnPulse 1s ease-in-out infinite;}
+@keyframes turnPulse{0%,100%{opacity:.7;}50%{opacity:1;}}
+.p-name{font-size:.85rem;font-weight:900;color:#e0f4ff;margin-bottom:4px;
+  display:flex;align-items:center;justify-content:center;gap:5px;}
+.p-name input{background:none;border:none;border-bottom:1px solid rgba(165,216,255,.4);
+  color:#e0f4ff;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:900;
+  width:90px;text-align:center;outline:none;padding:1px 2px;}
+.p-name input:focus{border-bottom-color:#5bb0e8;}
+.p-score-row{font-size:1.3rem;font-weight:900;color:#5bb0e8;line-height:1;}
+.p-score-label{font-size:.68rem;color:rgba(165,216,255,.6);margin-top:1px;}
+
+.vs-badge{
+  font-family:'Cinzel',serif;font-size:1rem;font-weight:700;
+  color:rgba(165,216,255,.5);width:32px;text-align:center;}
+
+/* Status */
+.status-bar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+.stat{background:rgba(255,255,255,.06);border:1px solid rgba(165,216,255,.2);
+  border-radius:20px;padding:4px 14px;font-size:.85rem;font-weight:700;
+  color:#a5d8ff;min-width:80px;text-align:center;}
+
+#reset-btn{display:block;margin:8px auto 0;padding:7px 26px;
+  border:1.5px solid rgba(165,216,255,.4);border-radius:30px;
+  background:rgba(165,216,255,.08);color:#a5d8ff;
+  font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:800;
+  cursor:pointer;transition:all .18s;letter-spacing:.8px;}
+#reset-btn:hover{background:rgba(165,216,255,.18);transform:translateY(-2px);}
+
+/* Board */
+#board-wrap{position:relative;z-index:5;margin:18px auto 0;padding:0 10px;width:100%;max-width:960px;}
+#board{display:grid;gap:var(--gap);justify-content:center;}
+
+/* Cards */
+.card{width:var(--card-w);height:var(--card-h);perspective:700px;cursor:pointer;}
+.card-inner{width:100%;height:100%;position:relative;transform-style:preserve-3d;
+  transition:transform .5s cubic-bezier(.4,.2,.2,1);border-radius:12px;}
+.card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg);}
+.card-face{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;overflow:hidden;}
+.card-back{background:linear-gradient(145deg,#0c2a5a,#1a4a8a,#0c2a5a);
+  border:2px solid rgba(165,216,255,.35);
+  box-shadow:0 4px 16px rgba(0,0,0,.6),inset 0 0 30px rgba(10,60,120,.4);}
+.card-front{transform:rotateY(180deg);border:2px solid rgba(165,216,255,.5);
+  box-shadow:0 4px 16px rgba(0,0,0,.5);}
+.card-front svg{width:100%;height:100%;display:block;}
+.card.matched .card-front{border-color:#a5d8ff;
+  box-shadow:0 0 22px rgba(165,216,255,.7),0 0 50px rgba(165,216,255,.2);
+  animation:matchPop .5s ease-out;}
+@keyframes matchPop{0%{transform:rotateY(180deg) scale(.92);}55%{transform:rotateY(180deg) scale(1.1);}100%{transform:rotateY(180deg) scale(1);}}
+.card.wrong .card-front{border-color:#ff7070;animation:wrongFlash .5s;}
+@keyframes wrongFlash{0%,100%{}50%{filter:brightness(1.4) saturate(1.5);}}
+.card:not(.flipped):not(.matched):hover .card-inner{
+  transform:rotateY(12deg) translateY(-5px);
+  filter:drop-shadow(0 10px 20px rgba(165,216,255,.25));}
+
+/* Praise popup */
+#praise-popup{position:fixed;inset:0;z-index:8000;display:none;
+  align-items:center;justify-content:center;pointer-events:none;}
+#praise-popup.show{display:flex;}
+.praise-inner{position:relative;display:flex;flex-direction:column;align-items:center;
+  animation:praiseIn .4s cubic-bezier(.3,.8,.4,1.4);}
+@keyframes praiseIn{0%{transform:scale(0) translateY(40px);opacity:0;}100%{transform:scale(1) translateY(0);opacity:1;}}
+.praise-char-wrap{width:130px;height:165px;
+  filter:drop-shadow(0 0 22px rgba(165,216,255,.9)) drop-shadow(0 0 50px rgba(165,216,255,.35));}
+.praise-char-wrap svg{width:100%;height:100%;}
+.speech-bbl{background:rgba(5,20,60,.92);border:2px solid rgba(165,216,255,.7);
+  border-radius:18px;padding:9px 20px;margin-top:-8px;
+  font-size:1.2rem;font-weight:900;color:#e0f4ff;text-align:center;letter-spacing:1px;
+  box-shadow:0 0 18px rgba(165,216,255,.25);}
+.speech-bbl::before{content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  border-left:10px solid transparent;border-right:10px solid transparent;
+  border-bottom:10px solid rgba(165,216,255,.7);}
+.praise-snow{position:absolute;pointer-events:none;animation:praiseSnow .85s ease-out forwards;}
+@keyframes praiseSnow{0%{transform:translate(0,0) scale(1);opacity:1;}
+  100%{transform:translate(var(--px),var(--py)) scale(.3);opacity:0;}}
+.ice-chip{position:fixed;pointer-events:none;z-index:7999;
+  animation:icefall 1.2s ease-out forwards;}
+@keyframes icefall{0%{transform:translate(0,0) rotate(0deg) scale(1);opacity:1;}
+  100%{transform:translate(var(--ix),var(--iy)) rotate(var(--ir,360deg)) scale(.2);opacity:0;}}
+
+/* Win overlay */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,5,25,.78);
+  z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(5px);}
+#overlay.show{display:flex;}
+.ov-card{background:linear-gradient(160deg,#040e30,#091e52);
+  border:2px solid rgba(165,216,255,.45);border-radius:26px;
+  padding:40px 50px;text-align:center;max-width:92vw;
+  box-shadow:0 0 80px rgba(165,216,255,.12),0 30px 80px rgba(0,0,0,.6);
+  animation:bounceIn .5s;}
+@keyframes bounceIn{0%{transform:scale(.4);opacity:0;}70%{transform:scale(1.06);}100%{transform:scale(1);opacity:1;}}
+.ov-card .big{font-size:3.8rem;margin-bottom:6px;}
+.ov-card h2{font-family:'Cinzel',serif;font-size:1.7rem;font-weight:700;margin-bottom:6px;
+  background:linear-gradient(180deg,#e0f4ff,#a5d8ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ov-scores{display:flex;gap:20px;justify-content:center;margin:12px 0 20px;}
+.ov-pcard{background:rgba(255,255,255,.07);border-radius:14px;padding:10px 20px;
+  border:1.5px solid rgba(165,216,255,.3);}
+.ov-pcard.winner{border-color:#f5c842;box-shadow:0 0 20px rgba(245,200,66,.3);}
+.ov-pcard .ov-pn{font-size:.85rem;color:rgba(165,216,255,.7);margin-bottom:4px;}
+.ov-pcard .ov-ps{font-size:1.8rem;font-weight:900;color:#5bb0e8;}
+.ov-pcard.winner .ov-ps{color:#f5c842;}
+.ov-btn{padding:10px 30px;border:1.5px solid rgba(165,216,255,.5);border-radius:30px;
+  background:rgba(165,216,255,.1);color:#a5d8ff;font-family:'Nunito',sans-serif;
+  font-size:.92rem;font-weight:800;cursor:pointer;transition:all .18s;letter-spacing:.8px;}
+.ov-btn:hover{background:rgba(165,216,255,.22);transform:translateY(-2px);}
+
+.conf{position:fixed;pointer-events:none;z-index:10000;
+  animation:cfall var(--cd,3s) ease-in forwards;}
+@keyframes cfall{0%{transform:translateY(-30px) rotate(0);opacity:1;}
+  100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+
+@media(max-width:640px){:root{--card-w:68px;--card-h:95px;--gap:6px;}
+  .player-panel{min-width:110px;padding:8px 10px;}}
+@media(max-width:400px){:root{--card-w:56px;--card-h:78px;--gap:4px;}
+  .player-panel{min-width:90px;}}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+
+<script>
+// Stars
+const sb=document.getElementById('stars');
+for(let i=0;i<180;i++){
+  const s=document.createElement('div');s.className='star';
+  const sz=Math.random()*2.5+.8;
+  s.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;width:${sz}px;height:${sz}px;--d:${2+Math.random()*5}s;--o:${.3+Math.random()*.7};animation-delay:${-Math.random()*5}s;`;
+  sb.appendChild(s);
+}
+for(let i=0;i<20;i++){
+  const el=document.createElement('div');el.className='flake';
+  el.textContent=['❄','❅','❆','✦','*'][Math.floor(Math.random()*5)];
+  el.style.cssText=`left:${Math.random()*100}vw;--fd:${8+Math.random()*14}s;--fs:${.7+Math.random()*1.3}rem;--fx:${(Math.random()-.5)*60}px;animation-delay:${-Math.random()*14}s;`;
+  document.body.appendChild(el);
+}
+</script>
+
+<header>
+  <span class="hdr-icon">❄️</span>
+  <h1>FROZEN MEMORY</h1>
+  <div class="subtitle">～ アナ雪 神経衰弱 対戦版 ～</div>
+  <div class="diff-tabs">
+    <button class="diff-tab active" onclick="setDiff('easy')">⭐ やさしい (6ペア)</button>
+    <button class="diff-tab" onclick="setDiff('medium')">🌟 ふつう (10ペア)</button>
+    <button class="diff-tab" onclick="setDiff('hard')">💎 むずかしい (18ペア)</button>
+  </div>
+
+  <!-- 2-Player panels -->
+  <div class="players-row">
+    <div class="player-panel active" id="p1-panel">
+      <div class="p-name">🩵 <input type="text" id="p1-name" value="プレイヤー1" maxlength="8"></div>
+      <div class="p-score-row"><span id="p1-score">0</span></div>
+      <div class="p-score-label">ペア獲得</div>
+    </div>
+    <div class="vs-badge">VS</div>
+    <div class="player-panel" id="p2-panel">
+      <div class="p-name">💜 <input type="text" id="p2-name" value="プレイヤー2" maxlength="8"></div>
+      <div class="p-score-row"><span id="p2-score">0</span></div>
+      <div class="p-score-label">ペア獲得</div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="stat">🃏 ペア: <span id="s-pairs">0</span>/<span id="s-total">0</span></div>
+    <div class="stat">⏱️ <span id="s-time">0:00</span></div>
+    <div class="stat">✋ 手数: <span id="s-moves">0</span></div>
+  </div>
+  <button id="reset-btn" onclick="newGame()">❄️ はじめから ❄️</button>
+</header>
+
+<div id="board-wrap"><div id="board"></div></div>
+
+<!-- Praise popup -->
+<div id="praise-popup">
+  <div class="praise-inner" id="praise-inner">
+    <div class="praise-char-wrap" id="praise-svg"></div>
+    <div style="position:relative">
+      <div class="speech-bbl" id="praise-text"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Win overlay -->
+<div id="overlay">
+  <div class="ov-card">
+    <div class="big" id="ov-icon">🏆</div>
+    <h2 id="ov-title">ゲーム終了！</h2>
+    <div class="ov-scores">
+      <div class="ov-pcard" id="ov-p1c">
+        <div class="ov-pn" id="ov-p1n">プレイヤー1</div>
+        <div class="ov-ps"><span id="ov-p1s">0</span> ペア</div>
+      </div>
+      <div class="ov-pcard" id="ov-p2c">
+        <div class="ov-pn" id="ov-p2n">プレイヤー2</div>
+        <div class="ov-ps"><span id="ov-p2s">0</span> ペア</div>
+      </div>
+    </div>
+    <button class="ov-btn" onclick="newGame();document.getElementById('overlay').classList.remove('show')">❄️ もう一度あそぶ</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//   CHARACTER SVG DEFINITIONS
+// ============================================================
+
+// Helper: base label band
+function lbl(name){
+  return `<rect x="4" y="101" width="72" height="8" rx="3" fill="rgba(0,0,0,.35)"/>
+  <text x="40" y="107.5" font-size="5.5" text-anchor="middle" fill="rgba(255,255,255,.92)" font-family="Nunito,sans-serif" font-weight="700">${name}</text>`;
+}
+// Helper: linear gradient defs
+function bgdef(uid,c1,c2){
+  return `<defs><linearGradient id="bg${uid}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>`;
+}
+// Helper: bg rect
+function bgrect(uid){ return `<rect width="80" height="110" fill="url(#bg${uid})" rx="10"/>`; }
+// Helper: corner snowflakes
+function corners(op=.12){
+  return `<text x="5" y="18" font-size="9" fill="rgba(255,255,255,${op})" font-family="Arial">❄</text>
+  <text x="64" y="15" font-size="7" fill="rgba(255,255,255,${op*.8})" font-family="Arial">❄</text>
+  <text x="5" y="102" font-size="7" fill="rgba(255,255,255,${op*.8})" font-family="Arial">❄</text>
+  <text x="65" y="104" font-size="9" fill="rgba(255,255,255,${op})" font-family="Arial">❄</text>`;
+}
+// Helper: human face
+function face(opts){
+  const {skin='#ffe9d5',skin2='#ffd5b0',uid,eyes='#5bb0e8',brow='#a06010',blush=true,lx=33,rx=47,ey=51,wink=false,smile='M34 65 Q40 70 46 65'} = opts;
+  const leftEyeArt = wink
+    ? `<path d="M29 ${ey} Q33 ${ey-3} 37 ${ey}" stroke="${brow}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`
+    : `<ellipse cx="${lx}" cy="${ey}" rx="4" ry="4.5" fill="white"/>
+       <circle cx="${lx+.5}" cy="${ey+.5}" r="3" fill="${eyes}"/>
+       <circle cx="${lx+.5}" cy="${ey+.5}" r="1.7" fill="#111"/>
+       <circle cx="${lx+1.5}" cy="${ey-.5}" r=".85" fill="rgba(255,255,255,.9)"/>`;
+  return `<defs><radialGradient id="sk${uid}" cx="48%" cy="38%" r="58%">
+    <stop offset="0%" stop-color="${skin}"/><stop offset="100%" stop-color="${skin2}"/></radialGradient></defs>
+  <!-- Neck --><rect x="35" y="66" width="10" height="12" fill="url(#sk${uid})" rx="3"/>
+  <!-- Head --><ellipse cx="40" cy="52" rx="18" ry="20" fill="url(#sk${uid})"/>
+  <!-- Ears --><ellipse cx="22" cy="53" rx="3" ry="4" fill="url(#sk${uid})"/>
+  <ellipse cx="58" cy="53" rx="3" ry="4" fill="url(#sk${uid})"/>
+  <!-- Eyes -->${leftEyeArt}
+  <ellipse cx="${rx}" cy="${ey}" rx="4" ry="4.5" fill="white"/>
+  <circle cx="${rx+.5}" cy="${ey+.5}" r="3" fill="${eyes}"/>
+  <circle cx="${rx+.5}" cy="${ey+.5}" r="1.7" fill="#111"/>
+  <circle cx="${rx+1.5}" cy="${ey-.5}" r=".85" fill="rgba(255,255,255,.9)"/>
+  <!-- Brows --><path d="M28.5 45 Q33 42.5 37 44.5" stroke="${brow}" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  <path d="M43 44.5 Q47 42.5 51.5 45" stroke="${brow}" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  <!-- Nose --><ellipse cx="40" cy="59" rx="2" ry="1.5" fill="rgba(200,110,90,.33)"/>
+  ${blush?`<ellipse cx="27" cy="60" rx="5.5" ry="3" fill="rgba(255,150,150,.22)"/>
+  <ellipse cx="53" cy="60" rx="5.5" ry="3" fill="rgba(255,150,150,.22)"/>` : ''}
+  <!-- Mouth --><path d="${smile}" stroke="#c06055" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="${smile}" stroke="rgba(255,180,170,.3)" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+}
+
+// ─────── 18 CHARACTER SVGs ───────
+function charSVG(c, uid) {
+  switch(c.id) {
+// ① エルサ
+case 'elsa': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#0d3b6e','#1a7abf')}${bgrect(uid)}${corners()}
+  <!-- Dress --><path d="M26 78 Q40 100 54 78 Q54 94 40 106 Q26 94 26 78Z" fill="rgba(130,195,235,.55)"/>
+  <ellipse cx="40" cy="98" rx="22" ry="14" fill="rgba(150,210,240,.45)"/>
+  <!-- Braid --><path d="M20 60 Q13 76 17 100" stroke="#c8a820" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M20 60 Q13 76 17 100" stroke="#e8c840" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+  <path d="M20 60 Q13 76 17 100" stroke="rgba(255,245,140,.4)" stroke-width="3" fill="none" stroke-dasharray="5,4" stroke-linecap="round"/>
+  <!-- Hair back --><ellipse cx="40" cy="50" rx="21" ry="23" fill="#d8d080"/>
+  ${face({uid,skin:'#ffe9d5',skin2:'#ffd5b0',eyes:'#5bb0e8',brow:'#909030',smile:'M34 65 Q40 70 46 65'})}
+  <!-- Hair front --><path d="M22 43 Q25 27 40 26 Q55 27 58 43 Q52 33 40 32 Q28 33 22 43Z" fill="#d8d080"/>
+  <!-- Updo bun --><ellipse cx="40" cy="29" rx="11" ry="9" fill="#d0c878"/>
+  <path d="M29 36 Q27 50 28 57" stroke="#d0c878" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Crown --><path d="M23 37 L27 29 L31 37 L36 24 L40 35 L44 24 L49 37 L53 29 L57 37" stroke="#f5d060" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+  <circle cx="36" cy="24" r="2" fill="#f5d060"/><circle cx="44" cy="24" r="2" fill="#f5d060"/>
+  ${lbl('❄ エルサ')}</svg>`;
+
+// ② アナ
+case 'anna': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#1a4a2e','#2e8a50')}${bgrect(uid)}${corners()}
+  <!-- Dress --><path d="M22 76 Q40 100 58 76 Q58 94 40 108 Q22 94 22 76Z" fill="rgba(200,80,100,.55)"/>
+  <ellipse cx="40" cy="98" rx="24" ry="15" fill="rgba(160,60,80,.45)"/>
+  <!-- Cape/wrap --><path d="M18 68 Q20 85 40 90 Q60 85 62 68" fill="rgba(80,160,100,.4)" stroke="rgba(100,200,120,.5)" stroke-width="1"/>
+  <!-- Left braid --><path d="M20 60 Q10 75 14 102" stroke="#8B4513" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M20 60 Q10 75 14 102" stroke="#b85820" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+  <!-- Hair back --><ellipse cx="40" cy="50" rx="21" ry="23" fill="#a04820"/>
+  ${face({uid,skin:'#ffe0c8',skin2:'#ffcbb0',eyes:'#5090c8',brow:'#7a3510',smile:'M32 64 Q40 72 48 64',blush:true})}
+  <!-- Freckles --><circle cx="29" cy="61" r="1.2" fill="rgba(180,90,50,.35)"/>
+  <circle cx="32" cy="63" r="1" fill="rgba(180,90,50,.3)"/>
+  <circle cx="48" cy="61" r="1.2" fill="rgba(180,90,50,.35)"/>
+  <circle cx="51" cy="63" r="1" fill="rgba(180,90,50,.3)"/>
+  <!-- Hair front --><path d="M22 42 Q25 26 40 25 Q55 26 58 42 Q52 32 40 31 Q28 32 22 42Z" fill="#a04820"/>
+  <!-- Right braid --><path d="M60 60 Q70 75 66 102" stroke="#8B4513" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M60 60 Q70 75 66 102" stroke="#b85820" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+  ${lbl('🌸 アナ')}</svg>`;
+
+// ③ オラフ
+case 'olaf': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#2060a0','#50a0e0')}${bgrect(uid)}
+  <text x="5" y="18" font-size="9" fill="rgba(255,255,255,.15)" font-family="Arial">❄</text>
+  <text x="64" y="15" font-size="7" fill="rgba(255,255,255,.12)" font-family="Arial">❄</text>
+  <!-- Snow ground --><ellipse cx="40" cy="105" rx="30" ry="8" fill="rgba(255,255,255,.12)"/>
+  <!-- Body (bottom) --><ellipse cx="40" cy="92" rx="22" ry="20" fill="#f0f8ff"/>
+  <ellipse cx="40" cy="92" rx="22" ry="20" fill="none" stroke="rgba(150,200,230,.4)" stroke-width="1"/>
+  <circle cx="36" cy="88" r="2.5" fill="#333"/>
+  <circle cx="40" cy="94" r="2.5" fill="#333"/>
+  <circle cx="44" cy="100" r="2.5" fill="#333"/>
+  <!-- Stick arms --><path d="M18 90 Q14 83 10 78" stroke="#8B4513" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <path d="M10 78 Q12 75 13 73" stroke="#8B4513" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M62 90 Q66 83 70 78" stroke="#8B4513" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <path d="M70 78 Q68 75 67 73" stroke="#8B4513" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <!-- Middle body --><ellipse cx="40" cy="72" rx="17" ry="14" fill="#f0f8ff"/>
+  <ellipse cx="40" cy="72" rx="17" ry="14" fill="none" stroke="rgba(150,200,230,.4)" stroke-width="1"/>
+  <!-- Buttons on middle --><circle cx="40" cy="64" r="2" fill="#333"/>
+  <circle cx="40" cy="71" r="2" fill="#333"/>
+  <!-- Scarf --><path d="M23 62 Q40 58 57 62 Q57 67 40 67 Q23 67 23 62Z" fill="#c0302a"/>
+  <path d="M23 62 Q25 70 27 76" stroke="#c0302a" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Head --><ellipse cx="40" cy="44" rx="19" ry="18" fill="#f0f8ff"/>
+  <ellipse cx="40" cy="44" rx="19" ry="18" fill="none" stroke="rgba(150,200,230,.4)" stroke-width="1"/>
+  <!-- Twig hair --><path d="M34 27 Q36 20 38 15" stroke="#8B4513" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <path d="M38 15 Q37 12 39 10" stroke="#8B4513" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M38 15 Q40 11 42 13" stroke="#8B4513" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <path d="M40 26 Q41 20 44 16" stroke="#8B4513" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Coal eyes --><circle cx="34" cy="41" r="3.5" fill="#222"/>
+  <circle cx="46" cy="41" r="3.5" fill="#222"/>
+  <circle cx="35.5" cy="39.5" r="1.2" fill="rgba(255,255,255,.85)"/>
+  <circle cx="47.5" cy="39.5" r="1.2" fill="rgba(255,255,255,.85)"/>
+  <!-- Carrot nose --><polygon points="40,47 50,49 40,51" fill="#e07020"/>
+  <!-- Smile --><path d="M32 53 Q35 56 40 56 Q45 56 48 53" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="35" cy="54" r="1.2" fill="#333"/><circle cx="45" cy="54" r="1.2" fill="#333"/>
+  <!-- Rosy cheeks --><ellipse cx="28" cy="47" rx="4.5" ry="2.5" fill="rgba(255,160,160,.3)"/>
+  <ellipse cx="52" cy="47" rx="4.5" ry="2.5" fill="rgba(255,160,160,.3)"/>
+  ${lbl('⛄ オラフ')}</svg>`;
+
+// ④ クリストフ
+case 'kristoff': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#4a2808','#9a6030')}${bgrect(uid)}${corners(.1)}
+  <!-- Body --><rect x="18" y="72" width="44" height="38" rx="6" fill="#6a4020"/>
+  <rect x="20" y="72" width="40" height="10" fill="#8a5030"/>
+  <!-- Suspenders --><path d="M32 72 L28 65" stroke="#3a2010" stroke-width="3" stroke-linecap="round"/>
+  <path d="M48 72 L52 65" stroke="#3a2010" stroke-width="3" stroke-linecap="round"/>
+  <!-- Neck --><rect x="35" y="64" width="10" height="13" fill="#e0b890" rx="3"/>
+  <!-- Hair back --><ellipse cx="40" cy="50" rx="21" ry="22" fill="#c09040"/>
+  <!-- Messy hair strands --><path d="M20 45 Q18 38 20 30 Q25 24 32 25" stroke="#c09040" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M60 45 Q62 38 60 30 Q55 24 48 25" stroke="#c09040" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  ${face({uid,skin:'#e8b888',skin2:'#d8a070',eyes:'#5888d0',brow:'#9a7020',smile:'M34 65 Q40 70 46 65'})}
+  <!-- Hair front messy --><path d="M22 43 Q24 28 40 27 Q56 28 58 43" fill="#c09040"/>
+  <path d="M22 43 Q20 35 23 28 Q26 23 32 24" stroke="#c09040" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <path d="M58 43 Q60 35 57 28 Q54 23 48 24" stroke="#c09040" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Stubble --><rect x="30" y="66" width="20" height="5" rx="2" fill="rgba(160,100,40,.2)"/>
+  ${lbl('⛏️ クリストフ')}</svg>`;
+
+// ⑤ スヴェン
+case 'sven': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#4a2a10','#8a5028')}${bgrect(uid)}${corners(.1)}
+  <!-- Body --><ellipse cx="40" cy="90" rx="28" ry="22" fill="#7a4820"/>
+  <ellipse cx="40" cy="90" rx="28" ry="22" fill="none" stroke="rgba(200,150,80,.3)" stroke-width="1"/>
+  <!-- Blue scarf --><path d="M14 72 Q40 68 66 72 Q66 78 40 80 Q14 78 14 72Z" fill="#2060a0"/>
+  <path d="M48 72 Q52 82 50 92" stroke="#2060a0" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Neck --><ellipse cx="40" cy="72" rx="12" ry="10" fill="#7a4820"/>
+  <!-- Head (wider, reindeer) --><ellipse cx="40" cy="50" rx="22" ry="18" fill="#8a5228"/>
+  <!-- Antlers --><path d="M26 36 Q22 26 18 18 Q20 16 22 18 Q26 24 28 20 Q30 16 32 18 Q30 24 30 28 Q28 32 26 36" fill="#7a4010"/>
+  <path d="M54 36 Q58 26 62 18 Q60 16 58 18 Q54 24 52 20 Q50 16 48 18 Q50 24 50 28 Q52 32 54 36" fill="#7a4010"/>
+  <!-- Forehead light patch --><ellipse cx="40" cy="44" rx="14" ry="8" fill="#c09060" opacity=".5"/>
+  <!-- Eyes (big, friendly) --><ellipse cx="31" cy="47" rx="5.5" ry="6" fill="#e8d0a0"/>
+  <circle cx="31.5" cy="47.5" r="3.5" fill="#604020"/>
+  <circle cx="31.5" cy="47.5" r="2" fill="#111"/>
+  <circle cx="33" cy="46" r="1.2" fill="rgba(255,255,255,.85)"/>
+  <ellipse cx="49" cy="47" rx="5.5" ry="6" fill="#e8d0a0"/>
+  <circle cx="49.5" cy="47.5" r="3.5" fill="#604020"/>
+  <circle cx="49.5" cy="47.5" r="2" fill="#111"/>
+  <circle cx="51" cy="46" r="1.2" fill="rgba(255,255,255,.85)"/>
+  <!-- Big nose --><ellipse cx="40" cy="58" rx="8" ry="6" fill="#c05040"/>
+  <ellipse cx="40" cy="57" rx="6" ry="4" fill="#d86050"/>
+  <ellipse cx="37" cy="56" rx="2" ry="1.5" fill="rgba(255,180,160,.4)"/>
+  <!-- Mouth smile --><path d="M33 63 Q40 68 47 63" stroke="#6a3020" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Cheeks --><ellipse cx="24" cy="53" rx="4" ry="2.5" fill="rgba(200,100,80,.2)"/>
+  <ellipse cx="56" cy="53" rx="4" ry="2.5" fill="rgba(200,100,80,.2)"/>
+  ${lbl('🦌 スヴェン')}</svg>`;
+
+// ⑥ ハンス
+case 'hans': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#0a1830','#183060')}${bgrect(uid)}${corners(.1)}
+  <!-- Military coat --><rect x="16" y="70" width="48" height="40" rx="6" fill="#1a4030"/>
+  <!-- Gold epaulettes --><ellipse cx="19" cy="73" rx="7" ry="4" fill="#c8a020"/><ellipse cx="61" cy="73" rx="7" ry="4" fill="#c8a020"/>
+  <!-- Gold buttons --><circle cx="40" cy="78" r="2" fill="#c8a020"/><circle cx="40" cy="86" r="2" fill="#c8a020"/>
+  <circle cx="40" cy="94" r="2" fill="#c8a020"/>
+  <!-- Collar --><path d="M28 70 L32 64 L40 68 L48 64 L52 70" fill="#1a4030" stroke="#c8a020" stroke-width=".8"/>
+  <!-- Neck --><rect x="35" y="64" width="10" height="10" fill="#ffe0c0" rx="3"/>
+  <!-- Hair back (auburn) --><ellipse cx="40" cy="50" rx="20" ry="21" fill="#7a3820"/>
+  <!-- Sideburns --><path d="M21 52 Q19 60 20 66" stroke="#7a3820" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M59 52 Q61 60 60 66" stroke="#7a3820" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  ${face({uid,skin:'#ffe5c5',skin2:'#ffd5a8',eyes:'#4a8040',brow:'#7a3820',smile:'M34 65 Q40 69 46 65'})}
+  <!-- Hair front slicked --><path d="M22 44 Q24 28 40 27 Q56 28 58 44 Q52 34 40 33 Q28 34 22 44Z" fill="#7a3820"/>
+  <!-- Side part detail --><path d="M26 29 Q30 38 28 46" stroke="#6a2810" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Slight smirk -->
+  ${lbl('🤴 ハンス')}</svg>`;
+
+// ⑦ マシュマロ
+case 'marshmallow': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#102838','#204858')}${bgrect(uid)}${corners(.1)}
+  <!-- Body mass --><ellipse cx="40" cy="92" rx="28" ry="20" fill="#d0e8f0"/>
+  <!-- Ice spike shoulders --><polygon points="14,68 10,50 18,65" fill="#b0d0e0"/><polygon points="10,55 7,40 16,52" fill="#c0dce8"/>
+  <polygon points="66,68 70,50 62,65" fill="#b0d0e0"/><polygon points="70,55 73,40 64,52" fill="#c0dce8"/>
+  <!-- Body upper --><ellipse cx="40" cy="72" rx="26" ry="22" fill="#d8eef6"/>
+  <!-- Ice spikes top --><polygon points="28,50 24,38 32,48" fill="#b0d0e0"/><polygon points="40,48 38,32 44,46" fill="#b0d0e0"/>
+  <polygon points="52,50 56,38 48,48" fill="#b0d0e0"/>
+  <!-- Head --><ellipse cx="40" cy="46" rx="20" ry="18" fill="#e0f0f8"/>
+  <!-- Hollow eyes (scary) --><ellipse cx="31" cy="43" rx="5" ry="6" fill="#1a3a50"/><ellipse cx="49" cy="43" rx="5" ry="6" fill="#1a3a50"/>
+  <ellipse cx="31" cy="43" rx="3" ry="4" fill="#0a1828"/><ellipse cx="49" cy="43" rx="3" ry="4" fill="#0a1828"/>
+  <!-- Ice blue glow in eyes --><ellipse cx="30" cy="42" rx="2" ry="2.5" fill="#4090c0" opacity=".4"/>
+  <ellipse cx="48" cy="42" rx="2" ry="2.5" fill="#4090c0" opacity=".4"/>
+  <!-- Frown / icy snarl --><path d="M31 55 Q40 50 49 55" stroke="#6090b0" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Icicle teeth --><polygon points="33,55 31,62 35,55" fill="#a0c8e0"/><polygon points="38,54 36,62 40,54" fill="#a0c8e0"/>
+  <polygon points="43,54 41,62 45,54" fill="#a0c8e0"/><polygon points="48,55 46,62 50,55" fill="#a0c8e0"/>
+  <!-- Eyebrow furrow --><path d="M26 37 Q31 34 36 37" stroke="#7a9aaa" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M44 37 Q49 34 54 37" stroke="#7a9aaa" stroke-width="2" fill="none" stroke-linecap="round"/>
+  ${lbl('🤖 マシュマロ')}</svg>`;
+
+// ⑧ パビー
+case 'pabbie': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#0a2810','#184820')}${bgrect(uid)}${corners(.1)}
+  <!-- Mossy ground --><ellipse cx="40" cy="105" rx="32" ry="8" fill="rgba(40,120,40,.3)"/>
+  <!-- Rolled body (large green oval) --><ellipse cx="40" cy="88" rx="30" ry="24" fill="#506838"/>
+  <!-- Moss texture --><ellipse cx="30" cy="82" rx="6" ry="4" fill="#3a5028" opacity=".5"/>
+  <ellipse cx="50" cy="92" rx="7" ry="4" fill="#3a5028" opacity=".4"/>
+  <ellipse cx="40" cy="78" rx="5" ry="3" fill="#3a5028" opacity=".5"/>
+  <!-- Crystal necklace --><path d="M26 72 Q40 68 54 72" stroke="#8080c0" stroke-width="1.5" fill="none"/>
+  <polygon points="40,72 37,80 43,80" fill="#a0a0e0" opacity=".8"/>
+  <polygon points="32,71 29,77 35,77" fill="#9090d0" opacity=".7"/>
+  <polygon points="48,71 45,77 51,77" fill="#9090d0" opacity=".7"/>
+  <!-- Head --><ellipse cx="40" cy="52" rx="19" ry="18" fill="#607848"/>
+  <!-- Stone-like texture on head --><ellipse cx="33" cy="46" rx="4" ry="3" fill="rgba(100,150,70,.3)"/>
+  <ellipse cx="48" cy="50" rx="3" ry="2.5" fill="rgba(100,150,70,.3)"/>
+  <!-- Old wise eyes --><ellipse cx="32" cy="50" rx="5" ry="4.5" fill="#e8d8c0"/>
+  <circle cx="32.5" cy="50.5" r="2.8" fill="#4a7030"/>
+  <circle cx="32.5" cy="50.5" r="1.5" fill="#1a2010"/>
+  <ellipse cx="48" cy="50" rx="5" ry="4.5" fill="#e8d8c0"/>
+  <circle cx="48.5" cy="50.5" r="2.8" fill="#4a7030"/>
+  <circle cx="48.5" cy="50.5" r="1.5" fill="#1a2010"/>
+  <!-- Bushy eyebrows --><path d="M26 44 Q32 40 38 44" stroke="#8a9870" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M42 44 Q48 40 54 44" stroke="#8a9870" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Nose --><ellipse cx="40" cy="56" rx="3.5" ry="2.5" fill="rgba(180,130,80,.4)"/>
+  <!-- Wise smile --><path d="M32 62 Q40 68 48 62" stroke="#5a7040" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Mossy wisps --><path d="M22 40 Q18 32 20 25" stroke="#4a7030" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M58 40 Q62 32 60 25" stroke="#4a7030" stroke-width="3" fill="none" stroke-linecap="round"/>
+  ${lbl('🧙 パビー')}</svg>`;
+
+// ⑨ ブルニ
+case 'bruni': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#3a1000','#802010')}${bgrect(uid)}${corners(.1)}
+  <!-- Fire glow background --><radialGradient id="fg${uid}" cx="65%" cy="60%" r="40%"><stop offset="0%" stop-color="rgba(255,200,50,.3)"/><stop offset="100%" stop-color="rgba(255,100,0,0)"/></radialGradient>
+  <rect width="80" height="110" fill="url(#fg${uid})" rx="10"/>
+  <!-- Body (cute salamander) --><ellipse cx="36" cy="80" rx="22" ry="18" fill="#3060c0"/>
+  <ellipse cx="36" cy="80" rx="22" ry="18" fill="none" stroke="rgba(150,180,255,.3)" stroke-width="1"/>
+  <!-- Belly lighter --><ellipse cx="36" cy="82" rx="14" ry="11" fill="#5080e0" opacity=".6"/>
+  <!-- Tail with fire --><path d="M57 82 Q66 76 70 68 Q72 60 68 54 Q66 50 63 52 Q62 56 65 60 Q67 65 64 70 Q60 76 55 80" fill="#3060c0"/>
+  <!-- Fire on tail tip --><ellipse cx="66" cy="52" rx="8" ry="10" fill="#ff9020" opacity=".9"/>
+  <ellipse cx="66" cy="50" rx="5" ry="7" fill="#ffcc00" opacity=".9"/>
+  <ellipse cx="66" cy="48" rx="3" ry="4" fill="#ffffff" opacity=".7"/>
+  <!-- Legs --><ellipse cx="20" cy="90" rx="5" ry="4" fill="#3060c0"/>
+  <ellipse cx="28" cy="96" rx="5" ry="4" fill="#3060c0"/>
+  <ellipse cx="46" cy="96" rx="5" ry="4" fill="#3060c0"/>
+  <ellipse cx="54" cy="88" rx="5" ry="4" fill="#3060c0"/>
+  <!-- Head --><ellipse cx="30" cy="56" rx="18" ry="16" fill="#4070d0"/>
+  <!-- Big cute eyes --><ellipse cx="24" cy="52" rx="6" ry="7" fill="white"/>
+  <circle cx="24.5" cy="52.5" r="4" fill="#f0a000"/>
+  <circle cx="24.5" cy="52.5" r="2" fill="#111"/>
+  <circle cx="26" cy="51" r="1.5" fill="rgba(255,255,255,.9)"/>
+  <ellipse cx="36" cy="52" rx="6" ry="7" fill="white"/>
+  <circle cx="36.5" cy="52.5" r="4" fill="#f0a000"/>
+  <circle cx="36.5" cy="52.5" r="2" fill="#111"/>
+  <circle cx="38" cy="51" r="1.5" fill="rgba(255,255,255,.9)"/>
+  <!-- Cute smile --><path d="M24 61 Q30 66 36 61" stroke="#2050b0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Spiny ridge --><path d="M20 44 Q22 38 25 34 Q28 30 30 34 Q33 38 35 34 Q38 30 40 35 Q42 40 44 35" stroke="#80a0f0" stroke-width="2" fill="none" stroke-linecap="round"/>
+  ${lbl('🔥 ブルニ')}</svg>`;
+
+// ⑩ ノック
+case 'nokk': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#001828','#003858')}${bgrect(uid)}${corners(.12)}
+  <!-- Water shimmer bg --><radialGradient id="wg${uid}" cx="50%" cy="70%" r="50%"><stop offset="0%" stop-color="rgba(0,150,200,.2)"/><stop offset="100%" stop-color="rgba(0,50,100,0)"/></radialGradient>
+  <rect width="80" height="110" fill="url(#wg${uid})" rx="10"/>
+  <!-- Water waves --><path d="M5 95 Q20 90 35 95 Q50 100 65 95 Q72 92 75 95" stroke="rgba(100,200,255,.2)" stroke-width="1.5" fill="none"/>
+  <path d="M5 100 Q20 95 35 100 Q50 105 65 100" stroke="rgba(100,200,255,.15)" stroke-width="1" fill="none"/>
+  <!-- Body/neck --><path d="M30 80 Q28 90 32 105 Q40 110 48 105 Q52 90 50 80 Q45 72 40 70 Q35 72 30 80Z" fill="#1a6080"/>
+  <!-- Mane flowing --><path d="M24 52 Q14 44 12 30 Q14 20 20 24 Q22 32 25 38 Q20 44 24 52" fill="#2090c0" opacity=".7"/>
+  <path d="M56 52 Q66 44 68 30 Q66 20 60 24 Q58 32 55 38 Q60 44 56 52" fill="#2090c0" opacity=".7"/>
+  <!-- Water mane detail --><path d="M18 52 Q12 38 16 25" stroke="rgba(100,200,255,.4)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M62 52 Q68 38 64 25" stroke="rgba(100,200,255,.4)" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Horse head --><ellipse cx="40" cy="52" rx="20" ry="18" fill="#1a7090"/>
+  <!-- Snout --><ellipse cx="40" cy="62" rx="12" ry="9" fill="#186080"/>
+  <!-- Flared nostrils --><ellipse cx="34" cy="63" rx="3" ry="2.5" fill="#0a4060"/>
+  <ellipse cx="46" cy="63" rx="3" ry="2.5" fill="#0a4060"/>
+  <!-- Ethereal eyes --><ellipse cx="30" cy="47" rx="5.5" ry="5" fill="#80e0ff"/>
+  <circle cx="30.5" cy="47.5" r="3" fill="#00a0d0"/>
+  <circle cx="30.5" cy="47.5" r="1.5" fill="#004060"/>
+  <circle cx="32" cy="46" r="1.2" fill="rgba(255,255,255,.9)"/>
+  <ellipse cx="50" cy="47" rx="5.5" ry="5" fill="#80e0ff"/>
+  <circle cx="50.5" cy="47.5" r="3" fill="#00a0d0"/>
+  <circle cx="50.5" cy="47.5" r="1.5" fill="#004060"/>
+  <circle cx="52" cy="46" r="1.2" fill="rgba(255,255,255,.9)"/>
+  <!-- Forelock --><path d="M28 38 Q32 28 38 22 Q42 28 44 36" fill="#2090c0"/>
+  ${lbl('🌊 ノック')}</svg>`;
+
+// ⑪ ホネマリン
+case 'honeymaren': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#2a1808','#5a3818')}${bgrect(uid)}${corners(.1)}
+  <!-- Northuldra outfit --><rect x="18" y="70" width="44" height="40" rx="6" fill="#8a4820"/>
+  <!-- Vest detail --><rect x="32" y="70" width="16" height="40" fill="#6a3010"/>
+  <!-- Belt --><rect x="18" y="82" width="44" height="6" rx="3" fill="#4a2010"/>
+  <!-- Leaf/nature detail --><text x="22" y="80" font-size="8" fill="rgba(100,180,80,.6)" font-family="Arial">🍃</text>
+  <text x="53" y="80" font-size="7" fill="rgba(100,180,80,.5)" font-family="Arial">🍃</text>
+  <!-- Neck --><rect x="35" y="64" width="10" height="12" fill="#c08060" rx="3"/>
+  <!-- Hair back (dark) --><ellipse cx="40" cy="50" rx="20" ry="22" fill="#1a1008"/>
+  <!-- Hair in bun with wrap --><ellipse cx="40" cy="30" rx="14" ry="12" fill="#1a1008"/>
+  <!-- Colorful headband --><rect x="24" y="39" width="32" height="5" rx="2.5" fill="#c04020"/>
+  <path d="M24 39 Q40 37 56 39" stroke="rgba(255,200,100,.4)" stroke-width="1" fill="none"/>
+  ${face({uid,skin:'#c08060',skin2:'#b07050',eyes:'#6a4020',brow:'#2a1008',smile:'M34 65 Q40 70 46 65',blush:false})}
+  <!-- Hair front sides --><path d="M22 43 Q20 34 22 28" stroke="#1a1008" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M58 43 Q60 34 58 28" stroke="#1a1008" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Earrings --><circle cx="22" cy="57" r="2.5" fill="#c8a020"/><circle cx="58" cy="57" r="2.5" fill="#c8a020"/>
+  ${lbl('🌿 ホネマリン')}</svg>`;
+
+// ⑫ ライダー
+case 'ryder': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#1a2808','#385020')}${bgrect(uid)}${corners(.1)}
+  <!-- Outfit --><rect x="18" y="70" width="44" height="40" rx="6" fill="#5a7030"/>
+  <rect x="26" y="70" width="28" height="40" fill="#4a6020"/>
+  <!-- Reindeer herder detail --><path d="M20 80 Q22 76 26 78" stroke="#8a9050" stroke-width="1.5" fill="none"/>
+  <path d="M60 80 Q58 76 54 78" stroke="#8a9050" stroke-width="1.5" fill="none"/>
+  <!-- Neck --><rect x="35" y="64" width="10" height="12" fill="#b07050" rx="3"/>
+  <!-- Dark hair back --><ellipse cx="40" cy="50" rx="20" ry="22" fill="#1a0808"/>
+  <!-- Messy hair --><path d="M22 44 Q18 34 22 26 Q26 20 32 22" stroke="#1a0808" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M58 44 Q62 34 58 26 Q54 20 48 22" stroke="#1a0808" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  ${face({uid,skin:'#b87050',skin2:'#a06040',eyes:'#604020',brow:'#1a0808',smile:'M32 64 Q40 71 48 64',blush:false})}
+  <!-- Hair front --><path d="M22 44 Q24 28 40 27 Q56 28 58 44 Q52 34 40 33 Q28 34 22 44Z" fill="#1a0808"/>
+  <!-- Messy strand --><path d="M28 32 Q32 24 36 30" stroke="#2a1010" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Earring (left) --><circle cx="22" cy="56" r="2.2" fill="#c8a020"/>
+  <path d="M22 58 L22 62" stroke="#c8a020" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Cheeky grin -->${lbl('🍃 ライダー')}</svg>`;
+
+// ⑬ イドゥナ
+case 'iduna': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#3a1040','#7030a0')}${bgrect(uid)}${corners(.1)}
+  <!-- Dress --><path d="M20 74 Q40 100 60 74 Q60 92 40 108 Q20 92 20 74Z" fill="rgba(160,80,200,.55)"/>
+  <ellipse cx="40" cy="98" rx="24" ry="15" fill="rgba(130,60,170,.45)"/>
+  <!-- Arendelle detail --><path d="M30 76 Q32 72 35 76" stroke="rgba(200,180,255,.4)" stroke-width="1.2" fill="none"/>
+  <path d="M45 76 Q47 72 50 76" stroke="rgba(200,180,255,.4)" stroke-width="1.2" fill="none"/>
+  <!-- Neck --><rect x="35" y="64" width="10" height="13" fill="#ffe0c5" rx="3"/>
+  <!-- Long loose auburn hair --><ellipse cx="40" cy="50" rx="22" ry="24" fill="#a04820"/>
+  <path d="M20 55 Q14 70 16 92" stroke="#903d18" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M60 55 Q66 70 64 92" stroke="#903d18" stroke-width="7" fill="none" stroke-linecap="round"/>
+  ${face({uid,skin:'#ffe5c5',skin2:'#ffd5a8',eyes:'#4878b0',brow:'#7a3510',smile:'M33 64 Q40 70 47 64',blush:true})}
+  <!-- Hair front loose --><path d="M22 43 Q24 27 40 26 Q56 27 58 43 Q52 33 40 32 Q28 33 22 43Z" fill="#a04820"/>
+  <!-- Gentle hair wave --><path d="M24 27 Q22 20 24 15 Q27 18 28 24" fill="#a04820" opacity=".8"/>
+  <!-- Soft sparkle in hair --><text x="48" y="28" font-size="8" fill="rgba(255,220,180,.6)" font-family="Arial">✦</text>
+  <!-- Necklace --><path d="M28 68 Q40 65 52 68" stroke="rgba(230,200,100,.5)" stroke-width="1.2" fill="none"/>
+  <circle cx="40" cy="68" r="2.5" fill="rgba(230,200,100,.7)"/>
+  ${lbl('💜 イドゥナ')}</svg>`;
+
+// ⑭ アグナル
+case 'agnarr': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#080a30','#182060')}${bgrect(uid)}${corners(.1)}
+  <!-- Royal coat --><rect x="16" y="70" width="48" height="40" rx="6" fill="#1a3880"/>
+  <!-- Gold trim --><path d="M16 70 Q40 68 64 70 L64 76 Q40 74 16 76Z" fill="#c8a020"/>
+  <!-- Medals/decoration --><circle cx="28" cy="80" r="3.5" fill="#c8a020"/><circle cx="36" cy="78" r="3" fill="#c8a020"/>
+  <!-- King insignia --><text x="45" y="85" font-size="10" fill="rgba(200,160,30,.7)" font-family="Arial">♛</text>
+  <!-- Neck --><rect x="35" y="64" width="10" height="12" fill="#ffe5c8" rx="3"/>
+  <!-- Hair back (dark brown) --><ellipse cx="40" cy="50" rx="20" ry="22" fill="#3a2010"/>
+  ${face({uid,skin:'#ffe0c0',skin2:'#ffd0a8',eyes:'#4a6888',brow:'#3a2010',smile:'M34 64 Q40 69 46 64',blush:false})}
+  <!-- Hair front --><path d="M22 43 Q24 28 40 27 Q56 28 58 43 Q52 33 40 32 Q28 33 22 43Z" fill="#3a2010"/>
+  <!-- Beard/stubble --><ellipse cx="40" cy="67" rx="12" ry="5" fill="#2a1808" opacity=".35"/>
+  <path d="M28 63 Q32 70 40 71 Q48 70 52 63" stroke="#2a1808" stroke-width="1.5" fill="rgba(42,24,8,.25)" stroke-linecap="round"/>
+  <!-- Crown --><path d="M24 36 L28 28 L32 36 L37 22 L40 34 L43 22 L48 36 L52 28 L56 36" stroke="#c8a020" stroke-width="2" fill="none" stroke-linejoin="round"/>
+  <circle cx="37" cy="22" r="2.5" fill="#c8a020"/><circle cx="43" cy="22" r="2.5" fill="#c8a020"/>
+  ${lbl('👑 アグナル')}</svg>`;
+
+// ⑮ マティアス
+case 'mattias': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#1a2808','#304818')}${bgrect(uid)}${corners(.1)}
+  <!-- Military uniform --><rect x="16" y="70" width="48" height="40" rx="6" fill="#2a4010"/>
+  <rect x="34" y="70" width="12" height="40" fill="#1a3008"/>
+  <!-- Epaulettes --><ellipse cx="18" cy="73" rx="7" ry="4" fill="#8a6020"/><ellipse cx="62" cy="73" rx="7" ry="4" fill="#8a6020"/>
+  <!-- Buttons --><circle cx="40" cy="78" r="2" fill="#8a6020"/><circle cx="40" cy="86" r="2" fill="#8a6020"/>
+  <circle cx="40" cy="94" r="2" fill="#8a6020"/>
+  <!-- Military hat piece --><rect x="22" y="26" width="36" height="8" rx="3" fill="#2a4010"/>
+  <rect x="18" y="30" width="44" height="4" rx="2" fill="#1a3008"/>
+  <!-- Hat brim --><rect x="16" y="34" width="48" height="4" rx="2" fill="#1a3008"/>
+  <!-- Neck --><rect x="35" y="62" width="10" height="12" fill="#9a6840" rx="3"/>
+  <!-- Hair (dark/curly suggested) --><ellipse cx="40" cy="50" rx="19" ry="20" fill="#1a1008"/>
+  ${face({uid,skin:'#8a5030',skin2:'#7a4020',eyes:'#4a3020',brow:'#1a1008',smile:'M33 64 Q40 71 47 64',blush:false})}
+  <!-- Hair front (close-cropped under hat) --><path d="M22 43 Q24 34 40 33 Q56 34 58 43" fill="#1a1008"/>
+  <!-- Warm smile lines --><path d="M28 62 Q27 65 28 68" stroke="rgba(150,90,50,.3)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M52 62 Q53 65 52 68" stroke="rgba(150,90,50,.3)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  ${lbl('⚔️ マティアス')}</svg>`;
+
+// ⑯ ガレ (風の精霊)
+case 'gale': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#0a1828','#1a3040')}${bgrect(uid)}
+  <!-- Wind swirls bg --><radialGradient id="wnd${uid}" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(200,240,255,.15)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+  <rect width="80" height="110" fill="url(#wnd${uid})" rx="10"/>
+  <!-- Leaves carried by wind --><text x="12" y="25" font-size="11" fill="rgba(100,200,80,.7)" font-family="Arial" transform="rotate(-30 12 25)">🍃</text>
+  <text x="58" y="35" font-size="9" fill="rgba(100,200,80,.6)" font-family="Arial" transform="rotate(20 58 35)">🍂</text>
+  <text x="8" y="70" font-size="8" fill="rgba(100,200,80,.5)" font-family="Arial" transform="rotate(-15 8 70)">🍃</text>
+  <text x="62" y="80" font-size="10" fill="rgba(100,200,80,.6)" font-family="Arial" transform="rotate(25 62 80)">🍂</text>
+  <!-- Main wind spiral (face) --><path d="M40 20 Q65 25 68 45 Q70 65 55 72 Q40 78 25 68 Q10 58 15 40 Q20 22 40 20Z" stroke="rgba(200,240,255,.35)" stroke-width="2.5" fill="rgba(180,230,255,.08)" stroke-linecap="round"/>
+  <path d="M40 26 Q60 32 62 48 Q64 62 52 68 Q40 73 28 65 Q17 57 20 42 Q24 27 40 26Z" stroke="rgba(200,240,255,.25)" stroke-width="1.5" fill="none"/>
+  <!-- Inner face suggestion (swirl eyes) --><path d="M28 45 Q32 40 36 45 Q34 50 30 48 Q27 47 28 45Z" fill="rgba(200,240,255,.4)"/>
+  <path d="M44 43 Q50 38 54 43 Q52 49 47 47 Q43 46 44 43Z" fill="rgba(200,240,255,.4)"/>
+  <!-- Swirl nose/mouth --><path d="M36 56 Q40 60 44 56 Q46 52 40 50 Q34 52 36 56Z" stroke="rgba(200,240,255,.35)" stroke-width="1.5" fill="rgba(200,240,255,.1)"/>
+  <!-- Radiating wind lines --><path d="M40 15 Q45 5 50 10 Q48 18 40 20" fill="rgba(180,230,255,.12)"/>
+  <path d="M65 48 Q76 45 74 55 Q68 58 65 52" fill="rgba(180,230,255,.1)"/>
+  <path d="M14 58 Q4 60 5 70 Q12 72 15 66" fill="rgba(180,230,255,.1)"/>
+  <!-- Floating sparkles --><text x="20" y="18" font-size="8" fill="rgba(200,240,255,.5)" font-family="Arial">✦</text>
+  <text x="62" y="25" font-size="7" fill="rgba(200,240,255,.45)" font-family="Arial">✦</text>
+  <text x="68" y="68" font-size="9" fill="rgba(200,240,255,.4)" font-family="Arial">✦</text>
+  ${lbl('💨 ガレ')}</svg>`;
+
+// ⑰ 大地の巨人
+case 'giant': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#2a1808','#504028')}${bgrect(uid)}${corners(.08)}
+  <!-- Stone texture bg pattern --><rect x="0" y="0" width="80" height="110" fill="url(#bg${uid})" rx="10"/>
+  <!-- Rocky body (massive) --><ellipse cx="40" cy="96" rx="34" ry="20" fill="#6a5038"/>
+  <!-- Rock texture on body --><path d="M14 88 Q20 82 28 86 Q36 90 44 84 Q52 78 60 84 Q66 88 66 95" stroke="#4a3820" stroke-width="2" fill="none"/>
+  <!-- Giant rock head --><ellipse cx="40" cy="58" rx="28" ry="26" fill="#6a5038"/>
+  <!-- Rock crack lines --><path d="M30 40 Q32 50 28 60" stroke="#4a3820" stroke-width="1.5" fill="none"/>
+  <path d="M50 38 Q52 48 54 58" stroke="#4a3820" stroke-width="1.5" fill="none"/>
+  <path d="M22 58 Q30 62 38 60" stroke="#4a3820" stroke-width="1" fill="none"/>
+  <!-- Stone boulders on top of head --><ellipse cx="28" cy="34" rx="10" ry="8" fill="#7a6048"/><ellipse cx="52" cy="36" rx="9" ry="7" fill="#7a6048"/>
+  <ellipse cx="40" cy="32" rx="8" ry="7" fill="#8a7058"/>
+  <!-- Deep-set stone eyes --><ellipse cx="29" cy="54" rx="8" ry="7" fill="#2a1a10"/><ellipse cx="51" cy="54" rx="8" ry="7" fill="#2a1a10"/>
+  <ellipse cx="29" cy="54" rx="5" ry="4.5" fill="#3a2a18"/><ellipse cx="51" cy="54" rx="5" ry="4.5" fill="#3a2a18"/>
+  <!-- Glowing stone eyes --><ellipse cx="29" cy="54" rx="3" ry="3.5" fill="#c09060" opacity=".6"/>
+  <ellipse cx="51" cy="54" rx="3" ry="3.5" fill="#c09060" opacity=".6"/>
+  <!-- Simple mouth (crack) --><path d="M27 66 Q40 62 53 66" stroke="#2a1a10" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- Stone nose block --><rect x="35" y="59" width="10" height="7" rx="2" fill="#5a4030"/>
+  ${lbl('🏔️ 大地の巨人')}</svg>`;
+
+// ⑱ トロール
+case 'troll': return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  ${bgdef(uid,'#0a2010','#1a4020')}${bgrect(uid)}${corners(.1)}
+  <!-- Mossy ground --><ellipse cx="40" cy="107" rx="30" ry="6" fill="rgba(40,120,40,.25)"/>
+  <!-- Rolled/round body --><ellipse cx="40" cy="88" rx="26" ry="24" fill="#4a6030"/>
+  <!-- Moss/lichen on body --><ellipse cx="28" cy="82" rx="7" ry="5" fill="#3a5020" opacity=".6"/>
+  <ellipse cx="52" cy="90" rx="6" ry="4" fill="#3a5020" opacity=".5"/>
+  <ellipse cx="40" cy="100" rx="8" ry="5" fill="#3a5020" opacity=".4"/>
+  <!-- Crystal collar necklace --><path d="M20 72 Q40 66 60 72" stroke="#7070c0" stroke-width="1.8" fill="none"/>
+  <polygon points="40,70 36,80 44,80" fill="#9090e0" opacity=".85"/>
+  <polygon points="30,70 26,79 34,79" fill="#8080d0" opacity=".75"/>
+  <polygon points="50,70 46,79 54,79" fill="#8080d0" opacity=".75"/>
+  <polygon points="22,72 19,79 25,79" fill="#7070c0" opacity=".6"/>
+  <polygon points="58,72 55,79 61,79" fill="#7070c0" opacity=".6"/>
+  <!-- Head --><ellipse cx="40" cy="50" rx="20" ry="19" fill="#5a7038"/>
+  <!-- Pointed ears --><polygon points="20,48 12,38 22,56" fill="#4a6028"/><polygon points="60,48 68,38 58,56" fill="#4a6028"/>
+  <ellipse cx="16" cy="45" rx="3" ry="4" fill="#6a8040"/>
+  <ellipse cx="64" cy="45" rx="3" ry="4" fill="#6a8040"/>
+  <!-- Mossy head top --><ellipse cx="40" cy="34" rx="15" ry="8" fill="#3a5020" opacity=".5"/>
+  <!-- Eyes (curious/big) --><ellipse cx="31" cy="47" rx="6" ry="6.5" fill="#e8d8a0"/>
+  <circle cx="31.5" cy="47.5" r="3.5" fill="#3a7020"/>
+  <circle cx="31.5" cy="47.5" r="1.8" fill="#111"/>
+  <circle cx="33" cy="46" r="1.2" fill="rgba(255,255,255,.9)"/>
+  <ellipse cx="49" cy="47" rx="6" ry="6.5" fill="#e8d8a0"/>
+  <circle cx="49.5" cy="47.5" r="3.5" fill="#3a7020"/>
+  <circle cx="49.5" cy="47.5" r="1.8" fill="#111"/>
+  <circle cx="51" cy="46" r="1.2" fill="rgba(255,255,255,.9)"/>
+  <!-- Bumpy nose --><ellipse cx="40" cy="55" rx="4" ry="3.5" fill="#4a6028"/>
+  <!-- Wide smile showing teeth --><path d="M28 61 Q40 69 52 61" stroke="#2a4018" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="40" cy="64" rx="8" ry="4" fill="rgba(50,80,20,.2)"/>
+  <rect x="32" y="61" width="16" height="3" rx="1" fill="rgba(255,255,255,.4)"/>
+  <!-- Bushy eyebrows --><path d="M25 40 Q31 36 37 40" stroke="#3a5020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M43 40 Q49 36 55 40" stroke="#3a5020" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  ${lbl('🌿 トロール')}</svg>`;
+
+    default: return `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+      ${bgdef(uid,'#1a1a3a','#3a3a5a')}${bgrect(uid)}
+      <text x="40" y="60" font-size="30" text-anchor="middle" font-family="Arial">❄</text>
+      ${lbl(c.name)}</svg>`;
+  }
+}
+
+// ── Praise Elsa SVG (large)
+const PRAISE_SVG = `<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="psk" cx="48%" cy="38%" r="58%"><stop offset="0%" stop-color="#ffe9d5"/><stop offset="100%" stop-color="#ffd5b0"/></radialGradient>
+    <radialGradient id="phr" cx="50%" cy="30%" r="70%"><stop offset="0%" stop-color="#e8e080"/><stop offset="100%" stop-color="#c0b030"/></radialGradient>
+  </defs>
+  <circle cx="50" cy="65" r="50" fill="rgba(165,216,255,.12)"/>
+  <!-- Dress --><path d="M28 94 Q50 122 72 94 Q72 112 50 128 Q28 112 28 94Z" fill="rgba(100,180,230,.6)"/>
+  <ellipse cx="50" cy="118" rx="26" ry="16" fill="rgba(150,210,240,.45)"/>
+  <!-- Braid --><path d="M22 72 Q14 90 18 118" stroke="#c0a018" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M22 72 Q14 90 18 118" stroke="#d8c040" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+  <!-- Hair back --><ellipse cx="50" cy="60" rx="26" ry="28" fill="url(#phr)"/>
+  <!-- Body --><rect x="42" y="80" width="16" height="16" fill="url(#psk)" rx="4"/>
+  <!-- Head --><ellipse cx="50" cy="60" rx="22" ry="24" fill="url(#psk)"/>
+  <!-- Ears --><ellipse cx="28" cy="62" rx="4" ry="5" fill="url(#psk)"/><ellipse cx="72" cy="62" rx="4" ry="5" fill="url(#psk)"/>
+  <!-- Hair front --><path d="M29 51 Q32 32 50 31 Q68 32 71 51 Q64 40 50 39 Q36 40 29 51Z" fill="url(#phr)"/>
+  <!-- Updo bun --><ellipse cx="50" cy="36" rx="13" ry="11" fill="#d0c878"/>
+  <!-- Crown --><path d="M30 45 L34 35 L39 45 L45 28 L50 42 L55 28 L61 45 L66 35 L70 45" stroke="#f5d060" stroke-width="2.8" fill="none" stroke-linejoin="round"/>
+  <circle cx="45" cy="28" r="2.8" fill="#f5d060"/><circle cx="55" cy="28" r="2.8" fill="#f5d060"/>
+  <!-- Happy closed eyes --><path d="M38 58 Q43 53 48 58" stroke="#909020" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M52 58 Q57 53 62 58" stroke="#909020" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- Eyebrows raised --><path d="M36 51 Q43 46 49 50" stroke="#a09020" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M51 50 Q57 46 64 51" stroke="#a09020" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <!-- Blush --><ellipse cx="35" cy="68" rx="8" ry="4.5" fill="rgba(255,150,150,.3)"/>
+  <ellipse cx="65" cy="68" rx="8" ry="4.5" fill="rgba(255,150,150,.3)"/>
+  <!-- Big smile --><path d="M38 74 Q50 86 62 74" stroke="#c06055" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M39 74 Q50 85 61 74" fill="rgba(180,60,60,.18)"/>
+  <path d="M40 74 L60 74" stroke="rgba(255,255,255,.45)" stroke-width="1.8"/>
+  <!-- Sparkles --><text x="12" y="40" font-size="14" fill="rgba(200,240,255,.8)" font-family="Arial">✦</text>
+  <text x="80" y="35" font-size="12" fill="rgba(200,240,255,.75)" font-family="Arial">✦</text>
+  <text x="8" y="90" font-size="11" fill="rgba(200,240,255,.65)" font-family="Arial">❄</text>
+  <text x="84" y="88" font-size="12" fill="rgba(200,240,255,.65)" font-family="Arial">❄</text>
+</svg>`;
+
+// Back card SVG
+const BACK_SVG = `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="bkgr" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#0c2a5e"/><stop offset="100%" stop-color="#1a4a8a"/></linearGradient></defs>
+  <rect width="80" height="110" fill="url(#bkgr)" rx="10"/>
+  <rect x="5" y="5" width="70" height="100" rx="8" fill="none" stroke="rgba(165,216,255,.3)" stroke-width="1"/>
+  <g transform="translate(40,55)" opacity=".5">
+    <line x1="-22" y1="0" x2="22" y2="0" stroke="#a5d8ff" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="0" y1="-22" x2="0" y2="22" stroke="#a5d8ff" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="-15.5" y1="-15.5" x2="15.5" y2="15.5" stroke="#a5d8ff" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="15.5" y1="-15.5" x2="-15.5" y2="15.5" stroke="#a5d8ff" stroke-width="2.5" stroke-linecap="round"/>
+    <g stroke="#a5d8ff" stroke-width="1.2" stroke-linecap="round">
+      <line x1="-22" y1="0" x2="-17" y2="-5"/><line x1="-22" y1="0" x2="-17" y2="5"/>
+      <line x1="22" y1="0" x2="17" y2="-5"/><line x1="22" y1="0" x2="17" y2="5"/>
+      <line x1="0" y1="-22" x2="-5" y2="-17"/><line x1="0" y1="-22" x2="5" y2="-17"/>
+      <line x1="0" y1="22" x2="-5" y2="17"/><line x1="0" y1="22" x2="5" y2="17"/>
+    </g>
+    <circle r="4" fill="#a5d8ff" opacity=".7"/>
+  </g>
+  <text x="10" y="22" font-size="11" fill="rgba(165,216,255,.35)" font-family="Arial">❄</text>
+  <text x="60" y="22" font-size="9" fill="rgba(165,216,255,.28)" font-family="Arial">❄</text>
+  <text x="10" y="104" font-size="9" fill="rgba(165,216,255,.28)" font-family="Arial">❄</text>
+  <text x="60" y="104" font-size="11" fill="rgba(165,216,255,.35)" font-family="Arial">❄</text>
+</svg>`;
+
+// ============================================================
+//   GAME DATA & STATE
+// ============================================================
+const ALL_CHARS = [
+  {id:'elsa'},{id:'anna'},{id:'olaf'},{id:'kristoff'},{id:'sven'},{id:'hans'},
+  {id:'marshmallow'},{id:'pabbie'},{id:'bruni'},{id:'nokk'},
+  {id:'honeymaren'},{id:'ryder'},{id:'iduna'},{id:'agnarr'},
+  {id:'mattias'},{id:'gale'},{id:'giant'},{id:'troll'},
+];
+const DIFFS = {easy:{pairs:6,cols:4},medium:{pairs:10,cols:5},hard:{pairs:18,cols:6}};
+const PRAISE = [
+  '✨ すごーい！','❄ やったね！','💙 おみごと！','🌟 さいこう！',
+  '👑 えらい！','❅ ペアみっけ！','💫 その調子！','🎉 すばらしい！',
+  '⭐ かんぺき！','❄ さすが！','✦ 天才！','💎 よくできました！',
+];
+
+let diff='easy', cards=[], flipped=[], matched=0, moves=0;
+let seconds=0, timer=null, canFlip=true, gameStarted=false;
+let currentPlayer=0, scores=[0,0];
+let praiseTimer=null;
+
+// ── Diff ──
+function setDiff(d){
+  diff=d;
+  document.querySelectorAll('.diff-tab').forEach((b,i)=>
+    b.classList.toggle('active',['easy','medium','hard'][i]===d));
+  newGame();
+}
+
+// ── New Game ──
+function newGame(){
+  clearInterval(timer);
+  matched=0;moves=0;seconds=0;flipped=[];canFlip=true;gameStarted=false;
+  currentPlayer=0;scores=[0,0];
+  updatePlayerUI();
+  document.getElementById('s-moves').textContent='0';
+  document.getElementById('s-time').textContent='0:00';
+  document.getElementById('s-pairs').textContent='0';
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('praise-popup').classList.remove('show');
+  const {pairs,cols}=DIFFS[diff];
+  document.getElementById('s-total').textContent=pairs;
+  const pool=[...ALL_CHARS].sort(()=>Math.random()-.5).slice(0,pairs);
+  const deck=[...pool,...pool].sort(()=>Math.random()-.5);
+  cards=deck.map((c,i)=>({...c,id:c.id,cardIdx:i,matched:false,flipped:false}));
+  const board=document.getElementById('board');
+  board.style.gridTemplateColumns=`repeat(${cols},var(--card-w))`;
+  board.innerHTML='';
+  cards.forEach((c,i)=>board.appendChild(createCardEl(c,i)));
+}
+
+// ── Card element ──
+function createCardEl(c, idx){
+  const el=document.createElement('div');
+  el.className='card';el.id=`card-${idx}`;
+  const backFace=document.createElement('div');backFace.className='card-face card-back';
+  backFace.innerHTML=BACK_SVG;
+  const frontFace=document.createElement('div');frontFace.className='card-face card-front';
+  frontFace.innerHTML=charSVG(c, idx);
+  const inner=document.createElement('div');inner.className='card-inner';
+  inner.appendChild(backFace);inner.appendChild(frontFace);
+  el.appendChild(inner);
+  el.addEventListener('click',()=>flipCard(idx));
+  return el;
+}
+
+// ── Flip ──
+function flipCard(idx){
+  if(!canFlip)return;
+  const c=cards[idx];
+  if(c.matched||c.flipped)return;
+  if(flipped.length>=2)return;
+  if(!gameStarted){
+    gameStarted=true;
+    timer=setInterval(()=>{seconds++;updateTimer();},1000);
+  }
+  c.flipped=true;
+  document.getElementById(`card-${idx}`).classList.add('flipped');
+  flipped.push(idx);
+  if(flipped.length===2){
+    moves++;
+    document.getElementById('s-moves').textContent=moves;
+    canFlip=false;
+    setTimeout(checkMatch,750);
+  }
+}
+
+// ── Match check ──
+function checkMatch(){
+  const [a,b]=flipped;
+  const ca=cards[a],cb=cards[b];
+  if(ca.id===cb.id){
+    ca.matched=cb.matched=true;matched++;
+    document.getElementById('s-pairs').textContent=matched;
+    document.getElementById(`card-${a}`).classList.add('matched');
+    document.getElementById(`card-${b}`).classList.add('matched');
+    scores[currentPlayer]++;
+    updatePlayerUI();
+    burstIce(a);burstIce(b);
+    flipped=[];canFlip=true;
+    showPraise();
+    if(matched===DIFFS[diff].pairs) setTimeout(winGame,500);
+    // Keep same player's turn on match
+  } else {
+    document.getElementById(`card-${a}`).classList.add('wrong');
+    document.getElementById(`card-${b}`).classList.add('wrong');
+    setTimeout(()=>{
+      [a,b].forEach(i=>{
+        cards[i].flipped=false;
+        document.getElementById(`card-${i}`).classList.remove('flipped','wrong');
+      });
+      flipped=[];canFlip=true;
+      currentPlayer=1-currentPlayer; // switch turn
+      updatePlayerUI();
+    },680);
+  }
+}
+
+// ── Player UI ──
+function updatePlayerUI(){
+  document.getElementById('p1-score').textContent=scores[0];
+  document.getElementById('p2-score').textContent=scores[1];
+  document.getElementById('p1-panel').classList.toggle('active',currentPlayer===0);
+  document.getElementById('p2-panel').classList.toggle('active',currentPlayer===1);
+}
+
+// ── Praise popup ──
+function showPraise(){
+  clearTimeout(praiseTimer);
+  const popup=document.getElementById('praise-popup');
+  const msg=PRAISE[Math.floor(Math.random()*PRAISE.length)];
+  const pname=document.getElementById(currentPlayer===0?'p1-name':'p2-name').value||`プレイヤー${currentPlayer+1}`;
+  document.getElementById('praise-svg').innerHTML=PRAISE_SVG;
+  document.getElementById('praise-text').textContent=`${pname}、${msg}`;
+  const inner=document.getElementById('praise-inner');
+  inner.querySelectorAll('.praise-snow').forEach(x=>x.remove());
+  const fc=['❄','❅','❆','✦','⭐','💙'];
+  for(let i=0;i<12;i++){
+    const s=document.createElement('div');s.className='praise-snow';
+    const ang=Math.random()*Math.PI*2,dist=55+Math.random()*75;
+    s.textContent=fc[Math.floor(Math.random()*fc.length)];
+    s.style.cssText=`position:absolute;top:50%;left:50%;font-size:${.8+Math.random()*1}rem;color:rgba(165,216,255,.9);--px:${Math.cos(ang)*dist}px;--py:${Math.sin(ang)*dist}px;animation-delay:${i*.04}s;`;
+    inner.appendChild(s);
+  }
+  popup.classList.add('show');
+  praiseTimer=setTimeout(()=>popup.classList.remove('show'),1700);
+}
+
+// ── Ice burst ──
+function burstIce(idx){
+  const el=document.getElementById(`card-${idx}`);
+  if(!el)return;
+  const rect=el.getBoundingClientRect();
+  const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+  const chips=['❄','❅','❆','✦','💙','⭐'];
+  for(let i=0;i<8;i++){
+    const c=document.createElement('div');c.className='ice-chip';
+    const ang=Math.random()*Math.PI*2,dist=50+Math.random()*70;
+    c.textContent=chips[Math.floor(Math.random()*chips.length)];
+    c.style.cssText=`left:${cx}px;top:${cy}px;font-size:${.7+Math.random()*.8}rem;color:rgba(165,216,255,.85);--ix:${Math.cos(ang)*dist}px;--iy:${Math.sin(ang)*dist}px;--ir:${(Math.random()-.5)*720}deg;animation-delay:${i*.04}s;`;
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),1400);
+  }
+}
+
+// ── Timer ──
+function updateTimer(){
+  const m=Math.floor(seconds/60),s=seconds%60;
+  document.getElementById('s-time').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// ── Win ──
+function winGame(){
+  clearInterval(timer);
+  const [s0,s1]=[scores[0],scores[1]];
+  const pn0=document.getElementById('p1-name').value||'プレイヤー1';
+  const pn1=document.getElementById('p2-name').value||'プレイヤー2';
+  let icon,title;
+  if(s0>s1){icon='🏆';title=`${pn0} の勝ち！🎉`;}
+  else if(s1>s0){icon='🏆';title=`${pn1} の勝ち！🎉`;}
+  else{icon='🤝';title='引き分け！すごい！';}
+  document.getElementById('ov-icon').textContent=icon;
+  document.getElementById('ov-title').textContent=title;
+  document.getElementById('ov-p1n').textContent=pn0;
+  document.getElementById('ov-p2n').textContent=pn1;
+  document.getElementById('ov-p1s').textContent=s0;
+  document.getElementById('ov-p2s').textContent=s1;
+  const p1c=document.getElementById('ov-p1c');
+  const p2c=document.getElementById('ov-p2c');
+  p1c.classList.toggle('winner',s0>s1);
+  p2c.classList.toggle('winner',s1>s0);
+  if(s0===s1){p1c.classList.add('winner');p2c.classList.add('winner');}
+  document.getElementById('overlay').classList.add('show');
+  launchConfetti();
+}
+
+// ── Confetti ──
+function launchConfetti(){
+  const cols=['#a5d8ff','#fff','#5bb0e8','#f5c842','#c080e8','#60d8c0','#ffb3c1'];
+  const emjs=['❄','❅','❆','✦','⭐','💙','🌟'];
+  for(let i=0;i<65;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');el.className='conf';
+      if(Math.random()>.4){el.textContent=emjs[Math.floor(Math.random()*emjs.length)];el.style.fontSize=(.8+Math.random()*.9)+'rem';}
+      else{const sz=7+Math.random()*8;el.style.cssText+=`width:${sz}px;height:${sz}px;background:${cols[Math.floor(Math.random()*cols.length)]};border-radius:${Math.random()>.5?'50%':'3px'};`;}
+      el.style.left=Math.random()*100+'vw';el.style.top='-25px';
+      el.style.cssText+=`--cd:${2+Math.random()*2.5}s;`;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),5000);
+    },i*52);
+  }
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='r'||e.key==='R')newGame();});
+newGame();
+</script>
+</body>
+</html>
