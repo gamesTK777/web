@@ -1,882 +1,1296 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>SPACE INVADERS</title>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Courier New',monospace; overflow:hidden; }
-canvas { display:block; image-rendering:pixelated; border:2px solid #333; }
-#ui { color:#0f0; font-size:13px; text-align:center; margin-top:6px; letter-spacing:1px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TK777 INVADER ARCADE</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg1: #050713;
+      --bg2: #0d1230;
+      --panel: rgba(10, 15, 35, 0.82);
+      --line: rgba(120, 220, 255, 0.24);
+      --pink: #ff5fa2;
+      --cyan: #4ef0ff;
+      --yellow: #ffd84d;
+      --purple: #9c6bff;
+      --green: #7dff9b;
+      --text: #ecf6ff;
+      --dim: #8ea6c9;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, #1d275c 0%, #0a0f24 36%, #050713 70%),
+        linear-gradient(180deg, #080c1b, #03040a);
+      color: var(--text);
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          180deg,
+          rgba(255,255,255,0.02) 0px,
+          rgba(255,255,255,0.02) 1px,
+          transparent 2px,
+          transparent 4px
+        );
+      mix-blend-mode: screen;
+      opacity: 0.35;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px 14px 28px;
+    }
+
+    .title {
+      text-align: center;
+      margin: 8px 0 14px;
+      letter-spacing: 0.08em;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 4vw, 2.4rem);
+      font-weight: 900;
+      text-shadow:
+        0 0 12px rgba(78, 240, 255, 0.55),
+        0 0 28px rgba(255, 95, 162, 0.38);
+    }
+
+    .title .sub {
+      margin-top: 6px;
+      color: var(--dim);
+      font-size: 0.92rem;
+      letter-spacing: 0.18em;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
+    .pill strong {
+      color: var(--cyan);
+      margin-left: 4px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      color: #041019;
+      font-weight: 800;
+      border-radius: 999px;
+      padding: 10px 16px;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(1px) scale(0.99); }
+
+    .btn-main {
+      background: linear-gradient(135deg, var(--cyan), #9ef7ff);
+      box-shadow: 0 0 20px rgba(78, 240, 255, 0.35);
+    }
+
+    .btn-sub {
+      background: linear-gradient(135deg, var(--pink), #ffb5d2);
+      box-shadow: 0 0 18px rgba(255, 95, 162, 0.28);
+    }
+
+    .btn-menu {
+      background: linear-gradient(135deg, var(--yellow), #fff0ad);
+      box-shadow: 0 0 18px rgba(255, 216, 77, 0.25);
+    }
+
+    .stage {
+      position: relative;
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(140, 220, 255, 0.2);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(108, 72, 255, 0.22), transparent 35%),
+        radial-gradient(circle at 50% 0%, rgba(255, 105, 180, 0.10), transparent 40%),
+        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+      box-shadow:
+        0 16px 40px rgba(0,0,0,0.45),
+        inset 0 0 80px rgba(78, 240, 255, 0.04);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      aspect-ratio: 16 / 10;
+      background: transparent;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(2, 6, 16, 0.5);
+      backdrop-filter: blur(6px);
+      transition: opacity 0.25s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .panel {
+      width: min(760px, 100%);
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(8, 12, 28, 0.86);
+      box-shadow:
+        0 0 28px rgba(78, 240, 255, 0.10),
+        0 0 32px rgba(255, 95, 162, 0.08);
+      padding: 22px 20px;
+      text-align: center;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.3rem, 3.4vw, 2rem);
+      text-shadow: 0 0 12px rgba(78, 240, 255, 0.35);
+    }
+
+    .panel p {
+      color: var(--dim);
+      margin: 10px auto;
+      max-width: 680px;
+      line-height: 1.7;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .mode-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+    }
+
+    .mode-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: var(--cyan);
+    }
+
+    .mode-card p {
+      margin: 0 0 14px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    .help {
+      margin-top: 18px;
+      text-align: left;
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--dim);
+      line-height: 1.8;
+      font-size: 0.94rem;
+    }
+
+    .help strong { color: var(--text); }
+
+    .result-title {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      margin-bottom: 10px;
+    }
+
+    .result-stats {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .touch-wrap {
+      margin-top: 14px;
+      display: none;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: stretch;
+    }
+
+    .touch-box {
+      flex: 1 1 300px;
+      min-width: 0;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(8, 12, 28, 0.72);
+      padding: 10px;
+      box-shadow: 0 0 24px rgba(0,0,0,0.24);
+    }
+
+    .touch-title {
+      color: var(--dim);
+      text-align: center;
+      font-size: 0.84rem;
+      margin-bottom: 10px;
+      letter-spacing: 0.08em;
+    }
+
+    .touch-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 10px;
+    }
+
+    .touch-btn {
+      height: 56px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 900;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .touch-btn.active {
+      background: rgba(78, 240, 255, 0.18);
+      border-color: rgba(78, 240, 255, 0.4);
+      box-shadow: 0 0 16px rgba(78, 240, 255, 0.2);
+    }
+
+    .footnote {
+      text-align: center;
+      color: var(--dim);
+      margin-top: 12px;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 860px) {
+      .menu-grid { grid-template-columns: 1fr; }
+      .touch-wrap { display: flex; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 12px 10px 20px; }
+      .topbar { padding: 10px; }
+      .pill { font-size: 0.84rem; }
+      .touch-row { grid-template-columns: 1fr 1fr 1fr; }
+      .touch-btn { height: 52px; }
+    }
+  </style>
 </head>
 <body>
-<canvas id="c"></canvas>
-<div id="ui"></div>
-<script>
-// ── Canvas Setup ──────────────────────────────────────────────
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const CW = 800, CH = 580;
-canvas.width = CW; canvas.height = CH;
+  <div class="wrap">
+    <div class="title">
+      <h1>TK777 INVADER ARCADE</h1>
+      <div class="sub">SINGLE / CO-OP / VS BATTLE</div>
+    </div>
 
-// Scale for display
-function resize() {
-  const scale = Math.min(window.innerWidth / CW, window.innerHeight / (CH + 30));
-  canvas.style.width = (CW * scale) + 'px';
-  canvas.style.height = (CH * scale) + 'px';
-}
-window.addEventListener('resize', resize); resize();
+    <div class="topbar">
+      <div class="hud">
+        <div class="pill">モード<strong id="hudMode">MENU</strong></div>
+        <div class="pill">LEVEL<strong id="hudLevel">1</strong></div>
+        <div class="pill">P1 SCORE<strong id="hudScore1">0</strong></div>
+        <div class="pill" id="pillScore2" style="display:none;">P2 SCORE<strong id="hudScore2">0</strong></div>
+        <div class="pill">TIME<strong id="hudTime">--</strong></div>
+        <div class="pill">状態<strong id="hudStatus">待機中</strong></div>
+      </div>
+      <div class="actions">
+        <button class="btn-main" id="btnStart">スタート</button>
+        <button class="btn-sub" id="btnRestart">リトライ</button>
+        <button class="btn-menu" id="btnMenu">メニュー</button>
+      </div>
+    </div>
 
-// ── Constants ─────────────────────────────────────────────────
-const INVADER_COLS = 11, INVADER_ROWS = 5;
-const INV_W = 36, INV_H = 28, INV_GAP_X = 14, INV_GAP_Y = 16;
-const SHIELD_W = 64, SHIELD_H = 40;
-const BULLET_W = 3, BULLET_H = 12;
-const SHIP_W = 44, SHIP_H = 22;
-const UFO_W = 56, UFO_H = 22;
+    <div class="stage">
+      <canvas id="game" width="960" height="600"></canvas>
 
-// Invader pixel sprites (11x8 grid per type, 2 frames)
-const SPRITES = {
-  // Type 0 (top row) - squid-like
-  0: [
-    [0,0,0,1,1,0,0,0,0,1,1,
-     0,0,1,1,1,1,0,0,1,1,1,
-     0,1,1,1,1,1,1,1,1,1,1,
-     1,1,0,1,1,1,1,1,0,1,1,
-     1,1,1,1,1,1,1,1,1,1,1,
-     0,1,1,1,1,1,1,1,1,1,0,
-     0,0,1,0,0,0,0,0,1,0,0,
-     0,1,0,0,0,0,0,0,0,1,0],
-    [0,0,0,1,1,0,0,0,0,1,1,
-     1,0,1,1,1,1,0,0,1,1,1,
-     1,1,1,1,1,1,1,1,1,1,1,
-     1,1,0,1,1,1,1,1,0,1,1,
-     1,1,1,1,1,1,1,1,1,1,1,
-     0,0,1,1,1,1,1,1,1,0,0,
-     0,1,1,0,0,0,0,0,1,1,0,
-     1,0,0,0,0,0,0,0,0,0,1]
-  ],
-  // Type 1 (mid rows) - crab-like
-  1: [
-    [0,0,1,0,0,0,0,0,1,0,0,
-     0,0,0,1,0,0,0,1,0,0,0,
-     0,0,1,1,1,1,1,1,1,0,0,
-     0,1,1,0,1,1,1,0,1,1,0,
-     1,1,1,1,1,1,1,1,1,1,1,
-     1,0,1,1,1,1,1,1,1,0,1,
-     1,0,1,0,0,0,0,0,1,0,1,
-     0,0,0,1,1,0,1,1,0,0,0],
-    [0,0,1,0,0,0,0,0,1,0,0,
-     1,0,0,1,0,0,0,1,0,0,1,
-     1,0,1,1,1,1,1,1,1,0,1,
-     1,1,1,0,1,1,1,0,1,1,1,
-     0,1,1,1,1,1,1,1,1,1,0,
-     0,0,1,1,1,1,1,1,1,0,0,
-     0,0,1,0,0,0,0,0,1,0,0,
-     0,1,0,0,0,0,0,0,0,1,0]
-  ],
-  // Type 2 (bottom rows) - octopus-like
-  2: [
-    [0,0,1,1,1,1,1,1,1,0,0,
-     1,1,1,1,1,1,1,1,1,1,1,
-     1,1,0,1,1,1,1,1,0,1,1,
-     1,1,1,1,1,1,1,1,1,1,1,
-     0,0,1,1,0,0,0,1,1,0,0,
-     0,1,1,0,0,0,0,0,1,1,0,
-     1,0,0,0,0,0,0,0,0,0,1,
-     0,1,0,0,0,0,0,0,0,1,0],
-    [0,0,1,1,1,1,1,1,1,0,0,
-     1,1,1,1,1,1,1,1,1,1,1,
-     1,1,0,1,1,1,1,1,0,1,1,
-     1,1,1,1,1,1,1,1,1,1,1,
-     0,1,1,1,0,0,0,1,1,1,0,
-     1,1,0,0,0,0,0,0,0,1,1,
-     1,0,0,0,0,0,0,0,0,0,1,
-     0,0,1,0,0,0,0,0,1,0,0]
-  ]
-};
+      <div class="overlay" id="menuOverlay">
+        <div class="panel">
+          <h2>モードを選んでゲーム開始</h2>
+          <p>レトロアーケード風のインベーダーゲームです。1人用、2人協力、2人対戦の3つのメニューから遊べます。</p>
 
-// ── Game State ────────────────────────────────────────────────
-let gameState = 'title'; // title, playing, gameover, win
-let gameMode = 0; // 1=1P, 2=2P_COOP, 3=2P_VERSUS
-let frame = 0;
-let wave = 1;
+          <div class="menu-grid">
+            <div class="mode-card">
+              <h3>1人用</h3>
+              <p>1機で敵編隊を撃破し続けるスタンダードモード。敵を全滅させると次のウェーブに進みます。</p>
+              <button class="btn-main" data-mode="single">このモードで遊ぶ</button>
+            </div>
 
-let invaders = [];
-let invaderDir = 1, invaderDropPending = false;
-let invaderMoveTimer = 0, invaderMoveInterval = 60;
-let invaderAnimFrame = 0;
+            <div class="mode-card">
+              <h3>2人協力プレイ</h3>
+              <p>2人で同じ敵編隊に立ち向かうモード。お互いを撃つことはありません。協力してウェーブ突破を目指します。</p>
+              <button class="btn-main" data-mode="coop">このモードで遊ぶ</button>
+            </div>
 
-let bullets = []; // {x,y,vy,owner:'p1'|'p2'|'inv'}
-let particles = [];
-let ufo = null;
-let ufoTimer = 0;
+            <div class="mode-card">
+              <h3>2人対戦プレイ</h3>
+              <p>上段と下段に分かれて戦うスコア対戦。敵撃破でも加点、相手に当てても加点。制限時間または残機で決着です。</p>
+              <button class="btn-main" data-mode="versus">このモードで遊ぶ</button>
+            </div>
+          </div>
 
-let shields = [];
-let scores = {p1:0, p2:0};
-let lives = {p1:3, p2:3};
-let ships = [];
+          <div class="help">
+            <div><strong>PC操作</strong></div>
+            <div>1P：A / D で移動、F で発射</div>
+            <div>2P：← / → で移動、/ で発射</div>
+            <div>1人用では 1P操作に加えて、← / → / Space でも操作可能です。</div>
+            <br>
+            <div><strong>スマホ操作</strong></div>
+            <div>画面下のタッチボタンで操作できます。2人モードでは1Pと2Pの操作パネルが両方表示されます。</div>
+          </div>
+        </div>
+      </div>
 
-let titleSelection = 0;
-const MODES = ['1人プレイ','2人 協力プレイ','2人 対戦プレイ'];
+      <div class="overlay hidden" id="resultOverlay">
+        <div class="panel">
+          <div class="result-title" id="resultTitle">GAME OVER</div>
+          <p id="resultText">結果表示</p>
+          <div class="result-stats">
+            <div class="pill">P1 SCORE<strong id="resultScore1">0</strong></div>
+            <div class="pill" id="resultScore2Wrap" style="display:none;">P2 SCORE<strong id="resultScore2">0</strong></div>
+            <div class="pill">LEVEL<strong id="resultLevel">1</strong></div>
+          </div>
+          <div style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button class="btn-main" id="resultRetry">もう一度遊ぶ</button>
+            <button class="btn-menu" id="resultMenu">メニューへ戻る</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-let keys = {};
-let prevKeys = {};
+    <div class="touch-wrap">
+      <div class="touch-box" id="touchP1">
+        <div class="touch-title">PLAYER 1</div>
+        <div class="touch-row">
+          <div class="touch-btn" data-touch="p1Left">◀</div>
+          <div class="touch-btn" data-touch="p1Right">▶</div>
+          <div class="touch-btn" data-touch="p1Fire">FIRE</div>
+        </div>
+      </div>
 
-// Touch state
-let touches = {}; // id -> {x,y,side}
+      <div class="touch-box" id="touchP2">
+        <div class="touch-title">PLAYER 2</div>
+        <div class="touch-row">
+          <div class="touch-btn" data-touch="p2Left">◀</div>
+          <div class="touch-btn" data-touch="p2Right">▶</div>
+          <div class="touch-btn" data-touch="p2Fire">FIRE</div>
+        </div>
+      </div>
+    </div>
 
-// ── Input ─────────────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if(gameState === 'title') {
-    if(e.code === 'ArrowUp' || e.code === 'KeyW') titleSelection = (titleSelection+2)%3;
-    if(e.code === 'ArrowDown' || e.code === 'KeyS') titleSelection = (titleSelection+1)%3;
-    if(e.code === 'Space' || e.code === 'Enter') startGame(titleSelection+1);
-  }
-  e.preventDefault();
-}, {passive:false});
-document.addEventListener('keyup', e => { keys[e.code] = false; });
+    <div class="footnote">保存してブラウザで開くだけで動作します。</div>
+  </div>
 
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  for(const t of e.changedTouches) {
-    const rect = canvas.getBoundingClientRect();
-    const sx = canvas.width / rect.width;
-    const sy = canvas.height / rect.height;
-    const x = (t.clientX - rect.left) * sx;
-    const y = (t.clientY - rect.top) * sy;
-    touches[t.identifier] = {x, y, startX:x, startY:y, moved:false};
-    if(gameState === 'title') {
-      handleTitleTouch(x, y);
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const hudMode = document.getElementById("hudMode");
+    const hudLevel = document.getElementById("hudLevel");
+    const hudScore1 = document.getElementById("hudScore1");
+    const hudScore2 = document.getElementById("hudScore2");
+    const hudTime = document.getElementById("hudTime");
+    const hudStatus = document.getElementById("hudStatus");
+    const pillScore2 = document.getElementById("pillScore2");
+
+    const menuOverlay = document.getElementById("menuOverlay");
+    const resultOverlay = document.getElementById("resultOverlay");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultText = document.getElementById("resultText");
+    const resultScore1 = document.getElementById("resultScore1");
+    const resultScore2 = document.getElementById("resultScore2");
+    const resultScore2Wrap = document.getElementById("resultScore2Wrap");
+    const resultLevel = document.getElementById("resultLevel");
+
+    const touchP1 = document.getElementById("touchP1");
+    const touchP2 = document.getElementById("touchP2");
+
+    const btnStart = document.getElementById("btnStart");
+    const btnRestart = document.getElementById("btnRestart");
+    const btnMenu = document.getElementById("btnMenu");
+    const resultRetry = document.getElementById("resultRetry");
+    const resultMenu = document.getElementById("resultMenu");
+
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const keys = {};
+    const touch = {
+      p1Left: false, p1Right: false, p1Fire: false,
+      p2Left: false, p2Right: false, p2Fire: false
+    };
+
+    const state = {
+      mode: "single",
+      status: "menu",
+      level: 1,
+      time: 90,
+      lastTime: 0,
+      enemies: [],
+      bullets: [],
+      enemyBullets: [],
+      particles: [],
+      players: [],
+      enemyDir: 1,
+      enemySpeed: 42,
+      enemyDrop: 26,
+      enemyShootTimer: 0,
+      stars: [],
+      flash: 0,
+      waveClearedAt: 0
+    };
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
     }
-  }
-}, {passive:false});
-canvas.addEventListener('touchmove', e => {
-  e.preventDefault();
-  for(const t of e.changedTouches) {
-    const rect = canvas.getBoundingClientRect();
-    const sx = canvas.width / rect.width;
-    const sy = canvas.height / rect.height;
-    const x = (t.clientX - rect.left) * sx;
-    const y = (t.clientY - rect.top) * sy;
-    if(touches[t.identifier]) {
-      touches[t.identifier].x = x;
-      touches[t.identifier].y = y;
-      if(Math.abs(x - touches[t.identifier].startX) > 5) touches[t.identifier].moved = true;
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
     }
-  }
-}, {passive:false});
-canvas.addEventListener('touchend', e => {
-  e.preventDefault();
-  for(const t of e.changedTouches) {
-    const td = touches[t.identifier];
-    if(td && !td.moved && gameState==='playing') {
-      // tap = shoot
-      const side = td.x < CW/2 ? 'p1' : 'p2';
-      if(side==='p1' || gameMode>=2) fireBullet(side);
+
+    function rectHit(a, b) {
+      return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+      );
     }
-    delete touches[t.identifier];
-  }
-}, {passive:false});
 
-function handleTitleTouch(x, y) {
-  // Check button regions
-  const bY = CH/2 - 20;
-  for(let i=0;i<3;i++) {
-    const by = bY + i*70;
-    if(x > CW/2-120 && x < CW/2+120 && y > by-20 && y < by+40) {
-      startGame(i+1);
-      return;
+    function initStars() {
+      state.stars = [];
+      for (let i = 0; i < 110; i++) {
+        state.stars.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          r: Math.random() * 2.2 + 0.2,
+          a: Math.random() * 0.8 + 0.2,
+          s: Math.random() * 10 + 8
+        });
+      }
     }
-  }
-}
 
-// ── Game Init ─────────────────────────────────────────────────
-function startGame(mode) {
-  gameMode = mode;
-  gameState = 'playing';
-  wave = 1;
-  scores = {p1:0, p2:0};
-  lives = {p1:3, p2:3};
-  bullets = [];
-  particles = [];
-  ufo = null;
-  ufoTimer = 400 + Math.random()*400;
-  initShips();
-  initInvaders();
-  initShields();
-}
+    function createPlayer(id, x, y, color, shootDir, keyset) {
+      return {
+        id,
+        x,
+        y,
+        w: 40,
+        h: 22,
+        color,
+        lives: state.mode === "versus" ? 5 : 3,
+        score: 0,
+        speed: 320,
+        cooldown: 0,
+        respawn: 0,
+        stun: 0,
+        shootDir,
+        keyset
+      };
+    }
 
-function initShips() {
-  ships = [];
-  if(gameMode === 1) {
-    ships.push({id:'p1', x:CW/2, y:CH-40, w:SHIP_W, h:SHIP_H, alive:true, invincible:0, shootCooldown:0, color:'#0f0', score:0});
-  } else if(gameMode === 2) {
-    ships.push({id:'p1', x:CW/3, y:CH-40, w:SHIP_W, h:SHIP_H, alive:true, invincible:0, shootCooldown:0, color:'#0f0', score:0});
-    ships.push({id:'p2', x:2*CW/3, y:CH-40, w:SHIP_W, h:SHIP_H, alive:true, invincible:0, shootCooldown:0, color:'#4af', score:0});
-  } else {
-    ships.push({id:'p1', x:CW/4, y:CH-40, w:SHIP_W, h:SHIP_H, alive:true, invincible:0, shootCooldown:0, color:'#0f0', score:0});
-    ships.push({id:'p2', x:3*CW/4, y:CH-40, w:SHIP_W, h:SHIP_H, alive:true, invincible:0, shootCooldown:0, color:'#f90', score:0});
-  }
-}
+    function setupPlayers() {
+      if (state.mode === "single") {
+        state.players = [
+          createPlayer("P1", W / 2 - 20, H - 70, "#4ef0ff", -1, {
+            left: ["KeyA", "ArrowLeft"],
+            right: ["KeyD", "ArrowRight"],
+            fire: ["KeyF", "Space"]
+          })
+        ];
+      } else if (state.mode === "coop") {
+        state.players = [
+          createPlayer("P1", W * 0.28 - 20, H - 70, "#4ef0ff", -1, {
+            left: ["KeyA"],
+            right: ["KeyD"],
+            fire: ["KeyF"]
+          }),
+          createPlayer("P2", W * 0.72 - 20, H - 70, "#ff5fa2", -1, {
+            left: ["ArrowLeft"],
+            right: ["ArrowRight"],
+            fire: ["Slash"]
+          })
+        ];
+      } else {
+        state.players = [
+          createPlayer("P1", W / 2 - 20, H - 72, "#4ef0ff", -1, {
+            left: ["KeyA"],
+            right: ["KeyD"],
+            fire: ["KeyF"]
+          }),
+          createPlayer("P2", W / 2 - 20, 50, "#ff5fa2", 1, {
+            left: ["ArrowLeft"],
+            right: ["ArrowRight"],
+            fire: ["Slash"]
+          })
+        ];
+      }
+    }
 
-function initInvaders() {
-  invaders = [];
-  const startX = 80, startY = 80;
-  invaderDir = 1;
-  invaderDropPending = false;
-  invaderMoveInterval = Math.max(8, 60 - (wave-1)*6);
-  invaderMoveTimer = 0;
-  invaderAnimFrame = 0;
+    function createWave() {
+      state.enemies = [];
+      const rows = state.mode === "versus" ? 4 : Math.min(4 + Math.floor((state.level - 1) / 2), 6);
+      const cols = state.mode === "versus" ? 8 : 9;
+      const sx = 86;
+      const sy = state.mode === "versus" ? 165 : 72;
+      const gapX = 70;
+      const gapY = 48;
 
-  for(let r=0; r<INVADER_ROWS; r++) {
-    for(let c=0; c<INVADER_COLS; c++) {
-      const type = r===0 ? 0 : r<=2 ? 1 : 2;
-      const pts = r===0 ? 30 : r<=2 ? 20 : 10;
-      invaders.push({
-        x: startX + c*(INV_W+INV_GAP_X),
-        y: startY + r*(INV_H+INV_GAP_Y),
-        type, pts, alive:true, col:c, row:r
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          state.enemies.push({
+            x: sx + c * gapX,
+            y: sy + r * gapY,
+            w: 36,
+            h: 26,
+            alive: true,
+            type: r % 3,
+            bob: Math.random() * Math.PI * 2
+          });
+        }
+      }
+
+      state.enemyDir = 1;
+      state.enemySpeed = state.mode === "versus"
+        ? 52 + state.level * 5
+        : 38 + state.level * 7;
+      state.enemyDrop = 22 + Math.min(10, state.level * 1.2);
+      state.enemyShootTimer = state.mode === "versus" ? 9999 : 0.6;
+    }
+
+    function resetGame(mode = state.mode) {
+      state.mode = mode;
+      state.status = "playing";
+      state.level = 1;
+      state.time = mode === "versus" ? 90 : 0;
+      state.bullets = [];
+      state.enemyBullets = [];
+      state.particles = [];
+      state.flash = 0;
+      state.waveClearedAt = 0;
+
+      setupPlayers();
+      createWave();
+      syncUI();
+      showMenu(false);
+      showResult(false);
+    }
+
+    function nextWave() {
+      state.level += 1;
+      state.bullets = [];
+      state.enemyBullets = [];
+      createWave();
+      syncUI();
+    }
+
+    function showMenu(show) {
+      menuOverlay.classList.toggle("hidden", !show);
+      if (show) state.status = "menu";
+      syncTouchPanels();
+      syncUI();
+    }
+
+    function showResult(show, title = "", text = "") {
+      resultOverlay.classList.toggle("hidden", !show);
+      if (show) {
+        resultTitle.textContent = title;
+        resultText.textContent = text;
+        resultScore1.textContent = state.players[0] ? state.players[0].score : 0;
+        resultScore2.textContent = state.players[1] ? state.players[1].score : 0;
+        resultLevel.textContent = state.level;
+        resultScore2Wrap.style.display = state.players.length > 1 ? "" : "none";
+      }
+    }
+
+    function endGame() {
+      state.status = "result";
+
+      if (state.mode === "versus") {
+        const p1 = state.players[0];
+        const p2 = state.players[1];
+        let title = "DRAW";
+        let text = "引き分けです。";
+        if (p1.score > p2.score) {
+          title = "PLAYER 1 WIN";
+          text = "P1 の勝利です。";
+        } else if (p2.score > p1.score) {
+          title = "PLAYER 2 WIN";
+          text = "P2 の勝利です。";
+        }
+        if (p1.lives <= 0 && p2.lives > 0) {
+          title = "PLAYER 2 WIN";
+          text = "P1 の残機がなくなりました。";
+        } else if (p2.lives <= 0 && p1.lives > 0) {
+          title = "PLAYER 1 WIN";
+          text = "P2 の残機がなくなりました。";
+        }
+        showResult(true, title, text);
+      } else if (state.mode === "coop") {
+        const total = state.players[0].score + state.players[1].score;
+        showResult(true, "GAME OVER", `協力プレイ終了。合計スコア ${total} 点。`);
+      } else {
+        showResult(true, "GAME OVER", `1人用終了。スコア ${state.players[0].score} 点。`);
+      }
+
+      syncUI();
+    }
+
+    function syncTouchPanels() {
+      if (state.mode === "single") {
+        touchP1.style.display = "";
+        touchP2.style.display = "none";
+      } else {
+        touchP1.style.display = "";
+        touchP2.style.display = "";
+      }
+    }
+
+    function syncUI() {
+      const modeLabel =
+        state.status === "menu" ? "MENU" :
+        state.mode === "single" ? "1P" :
+        state.mode === "coop" ? "CO-OP" : "VS";
+
+      hudMode.textContent = modeLabel;
+      hudLevel.textContent = state.level;
+      hudScore1.textContent = state.players[0] ? state.players[0].score : 0;
+      hudScore2.textContent = state.players[1] ? state.players[1].score : 0;
+      pillScore2.style.display = state.players.length > 1 ? "" : "none";
+      hudTime.textContent = state.mode === "versus"
+        ? Math.max(0, Math.ceil(state.time))
+        : "--";
+      hudStatus.textContent =
+        state.status === "menu" ? "待機中" :
+        state.status === "playing" ? "プレイ中" :
+        "終了";
+
+      syncTouchPanels();
+    }
+
+    function playerInput(player) {
+      const ks = player.keyset;
+      const keyLeft = ks.left.some(code => keys[code]);
+      const keyRight = ks.right.some(code => keys[code]);
+      const keyFire = ks.fire.some(code => keys[code]);
+
+      const tLeft = player.id === "P1" ? touch.p1Left : touch.p2Left;
+      const tRight = player.id === "P1" ? touch.p1Right : touch.p2Right;
+      const tFire = player.id === "P1" ? touch.p1Fire : touch.p2Fire;
+
+      return {
+        left: keyLeft || tLeft,
+        right: keyRight || tRight,
+        fire: keyFire || tFire
+      };
+    }
+
+    function fireBullet(player) {
+      const speed = 520 * player.shootDir;
+      state.bullets.push({
+        x: player.x + player.w / 2 - 3,
+        y: player.shootDir < 0 ? player.y - 14 : player.y + player.h + 2,
+        w: 6,
+        h: 16,
+        vy: speed,
+        owner: player.id,
+        color: player.color
+      });
+      player.cooldown = state.mode === "versus" ? 0.28 : 0.24;
+      burst(player.x + player.w / 2, player.shootDir < 0 ? player.y : player.y + player.h, player.color, 6, 1.6);
+    }
+
+    function fireEnemyBullet() {
+      const alive = state.enemies.filter(e => e.alive);
+      if (!alive.length) return;
+      const shooter = alive[(Math.random() * alive.length) | 0];
+      state.enemyBullets.push({
+        x: shooter.x + shooter.w / 2 - 3,
+        y: shooter.y + shooter.h + 4,
+        w: 6,
+        h: 14,
+        vy: 260 + state.level * 14,
+        color: "#ffd84d"
       });
     }
-  }
-}
 
-function initShields() {
-  shields = [];
-  const count = 4;
-  for(let i=0; i<count; i++) {
-    const sx = 80 + i * (CW-160)/(count-1) - SHIELD_W/2;
-    const sy = CH - 110;
-    // Shield pixel grid (8x5 blocks)
-    const grid = [];
-    const BW=8, BH=8;
-    const cols = Math.floor(SHIELD_W/BW);
-    const rows = Math.floor(SHIELD_H/BH);
-    for(let row=0; row<rows; row++) {
-      grid[row] = [];
-      for(let col=0; col<cols; col++) {
-        // arch shape cutout at bottom center
-        const cx = col - cols/2 + 0.5;
-        const ry = rows - 1 - row;
-        let alive = true;
-        // Cut notch at bottom center
-        if(row >= rows-2 && Math.abs(cx) < 2) alive = false;
-        // Round top corners
-        if(row === 0 && (col===0||col===cols-1)) alive = false;
-        grid[row][col] = alive;
-      }
-    }
-    shields.push({x:sx, y:sy, grid, bw:BW, bh:BH, cols, rows});
-  }
-}
+    function hitPlayer(player, byEnemy = true) {
+      if (player.respawn > 0) return;
 
-// ── Shooting ──────────────────────────────────────────────────
-function fireBullet(owner) {
-  const ship = ships.find(s=>s.id===owner);
-  if(!ship || !ship.alive) return;
-  if(ship.shootCooldown > 0) return;
-  // Limit bullets from same owner
-  const existing = bullets.filter(b=>b.owner===owner);
-  if(existing.length >= 2) return;
-  bullets.push({x:ship.x, y:ship.y-ship.h/2-4, vy:-12, owner, w:BULLET_W, h:BULLET_H});
-  ship.shootCooldown = 18;
-}
+      player.lives -= 1;
+      player.respawn = 1.4;
+      player.stun = 0.45;
+      state.flash = 0.14;
+      burst(player.x + player.w / 2, player.y + player.h / 2, byEnemy ? "#ffd84d" : "#ff5fa2", 14, 2.8);
 
-function invaderShoot() {
-  const alive = invaders.filter(v=>v.alive);
-  if(alive.length===0) return;
-  // Pick a random bottom-row invader in each column
-  const cols = {};
-  for(const inv of alive) {
-    if(!cols[inv.col] || inv.row > cols[inv.col].row) cols[inv.col] = inv;
-  }
-  const shooters = Object.values(cols);
-  if(shooters.length===0) return;
-  const shooter = shooters[Math.floor(Math.random()*shooters.length)];
-  const invBulletCount = bullets.filter(b=>b.owner==='inv').length;
-  const maxInvBullets = Math.min(4, 1 + Math.floor(wave/2));
-  if(invBulletCount >= maxInvBullets) return;
-  bullets.push({x:shooter.x+INV_W/2, y:shooter.y+INV_H, vy:5+wave*0.3, owner:'inv', w:BULLET_W, h:BULLET_H+2, zigzag:Math.random()<0.5, phase:0});
-}
-
-// ── Particles ─────────────────────────────────────────────────
-function spawnParticles(x, y, color, count=12) {
-  for(let i=0;i<count;i++) {
-    const a = Math.random()*Math.PI*2;
-    const spd = 1+Math.random()*4;
-    particles.push({x,y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, life:1, maxLife:0.6+Math.random()*0.6, color, size:2+Math.random()*3});
-  }
-}
-
-// ── Update ────────────────────────────────────────────────────
-function update() {
-  if(gameState !== 'playing') return;
-  frame++;
-
-  prevKeys = {...keys};
-
-  // Ship movement & shooting
-  for(const ship of ships) {
-    if(!ship.alive) continue;
-    if(ship.shootCooldown > 0) ship.shootCooldown--;
-    if(ship.invincible > 0) ship.invincible--;
-
-    const speed = 4;
-    const isP1 = ship.id === 'p1';
-    const leftKey = isP1 ? (keys['ArrowLeft']||false) : (keys['KeyA']||false);
-    const rightKey = isP1 ? (keys['ArrowRight']||false) : (keys['KeyD']||false);
-    const shootKey = isP1 ? (keys['Space']||false) : (keys['ShiftLeft']||keys['ShiftRight']||keys['KeyF']||false);
-
-    // Touch movement
-    let touchDx = 0;
-    for(const td of Object.values(touches)) {
-      const side = td.x < CW/2 ? 'p1' : 'p2';
-      if(side === ship.id && td.moved) {
-        touchDx = (td.x - (ship.x)) * 0.15;
-      }
-    }
-
-    if(leftKey) ship.x -= speed;
-    if(rightKey) ship.x += speed;
-    if(touchDx !== 0) ship.x += touchDx;
-
-    // In versus mode, restrict halves
-    if(gameMode===3) {
-      if(ship.id==='p1') ship.x = Math.max(SHIP_W/2, Math.min(CW/2-10, ship.x));
-      else ship.x = Math.max(CW/2+10, Math.min(CW-SHIP_W/2, ship.x));
-    } else {
-      ship.x = Math.max(SHIP_W/2, Math.min(CW-SHIP_W/2, ship.x));
-    }
-
-    if(shootKey && ship.shootCooldown===0) fireBullet(ship.id);
-  }
-
-  // Invader movement
-  invaderMoveTimer++;
-  const aliveInv = invaders.filter(v=>v.alive);
-  if(aliveInv.length===0) { nextWave(); return; }
-
-  const moveSpeed = Math.max(1, Math.ceil(aliveInv.length / 10));
-  if(invaderMoveTimer >= invaderMoveInterval) {
-    invaderMoveTimer = 0;
-    invaderAnimFrame = 1 - invaderAnimFrame;
-    invaderMoveInterval = Math.max(4, 8 + Math.floor(aliveInv.length * 0.6) - (wave-1)*4);
-
-    if(invaderDropPending) {
-      for(const inv of invaders) { inv.y += 20; }
-      invaderDir *= -1;
-      invaderDropPending = false;
-    } else {
-      let hitEdge = false;
-      for(const inv of aliveInv) {
-        inv.x += invaderDir * (8 + wave);
-        if(inv.x < 20 || inv.x + INV_W > CW-20) hitEdge = true;
-      }
-      if(hitEdge) invaderDropPending = true;
-    }
-
-    // Invaders reached bottom
-    for(const inv of aliveInv) {
-      if(inv.y + INV_H >= CH-50) { gameOver(); return; }
-    }
-
-    // Invader shoots
-    if(Math.random() < 0.4) invaderShoot();
-  }
-
-  // UFO
-  ufoTimer--;
-  if(ufoTimer <= 0 && !ufo) {
-    ufo = {x: -UFO_W, y:40, vx:2+wave*0.3, pts:[100,150,200,300][Math.floor(Math.random()*4)]};
-    ufoTimer = 500 + Math.random()*500;
-  }
-  if(ufo) {
-    ufo.x += ufo.vx;
-    if(ufo.x > CW+UFO_W) ufo = null;
-  }
-
-  // Bullets
-  for(let i=bullets.length-1; i>=0; i--) {
-    const b = bullets[i];
-    if(b.zigzag) { b.phase+=0.3; b.x += Math.sin(b.phase)*2; }
-    b.y += b.vy;
-
-    // Off screen
-    if(b.y < -20 || b.y > CH+20) { bullets.splice(i,1); continue; }
-
-    let hit = false;
-
-    // Bullet vs shields
-    for(const sh of shields) {
-      if(hit) break;
-      const lx = b.x - sh.x, ly = b.y - sh.y;
-      const col = Math.floor(lx / sh.bw), row = Math.floor(ly / sh.bh);
-      if(col>=0 && col<sh.cols && row>=0 && row<sh.rows && sh.grid[row][col]) {
-        sh.grid[row][col] = false;
-        // Damage nearby blocks
-        if(Math.random()<0.5 && row+1<sh.rows) sh.grid[row+1][col] = false;
-        spawnParticles(b.x, b.y, '#0a0', 4);
-        bullets.splice(i,1); hit=true; break;
-      }
-    }
-    if(hit) continue;
-
-    if(b.owner === 'inv') {
-      // vs ships
-      for(const ship of ships) {
-        if(!ship.alive || ship.invincible>0) continue;
-        if(Math.abs(b.x-ship.x)<ship.w/2+2 && Math.abs(b.y-ship.y)<ship.h/2+4) {
-          hitShip(ship);
-          bullets.splice(i,1); hit=true; break;
+      if (state.mode === "versus") {
+        if (player.id === "P1") {
+          player.x = W / 2 - 20;
+          player.y = H - 72;
+        } else {
+          player.x = W / 2 - 20;
+          player.y = 50;
+        }
+      } else {
+        const alivePlayers = state.players.filter(p => p.lives > 0);
+        if (!alivePlayers.length) {
+          endGame();
         }
       }
-    } else {
-      // vs invaders
-      for(const inv of aliveInv) {
-        if(!inv.alive) continue;
-        if(b.x>inv.x && b.x<inv.x+INV_W && b.y>inv.y && b.y<inv.y+INV_H) {
-          inv.alive = false;
-          const scoreOwner = b.owner;
-          const ship = ships.find(s=>s.id===scoreOwner);
-          if(ship) ship.score += inv.pts;
-          scores[scoreOwner] = (scores[scoreOwner]||0) + inv.pts;
-          spawnParticles(inv.x+INV_W/2, inv.y+INV_H/2, inv.type===0?'#f0f':inv.type===1?'#0ff':'#ff0', 16);
-          bullets.splice(i,1); hit=true; break;
+    }
+
+    function awardScore(playerId, points) {
+      const p = state.players.find(v => v.id === playerId);
+      if (p) p.score += points;
+    }
+
+    function burst(x, y, color, n = 10, power = 2) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = Math.random() * 90 * power + 30;
+        state.particles.push({
+          x, y,
+          vx: Math.cos(a) * s,
+          vy: Math.sin(a) * s,
+          life: Math.random() * 0.5 + 0.35,
+          max: Math.random() * 0.5 + 0.35,
+          color
+        });
+      }
+    }
+
+    function updatePlayers(dt) {
+      for (const p of state.players) {
+        if (p.cooldown > 0) p.cooldown -= dt;
+        if (p.respawn > 0) p.respawn -= dt;
+        if (p.stun > 0) p.stun -= dt;
+
+        if (p.lives <= 0) continue;
+        if (p.stun > 0) continue;
+
+        const input = playerInput(p);
+        let move = 0;
+        if (input.left) move -= 1;
+        if (input.right) move += 1;
+
+        p.x += move * p.speed * dt;
+        p.x = clamp(p.x, 12, W - p.w - 12);
+
+        if (input.fire && p.cooldown <= 0 && p.respawn <= 0) {
+          fireBullet(p);
         }
       }
-      if(hit) continue;
-      // vs UFO
-      if(ufo && b.x>ufo.x && b.x<ufo.x+UFO_W && b.y>ufo.y && b.y<ufo.y+UFO_H) {
-        const scoreOwner = b.owner;
-        scores[scoreOwner] = (scores[scoreOwner]||0) + ufo.pts;
-        const ship = ships.find(s=>s.id===scoreOwner);
-        if(ship) ship.score += ufo.pts;
-        spawnParticles(ufo.x+UFO_W/2, ufo.y+UFO_H/2, '#f44', 20);
-        ufo = null;
-        bullets.splice(i,1); hit=true;
+    }
+
+    function updateEnemies(dt) {
+      const alive = state.enemies.filter(e => e.alive);
+      if (!alive.length) {
+        if (!state.waveClearedAt) state.waveClearedAt = performance.now();
+        if (performance.now() - state.waveClearedAt > 650) {
+          state.waveClearedAt = 0;
+          nextWave();
+        }
+        return;
       }
-      if(hit) continue;
-      // P1 bullet vs P2 bullet (cancel in versus)
-      if(gameMode===3) {
-        for(let j=bullets.length-1; j>=0; j--) {
-          if(j===i) continue;
-          const b2 = bullets[j];
-          if(b2.owner!==b.owner && Math.abs(b.x-b2.x)<6 && Math.abs(b.y-b2.y)<10) {
-            spawnParticles(b.x, b.y, '#fff', 6);
-            bullets.splice(Math.max(i,j),1);
-            bullets.splice(Math.min(i,j),1);
-            hit=true; break;
+
+      let minX = Infinity;
+      let maxX = -Infinity;
+      for (const e of alive) {
+        e.x += state.enemyDir * state.enemySpeed * dt;
+        e.bob += dt * 4;
+        minX = Math.min(minX, e.x);
+        maxX = Math.max(maxX, e.x + e.w);
+      }
+
+      if (minX < 18 || maxX > W - 18) {
+        state.enemyDir *= -1;
+        for (const e of alive) e.y += state.enemyDrop;
+      }
+
+      if (state.mode !== "versus") {
+        state.enemyShootTimer -= dt;
+        const fireGap = Math.max(0.22, 0.85 - state.level * 0.05);
+        if (state.enemyShootTimer <= 0) {
+          fireEnemyBullet();
+          state.enemyShootTimer = fireGap;
+        }
+
+        for (const e of alive) {
+          const threshold = H - 125;
+          if (e.y + e.h >= threshold) {
+            state.players.forEach(p => { p.lives = 0; });
+            endGame();
+            return;
           }
         }
       }
     }
-  }
 
-  // Particles
-  for(let i=particles.length-1; i>=0; i--) {
-    const p = particles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.vy += 0.1;
-    p.life -= 1/60/p.maxLife;
-    if(p.life<=0) particles.splice(i,1);
-  }
-}
+    function updateBullets(dt) {
+      for (const b of state.bullets) b.y += b.vy * dt;
+      for (const b of state.enemyBullets) b.y += b.vy * dt;
 
-function hitShip(ship) {
-  if(ship.invincible>0) return;
-  spawnParticles(ship.x, ship.y, ship.color, 20);
-  lives[ship.id]--;
-  if(lives[ship.id]<=0) {
-    ship.alive = false;
-    // Check game over
-    const alivShips = ships.filter(s=>s.alive);
-    if(alivShips.length===0) { gameOver(); }
-  } else {
-    ship.invincible = 120;
-    ship.x = ship.id==='p1' ? (gameMode===3?CW/4:CW/2) : (gameMode===3?3*CW/4:2*CW/3);
-  }
-}
+      state.bullets = state.bullets.filter(b => b.y > -40 && b.y < H + 40);
+      state.enemyBullets = state.enemyBullets.filter(b => b.y > -40 && b.y < H + 40);
 
-function nextWave() {
-  wave++;
-  bullets = [];
-  ufo = null;
-  ufoTimer = 400 + Math.random()*400;
-  initInvaders();
-  initShields();
-  // Restore dead ships in coop if partner alive
-  if(gameMode===2) {
-    for(const ship of ships) {
-      if(!ship.alive && lives[ship.id]>0) ship.alive=true;
-    }
-  }
-}
+      // Player bullets vs enemies
+      for (const b of state.bullets) {
+        if (!b) continue;
+        for (const e of state.enemies) {
+          if (!e.alive) continue;
+          if (rectHit(b, e)) {
+            e.alive = false;
+            b.dead = true;
+            awardScore(b.owner, 100);
+            burst(e.x + e.w / 2, e.y + e.h / 2, b.color, 12, 2.1);
+            break;
+          }
+        }
+      }
 
-function gameOver() {
-  gameState = 'gameover';
-}
+      // Player bullets vs opponent (versus only)
+      if (state.mode === "versus") {
+        for (const b of state.bullets) {
+          if (b.dead) continue;
+          const target = b.owner === "P1"
+            ? state.players.find(p => p.id === "P2")
+            : state.players.find(p => p.id === "P1");
 
-// ── Drawing ───────────────────────────────────────────────────
-function drawPixelInvader(inv) {
-  const sprite = SPRITES[inv.type][invaderAnimFrame];
-  const pw = INV_W/11, ph = INV_H/8;
-  const colors = ['#f0f','#0ff','#0f0'];
-  ctx.fillStyle = colors[inv.type];
-  for(let r=0; r<8; r++) {
-    for(let c=0; c<11; c++) {
-      if(sprite[r*11+c]) {
-        ctx.fillRect(inv.x+c*pw, inv.y+r*ph, pw-0.5, ph-0.5);
+          if (target && target.lives > 0 && target.respawn <= 0 && rectHit(b, target)) {
+            b.dead = true;
+            awardScore(b.owner, 250);
+            hitPlayer(target, false);
+          }
+        }
+      }
+
+      // Enemy bullets vs players
+      for (const eb of state.enemyBullets) {
+        for (const p of state.players) {
+          if (p.lives <= 0 || p.respawn > 0) continue;
+          if (rectHit(eb, p)) {
+            eb.dead = true;
+            hitPlayer(p, true);
+            break;
+          }
+        }
+      }
+
+      state.bullets = state.bullets.filter(b => !b.dead);
+      state.enemyBullets = state.enemyBullets.filter(b => !b.dead);
+
+      if (state.mode === "versus") {
+        const alive = state.players.filter(p => p.lives > 0);
+        if (alive.length <= 1) endGame();
       }
     }
-  }
-}
 
-function drawShip(ship) {
-  if(!ship.alive) return;
-  if(ship.invincible>0 && Math.floor(ship.invincible/5)%2===0) return;
-  const x=ship.x, y=ship.y;
-  ctx.fillStyle = ship.color;
-  // Body
-  ctx.beginPath();
-  ctx.moveTo(x, y-ship.h/2);
-  ctx.lineTo(x+ship.w/2, y+ship.h/2);
-  ctx.lineTo(x-ship.w/2, y+ship.h/2);
-  ctx.closePath();
-  ctx.fill();
-  // Cannon
-  ctx.fillRect(x-3, y-ship.h/2-8, 6, 10);
-  // Base details
-  ctx.fillStyle = ship.id==='p1'?'#0a0':'#0060a0';
-  ctx.fillRect(x-ship.w/2, y+ship.h/4, ship.w, ship.h/4);
-}
+    function updateParticles(dt) {
+      for (const p of state.particles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+        p.life -= dt;
+      }
+      state.particles = state.particles.filter(p => p.life > 0);
+      if (state.flash > 0) state.flash -= dt;
+    }
 
-function drawUFO() {
-  if(!ufo) return;
-  const x=ufo.x+UFO_W/2, y=ufo.y+UFO_H/2;
-  ctx.fillStyle='#f44';
-  // Ellipse body
-  ctx.beginPath();
-  ctx.ellipse(x, y+4, UFO_W/2, UFO_H/2, 0, 0, Math.PI*2);
-  ctx.fill();
-  // Dome
-  ctx.fillStyle='#faa';
-  ctx.beginPath();
-  ctx.ellipse(x, y-2, UFO_W/3, UFO_H/2.5, 0, 0, -Math.PI);
-  ctx.fill();
-  // Lights
-  ctx.fillStyle='#ff0';
-  for(let i=-1;i<=1;i++) {
-    ctx.beginPath();
-    ctx.arc(x+i*12, y+4, 3, 0, Math.PI*2);
-    ctx.fill();
-  }
-}
-
-function drawShields() {
-  for(const sh of shields) {
-    ctx.fillStyle = '#0f0';
-    for(let r=0; r<sh.rows; r++) {
-      for(let c=0; c<sh.cols; c++) {
-        if(sh.grid[r][c]) {
-          ctx.fillRect(sh.x+c*sh.bw, sh.y+r*sh.bh, sh.bw-1, sh.bh-1);
+    function updateStars(dt) {
+      for (const s of state.stars) {
+        s.y += s.s * dt;
+        if (s.y > H) {
+          s.y = -3;
+          s.x = Math.random() * W;
         }
       }
     }
-  }
-}
 
-function drawBullets() {
-  for(const b of bullets) {
-    if(b.owner==='inv') {
-      ctx.fillStyle='#f44';
-      // zigzag shape
-      ctx.fillRect(b.x-b.w/2, b.y-b.h/2, b.w, b.h);
-    } else {
-      const ship = ships.find(s=>s.id===b.owner);
-      ctx.fillStyle = ship ? ship.color : '#fff';
-      ctx.fillRect(b.x-b.w/2, b.y-b.h/2, b.w, b.h);
-    }
-  }
-}
+    function update(dt) {
+      updateStars(dt);
 
-function drawParticles() {
-  for(const p of particles) {
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
+      if (state.status !== "playing") return;
 
-function drawHUD() {
-  ctx.font = 'bold 16px Courier New';
-  ctx.textAlign = 'left';
-
-  if(gameMode===1) {
-    ctx.fillStyle='#0f0';
-    ctx.fillText('SCORE: '+scores.p1, 20, 24);
-    ctx.fillText('WAVE: '+wave, CW/2-40, 24);
-    // Lives
-    ctx.fillText('LIVES: ', CW-160, 24);
-    for(let i=0;i<lives.p1;i++) drawMiniShip(CW-80+i*22, 18, '#0f0');
-  } else if(gameMode===2) {
-    ctx.fillStyle='#0f0';
-    ctx.fillText('P1: '+scores.p1, 20, 24);
-    ctx.fillStyle='#4af';
-    ctx.fillText('P2: '+scores.p2, 160, 24);
-    ctx.fillStyle='#fff';
-    ctx.textAlign='center';
-    ctx.fillText('WAVE '+wave, CW/2, 24);
-    ctx.textAlign='left';
-    // Lives
-    ctx.fillStyle='#0f0';
-    ctx.fillText('P1♥:'+lives.p1+'  ', 20, CH-10);
-    ctx.fillStyle='#4af';
-    ctx.fillText('P2♥:'+lives.p2, 140, CH-10);
-  } else {
-    ctx.fillStyle='#0f0';
-    ctx.fillText('P1: '+scores.p1, 20, 24);
-    ctx.fillStyle='#f90';
-    ctx.fillText('P2: '+scores.p2, CW-150, 24);
-    ctx.fillStyle='#fff';
-    ctx.textAlign='center';
-    ctx.fillText('WAVE '+wave, CW/2, 24);
-    // Lives
-    ctx.fillStyle='#0f0';
-    ctx.textAlign='left';
-    ctx.fillText('P1♥:'+lives.p1, 20, CH-10);
-    ctx.fillStyle='#f90';
-    ctx.textAlign='right';
-    ctx.fillText('P2♥:'+lives.p2, CW-20, CH-10);
-    ctx.textAlign='left';
-    // Divider
-    ctx.strokeStyle='rgba(255,255,255,0.1)';
-    ctx.setLineDash([4,4]);
-    ctx.beginPath(); ctx.moveTo(CW/2,30); ctx.lineTo(CW/2,CH-50); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Ground line
-  ctx.strokeStyle='#0f0';
-  ctx.lineWidth=2;
-  ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(0, CH-26); ctx.lineTo(CW, CH-26); ctx.stroke();
-}
-
-function drawMiniShip(x,y,color) {
-  ctx.fillStyle=color;
-  ctx.beginPath();
-  ctx.moveTo(x,y-8);
-  ctx.lineTo(x+9,y+6);
-  ctx.lineTo(x-9,y+6);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function drawTitle() {
-  // Background stars
-  ctx.fillStyle='#000';
-  ctx.fillRect(0,0,CW,CH);
-  drawStars();
-
-  // Title
-  ctx.fillStyle='#0f0';
-  ctx.font='bold 56px Courier New';
-  ctx.textAlign='center';
-  ctx.shadowColor='#0f0';
-  ctx.shadowBlur=20;
-  ctx.fillText('SPACE INVADERS', CW/2, 130);
-  ctx.shadowBlur=0;
-
-  // Invader demo
-  ctx.fillStyle='#f0f';
-  ctx.font='24px Courier New';
-  ctx.fillText('👾 👾 👾', CW/2-60, 185);
-
-  // Mode buttons
-  const bY = CH/2 - 20;
-  for(let i=0; i<3; i++) {
-    const by = bY + i*70;
-    const sel = i===titleSelection;
-    ctx.fillStyle = sel ? '#0f0' : '#333';
-    roundRect(CW/2-140, by-24, 280, 50, 8);
-    ctx.fill();
-    ctx.strokeStyle = sel ? '#0f0' : '#555';
-    ctx.lineWidth = 2;
-    roundRect(CW/2-140, by-24, 280, 50, 8);
-    ctx.stroke();
-    ctx.fillStyle = sel ? '#000' : '#0a0';
-    ctx.font = 'bold 20px Courier New';
-    ctx.fillText(MODES[i], CW/2, by+10);
-  }
-
-  ctx.fillStyle='#888';
-  ctx.font='14px Courier New';
-  ctx.fillText('↑↓ / タップで選択　Space/Enterで決定', CW/2, CH-30);
-
-  // Controls hint
-  ctx.font='12px Courier New';
-  ctx.fillStyle='#555';
-  ctx.fillText('P1: 矢印+Space  P2: WASD+Shift  (タッチ対応)', CW/2, CH-10);
-  ctx.textAlign='left';
-}
-
-let stars = [];
-for(let i=0;i<80;i++) stars.push({x:Math.random()*CW, y:Math.random()*CH, b:Math.random()});
-function drawStars() {
-  for(const s of stars) {
-    const flicker = 0.5 + 0.5*Math.sin(frame*0.05+s.x);
-    ctx.globalAlpha = s.b * flicker;
-    ctx.fillStyle='#fff';
-    ctx.fillRect(s.x, s.y, 1.5, 1.5);
-  }
-  ctx.globalAlpha=1;
-}
-
-function drawGameOver() {
-  ctx.fillStyle='rgba(0,0,0,0.7)';
-  ctx.fillRect(0,0,CW,CH);
-
-  if(gameMode===3) {
-    // Versus - show winner
-    const p1s = scores.p1, p2s = scores.p2;
-    let msg, col;
-    if(p1s > p2s) { msg='P1 WIN!'; col='#0f0'; }
-    else if(p2s > p1s) { msg='P2 WIN!'; col='#f90'; }
-    else { msg='DRAW!'; col='#fff'; }
-    ctx.fillStyle=col;
-    ctx.font='bold 60px Courier New';
-    ctx.textAlign='center';
-    ctx.shadowColor=col; ctx.shadowBlur=30;
-    ctx.fillText(msg, CW/2, CH/2-30);
-    ctx.shadowBlur=0;
-    ctx.fillStyle='#0f0'; ctx.font='22px Courier New';
-    ctx.fillText('P1: '+p1s+'  P2: '+p2s, CW/2, CH/2+30);
-  } else {
-    ctx.fillStyle='#f44';
-    ctx.font='bold 60px Courier New';
-    ctx.textAlign='center';
-    ctx.shadowColor='#f44'; ctx.shadowBlur=30;
-    ctx.fillText('GAME OVER', CW/2, CH/2-20);
-    ctx.shadowBlur=0;
-    if(gameMode===2) {
-      ctx.fillStyle='#0f0';
-      ctx.font='20px Courier New';
-      ctx.fillText('P1: '+scores.p1+'  P2: '+scores.p2+'  合計: '+(scores.p1+scores.p2), CW/2, CH/2+30);
-    } else {
-      ctx.fillStyle='#0f0';
-      ctx.font='24px Courier New';
-      ctx.fillText('SCORE: '+scores.p1, CW/2, CH/2+30);
-    }
-  }
-  ctx.fillStyle='#888';
-  ctx.font='18px Courier New';
-  ctx.fillText('Space / タップ でタイトルへ', CW/2, CH/2+80);
-  ctx.textAlign='left';
-}
-
-function drawWin() {
-  ctx.fillStyle='rgba(0,0,0,0.7)';
-  ctx.fillRect(0,0,CW,CH);
-  ctx.fillStyle='#ff0';
-  ctx.font='bold 54px Courier New';
-  ctx.textAlign='center';
-  ctx.shadowColor='#ff0'; ctx.shadowBlur=30;
-  ctx.fillText('STAGE CLEAR!', CW/2, CH/2-20);
-  ctx.shadowBlur=0;
-  if(gameMode>=2) {
-    ctx.fillStyle='#0f0';
-    ctx.font='20px Courier New';
-    ctx.fillText('P1: '+scores.p1+'  P2: '+scores.p2, CW/2, CH/2+30);
-  }
-  ctx.textAlign='left';
-}
-
-function roundRect(x,y,w,h,r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y);
-  ctx.arcTo(x+w,y,x+w,y+r,r);
-  ctx.lineTo(x+w,y+h-r);
-  ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
-  ctx.lineTo(x+r,y+h);
-  ctx.arcTo(x,y+h,x,y+h-r,r);
-  ctx.lineTo(x,y+r);
-  ctx.arcTo(x,y,x+r,y,r);
-  ctx.closePath();
-}
-
-// ── Main Loop ─────────────────────────────────────────────────
-function draw() {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0,0,CW,CH);
-  drawStars();
-
-  if(gameState==='title') {
-    drawTitle();
-  } else {
-    // Draw shields
-    drawShields();
-    // Draw invaders
-    for(const inv of invaders) {
-      if(inv.alive) drawPixelInvader(inv);
-    }
-    // Draw UFO
-    drawUFO();
-    // Draw ships
-    for(const ship of ships) drawShip(ship);
-    // Draw bullets
-    drawBullets();
-    // Draw particles
-    drawParticles();
-    // HUD
-    drawHUD();
-
-    if(gameState==='gameover') drawGameOver();
-    if(gameState==='win') drawWin();
-  }
-}
-
-// Key handling for gameover/win screens
-document.addEventListener('keydown', e => {
-  if(gameState==='gameover'||gameState==='win') {
-    if(e.code==='Space'||e.code==='Enter') gameState='title';
-  }
-});
-canvas.addEventListener('touchend', e => {
-  if(gameState==='gameover'||gameState==='win') {
-    gameState='title';
-  }
-  // Title touch select
-  if(gameState==='title') {
-    const rect=canvas.getBoundingClientRect();
-    const sx=canvas.width/rect.width, sy=canvas.height/rect.height;
-    for(const t of e.changedTouches) {
-      const x=(t.clientX-rect.left)*sx, y=(t.clientY-rect.top)*sy;
-      const bY=CH/2-20;
-      for(let i=0;i<3;i++) {
-        const by=bY+i*70;
-        if(x>CW/2-140&&x<CW/2+140&&y>by-24&&y<by+26) {
-          titleSelection=i;
+      if (state.mode === "versus") {
+        state.time -= dt;
+        if (state.time <= 0) {
+          state.time = 0;
+          endGame();
+          return;
         }
       }
+
+      updatePlayers(dt);
+      updateEnemies(dt);
+      updateBullets(dt);
+      updateParticles(dt);
+
+      syncUI();
     }
-  }
-}, {passive:false});
 
-function gameLoop() {
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
+    function drawGrid() {
+      const horizon = H * 0.58;
+      ctx.save();
 
-gameLoop();
-</script>
+      ctx.strokeStyle = "rgba(78,240,255,0.14)";
+      ctx.lineWidth = 1;
+
+      for (let i = -10; i <= 10; i++) {
+        const x = W / 2 + i * 56;
+        ctx.beginPath();
+        ctx.moveTo(x, H);
+        ctx.lineTo(W / 2 + i * 10, horizon);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < 10; y++) {
+        const yy = horizon + y * 26 + y * y * 3.2;
+        ctx.beginPath();
+        ctx.moveTo(0, yy);
+        ctx.lineTo(W, yy);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawStars() {
+      for (const s of state.stars) {
+        ctx.globalAlpha = s.a;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(s.x, s.y, s.r, s.r);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#060a1a");
+      g.addColorStop(0.45, "#121a3f");
+      g.addColorStop(0.75, "#100a1f");
+      g.addColorStop(1, "#05070d");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      const sun = ctx.createRadialGradient(W / 2, 145, 18, W / 2, 145, 180);
+      sun.addColorStop(0, "rgba(255, 233, 180, 0.95)");
+      sun.addColorStop(0.35, "rgba(255, 160, 60, 0.55)");
+      sun.addColorStop(1, "rgba(255, 90, 120, 0)");
+      ctx.fillStyle = sun;
+      ctx.beginPath();
+      ctx.arc(W / 2, 145, 120, 0, Math.PI * 2);
+      ctx.fill();
+
+      drawStars();
+      drawGrid();
+
+      if (state.mode === "versus") {
+        ctx.strokeStyle = "rgba(255,255,255,0.08)";
+        ctx.setLineDash([10, 12]);
+        ctx.beginPath();
+        ctx.moveTo(0, H / 2);
+        ctx.lineTo(W, H / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawShip(p) {
+      if (p.lives <= 0) return;
+      if (p.respawn > 0 && Math.floor(p.respawn * 10) % 2 === 0) return;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+
+      const glow = ctx.createRadialGradient(p.w/2, p.h/2, 4, p.w/2, p.h/2, 34);
+      glow.addColorStop(0, p.color + "88");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(-14, -14, p.w + 28, p.h + 28);
+
+      ctx.fillStyle = p.color;
+      if (p.shootDir < 0) {
+        ctx.fillRect(4, 12, 32, 8);
+        ctx.fillRect(10, 6, 20, 8);
+        ctx.fillRect(16, 0, 8, 6);
+        ctx.fillRect(0, 16, 8, 6);
+        ctx.fillRect(32, 16, 8, 6);
+      } else {
+        ctx.fillRect(4, 2, 32, 8);
+        ctx.fillRect(10, 10, 20, 8);
+        ctx.fillRect(16, 18, 8, 6);
+        ctx.fillRect(0, 0, 8, 6);
+        ctx.fillRect(32, 0, 8, 6);
+      }
+
+      ctx.restore();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${p.id} ❤${Math.max(0, p.lives)}`, p.x + p.w / 2, p.shootDir < 0 ? p.y + 44 : p.y - 10);
+    }
+
+    function drawAlien(e) {
+      if (!e.alive) return;
+      const x = e.x;
+      const y = e.y + Math.sin(e.bob) * 1.6;
+      const patterns = [
+        [
+          "00111100",
+          "11111111",
+          "11011011",
+          "11111111",
+          "00111100",
+          "01011010",
+          "10000001"
+        ],
+        [
+          "00111100",
+          "01111110",
+          "11111111",
+          "11011011",
+          "11111111",
+          "00100100",
+          "01000010"
+        ],
+        [
+          "00111100",
+          "01111110",
+          "11111111",
+          "10111101",
+          "11111111",
+          "01100110",
+          "11000011"
+        ]
+      ];
+      const color = e.type === 0 ? "#7dff9b" : e.type === 1 ? "#ffd84d" : "#9c6bff";
+      const pattern = patterns[e.type];
+      const px = 4;
+
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = color;
+
+      for (let r = 0; r < pattern.length; r++) {
+        for (let c = 0; c < pattern[r].length; c++) {
+          if (pattern[r][c] === "1") {
+            ctx.fillRect(x + c * px, y + r * px, px - 0.5, px - 0.5);
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawBullets() {
+      for (const b of state.bullets) {
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 12;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      }
+      for (const b of state.enemyBullets) {
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 10;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+      }
+      ctx.shadowBlur = 0;
+    }
+
+    function drawParticles() {
+      for (const p of state.particles) {
+        const a = p.life / p.max;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 3, 3);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawCenterText() {
+      if (state.status === "menu") {
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.font = "bold 22px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("モードを選択してください", W / 2, H - 26);
+      } else if (state.status === "playing" && state.waveClearedAt) {
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.font = "bold 30px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("WAVE CLEAR!", W / 2, H / 2);
+      }
+    }
+
+    function render() {
+      drawBackground();
+
+      for (const e of state.enemies) drawAlien(e);
+      for (const p of state.players) drawShip(p);
+      drawBullets();
+      drawParticles();
+      drawCenterText();
+
+      if (state.flash > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${state.flash * 1.8})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function frame(ts) {
+      if (!state.lastTime) state.lastTime = ts;
+      let dt = (ts - state.lastTime) / 1000;
+      state.lastTime = ts;
+      dt = Math.min(dt, 0.033);
+
+      update(dt);
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    function chooseMode(mode) {
+      state.mode = mode;
+      syncTouchPanels();
+      resetGame(mode);
+    }
+
+    document.querySelectorAll("[data-mode]").forEach(btn => {
+      btn.addEventListener("click", () => chooseMode(btn.dataset.mode));
+    });
+
+    btnStart.addEventListener("click", () => {
+      if (state.status === "menu") {
+        resetGame(state.mode || "single");
+      } else if (state.status === "result") {
+        resetGame(state.mode);
+      }
+    });
+
+    btnRestart.addEventListener("click", () => {
+      if (state.status !== "menu") resetGame(state.mode);
+    });
+
+    btnMenu.addEventListener("click", () => {
+      showResult(false);
+      showMenu(true);
+    });
+
+    resultRetry.addEventListener("click", () => resetGame(state.mode));
+    resultMenu.addEventListener("click", () => {
+      showResult(false);
+      showMenu(true);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      const blocked = ["ArrowLeft", "ArrowRight", "Space", "Slash", "KeyA", "KeyD", "KeyF"];
+      if (blocked.includes(e.code)) e.preventDefault();
+      keys[e.code] = true;
+
+      if (e.code === "Escape") {
+        showResult(false);
+        showMenu(true);
+      }
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keys[e.code] = false;
+    });
+
+    document.querySelectorAll(".touch-btn").forEach(btn => {
+      const key = btn.dataset.touch;
+      const on = (ev) => {
+        ev.preventDefault();
+        touch[key] = true;
+        btn.classList.add("active");
+      };
+      const off = (ev) => {
+        ev.preventDefault();
+        touch[key] = false;
+        btn.classList.remove("active");
+      };
+
+      btn.addEventListener("pointerdown", on);
+      btn.addEventListener("pointerup", off);
+      btn.addEventListener("pointerleave", off);
+      btn.addEventListener("pointercancel", off);
+      btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    });
+
+    initStars();
+    syncTouchPanels();
+    syncUI();
+    requestAnimationFrame(frame);
+  </script>
 </body>
 </html>
