@@ -152,6 +152,8 @@ header {
   position: relative; z-index: 5;
   display: flex; justify-content: center;
   padding: 0 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 #board {
   display: inline-grid;
@@ -174,6 +176,8 @@ header {
   transition: transform 0.1s, box-shadow 0.1s;
   -webkit-tap-highlight-color: transparent;
   outline: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 /* Hidden cell */
@@ -329,15 +333,36 @@ header {
   font-weight: 700; color: rgba(251,191,36,0.8); margin-top: 8px;
 }
 
+/* ── Flag mode toggle ── */
+#flag-toggle {
+  display: none; /* shown on touch devices */
+  margin: 8px auto 10px;
+  padding: 10px 24px;
+  border: 2px solid rgba(248,113,113,0.4);
+  border-radius: 30px;
+  background: rgba(248,113,113,0.08);
+  color: rgba(248,113,113,0.8);
+  font-family: var(--font); font-size: 0.9rem; font-weight: 800;
+  cursor: pointer; transition: all 0.18s;
+  text-align: center;
+}
+#flag-toggle.active {
+  background: linear-gradient(135deg, rgba(248,113,113,0.35), rgba(232,121,249,0.25));
+  border-color: rgba(248,113,113,0.8);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(248,113,113,0.3);
+}
+@media (pointer: coarse) {
+  #flag-toggle { display: inline-block; }
+}
+
 /* ── Responsive ── */
 @media (max-width: 520px) {
-  :root { --cell-size: 32px; --cell-radius: 6px; }
   .cell { font-size: 0.9rem; }
   .ov-card { padding: 30px 22px; }
   .logo { font-size: 1.6rem; }
 }
 @media (max-width: 380px) {
-  :root { --cell-size: 26px; --cell-radius: 5px; }
   .cell { font-size: 0.8rem; }
 }
 </style>
@@ -436,6 +461,11 @@ header {
   </div>
 </header>
 
+<!-- Flag toggle for mobile -->
+<div style="text-align:center">
+  <button id="flag-toggle" onclick="toggleFlagMode()">🚩 旗モード：OFF</button>
+</div>
+
 <!-- Board -->
 <div id="board-wrap" class="wrap">
   <div id="board"></div>
@@ -498,6 +528,8 @@ let bestTimes = { easy: Infinity, medium: Infinity, hard: Infinity };
 let revealedCount = 0;
 let chordCells = [];
 let chordTimer = null;
+let flagMode = false;
+let activeTouchId = null; // track single touch to prevent multi-cell issues
 
 // ============================================================
 //   DIFFICULTY
@@ -524,6 +556,41 @@ function applyCustom() {
 }
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ============================================================
+//   FLAG MODE (mobile)
+// ============================================================
+function toggleFlagMode() {
+  flagMode = !flagMode;
+  const btn = document.getElementById('flag-toggle');
+  btn.textContent = flagMode ? '🚩 旗モード：ON' : '🚩 旗モード：OFF';
+  btn.classList.toggle('active', flagMode);
+}
+
+// ============================================================
+//   DYNAMIC CELL SIZING
+// ============================================================
+function adjustCellSize() {
+  const vw = window.innerWidth;
+  const gap = 3; // CSS gap between cells
+  const boardPad = 14 * 2; // padding on board (14px each side)
+  const wrapPad = 10 * 2; // padding on board-wrap (10px each side) + wrap (12px each side)
+  const outerPad = 24; // extra safety margin
+  const availW = vw - boardPad - wrapPad - outerPad;
+  const totalGaps = (cfg.w - 1) * gap;
+  let cellSize = Math.floor((availW - totalGaps) / cfg.w);
+  cellSize = clamp(cellSize, 18, 38); // min 18px, max 38px (default)
+
+  const cellRadius = cellSize >= 32 ? 8 : cellSize >= 26 ? 6 : 5;
+  const fontSize = cellSize >= 32 ? '1rem' : cellSize >= 26 ? '0.9rem' : '0.75rem';
+
+  document.documentElement.style.setProperty('--cell-size', cellSize + 'px');
+  document.documentElement.style.setProperty('--cell-radius', cellRadius + 'px');
+  // Update font size on cells
+  document.querySelectorAll('.cell').forEach(c => c.style.fontSize = fontSize);
+}
+
+window.addEventListener('resize', () => adjustCellSize());
 
 // ============================================================
 //   GAME INIT
@@ -593,6 +660,7 @@ function neighbors(r, c) {
 //   RENDER BOARD
 // ============================================================
 function renderBoard() {
+  adjustCellSize();
   const el = document.getElementById('board');
   el.style.gridTemplateColumns = `repeat(${cfg.w}, var(--cell-size))`;
   el.innerHTML = '';
@@ -631,17 +699,60 @@ function makeCell(r, c) {
     cell.classList.add('hidden');
   }
 
-  // Events
-  cell.addEventListener('click', () => onLeftClick(r, c));
+  // Events - desktop
   cell.addEventListener('contextmenu', e => { e.preventDefault(); onRightClick(r, c); });
 
-  // Touch: long press = flag
+  // Touch handling (mobile)
   let tp = null;
+  let touchHandled = false;
+
   cell.addEventListener('touchstart', e => {
-    tp = setTimeout(() => { tp = null; e.preventDefault(); onRightClick(r, c); }, 420);
-  }, {passive:true});
-  cell.addEventListener('touchend', () => { if(tp){clearTimeout(tp);tp=null;} });
-  cell.addEventListener('touchmove', () => { if(tp){clearTimeout(tp);tp=null;} });
+    // Only track one touch at a time to prevent multi-cell issues
+    if (activeTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    activeTouchId = touch.identifier;
+    touchHandled = false;
+
+    tp = setTimeout(() => {
+      tp = null;
+      touchHandled = true;
+      onRightClick(r, c);
+      // Vibrate feedback if available
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 400);
+  }, {passive: false});
+
+  cell.addEventListener('touchend', e => {
+    const touch = Array.from(e.changedTouches).find(t => t.identifier === activeTouchId);
+    if (!touch) return;
+    e.preventDefault(); // prevent subsequent click event
+    activeTouchId = null;
+    if (tp) {
+      clearTimeout(tp); tp = null;
+      // Short tap: use flag mode or normal click
+      if (!touchHandled) {
+        if (flagMode) {
+          onRightClick(r, c);
+        } else {
+          onLeftClick(r, c);
+        }
+      }
+    }
+    touchHandled = false;
+  }, {passive: false});
+
+  cell.addEventListener('touchmove', e => {
+    if (tp) { clearTimeout(tp); tp = null; }
+  }, {passive: true});
+
+  // Desktop click
+  cell.addEventListener('click', e => {
+    if (flagMode) {
+      onRightClick(r, c);
+    } else {
+      onLeftClick(r, c);
+    }
+  });
 
   return cell;
 }
