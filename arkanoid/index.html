@@ -41,6 +41,9 @@ const P1Y=CH-30;                 // P1 paddle center Y
 const P2Y=370;                   // P2 paddle center Y (2P mode)
 const BALL_MIN=4.5, BALL_MAX=9.5;
 const BALL_BASE=5.5;
+const MIN_VY=1.8;  // minimum vertical speed to prevent near-horizontal loops
+
+function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
 
 // Block type codes
 const BT = { EMPTY:0, HP1:1, HP2:2, HP3:3, ITEM:4, INDES:9 };
@@ -389,20 +392,31 @@ class Paddle {
 class Ball {
   constructor(x,y,vx,vy){
     this.x=x; this.y=y; this.vx=vx; this.vy=vy;
+    this.prevX=x; this.prevY=y;
     this.r=BALL_R; this.alive=true;
     this.power=false; // through-blocks
     this.trail=[];
   }
   speed(){ return Math.sqrt(this.vx*this.vx+this.vy*this.vy); }
   clampSpeed(){
-    const s=this.speed();
-    if(s<BALL_MIN){ const f=BALL_MIN/s; this.vx*=f; this.vy*=f; }
+    let s=this.speed();
+    if(s<.01) return;
+    if(s<BALL_MIN){ const f=BALL_MIN/s; this.vx*=f; this.vy*=f; s=BALL_MIN; }
     if(s>BALL_MAX){ const f=BALL_MAX/s; this.vx*=f; this.vy*=f; }
+    // Ensure minimum vertical component to prevent near-horizontal loops
+    if(Math.abs(this.vy)<MIN_VY){
+      this.vy=this.vy>=0?MIN_VY:-MIN_VY;
+      const ns=this.speed();
+      if(ns>0){ const f=s/ns; this.vx*=f; this.vy*=f; }
+    }
   }
-  update(){
+  update(speedMult){
+    this.prevX=this.x; this.prevY=this.y;
     this.trail.push({x:this.x,y:this.y});
     if(this.trail.length>8) this.trail.shift();
-    this.x+=this.vx; this.y+=this.vy;
+    // Move by actual speed (apply multiplier to delta, not stored velocity)
+    this.x+=this.vx*speedMult;
+    this.y+=this.vy*speedMult;
     // Wall bounces
     if(this.x-this.r<WL){ this.x=WL+this.r; this.vx=Math.abs(this.vx); }
     if(this.x+this.r>WR){ this.x=WR-this.r; this.vx=-Math.abs(this.vx); }
@@ -558,8 +572,11 @@ function loadLevel(){
 function resetBall(){
   balls=[];
   const p=paddles[0];
-  const angle=-Math.PI/2 + (Math.random()-.5)*.6;
-  balls.push(new Ball(p.x, p.top-BALL_R-2, Math.cos(angle)*BALL_BASE, Math.sin(angle)*BALL_BASE));
+  const bx=p.x, by=p.top-BALL_R-4;
+  const angle=-Math.PI/2 + (Math.random()-.5)*.5;
+  const b=new Ball(bx, by, Math.cos(angle)*BALL_BASE, Math.sin(angle)*BALL_BASE);
+  b.prevX=bx; b.prevY=by; // init prev position to prevent false collision
+  balls.push(b);
 }
 
 function launchStuckBall(paddle){
@@ -634,24 +651,75 @@ function dropItem(x,y){
 }
 
 function ballVsPaddle(ball, paddle){
-  if(ball.vy<0) return false; // ball moving up, skip
-  if(ball.x+ball.r < paddle.left-2 || ball.x-ball.r > paddle.right+2) return false;
-  if(ball.y+ball.r < paddle.top || ball.y-ball.r > paddle.bot+4) return false;
+  // Only handle balls moving downward (vy>0).
+  // Balls going upward always pass through paddles (needed for 2P P2 paddle).
+  if(ball.vy<=0) return false;
 
-  // Bounce
-  const rel=(ball.x-paddle.x)/(paddle.w/2); // -1 to 1
-  const maxAngle=Math.PI*0.4;
-  const angle=-Math.PI/2+rel*maxAngle;
-  const spd=Math.max(BALL_MIN, ball.speed()+(fastTimer>0?.3:0));
-  ball.vx=Math.sin(angle)*spd;
-  ball.vy=-Math.cos(angle)*spd;
-  ball.y=paddle.top-ball.r-1;
+  const padTop=paddle.top;
+  const padBot=paddle.bot;
+  const padL=paddle.left;
+  const padR=paddle.right;
+
+  // ── Step 1: Vertical surface-crossing check ──
+  // Ball's bottom edge position this frame and previous frame
+  const botNow =ball.y+ball.r;
+  const botPrev=ball.prevY+ball.r;
+
+  // Ball must be crossing (or just passed) the paddle's top surface
+  if(botNow  < padTop-1)  return false;   // hasn't reached paddle yet
+  if(botPrev > padTop+6)  return false;   // was already deep inside → skip to prevent re-catch
+
+  // ── Step 2: Horizontal range check ──
+  // Allow small tolerance at the edges for a natural "lip catch" feel
+  const edgeTol=ball.r*0.3;
+  if(ball.x < padL-edgeTol || ball.x > padR+edgeTol) return false;
+
+  // ── Step 3: Edge deflection (ball hits paddle side) ──
+  // If ball center is outside the paddle width but within tolerance, deflect sideways
+  if(ball.x < padL+2){
+    ball.vx=-Math.abs(ball.vx)-1; // push left
+    ball.vy=-Math.abs(ball.vy)*0.6;
+    ball.y=padTop-ball.r-1;
+    ball.clampSpeed(); paddle.glow(); return true;
+  }
+  if(ball.x > padR-2){
+    ball.vx=Math.abs(ball.vx)+1;  // push right
+    ball.vy=-Math.abs(ball.vy)*0.6;
+    ball.y=padTop-ball.r-1;
+    ball.clampSpeed(); paddle.glow(); return true;
+  }
+
+  // ── Step 4: Normal top-surface reflection ──
+  // rel: -1 (left edge) → 0 (center) → +1 (right edge)
+  const rel=clamp((ball.x-paddle.x)/(paddle.w/2), -1, 1);
+
+  // Reflection angle: steeper at edges, more vertical at center
+  // Center → straight up (−90°), edge → ±72° from vertical
+  const maxAngle=Math.PI*0.38;  // ≈68°
+  const angle=-Math.PI/2 + rel*maxAngle;
+
+  // Preserve current speed (with slight boost from fastTimer)
+  const spd=clamp(ball.speed()+(fastTimer>0?.3:0), BALL_MIN, BALL_MAX);
+
+  // Set new velocity from reflection angle
+  ball.vx= Math.sin(angle)*spd;
+  ball.vy=-Math.abs(Math.cos(angle)*spd);  // ALWAYS upward (negative)
+
+  // Safety: guarantee vy is solidly upward
+  if(ball.vy>-MIN_VY) ball.vy=-MIN_VY;
+
+  // ── Step 5: Position correction ──
+  // Place ball cleanly above the paddle surface (prevent overlap)
+  ball.y=padTop-ball.r-1;
+
   ball.clampSpeed();
   paddle.glow();
-  combo=0; // reset combo on paddle hit
+  combo=0;
 
+  // ── Step 6: Sticky paddle ──
   if(paddle.fx.sticky>0){
     ball.vx=0; ball.vy=0;
+    ball.y=padTop-ball.r-1;
     paddle.stickyBall=ball;
   }
   return true;
@@ -775,30 +843,36 @@ function update(){
   processInput();
   for(const p of paddles) p.update();
 
-  // Speed multiplier
-  const spd=slowTimer>0?.55:fastTimer>0?1.45:1;
+  // Speed multiplier (applied to movement delta, not stored velocity)
+  const spdMult=slowTimer>0?0.55:fastTimer>0?1.45:1.0;
 
   // Update balls
-  const dead=[];
   for(const ball of balls){
     if(ball.vx===0&&ball.vy===0) continue; // sticky
-    // Apply speed
-    const sv=ball.vx, su=ball.vy;
-    ball.vx*=spd; ball.vy*=spd;
-    ball.update();
-    ball.vx=sv; ball.vy=su; // restore nominal speed (clamp handles range)
+
+    // Move ball (speedMult scales the delta, not stored vx/vy)
+    ball.update(spdMult);
     ball.clampSpeed();
 
-    // vs paddles
+    // vs paddles (check P2 first since it's above P1)
     let caught=false;
-    for(const pad of paddles) if(ballVsPaddle(ball,pad)){caught=true;break;}
+    for(let pi=paddles.length-1;pi>=0;pi--){
+      if(ballVsPaddle(ball,paddles[pi])){caught=true;break;}
+    }
     if(caught) continue;
 
+    // Shield bounce (P1 has shield → ball bounces at very bottom)
+    if(paddles[0].fx.shield>0 && ball.vy>0 && ball.y+ball.r>=CH-10 && ball.prevY+ball.r<CH-6){
+      ball.vy=-Math.abs(ball.vy);
+      ball.y=CH-10-ball.r-1;
+      ball.clampSpeed();
+      continue;
+    }
+
     // vs blocks
-    let hits=0;
     for(const block of blocks){
       if(!block.alive) continue;
-      if(ballVsBlock(ball,block)) { hits++; if(!ball.power) break; }
+      if(ballVsBlock(ball,block)){ if(!ball.power) break; }
     }
   }
 
