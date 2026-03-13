@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>シンプルレーシング｜一人用/二人用</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #1a3e1f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            touch-action: manipulation;
+        }
+        .game-container {
+            background: #2a5a2a;
+            border-radius: 24px 24px 12px 12px;
+            padding: 16px 12px 12px 12px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.6);
+            width: min(98vw, 900px);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            background: #2e4d2e;
+            border-radius: 18px;
+            border: 4px solid #5a3e1e;
+            box-shadow: inset 0 0 0 2px #8b6b41, 0 8px 0 #3b2e1a;
+            cursor: none;
+            touch-action: none;
+        }
+        .mode-panel {
+            display: flex;
+            gap: 12px;
+            margin: 15px 0 8px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .mode-btn {
+            background: #ece3c6;
+            border: none;
+            border-radius: 60px;
+            padding: 12px 28px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #2d4b2d;
+            box-shadow: 0 6px 0 #8b6b41, 0 8px 10px black;
+            transition: 0.08s linear;
+            touch-action: manipulation;
+            cursor: pointer;
+            flex: 0 1 auto;
+            min-width: 160px;
+            letter-spacing: 1px;
+        }
+        .mode-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 1px 0 #6b4f31, 0 5px 8px black;
+        }
+        .mode-btn.selected {
+            background: #ffd966;
+            box-shadow: 0 4px 0 #b57c1a, 0 8px 12px black;
+            transform: translateY(2px);
+        }
+        .control-panel {
+            background: #4d3c22;
+            border-radius: 60px 60px 20px 20px;
+            padding: 15px 8px 12px 8px;
+            margin-top: 10px;
+            border: 2px solid #816e3f;
+        }
+        .player-buttons {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px 8px;
+        }
+        .p1-controls, .p2-controls {
+            display: flex;
+            gap: 10px;
+            background: #2c3a2c;
+            padding: 12px 14px;
+            border-radius: 50px;
+            border: 2px solid #6b8c5c;
+            box-shadow: inset 0 2px 5px #1e2a1e;
+            backdrop-filter: blur(2px);
+        }
+        .p2-controls {
+            background: #2a3848;
+            border-color: #6d8ba5;
+        }
+        .ctrl-btn {
+            background: #bcac88;
+            border: none;
+            width: 65px;
+            height: 65px;
+            border-radius: 40px;
+            font-size: 1.9rem;
+            font-weight: bold;
+            color: #242424;
+            box-shadow: 0 7px 0 #5f4f33, 0 8px 10px black;
+            transition: 0.06s linear;
+            touch-action: manipulation;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ctrl-btn:active {
+            transform: translateY(7px);
+            box-shadow: 0 1px 0 #5f4f33, 0 5px 8px black;
+        }
+        .p2-controls .ctrl-btn {
+            background: #9bb6d0;
+            box-shadow: 0 7px 0 #4a637a;
+        }
+        .info {
+            display: flex;
+            justify-content: space-between;
+            color: #efefcd;
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 5px 20px 0;
+            text-shadow: 2px 2px 0 #2b4d2b;
+        }
+        .winner-message {
+            background: #ffcf8a;
+            color: #1f4f1f;
+            font-size: 1.7rem;
+            font-weight: bold;
+            padding: 8px 25px;
+            border-radius: 40px;
+            text-align: center;
+            box-shadow: 0 4px 0 #785e28;
+            margin-top: 10px;
+        }
+        .reset-btn {
+            background: #b65151;
+            border: none;
+            border-radius: 40px;
+            padding: 8px 35px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #fcf0cf;
+            box-shadow: 0 6px 0 #713232;
+            cursor: pointer;
+            margin-top: 8px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            touch-action: manipulation;
+        }
+        .reset-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 1px 0 #713232;
+        }
+        .footer {
+            text-align: center;
+            color: #adad80;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        .key-hint {
+            color: #c5b27b;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <!-- モード選択 -->
+    <div class="mode-panel">
+        <button class="mode-btn" id="mode1Btn" data-mode="1">🚗 一人用</button>
+        <button class="mode-btn" id="mode2Btn" data-mode="2">🚗🚙 二人用</button>
+    </div>
+
+    <!-- 情報表示 -->
+    <div class="info">
+        <span id="p1Lap">P1 周回: 0/3</span>
+        <span id="p2Lap" style="display: none;">P2 周回: 0/3</span>
+    </div>
+    <div id="winnerDisplay" class="winner-message" style="display: none;"></div>
+
+    <!-- 操作ボタン（スマホ/タッチ用） -->
+    <div class="control-panel">
+        <div class="player-buttons">
+            <!-- Player1 操作 -->
+            <div class="p1-controls" id="p1ctrl">
+                <button class="ctrl-btn" data-p1="up">▲</button>
+                <button class="ctrl-btn" data-p1="left">◀</button>
+                <button class="ctrl-btn" data-p1="down">▼</button>
+                <button class="ctrl-btn" data-p1="right">▶</button>
+            </div>
+            <!-- Player2 操作 (二人用のみ表示) -->
+            <div class="p2-controls" id="p2ctrl" style="display: none;">
+                <button class="ctrl-btn" data-p2="up">W</button>
+                <button class="ctrl-btn" data-p2="left">A</button>
+                <button class="ctrl-btn" data-p2="down">S</button>
+                <button class="ctrl-btn" data-p2="right">D</button>
+            </div>
+        </div>
+        <button class="reset-btn" id="resetGame">🔄 リスタート</button>
+    </div>
+    <div class="footer">
+        <span class="key-hint">PC: P1 矢印キー / P2 WASD</span>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ---------- キャンバス設定 ----------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+
+    // ゲーム状態
+    let gameMode = 1;            // 1:一人用, 2:二人用
+    let gameActive = false;      // レース中か
+    let winner = null;           // 'p1' or 'p2' or null
+    let animationFrame = null;
+
+    // 車データ
+    const carRadius = 15;
+    const maxSpeed = 6;
+    const acceleration = 0.25;
+    const turnSpeed = 0.09;
+    const friction = 0.98;
+    const bounceDamping = 0.6;    // 壁衝突時の減衰
+
+    // プレイヤー1 (赤) , プレイヤー2 (青)
+    let cars = [];
+
+    // 周回数
+    let lapsP1 = 0;
+    let lapsP2 = 0;
+    const maxLap = 3;
+
+    // キー状態 (PC用 + タッチボタン連動)
+    const keys = {
+        p1: { up: false, down: false, left: false, right: false },
+        p2: { up: false, down: false, left: false, right: false }
+    };
+
+    // ---------- コース定義 (凸八角形) ----------
+    const centerX = 400, centerY = 250;
+    const trackRadius = 200;
+    const numEdges = 8;
+    const vertices = [];
+    // 時計回りに頂点生成 (0°から始めて45°ずつ)
+    for (let i = 0; i < numEdges; i++) {
+        let angle = -i * (Math.PI * 2 / numEdges); // 時計回り
+        let x = centerX + trackRadius * Math.cos(angle);
+        let y = centerY + trackRadius * Math.sin(angle);
+        vertices.push({ x, y });
+    }
+
+    // 各辺の情報 (内側法線は右方向: 時計回り多角形の内側は各辺の右側)
+    const edges = [];
+    for (let i = 0; i < vertices.length; i++) {
+        const p1 = vertices[i];
+        const p2 = vertices[(i + 1) % vertices.length];
+        const edgeVec = { x: p2.x - p1.x, y: p2.y - p1.y };
+        const length = Math.hypot(edgeVec.x, edgeVec.y);
+        const unit = { x: edgeVec.x / length, y: edgeVec.y / length };
+        // 右法線 (内側向き) = (unit.y, -unit.x)  (時計回りでは右が内側)
+        const normal = { x: unit.y, y: -unit.x };
+        edges.push({
+            p1, p2,
+            unit,
+            normal,
+            length
+        });
+    }
+
+    // スタートラインは最初の辺 (頂点0-1) とする
+    const startEdge = edges[0];
+    // スタート位置 (辺の中点 + 内側に少し)
+    function getStartPosition(offsetIndex = 0) {
+        const mid = {
+            x: (startEdge.p1.x + startEdge.p2.x) / 2,
+            y: (startEdge.p1.y + startEdge.p2.y) / 2
+        };
+        // 内側方向に carRadius*2 ずらす
+        const innerOffset = carRadius * 2;
+        const startX = mid.x + startEdge.normal.x * innerOffset;
+        const startY = mid.y + startEdge.normal.y * innerOffset;
+        // 複数台の場合は横にずらす (辺の方向に沿って)
+        const along = startEdge.unit;
+        const shift = (offsetIndex === 0) ? 0 : (offsetIndex === 1 ? 30 : -30);
+        return {
+            x: startX + along.x * shift,
+            y: startY + along.y * shift
+        };
+    }
+
+    // 初期車生成
+    function initCars() {
+        cars = [];
+        // 車1 (赤)
+        const pos1 = getStartPosition(0);
+        cars.push({
+            x: pos1.x, y: pos1.y,
+            vx: 0, vy: 0,
+            angle: Math.atan2(startEdge.unit.y, startEdge.unit.x), // 辺の方向を向く
+            color: '#e63946',
+            player: 'p1',
+            radius: carRadius,
+            active: true
+        });
+
+        if (gameMode === 2) {
+            // 車2 (青) 少し横にずらす
+            const pos2 = getStartPosition(1);
+            cars.push({
+                x: pos2.x, y: pos2.y,
+                vx: 0, vy: 0,
+                angle: Math.atan2(startEdge.unit.y, startEdge.unit.x),
+                color: '#1e6091',
+                player: 'p2',
+                radius: carRadius,
+                active: true
+            });
+        }
+    }
+
+    // リセット (モード変更時やリスタート)
+    function resetGame() {
+        gameActive = true;
+        winner = null;
+        lapsP1 = 0;
+        lapsP2 = 0;
+        document.getElementById('winnerDisplay').style.display = 'none';
+        document.getElementById('p1Lap').innerText = `P1 周回: 0/${maxLap}`;
+        if (gameMode === 2) {
+            document.getElementById('p2Lap').style.display = 'inline';
+            document.getElementById('p2Lap').innerText = `P2 周回: 0/${maxLap}`;
+        } else {
+            document.getElementById('p2Lap').style.display = 'none';
+        }
+        // キー状態リセット
+        keys.p1 = { up: false, down: false, left: false, right: false };
+        keys.p2 = { up: false, down: false, left: false, right: false };
+        initCars();
+    }
+
+    // ---------- 物理更新 & 衝突 ----------
+    function updatePhysics() {
+        if (!gameActive || winner) return;
+
+        // 各車処理
+        cars.forEach((car, index) => {
+            if (!car.active) return;
+
+            // 入力を反映 (p1 / p2)
+            const keyState = car.player === 'p1' ? keys.p1 : keys.p2;
+
+            // ステアリング
+            if (keyState.left) car.angle -= turnSpeed;
+            if (keyState.right) car.angle += turnSpeed;
+
+            // 加速/減速
+            let accel = 0;
+            if (keyState.up) accel += acceleration;
+            if (keyState.down) accel -= acceleration * 0.7; // バックは弱め
+
+            // 進行方向の加速度
+            car.vx += Math.cos(car.angle) * accel;
+            car.vy += Math.sin(car.angle) * accel;
+
+            // 摩擦
+            car.vx *= friction;
+            car.vy *= friction;
+
+            // 速度制限
+            let sp = Math.hypot(car.vx, car.vy);
+            if (sp > maxSpeed) {
+                car.vx = (car.vx / sp) * maxSpeed;
+                car.vy = (car.vy / sp) * maxSpeed;
+            }
+
+            // 仮移動
+            let newX = car.x + car.vx;
+            let newY = car.y + car.vy;
+
+            // 壁衝突 (各辺との円衝突)
+            for (let edge of edges) {
+                const p1 = edge.p1, p2 = edge.p2;
+                const normal = edge.normal; // 内側法線
+
+                // 線分上の最近点を求める
+                const ab = { x: p2.x - p1.x, y: p2.y - p1.y };
+                const t = ((newX - p1.x) * ab.x + (newY - p1.y) * ab.y) / (edge.length * edge.length);
+                let closestX, closestY;
+                if (t < 0) {
+                    closestX = p1.x;
+                    closestY = p1.y;
+                } else if (t > 1) {
+                    closestX = p2.x;
+                    closestY = p2.y;
+                } else {
+                    closestX = p1.x + t * ab.x;
+                    closestY = p1.y + t * ab.y;
+                }
+
+                const dx = newX - closestX;
+                const dy = newY - closestY;
+                const dist = Math.hypot(dx, dy);
+                if (dist < car.radius) {
+                    // 押し出し方向 (法線方向に補正)
+                    let pushDirX = 0, pushDirY = 0;
+                    if (dist > 0.001) {
+                        pushDirX = dx / dist;
+                        pushDirY = dy / dist;
+                    } else {
+                        // 完全に線上の場合 → 内側法線方向を使う
+                        pushDirX = normal.x;
+                        pushDirY = normal.y;
+                    }
+
+                    // 内側に押し出す (めり込み解消)
+                    const overlap = car.radius - dist;
+                    newX += pushDirX * overlap * 0.7;  // 完全に押し出すと振動するので弱め
+                    newY += pushDirY * overlap * 0.7;
+
+                    // 速度の法線成分を減衰 (跳ね返り)
+                    const vDotN = car.vx * pushDirX + car.vy * pushDirY;
+                    if (vDotN < 0) { // 内側から外側へ向かう速度の場合のみ反射
+                        car.vx -= vDotN * pushDirX * (1 + bounceDamping);
+                        car.vy -= vDotN * pushDirY * (1 + bounceDamping);
+                    }
+                }
+            }
+
+            // 周回判定 (スタートライン通過: 前のフレーム位置と現在位置で辺のどちら側にいるか)
+            const edge = startEdge;
+            const p1 = edge.p1, p2 = edge.p2;
+            const ab = { x: p2.x - p1.x, y: p2.y - p1.y };
+            // 直線符号付き距離 (外積のZ成分を使う: (p - p1) と 法線の内積でも可)
+            // 右法線 = normal なので、内側が正
+            function signedDist(px, py) {
+                const vec = { x: px - p1.x, y: py - p1.y };
+                return vec.x * edge.normal.x + vec.y * edge.normal.y;
+            }
+            const prevDist = signedDist(car.x, car.y);
+            const currDist = signedDist(newX, newY);
+
+            // 符号が変わり、かつ内側→外側ではなく、内側から外側への変化は通常ありえないので、とにかく通過したらカウント
+            // ただし、めったに起こらないので簡易的に行う
+            if (prevDist * currDist < 0 && Math.hypot(car.vx, car.vy) > 0.5) {
+                // どちらかの周回数を増やす
+                if (car.player === 'p1') {
+                    lapsP1 = Math.min(lapsP1 + 1, maxLap);
+                    document.getElementById('p1Lap').innerText = `P1 周回: ${lapsP1}/${maxLap}`;
+                } else {
+                    lapsP2 = Math.min(lapsP2 + 1, maxLap);
+                    document.getElementById('p2Lap').innerText = `P2 周回: ${lapsP2}/${maxLap}`;
+                }
+            }
+
+            car.x = newX;
+            car.y = newY;
+
+            // コース外完全脱出防止 (万が一、外に出たら中心付近に戻す)
+            if (Math.hypot(car.x - centerX, car.y - centerY) > trackRadius + 50) {
+                const resetPos = getStartPosition(car.player === 'p1' ? 0 : 1);
+                car.x = resetPos.x;
+                car.y = resetPos.y;
+                car.vx *= 0.3;
+                car.vy *= 0.3;
+            }
+        });
+
+        // 車同士の簡易衝突 (二人用のみ)
+        if (gameMode === 2 && cars.length === 2) {
+            const c1 = cars[0];
+            const c2 = cars[1];
+            const dx = c1.x - c2.x;
+            const dy = c1.y - c2.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = c1.radius + c2.radius;
+            if (dist < minDist) {
+                // 押し出し方向
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const overlap = minDist - dist;
+                // 両方動かす
+                c1.x += nx * overlap * 0.5;
+                c1.y += ny * overlap * 0.5;
+                c2.x -= nx * overlap * 0.5;
+                c2.y -= ny * overlap * 0.5;
+
+                // 速度交換 (反発)
+                const v1n = c1.vx * nx + c1.vy * ny;
+                const v2n = c2.vx * nx + c2.vy * ny;
+                if (v1n - v2n < 0) { // 近づいている場合のみ
+                    const v1t = c1.vx - v1n * nx, v1ty = c1.vy - v1n * ny;
+                    const v2t = c2.vx - v2n * nx, v2ty = c2.vy - v2n * ny;
+                    // 反発係数0.5
+                    const newV1n = (v1n * 0.3 + v2n * 0.5);
+                    const newV2n = (v2n * 0.3 + v1n * 0.5);
+                    c1.vx = v1t + newV1n * nx;
+                    c1.vy = v1ty + newV1n * ny;
+                    c2.vx = v2t + newV2n * nx;
+                    c2.vy = v2ty + newV2n * ny;
+                }
+            }
+        }
+
+        // 勝者判定
+        if (gameMode === 1 && lapsP1 >= maxLap) {
+            winner = 'p1';
+            gameActive = false;
+            document.getElementById('winnerDisplay').innerText = '🏆 一人用 ゴール！ 🏆';
+            document.getElementById('winnerDisplay').style.display = 'block';
+        } else if (gameMode === 2) {
+            if (lapsP1 >= maxLap) {
+                winner = 'p1';
+                gameActive = false;
+                document.getElementById('winnerDisplay').innerText = '🏆 プレイヤー1 勝利！ 🏆';
+                document.getElementById('winnerDisplay').style.display = 'block';
+            } else if (lapsP2 >= maxLap) {
+                winner = 'p2';
+                gameActive = false;
+                document.getElementById('winnerDisplay').innerText = '🏆 プレイヤー2 勝利！ 🏆';
+                document.getElementById('winnerDisplay').style.display = 'block';
+            }
+        }
+    }
+
+    // ---------- 描画 ----------
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 背景 (芝生)
+        ctx.fillStyle = '#367c36';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // コース (グレー)
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x, vertices[0].y);
+        for (let i = 1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x, vertices[i].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#4f4f4f';
+        ctx.fill();
+        ctx.strokeStyle = '#b1b1b1';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // 内側のライン (白)
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x, vertices[0].y);
+        for (let i = 1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x, vertices[i].y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = '#dddddd';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // スタートライン (赤)
+        ctx.beginPath();
+        ctx.moveTo(startEdge.p1.x, startEdge.p1.y);
+        ctx.lineTo(startEdge.p2.x, startEdge.p2.y);
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        ctx.stroke();
+
+        // 各車描画
+        cars.forEach(car => {
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+            ctx.fillStyle = car.color;
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 8;
+            // 車体 (丸みを帯びた長方形)
+            ctx.beginPath();
+            ctx.ellipse(0, 0, car.radius * 1.2, car.radius * 0.8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // ヘッドライト
+            ctx.fillStyle = '#f9f3b0';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            ctx.arc(car.radius, -4, 5, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(car.radius, 4, 5, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // 周回数表示を更新
+        requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop() {
+        if (gameActive && !winner) {
+            updatePhysics();
+        }
+        draw();
+    }
+
+    // ---------- イベント設定 ----------
+    function handleKeyDown(e) {
+        e.preventDefault();
+        const key = e.key;
+        // P1 矢印
+        if (key === 'ArrowUp') keys.p1.up = true;
+        if (key === 'ArrowDown') keys.p1.down = true;
+        if (key === 'ArrowLeft') keys.p1.left = true;
+        if (key === 'ArrowRight') keys.p1.right = true;
+        // P2 WASD
+        if (key === 'w' || key === 'W') keys.p2.up = true;
+        if (key === 's' || key === 'S') keys.p2.down = true;
+        if (key === 'a' || key === 'A') keys.p2.left = true;
+        if (key === 'd' || key === 'D') keys.p2.right = true;
+    }
+
+    function handleKeyUp(e) {
+        const key = e.key;
+        if (key === 'ArrowUp') keys.p1.up = false;
+        if (key === 'ArrowDown') keys.p1.down = false;
+        if (key === 'ArrowLeft') keys.p1.left = false;
+        if (key === 'ArrowRight') keys.p1.right = false;
+        if (key === 'w' || key === 'W') keys.p2.up = false;
+        if (key === 's' || key === 'S') keys.p2.down = false;
+        if (key === 'a' || key === 'A') keys.p2.left = false;
+        if (key === 'd' || key === 'D') keys.p2.right = false;
+        e.preventDefault();
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','W','s','S','a','A','d','D'].includes(e.key)) {
+            e.preventDefault();
+            handleKeyDown(e);
+        }
+    });
+    window.addEventListener('keyup', handleKeyUp);
+
+    // タッチボタン
+    document.querySelectorAll('[data-p1]').forEach(btn => {
+        const action = btn.dataset.p1; // up,down,left,right
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys.p1[action] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); keys.p1[action] = false; });
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); keys.p1[action] = true; });
+        btn.addEventListener('mouseup', (e) => { e.preventDefault(); keys.p1[action] = false; });
+        btn.addEventListener('mouseleave', (e) => { keys.p1[action] = false; }); // ボタン外で離したとき
+    });
+    document.querySelectorAll('[data-p2]').forEach(btn => {
+        const action = btn.dataset.p2;
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys.p2[action] = true; });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); keys.p2[action] = false; });
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); keys.p2[action] = true; });
+        btn.addEventListener('mouseup', (e) => { e.preventDefault(); keys.p2[action] = false; });
+        btn.addEventListener('mouseleave', (e) => { keys.p2[action] = false; });
+    });
+
+    // モード切り替え
+    document.getElementById('mode1Btn').addEventListener('click', () => {
+        gameMode = 1;
+        document.getElementById('mode1Btn').classList.add('selected');
+        document.getElementById('mode2Btn').classList.remove('selected');
+        document.getElementById('p2ctrl').style.display = 'none';
+        resetGame();
+    });
+    document.getElementById('mode2Btn').addEventListener('click', () => {
+        gameMode = 2;
+        document.getElementById('mode2Btn').classList.add('selected');
+        document.getElementById('mode1Btn').classList.remove('selected');
+        document.getElementById('p2ctrl').style.display = 'flex';
+        resetGame();
+    });
+
+    document.getElementById('resetGame').addEventListener('click', resetGame);
+
+    // 初期化
+    gameMode = 1;
+    document.getElementById('mode1Btn').classList.add('selected');
+    document.getElementById('p2ctrl').style.display = 'none';
+    resetGame();
+    gameLoop();
+
+    // タッチデバイスでのスクロール防止
+    canvas.addEventListener('touchstart', e => e.preventDefault());
+})();
+</script>
+</body>
+</html>
