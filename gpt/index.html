@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Turbo Twin Rush</title>
+  <style>
+    :root {
+      --bg1: #08121f;
+      --bg2: #121b31;
+      --panel: rgba(8, 14, 28, 0.82);
+      --panel-strong: rgba(10, 16, 32, 0.94);
+      --line: rgba(255,255,255,0.12);
+      --text: #eef4ff;
+      --sub: #adc1e7;
+      --accent: #4fd1ff;
+      --accent2: #ffcf52;
+      --danger: #ff6b7a;
+      --good: #77f58e;
+      --shadow: 0 16px 48px rgba(0,0,0,0.42);
+      --radius: 22px;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", "Noto Sans JP", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at top, #1d335f 0%, transparent 32%),
+        linear-gradient(180deg, var(--bg2), var(--bg1));
+      color: var(--text);
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: transparent;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      pointer-events: none;
+    }
+
+    .panel {
+      width: min(780px, 100%);
+      background: linear-gradient(180deg, rgba(18, 28, 52, 0.95), rgba(8, 14, 28, 0.95));
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: clamp(18px, 3vw, 28px);
+      pointer-events: auto;
+      backdrop-filter: blur(14px);
+    }
+
+    .title {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 5vw, 54px);
+      font-weight: 900;
+      letter-spacing: 0.03em;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      color: var(--sub);
+      line-height: 1.6;
+      font-size: clamp(14px, 2vw, 17px);
+    }
+
+    .mode-grid,
+    .button-row,
+    .info-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mode-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .mode-btn,
+    .action-btn,
+    .ghost-btn,
+    .touch-btn,
+    .mini-btn {
+      border: 0;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: transform 0.14s ease, filter 0.14s ease, background 0.14s ease, opacity 0.14s ease;
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .mode-btn {
+      padding: 18px;
+      text-align: left;
+      min-height: 128px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+    }
+
+    .mode-btn:hover,
+    .action-btn:hover,
+    .ghost-btn:hover,
+    .mini-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(180deg, rgba(79, 209, 255, 0.24), rgba(79, 209, 255, 0.12));
+      border-color: rgba(79, 209, 255, 0.5);
+      box-shadow: inset 0 0 0 1px rgba(79, 209, 255, 0.18);
+    }
+
+    .mode-btn strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 20px;
+    }
+
+    .mode-btn span {
+      color: var(--sub);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .button-row {
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .action-btn,
+    .ghost-btn,
+    .mini-btn {
+      padding: 14px 18px;
+      font-size: 15px;
+    }
+
+    .action-btn {
+      background: linear-gradient(180deg, var(--accent), #2596d8);
+      color: #041220;
+      min-width: 160px;
+    }
+
+    .ghost-btn,
+    .mini-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .tip {
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .info-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 16px;
+    }
+
+    .info-card {
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      line-height: 1.6;
+      color: var(--sub);
+      font-size: 14px;
+    }
+
+    .info-card strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    #hudTop {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .hud-chip {
+      background: rgba(6, 11, 24, 0.68);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+      backdrop-filter: blur(8px);
+    }
+
+    #touchLayer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .touch-area {
+      position: absolute;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .touch-cluster,
+    .touch-pair {
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .touch-pair {
+      flex-direction: column;
+    }
+
+    .touch-btn {
+      min-width: 72px;
+      min-height: 72px;
+      padding: 0 12px;
+      background: rgba(9, 16, 30, 0.62);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .touch-btn.small {
+      min-width: 68px;
+      min-height: 58px;
+      font-size: 13px;
+    }
+
+    .touch-btn.active {
+      transform: translateY(1px) scale(0.98);
+      background: rgba(79, 209, 255, 0.28);
+      border-color: rgba(79, 209, 255, 0.62);
+    }
+
+    #resultOverlay.hidden,
+    #menuOverlay.hidden,
+    #pauseBadge.hidden,
+    #hudTop.hidden,
+    #touchLayer.hidden {
+      display: none;
+    }
+
+    #pauseBadge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .badge {
+      background: rgba(9, 15, 28, 0.72);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      color: var(--text);
+    }
+
+    .result-list {
+      display: grid;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      font-size: 15px;
+    }
+
+    .result-item strong {
+      font-size: 18px;
+    }
+
+    .accent {
+      color: var(--accent);
+    }
+
+    .warning {
+      color: var(--accent2);
+    }
+
+    .danger {
+      color: var(--danger);
+    }
+
+    @media (max-width: 680px) {
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+
+      .action-btn,
+      .ghost-btn,
+      .mini-btn {
+        width: 100%;
+      }
+
+      .touch-btn {
+        min-width: 64px;
+        min-height: 64px;
+      }
+
+      #hudTop {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="gameCanvas" aria-label="Racing game canvas"></canvas>
+
+    <div id="hudTop" class="hidden" aria-hidden="true">
+      <div class="hud-chip" id="statusChip">MODE 1P</div>
+      <div class="hud-chip" id="timeChip">TIME 00.0</div>
+    </div>
+
+    <div id="pauseBadge" class="hidden">
+      <button id="pauseBtn" class="mini-btn" type="button">一時停止</button>
+      <button id="menuBtn" class="mini-btn" type="button">メニュー</button>
+    </div>
+
+    <div id="touchLayer" class="hidden" aria-label="Touch controls"></div>
+
+    <div id="menuOverlay" class="overlay">
+      <div class="panel">
+        <h1 class="title">Turbo Twin Rush</h1>
+        <p class="subtitle">
+          1つのHTMLだけで動く、PC / スマホ対応のアーケードレーシングゲームです。<br>
+          1人用は自己ベスト更新、2人用はどちらが先にゴールへ届くかの対戦モードです。
+        </p>
+
+        <div class="mode-grid">
+          <button class="mode-btn active" data-mode="1" type="button">
+            <strong>1人用モード</strong>
+            <span>交通をかわしながらゴール距離へ到達。ベストタイムと安定走行の両立が重要です。</span>
+          </button>
+          <button class="mode-btn" data-mode="2" type="button">
+            <strong>2人用モード</strong>
+            <span>それぞれ独立レーンで同時対戦。先に目標距離へ到達したプレイヤーが勝利します。</span>
+          </button>
+        </div>
+
+        <div class="button-row">
+          <div class="tip" id="modeTip">
+            PC: ← → / A D で左右、↑ / W で加速、↓ / S でブレーキ、Space でブースト<br>
+            スマホ: 画面下の大きなタッチボタンで左右・加速・ブーストを操作できます。
+          </div>
+          <button id="demoBtn" class="ghost-btn" type="button">操作説明切替</button>
+          <button id="startBtn" class="action-btn" type="button">レース開始</button>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-card">
+            <strong>操作しやすさ重視</strong>
+            基本は自動巡航。加速・ブレーキ・ブーストでリズムを作れるため、スマホでも遊びやすくしています。
+          </div>
+          <div class="info-card">
+            <strong>PC操作</strong>
+            1Pは矢印キー / WASD、2P時の2Pは I J K L と O キーで操作できます。P で一時停止も可能です。
+          </div>
+          <div class="info-card">
+            <strong>勝敗条件</strong>
+            1Pは制限時間内にゴール到達でクリア。2Pは先にゴール距離へ到達したプレイヤーが勝利します。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultOverlay" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title" id="resultTitle">RESULT</h2>
+        <p class="subtitle" id="resultSubtitle"></p>
+        <div class="result-list" id="resultList"></div>
+        <div class="button-row">
+          <div class="tip">そのまま再挑戦できます。1ファイルなので保存してすぐ配布・公開できます。</div>
+          <button id="retryBtn" class="ghost-btn" type="button">もう一度</button>
+          <button id="backToMenuBtn" class="action-btn" type="button">メニューへ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const ui = {
+        menuOverlay: document.getElementById('menuOverlay'),
+        resultOverlay: document.getElementById('resultOverlay'),
+        resultTitle: document.getElementById('resultTitle'),
+        resultSubtitle: document.getElementById('resultSubtitle'),
+        resultList: document.getElementById('resultList'),
+        modeButtons: [...document.querySelectorAll('.mode-btn')],
+        startBtn: document.getElementById('startBtn'),
+        retryBtn: document.getElementById('retryBtn'),
+        backToMenuBtn: document.getElementById('backToMenuBtn'),
+        demoBtn: document.getElementById('demoBtn'),
+        modeTip: document.getElementById('modeTip'),
+        hudTop: document.getElementById('hudTop'),
+        statusChip: document.getElementById('statusChip'),
+        timeChip: document.getElementById('timeChip'),
+        pauseBadge: document.getElementById('pauseBadge'),
+        pauseBtn: document.getElementById('pauseBtn'),
+        menuBtn: document.getElementById('menuBtn'),
+        touchLayer: document.getElementById('touchLayer'),
+      };
+
+      const DPR_MAX = 2;
+      let dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX);
+      let cw = 0;
+      let ch = 0;
+      let lastTs = 0;
+
+      const KEYMAP = {
+        1: { left: ['ArrowLeft', 'a', 'A'], right: ['ArrowRight', 'd', 'D'], accel: ['ArrowUp', 'w', 'W'], brake: ['ArrowDown', 's', 'S'], nitro: [' ', 'Spacebar', 'Space'] },
+        2: { left: ['j', 'J'], right: ['l', 'L'], accel: ['i', 'I'], brake: ['k', 'K'], nitro: ['o', 'O'] },
+      };
+
+      const COLORS = ['#46d7ff', '#ff7d8d'];
+      const NAMES = ['PLAYER 1', 'PLAYER 2'];
+      const CAR_SKINS = [
+        { body: '#46d7ff', glow: 'rgba(70,215,255,0.33)' },
+        { body: '#ff7d8d', glow: 'rgba(255,125,141,0.32)' },
+      ];
+
+      const game = {
+        state: 'menu',
+        mode: 1,
+        panels: [],
+        players: [],
+        timeLimit: 70,
+        elapsed: 0,
+        finished: false,
+        winner: null,
+        touchVisible: false,
+        decorativeStars: [],
+      };
+
+      const input = {
+        keys: new Set(),
+        touch: {
+          1: { left: false, right: false, accel: false, brake: false, nitro: false },
+          2: { left: false, right: false, accel: false, brake: false, nitro: false },
+        }
+      };
+
+      function rand(min, max) { return min + Math.random() * (max - min); }
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function formatTime(sec) { return sec.toFixed(1).padStart(4, '0'); }
+      function formatMeters(m) { return `${Math.floor(m)}m`; }
+      function deviceIsTouchLike() {
+        return window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+      }
+
+      function createStars() {
+        game.decorativeStars = Array.from({ length: 130 }, () => ({
+          x: Math.random(),
+          y: Math.random(),
+          r: rand(0.4, 1.8),
+          s: rand(0.2, 0.9),
+        }));
+      }
+
+      function createPlayer(index) {
+        return {
+          id: index + 1,
+          name: NAMES[index],
+          color: COLORS[index],
+          skin: CAR_SKINS[index],
+          x: 0,
+          speed: 180,
+          distance: 0,
+          nitro: 100,
+          boostHeat: 0,
+          collisions: 0,
+          finished: false,
+          finishTime: null,
+          traffic: [],
+          spawnTimer: rand(0.2, 0.8),
+          laneOffset: rand(-14, 14),
+          roadSeed: Math.random() * 1000,
+          dashOffset: Math.random() * 1000,
+          collisionFlash: 0,
+          shake: 0,
+          bestNearMiss: 0,
+        };
+      }
+
+      function setMode(mode) {
+        game.mode = mode;
+        ui.modeButtons.forEach(btn => btn.classList.toggle('active', Number(btn.dataset.mode) === mode));
+        ui.modeTip.innerHTML = mode === 1
+          ? 'PC: ← → / A D で左右、↑ / W で加速、↓ / S でブレーキ、Space でブースト<br>スマホ: 画面下の大きなボタンで片手でも遊びやすい配置です。'
+          : 'PC: 1P = W A S D + Space、2P = I J K L + O<br>スマホ: 画面を分割し、それぞれのプレイヤー専用ボタンを表示します。';
+      }
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, DPR_MAX);
+        const rect = canvas.getBoundingClientRect();
+        cw = Math.max(320, Math.round(rect.width));
+        ch = Math.max(480, Math.round(rect.height));
+        canvas.width = Math.round(cw * dpr);
+        canvas.height = Math.round(ch * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        updatePanels();
+        layoutTouchControls();
+      }
+
+      function updatePanels() {
+        const pad = Math.max(12, Math.min(cw, ch) * 0.016);
+        const topPad = 68;
+        const bottomPad = deviceIsTouchLike() ? 118 : 16;
+        if (game.mode === 1) {
+          game.panels = [{ x: pad, y: topPad, w: cw - pad * 2, h: ch - topPad - bottomPad }];
+          return;
+        }
+        const wide = cw > ch * 1.08;
+        if (wide) {
+          const gap = pad;
+          const w = (cw - pad * 2 - gap) / 2;
+          game.panels = [
+            { x: pad, y: topPad, w, h: ch - topPad - bottomPad },
+            { x: pad + w + gap, y: topPad, w, h: ch - topPad - bottomPad },
+          ];
+        } else {
+          const gap = pad;
+          const h = (ch - topPad - bottomPad - gap) / 2;
+          game.panels = [
+            { x: pad, y: topPad, w: cw - pad * 2, h },
+            { x: pad, y: topPad + h + gap, w: cw - pad * 2, h },
+          ];
+        }
+      }
+
+      function touchAreaForPanel(panel, playerId) {
+        const baseH = Math.min(100, Math.max(72, panel.h * 0.22));
+        return {
+          playerId,
+          x: panel.x + Math.max(8, panel.w * 0.05),
+          y: Math.min(ch - baseH - 12, panel.y + panel.h - baseH + 12),
+          w: panel.w - Math.max(16, panel.w * 0.1),
+          h: baseH,
+        };
+      }
+
+      function layoutTouchControls() {
+        ui.touchLayer.innerHTML = '';
+        if (game.state !== 'running' || !deviceIsTouchLike()) {
+          ui.touchLayer.classList.add('hidden');
+          return;
+        }
+        ui.touchLayer.classList.remove('hidden');
+        game.panels.forEach((panel, idx) => {
+          const area = touchAreaForPanel(panel, idx + 1);
+          const el = document.createElement('div');
+          el.className = 'touch-area';
+          el.style.left = `${area.x}px`;
+          el.style.top = `${area.y}px`;
+          el.style.width = `${area.w}px`;
+          el.style.height = `${area.h}px`;
+          el.innerHTML = `
+            <div class="touch-cluster">
+              <button class="touch-btn" data-player="${area.playerId}" data-action="left" type="button">◀</button>
+              <button class="touch-btn" data-player="${area.playerId}" data-action="right" type="button">▶</button>
+            </div>
+            <div style="flex:1"></div>
+            <div class="touch-pair">
+              <button class="touch-btn small" data-player="${area.playerId}" data-action="brake" type="button">BRAKE</button>
+              <button class="touch-btn" data-player="${area.playerId}" data-action="accel" type="button">ACCEL</button>
+            </div>
+            <button class="touch-btn" data-player="${area.playerId}" data-action="nitro" type="button">BOOST</button>
+          `;
+          ui.touchLayer.appendChild(el);
+        });
+        bindTouchButtons();
+      }
+
+      function setTouchState(playerId, action, value, target) {
+        if (!input.touch[playerId]) return;
+        input.touch[playerId][action] = value;
+        if (target) target.classList.toggle('active', value);
+      }
+
+      function bindTouchButtons() {
+        const buttons = [...ui.touchLayer.querySelectorAll('.touch-btn')];
+        buttons.forEach(btn => {
+          const player = Number(btn.dataset.player);
+          const action = btn.dataset.action;
+          const on = (e) => {
+            e.preventDefault();
+            setTouchState(player, action, true, btn);
+          };
+          const off = (e) => {
+            e.preventDefault();
+            setTouchState(player, action, false, btn);
+          };
+          btn.addEventListener('pointerdown', on);
+          btn.addEventListener('pointerup', off);
+          btn.addEventListener('pointerleave', off);
+          btn.addEventListener('pointercancel', off);
+        });
+      }
+
+      function activeControlFor(playerId, action) {
+        const keyActive = KEYMAP[playerId][action].some(key => input.keys.has(key));
+        const touchActive = input.touch[playerId][action];
+        return keyActive || touchActive;
+      }
+
+      function startGame() {
+        game.state = 'running';
+        game.elapsed = 0;
+        game.finished = false;
+        game.winner = null;
+        game.timeLimit = game.mode === 1 ? 75 : 80;
+        game.players = Array.from({ length: game.mode }, (_, i) => createPlayer(i));
+        game.players.forEach((p, idx) => p.x = idx % 2 === 0 ? -20 : 20);
+        updatePanels();
+        ui.menuOverlay.classList.add('hidden');
+        ui.resultOverlay.classList.add('hidden');
+        ui.hudTop.classList.remove('hidden');
+        ui.pauseBadge.classList.remove('hidden');
+        ui.statusChip.textContent = game.mode === 1 ? 'MODE 1P' : 'MODE 2P';
+        ui.timeChip.textContent = `TIME ${formatTime(game.timeLimit)}`;
+        resetInputs();
+        layoutTouchControls();
+      }
+
+      function showMenu() {
+        game.state = 'menu';
+        ui.menuOverlay.classList.remove('hidden');
+        ui.resultOverlay.classList.add('hidden');
+        ui.hudTop.classList.add('hidden');
+        ui.pauseBadge.classList.add('hidden');
+        ui.touchLayer.classList.add('hidden');
+        resetInputs();
+      }
+
+      function resetInputs() {
+        input.keys.clear();
+        Object.values(input.touch).forEach(v => {
+          Object.keys(v).forEach(k => v[k] = false);
+        });
+      }
+
+      function finishGame(reason = '') {
+        if (game.finished) return;
+        game.finished = true;
+        game.state = 'result';
+        ui.hudTop.classList.add('hidden');
+        ui.pauseBadge.classList.add('hidden');
+        ui.touchLayer.classList.add('hidden');
+        populateResults(reason);
+      }
+
+      function populateResults(reason) {
+        ui.resultOverlay.classList.remove('hidden');
+        ui.resultList.innerHTML = '';
+        if (game.mode === 1) {
+          const p = game.players[0];
+          const cleared = p.distance >= 3000;
+          ui.resultTitle.textContent = cleared ? 'GOAL!' : 'RACE OVER';
+          ui.resultSubtitle.textContent = cleared
+            ? `ゴール到達。残り ${(game.timeLimit - game.elapsed).toFixed(1)} 秒でクリアしました。`
+            : reason || '制限時間終了。再挑戦してさらに遠くへ進みましょう。';
+          const stats = [
+            ['到達距離', formatMeters(p.distance)],
+            ['クラッシュ', `${p.collisions} 回`],
+            ['残りブースト', `${Math.floor(p.nitro)}%`],
+            ['平均速度感', `${Math.round((p.distance / Math.max(game.elapsed, 0.1)) * 2.8)} km/h`],
+          ];
+          stats.forEach(([label, value]) => addResultItem(label, value, p.color));
+        } else {
+          const ordered = [...game.players].sort((a, b) => {
+            if (a.finished && b.finished) return a.finishTime - b.finishTime;
+            if (a.finished) return -1;
+            if (b.finished) return 1;
+            return b.distance - a.distance;
+          });
+          const winner = ordered[0];
+          ui.resultTitle.textContent = `${winner.name} WIN!`;
+          ui.resultSubtitle.textContent = reason || (winner.finished
+            ? `${winner.name} が先にゴールしました。`
+            : '時間切れ時点の到達距離で勝敗が決まりました。');
+          ordered.forEach((p, index) => {
+            const right = p.finished ? `${p.finishTime.toFixed(1)} 秒` : `${formatMeters(p.distance)}`;
+            addResultItem(`${index + 1}位 ${p.name}`, right, p.color, `${p.collisions} 回接触 / BOOST ${Math.floor(p.nitro)}%`);
+          });
+        }
+      }
+
+      function addResultItem(title, value, color, sub = '') {
+        const el = document.createElement('div');
+        el.className = 'result-item';
+        el.innerHTML = `
+          <div>
+            <strong style="color:${color}">${title}</strong>
+            ${sub ? `<div style="margin-top:4px;color:var(--sub);font-size:13px">${sub}</div>` : ''}
+          </div>
+          <div style="font-weight:900;font-size:18px">${value}</div>
+        `;
+        ui.resultList.appendChild(el);
+      }
+
+      function desiredDistance() {
+        return game.mode === 1 ? 3000 : 2500;
+      }
+
+      function update(dt) {
+        if (game.state !== 'running') return;
+        game.elapsed += dt;
+        ui.timeChip.textContent = `TIME ${formatTime(Math.max(0, game.timeLimit - game.elapsed))}`;
+        const target = desiredDistance();
+
+        for (let i = 0; i < game.players.length; i++) {
+          const p = game.players[i];
+          if (p.finished) continue;
+
+          const left = activeControlFor(p.id, 'left');
+          const right = activeControlFor(p.id, 'right');
+          const accel = activeControlFor(p.id, 'accel');
+          const brake = activeControlFor(p.id, 'brake');
+          const nitro = activeControlFor(p.id, 'nitro');
+
+          let desiredSpeed = 175;
+          if (accel) desiredSpeed = 255;
+          if (brake) desiredSpeed = 95;
+
+          if (nitro && p.nitro > 0) {
+            desiredSpeed += 90;
+            p.nitro = Math.max(0, p.nitro - 42 * dt);
+            p.boostHeat = 1;
+          } else {
+            p.nitro = Math.min(100, p.nitro + 11 * dt);
+            p.boostHeat = Math.max(0, p.boostHeat - 2.6 * dt);
+          }
+
+          p.speed = lerp(p.speed, desiredSpeed, dt * 2.6);
+
+          const panel = game.panels[i];
+          const roadW = panel.w * 0.56;
+          const maxX = roadW * 0.34;
+          const turnPower = (215 + p.speed * 0.15) * dt;
+          if (left) p.x -= turnPower;
+          if (right) p.x += turnPower;
+          p.x = clamp(p.x, -maxX, maxX);
+
+          if (Math.abs(p.x) > roadW * 0.325) {
+            p.speed = Math.max(86, p.speed - 80 * dt);
+          }
+
+          p.distance += p.speed * dt * 0.47;
+          p.collisionFlash = Math.max(0, p.collisionFlash - 2.6 * dt);
+          p.shake = Math.max(0, p.shake - 5 * dt);
+          p.dashOffset += p.speed * dt * 1.6;
+
+          updateTrafficForPlayer(p, panel, dt);
+
+          if (p.distance >= target) {
+            p.finished = true;
+            p.finishTime = game.elapsed;
+            if (game.mode === 2) {
+              game.winner = p;
+              finishGame(`${p.name} が先に ${target}m 到達！`);
+              return;
+            }
+          }
+        }
+
+        if (game.mode === 1 && game.players[0].finished) {
+          finishGame('');
+          return;
+        }
+
+        if (game.elapsed >= game.timeLimit) {
+          finishGame('制限時間になりました。');
+        }
+      }
+
+      function spawnTraffic(player, panel) {
+        const roadW = panel.w * 0.56;
+        const laneCount = 3;
+        const laneW = roadW / laneCount;
+        const lane = Math.floor(rand(0, laneCount));
+        const carW = laneW * 0.58;
+        const carH = Math.max(52, laneW * 1.04);
+        const tx = -roadW / 2 + laneW * (lane + 0.5) + rand(-laneW * 0.08, laneW * 0.08);
+        player.traffic.push({
+          x: tx,
+          y: -carH * 1.8,
+          w: carW,
+          h: carH,
+          speed: rand(90, 235),
+          hue: rand(0, 360),
+          blink: Math.random() < 0.25,
+        });
+      }
+
+      function updateTrafficForPlayer(player, panel, dt) {
+        const roadW = panel.w * 0.56;
+        const roadCenterX = panel.x + panel.w / 2;
+        const playerY = panel.y + panel.h * 0.76;
+        const carW = roadW * 0.12;
+        const carH = carW * 1.75;
+
+        player.spawnTimer -= dt;
+        const densityFactor = game.mode === 1 ? 1 : 1.1;
+        if (player.spawnTimer <= 0) {
+          spawnTraffic(player, panel);
+          player.spawnTimer = rand(0.4, 0.95) / densityFactor;
+        }
+
+        for (let i = player.traffic.length - 1; i >= 0; i--) {
+          const t = player.traffic[i];
+          t.y += (player.speed - t.speed) * dt * 1.1;
+
+          const screenX = roadCenterX + t.x;
+          const playerX = roadCenterX + player.x;
+
+          const nearMissX = Math.abs(screenX - playerX);
+          const nearMissY = Math.abs((panel.y + t.y) - playerY);
+          if (nearMissY < carH * 0.8 && nearMissX < carW * 1.2 && nearMissX > carW * 0.8) {
+            player.nitro = Math.min(100, player.nitro + 14 * dt);
+          }
+
+          const hit = Math.abs(screenX - playerX) < (t.w + carW) * 0.44 && Math.abs((panel.y + t.y) - playerY) < (t.h + carH) * 0.44;
+          if (hit && player.collisionFlash <= 0.01) {
+            player.collisions += 1;
+            player.speed = Math.max(82, player.speed * 0.58);
+            player.nitro = Math.max(0, player.nitro - 28);
+            player.collisionFlash = 1;
+            player.shake = 1;
+            player.x += (player.x < t.x ? -1 : 1) * roadW * 0.04;
+            if (navigator.vibrate) navigator.vibrate(35);
+          }
+
+          if (t.y > panel.h + 160 || t.y < -220) {
+            player.traffic.splice(i, 1);
+          }
+        }
+      }
+
+      function roadMetrics(panel) {
+        const roadW = panel.w * 0.56;
+        const cx = panel.x + panel.w / 2;
+        return { roadW, cx };
+      }
+
+      function drawBackground() {
+        const sky = ctx.createLinearGradient(0, 0, 0, ch);
+        sky.addColorStop(0, '#163164');
+        sky.addColorStop(0.32, '#0d1f3c');
+        sky.addColorStop(1, '#07101d');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, cw, ch);
+
+        for (const s of game.decorativeStars) {
+          const x = s.x * cw;
+          const y = (s.y * ch + game.elapsed * s.s * 8) % ch;
+          ctx.globalAlpha = 0.55;
+          ctx.fillStyle = '#e9f1ff';
+          ctx.beginPath();
+          ctx.arc(x, y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        const glow = ctx.createRadialGradient(cw * 0.5, ch * 0.08, 10, cw * 0.5, ch * 0.08, Math.max(cw, ch) * 0.75);
+        glow.addColorStop(0, 'rgba(83,170,255,0.16)');
+        glow.addColorStop(1, 'rgba(83,170,255,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, cw, ch);
+      }
+
+      function drawPanel(panel, player, panelIndex) {
+        const { roadW, cx } = roadMetrics(panel);
+        const roadX = cx - roadW / 2;
+        const shoulderW = roadW * 0.12;
+        const laneCount = 3;
+        const laneW = roadW / laneCount;
+        const playerX = cx + player.x;
+        const playerY = panel.y + panel.h * 0.76;
+        const playerW = roadW * 0.12;
+        const playerH = playerW * 1.75;
+        const shakeX = player.shake > 0 ? rand(-5, 5) * player.shake : 0;
+        const shakeY = player.shake > 0 ? rand(-4, 4) * player.shake : 0;
+
+        ctx.save();
+        ctx.beginPath();
+        roundRectPath(panel.x, panel.y, panel.w, panel.h, 24);
+        ctx.clip();
+
+        const panelBg = ctx.createLinearGradient(0, panel.y, 0, panel.y + panel.h);
+        panelBg.addColorStop(0, '#122642');
+        panelBg.addColorStop(0.48, '#173015');
+        panelBg.addColorStop(1, '#0f2410');
+        ctx.fillStyle = panelBg;
+        ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+
+        drawScenery(panel, player);
+
+        ctx.fillStyle = '#3a3e4e';
+        ctx.fillRect(roadX, panel.y, roadW, panel.h);
+
+        ctx.fillStyle = '#66814e';
+        ctx.fillRect(panel.x, panel.y, roadX - panel.x, panel.h);
+        ctx.fillRect(roadX + roadW, panel.y, panel.x + panel.w - (roadX + roadW), panel.h);
+
+        ctx.fillStyle = '#8aa85c';
+        for (let y = panel.y + ((player.dashOffset * 0.6) % 56) - 56; y < panel.y + panel.h + 56; y += 56) {
+          ctx.fillRect(panel.x + 12, y, 8, 28);
+          ctx.fillRect(panel.x + panel.w - 20, y + 14, 8, 28);
+        }
+
+        ctx.fillStyle = '#e8d04e';
+        ctx.fillRect(roadX + shoulderW * 0.32, panel.y, 4, panel.h);
+        ctx.fillRect(roadX + roadW - shoulderW * 0.32 - 4, panel.y, 4, panel.h);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.65)';
+        for (let l = 1; l < laneCount; l++) {
+          const x = roadX + laneW * l - 4;
+          for (let y = panel.y + (player.dashOffset % 54) - 54; y < panel.y + panel.h + 54; y += 54) {
+            ctx.fillRect(x, y, 8, 28);
+          }
+        }
+
+        for (const t of player.traffic) {
+          drawCar(cx + t.x, panel.y + t.y, t.w, t.h, `hsl(${t.hue} 72% 56%)`, t.blink, false);
+        }
+
+        drawSpeedLines(panel, player);
+        drawCar(playerX + shakeX, playerY + shakeY, playerW, playerH, player.skin.body, true, true, player.skin.glow, player.boostHeat);
+
+        if (player.collisionFlash > 0) {
+          ctx.fillStyle = `rgba(255, 90, 110, ${player.collisionFlash * 0.18})`;
+          ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+        }
+
+        drawPanelHud(panel, player, panelIndex);
+
+        ctx.restore();
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 1;
+        roundRectPath(panel.x + 0.5, panel.y + 0.5, panel.w - 1, panel.h - 1, 24);
+        ctx.stroke();
+      }
+
+      function drawScenery(panel, player) {
+        const spacing = 128;
+        const ox = (player.dashOffset * 0.75) % spacing;
+        for (let y = panel.y - spacing + ox; y < panel.y + panel.h + spacing; y += spacing) {
+          drawTree(panel.x + panel.w * 0.09, y, 1);
+          drawTree(panel.x + panel.w * 0.91, y + 52, 0.85);
+        }
+      }
+
+      function drawTree(x, y, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#5d402b';
+        ctx.fillRect(-5, 10, 10, 20);
+        ctx.beginPath();
+        ctx.fillStyle = '#2f7843';
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.fillStyle = '#3e9152';
+        ctx.arc(10, 4, 10, 0, Math.PI * 2);
+        ctx.arc(-10, 6, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawSpeedLines(panel, player) {
+        const intensity = clamp((player.speed - 160) / 120, 0, 1);
+        if (intensity <= 0.02) return;
+        ctx.save();
+        ctx.globalAlpha = 0.18 * intensity;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 18; i++) {
+          const x = panel.x + rand(18, panel.w - 18);
+          const y = panel.y + rand(18, panel.h - 18);
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + 14 + intensity * 18);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawCar(x, y, w, h, color, blink = false, isPlayer = false, glowColor = 'rgba(255,255,255,0.22)', boostHeat = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        if (isPlayer) {
+          ctx.shadowBlur = 24 + boostHeat * 16;
+          ctx.shadowColor = glowColor;
+        }
+        ctx.fillStyle = color;
+        roundRectCentered(-w / 2, -h / 2, w, h, Math.max(10, w * 0.18));
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        roundRectCentered(-w * 0.26, -h * 0.28, w * 0.52, h * 0.28, w * 0.08);
+        ctx.fill();
+
+        ctx.fillStyle = '#111b2e';
+        roundRectCentered(-w * 0.28, -h * 0.2, w * 0.56, h * 0.18, w * 0.08);
+        ctx.fill();
+
+        ctx.fillStyle = '#09111d';
+        ctx.fillRect(-w * 0.42, -h * 0.2, w * 0.1, h * 0.25);
+        ctx.fillRect(w * 0.32, -h * 0.2, w * 0.1, h * 0.25);
+        ctx.fillRect(-w * 0.42, h * 0.01, w * 0.1, h * 0.25);
+        ctx.fillRect(w * 0.32, h * 0.01, w * 0.1, h * 0.25);
+
+        ctx.fillStyle = blink ? '#ffd54f' : '#ff7788';
+        ctx.fillRect(-w * 0.28, -h * 0.47, w * 0.17, h * 0.07);
+        ctx.fillRect(w * 0.11, -h * 0.47, w * 0.17, h * 0.07);
+
+        ctx.fillStyle = '#bde8ff';
+        ctx.fillRect(-w * 0.28, h * 0.4, w * 0.17, h * 0.07);
+        ctx.fillRect(w * 0.11, h * 0.4, w * 0.17, h * 0.07);
+
+        if (isPlayer && boostHeat > 0.01) {
+          ctx.globalAlpha = boostHeat * 0.9;
+          ctx.fillStyle = '#ffd46f';
+          ctx.beginPath();
+          ctx.moveTo(-w * 0.18, h * 0.56);
+          ctx.lineTo(-w * 0.04, h * 0.92 + rand(0, 6));
+          ctx.lineTo(w * 0.02, h * 0.58);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.moveTo(w * 0.18, h * 0.56);
+          ctx.lineTo(w * 0.04, h * 0.92 + rand(0, 6));
+          ctx.lineTo(-w * 0.02, h * 0.58);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawPanelHud(panel, player, panelIndex) {
+        const target = desiredDistance();
+        const progress = clamp(player.distance / target, 0, 1);
+        const px = panel.x + 14;
+        const py = panel.y + 12;
+        const barW = panel.w - 28;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(7, 13, 24, 0.56)';
+        roundRectPath(px, py, barW, 54, 16);
+        ctx.fill();
+
+        ctx.fillStyle = player.color;
+        ctx.font = '800 16px Segoe UI, Noto Sans JP, sans-serif';
+        ctx.fillText(player.name, px + 14, py + 20);
+
+        ctx.fillStyle = '#d7e6ff';
+        ctx.font = '700 13px Segoe UI, Noto Sans JP, sans-serif';
+        ctx.fillText(`SPD ${Math.round(player.speed)}`, px + 14, py + 42);
+        ctx.fillText(`DIST ${formatMeters(player.distance)}`, px + 104, py + 42);
+        ctx.fillText(`HIT ${player.collisions}`, px + 224, py + 42);
+
+        const nitroW = Math.min(132, barW * 0.26);
+        const nitroX = px + barW - nitroW - 14;
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        roundRectPath(nitroX, py + 14, nitroW, 12, 999);
+        ctx.fill();
+        ctx.fillStyle = '#ffd46f';
+        roundRectPath(nitroX, py + 14, nitroW * (player.nitro / 100), 12, 999);
+        ctx.fill();
+        ctx.fillStyle = '#f7fbff';
+        ctx.font = '800 11px Segoe UI, Noto Sans JP, sans-serif';
+        ctx.fillText('BOOST', nitroX, py + 42);
+
+        const progY = panel.y + panel.h - 18;
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        roundRectPath(panel.x + 16, progY, panel.w - 32, 8, 999);
+        ctx.fill();
+        ctx.fillStyle = player.color;
+        roundRectPath(panel.x + 16, progY, (panel.w - 32) * progress, 8, 999);
+        ctx.fill();
+
+        if (player.finished) {
+          ctx.fillStyle = 'rgba(0,0,0,0.26)';
+          ctx.fillRect(panel.x, panel.y, panel.w, panel.h);
+          ctx.fillStyle = player.color;
+          ctx.font = '900 42px Segoe UI, Noto Sans JP, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('GOAL!', panel.x + panel.w / 2, panel.y + panel.h / 2);
+          ctx.textAlign = 'start';
+        }
+        ctx.restore();
+      }
+
+      function roundRectPath(x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rr, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rr);
+        ctx.arcTo(x + w, y + h, x, y + h, rr);
+        ctx.arcTo(x, y + h, x, y, rr);
+        ctx.arcTo(x, y, x + w, y, rr);
+        ctx.closePath();
+      }
+
+      function roundRectCentered(x, y, w, h, r) {
+        roundRectPath(x, y, w, h, r);
+      }
+
+      function render() {
+        drawBackground();
+
+        if (game.state === 'menu') {
+          drawMenuBackdrop();
+          return;
+        }
+
+        game.players.forEach((player, i) => drawPanel(game.panels[i], player, i));
+
+        if (game.state === 'paused') {
+          drawPauseOverlay();
+        }
+      }
+
+      function drawMenuBackdrop() {
+        updatePanels();
+        const previewPlayers = [createPlayer(0), createPlayer(1)];
+        previewPlayers[0].distance = 1380;
+        previewPlayers[1].distance = 910;
+        previewPlayers[0].speed = 242;
+        previewPlayers[1].speed = 198;
+        const panels = cw > ch * 1.08
+          ? [{ x: 22, y: 88, w: (cw - 54) / 2, h: ch - 110 }, { x: 32 + (cw - 54) / 2, y: 88, w: (cw - 54) / 2, h: ch - 110 }]
+          : [{ x: 22, y: 88, w: cw - 44, h: (ch - 122) / 2 }, { x: 22, y: 100 + (ch - 122) / 2, w: cw - 44, h: (ch - 122) / 2 }];
+        previewPlayers.forEach((p, idx) => {
+          p.traffic = [
+            { x: -28, y: 50, w: 46, h: 82, speed: 120, hue: 230, blink: false },
+            { x: 56, y: 180, w: 46, h: 82, speed: 140, hue: 38, blink: true },
+            { x: -60, y: 290, w: 46, h: 82, speed: 160, hue: 314, blink: false },
+          ];
+          drawPanel(panels[idx], p, idx);
+        });
+      }
+
+      function drawPauseOverlay() {
+        ctx.fillStyle = 'rgba(6,10,18,0.48)';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.fillStyle = '#f5fbff';
+        ctx.font = '900 54px Segoe UI, Noto Sans JP, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSED', cw / 2, ch / 2);
+        ctx.font = '700 18px Segoe UI, Noto Sans JP, sans-serif';
+        ctx.fillStyle = 'rgba(245,251,255,0.85)';
+        ctx.fillText('Pキーまたは一時停止ボタンで再開', cw / 2, ch / 2 + 34);
+        ctx.textAlign = 'start';
+      }
+
+      function togglePause() {
+        if (game.state === 'running') {
+          game.state = 'paused';
+          ui.pauseBtn.textContent = '再開';
+          ui.touchLayer.classList.add('hidden');
+        } else if (game.state === 'paused') {
+          game.state = 'running';
+          ui.pauseBtn.textContent = '一時停止';
+          layoutTouchControls();
+        }
+      }
+
+      function gameLoop(ts) {
+        if (!lastTs) lastTs = ts;
+        const dt = Math.min(0.033, (ts - lastTs) / 1000);
+        lastTs = ts;
+        if (game.state === 'running') update(dt);
+        render();
+        requestAnimationFrame(gameLoop);
+      }
+
+      function bindEvents() {
+        window.addEventListener('resize', resize);
+        window.addEventListener('keydown', (e) => {
+          if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || [' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+          }
+          input.keys.add(e.key);
+          input.keys.add(e.code);
+          if ((e.key === 'p' || e.key === 'P') && (game.state === 'running' || game.state === 'paused')) {
+            togglePause();
+          }
+        }, { passive: false });
+        window.addEventListener('keyup', (e) => {
+          input.keys.delete(e.key);
+          input.keys.delete(e.code);
+        });
+
+        ui.modeButtons.forEach(btn => btn.addEventListener('click', () => setMode(Number(btn.dataset.mode))));
+        ui.startBtn.addEventListener('click', startGame);
+        ui.retryBtn.addEventListener('click', startGame);
+        ui.backToMenuBtn.addEventListener('click', showMenu);
+        ui.menuBtn.addEventListener('click', showMenu);
+        ui.pauseBtn.addEventListener('click', togglePause);
+        ui.demoBtn.addEventListener('click', () => {
+          game.touchVisible = !game.touchVisible;
+          ui.modeTip.innerHTML = game.touchVisible
+            ? 'スマホでは下の大きなボタンを親指で操作できます。2Pでは各プレイヤーのエリアごとに専用ボタンが出ます。<br>PCではキーボード操作の方が快適です。'
+            : (game.mode === 1
+              ? 'PC: ← → / A D で左右、↑ / W で加速、↓ / S でブレーキ、Space でブースト<br>スマホ: 画面下の大きなボタンで片手でも遊びやすい配置です。'
+              : 'PC: 1P = W A S D + Space、2P = I J K L + O<br>スマホ: 画面を分割し、それぞれのプレイヤー専用ボタンを表示します。');
+        });
+
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden && game.state === 'running') togglePause();
+        });
+      }
+
+      createStars();
+      bindEvents();
+      setMode(1);
+      resize();
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>
