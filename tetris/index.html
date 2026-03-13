@@ -15,11 +15,11 @@ canvas { display:block; image-rendering:pixelated; }
 <canvas id="c"></canvas>
 <script>
 // ═══════════════════════════════════════════════════
-// CANVAS
+// CANVAS  (高さを660に拡張してコントロール領域を確保)
 // ═══════════════════════════════════════════════════
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
-const CW = 900, CH = 640;
+const CW = 900, CH = 660;
 canvas.width = CW; canvas.height = CH;
 function resize() {
   const s = Math.min(window.innerWidth/CW, window.innerHeight/CH);
@@ -33,14 +33,12 @@ window.addEventListener('resize', resize); resize();
 // ═══════════════════════════════════════════════════
 const COLS = 10, ROWS = 20;
 const PTYPES = ['I','O','T','S','Z','J','L'];
-
 const COL = { I:'#00e5ff', O:'#f5d800', T:'#cc00ff',
               S:'#00e000', Z:'#ff2200', J:'#2244ff', L:'#ff8800', G:'#444' };
 const HI  = { I:'#99f8ff', O:'#fff599', T:'#ee88ff',
               S:'#99ff99', Z:'#ff9988', J:'#88aaff', L:'#ffcc88', G:'#666' };
 const SH  = { I:'#007788', O:'#887700', T:'#660088',
               S:'#006600', Z:'#880000', J:'#001188', L:'#883300', G:'#222' };
-
 const SHAPES = {
   I:[[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
      [[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],
@@ -61,8 +59,6 @@ const SHAPES = {
   L:[[[0,0,1],[1,1,1],[0,0,0]],[[0,1,0],[0,1,0],[0,1,1]],
      [[0,0,0],[1,1,1],[1,0,0]],[[1,1,0],[0,1,0],[0,1,0]]]
 };
-
-// SRS kicks
 const KICKS_JLSTZ = {
   '0>1':[[-1,0],[-1,1],[0,-2],[-1,-2]], '1>0':[[1,0],[1,-1],[0,2],[1,2]],
   '1>2':[[1,0],[1,-1],[0,2],[1,2]],     '2>1':[[-1,0],[-1,1],[0,-2],[-1,-2]],
@@ -75,7 +71,6 @@ const KICKS_I = {
   '2>3':[[2,0],[-1,0],[2,1],[-1,-2]], '3>2':[[-2,0],[1,0],[-2,-1],[1,2]],
   '3>0':[[1,0],[-2,0],[1,-2],[-2,1]], '0>3':[[-1,0],[2,0],[-1,2],[2,-1]]
 };
-
 const LSCORES  = [0,100,300,500,800];
 const LNAMES   = ['','SINGLE','DOUBLE','TRIPLE','TETRIS!!!'];
 const LCOLORS  = ['','#fff','#0ff','#ff0','#f0f'];
@@ -88,9 +83,7 @@ const GRAVITY  = [48,43,38,33,28,23,18,13,8,6,5,5,5,4,4,4,3,3,3,2,2,1];
 let particles=[], popups=[], rowFlashes=[];
 let shakeAmt=0, shakeX=0, shakeY=0;
 let screenFlashAlpha=0, screenFlashColor='#fff';
-
 function shock(mag) { if(mag>shakeAmt) shakeAmt=mag; }
-
 function burst(cx,cy,color,n,power) {
   for(let i=0;i<n;i++){
     const a=Math.random()*Math.PI*2, s=power*(0.3+Math.random()*0.7);
@@ -114,15 +107,10 @@ function popup(x,y,text,color,size) {
 function flashRows(bx,by,cell,rows,color) {
   rowFlashes.push({bx,by,cell,rows:rows.slice(),color,timer:15,max:15});
 }
-
 function lineClearFX(game, L, n, rowIndices, rowData) {
   const bx=L.bx,by=L.by,cell=L.cell;
   const color = n>=4?'#ff00ff':n>=3?'#ffff00':n>=2?'#00ffff':'#ffffff';
-
-  // Flash rows
   flashRows(bx,by,cell,rowIndices,color);
-
-  // Particles per cleared cell
   const pc = n>=4?12:n>=3?9:n>=2?7:5;
   for(let ri=0;ri<rowData.length;ri++){
     for(let c=0;c<COLS;c++){
@@ -131,8 +119,6 @@ function lineClearFX(game, L, n, rowIndices, rowData) {
       sparkle(cx,cy,3);
     }
   }
-
-  // Extra mega-burst for Tetris
   if(n>=4){
     const mx=bx+COLS*cell/2;
     const my=by+(rowIndices.reduce((a,b)=>a+b,0)/rowIndices.length)*cell;
@@ -142,16 +128,12 @@ function lineClearFX(game, L, n, rowIndices, rowData) {
   } else if(n>=2){
     screenFlashAlpha=0.5; screenFlashColor=color;
   }
-
   shock([0,4,9,14,22][n]);
-
-  // Popups
   const px=bx+COLS*cell/2, py=by+ROWS*cell/2;
   popup(px, py-20, LNAMES[n], color, n>=4?34:22);
   popup(px, py+22, '+'+game._pts, '#ffff88', 18);
   if(game.combo>0) popup(px, py-55, 'COMBO ×'+(game.combo+1), '#ff8800', 16);
 }
-
 function updateFX() {
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];
@@ -172,7 +154,6 @@ function updateFX() {
   if(shakeAmt>.3){ shakeX=(Math.random()-.5)*shakeAmt*2; shakeY=(Math.random()-.5)*shakeAmt*2; shakeAmt*=.72; }
   else { shakeX=shakeY=shakeAmt=0; }
 }
-
 function drawFX() {
   if(screenFlashAlpha>0){
     ctx.fillStyle=screenFlashColor;
@@ -209,7 +190,6 @@ function drawFX() {
 // ═══════════════════════════════════════════════════
 class TetrisGame {
   constructor(idx) { this.idx=idx; this.reset(); }
-
   reset() {
     this.board=Array.from({length:ROWS},()=>Array(COLS).fill(null));
     this.piece=null; this.hold=null; this.holdUsed=false;
@@ -221,22 +201,18 @@ class TetrisGame {
     this._rows=null; this._rowData=null; this._n=0; this._pts=0;
     this.spawn();
   }
-
   _fillBag() {
     const bag=[...PTYPES];
     for(let i=bag.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; }
     this.queue.push(...bag);
   }
-
   _next() { if(this.queue.length<5) this._fillBag(); return this.queue.shift(); }
-
   spawn() {
     const t=this._next();
     this.piece={t, x:3, y:(t==='I')?-1:0, r:0};
     this.lockT=0; this.lockM=0; this.holdUsed=false;
     if(!this.ok(this.piece)) this.alive=false;
   }
-
   ok(p, board) {
     board=board||this.board;
     const s=SHAPES[p.t][p.r&3];
@@ -248,14 +224,12 @@ class TetrisGame {
     }
     return true;
   }
-
   ghost() {
     if(!this.piece) return 0;
     let gy=this.piece.y;
     while(this.ok({...this.piece,y:gy+1})) gy++;
     return gy;
   }
-
   move(dx) {
     if(!this.piece) return false;
     const np={...this.piece,x:this.piece.x+dx};
@@ -264,7 +238,6 @@ class TetrisGame {
     if(this.lockT>0&&this.lockM<15){this.lockT=0;this.lockM++;}
     return true;
   }
-
   rotate(dir) {
     if(!this.piece) return false;
     const p=this.piece, nr=((p.r+dir)%4+4)%4;
@@ -278,14 +251,12 @@ class TetrisGame {
     }
     return false;
   }
-
   hardDrop() {
     if(!this.piece) return;
     const dy=this.ghost()-this.piece.y;
     this.piece.y+=dy; this.score+=dy*2;
     this.lock();
   }
-
   lock() {
     if(!this.piece) return;
     const s=SHAPES[this.piece.t][this.piece.r&3];
@@ -303,7 +274,6 @@ class TetrisGame {
     }
     this.spawn();
   }
-
   _clearLines() {
     this._rows=null; this._n=0; this._rowData=null; this._pts=0;
     const rows=[];
@@ -317,7 +287,6 @@ class TetrisGame {
     this._rows=rows; this._rowData=rowData; this._n=n; this._pts=pts;
     for(const r of rows){ this.board.splice(r,1); this.board.unshift(Array(COLS).fill(null)); }
   }
-
   _addGarbage(n) {
     const col=Math.floor(Math.random()*COLS);
     for(let i=0;i<n;i++){
@@ -328,14 +297,12 @@ class TetrisGame {
     this.garbFlash=25;
     if(this.piece&&!this.ok(this.piece)) this.alive=false;
   }
-
   holdPiece() {
     if(this.holdUsed||!this.piece) return;
     const t=this.piece.t; this.holdUsed=true;
     if(this.hold) this.queue.unshift(this.hold);
     this.hold=t; this.piece=null; this.spawn();
   }
-
   update(gravStep) {
     if(!this.alive||!this.piece) return;
     if(this.garbFlash>0) this.garbFlash--;
@@ -347,7 +314,7 @@ class TetrisGame {
 }
 
 // ═══════════════════════════════════════════════════
-// INPUT
+// INPUT (キーボード)
 // ═══════════════════════════════════════════════════
 const keys={}, prev={};
 document.addEventListener('keydown',e=>{keys[e.code]=true;e.preventDefault();},{passive:false});
@@ -364,7 +331,9 @@ function dasPoll(k){
   return false;
 }
 
-// Touch buttons
+// ═══════════════════════════════════════════════════
+// タッチボタン状態
+// ═══════════════════════════════════════════════════
 const TB={}, prevTB={}, tDas={};
 function tDasPoll(k){
   if(!TB[k]){delete tDas[k];return false;}
@@ -377,43 +346,359 @@ function tDasPoll(k){
 function tjp(k){return TB[k]&&!prevTB[k];}
 
 // ═══════════════════════════════════════════════════
-// LAYOUT
+// スワイプ検出
+// ═══════════════════════════════════════════════════
+let swipeTracks = {}; // identifier -> {sx,sy,st,moved,gi}
+const SWIPE_THRESHOLD = 28;
+const TAP_MAX_DIST = 14;
+const FLICK_SPEED = 9; // px/frame でハードドロップ判定
+
+function getBoardForTouch(x, y) {
+  for(let gi=0; gi<layouts.length; gi++){
+    const L=layouts[gi];
+    if(x>=L.bx && x<=L.bx+L.bw && y>=L.by && y<=L.by+L.bh) return gi;
+  }
+  return -1;
+}
+
+// ═══════════════════════════════════════════════════
+// レイアウト  ── 大幅改善 ──
 // ═══════════════════════════════════════════════════
 function makeLayout(mode) {
   if(mode===1){
-    const cell=28, bw=COLS*cell, bh=ROWS*cell;
-    const bx=Math.round((CW-bw)/2), by=Math.round((CH-bh)/2)-10;
-    return [{ cell,bx,by,bw,bh, lx:bx-128,lw:118, rx:bx+bw+10,rw:118 }];
+    // 1人プレイ: cell=22 ボードを上部中央に配置、下部にコントロール
+    const cell=22, bw=COLS*cell, bh=ROWS*cell; // 220×440
+    const bx=Math.round((CW-bw)/2);            // 340
+    const by=22;
+    return [{ cell,bx,by,bw,bh, lx:12, lw:158, rx:CW-170, rw:158 }];
   } else {
-    const cell=20, bw=COLS*cell, bh=ROWS*cell;
-    const by=Math.round((CH-bh)/2)-5;
-    const p1bx=105, p2bx=CW-105-bw;
+    // 2人プレイ
+    const cell=17, bw=COLS*cell, bh=ROWS*cell; // 170×340
+    const by=12;
+    const p1bx=88, p2bx=CW-88-bw;             // p2bx=642
     return [
-      { cell,bx:p1bx,by,bw,bh, lx:p1bx-98,lw:88, rx:p1bx+bw+10,rw:78 },
-      { cell,bx:p2bx,by,bw,bh, lx:p2bx-88,lw:78, rx:p2bx+bw+10,rw:88 }
+      { cell,bx:p1bx,by,bw,bh, lx:8,         lw:70, rx:p1bx+bw+8,  rw:65 },
+      { cell,bx:p2bx,by,bw,bh, lx:p2bx-78,lw:65, rx:p2bx+bw+8, rw:70 }
     ];
   }
 }
 
 // ═══════════════════════════════════════════════════
-// DRAWING HELPERS
+// タッチゾーン構築  ── 完全リデザイン ──
+// ═══════════════════════════════════════════════════
+let touchZones=[];
+
+/*
+  1人プレイのボタン配置 (横900×縦660):
+  ─────────────────────────────────────────────────
+    【左クラスター: 左親指】    【右クラスター: 右親指】
+    ┌──────────┐ ┌──────────┐   ┌──────────┐ ┌──────────┐
+    │  ◀ 左移動 │ │  ▶ 右移動 │   │  ↺ 左回転 │ │  ↻ 右回転 │
+    └──────────┘ └──────────┘   └──────────┘ └──────────┘
+    ┌─────────────────────────┐   ┌──────────┐ ┌──────────┐
+    │    ▼  ソフトドロップ     │   │  ⬇ 即落下 │ │   HOLD   │
+    └─────────────────────────┘   └──────────┘ └──────────┘
+  ─────────────────────────────────────────────────
+*/
+function buildTouchZones(mode) {
+  touchZones=[];
+  if(mode===1){
+    const y1=480, h1=80, y2=570, h2=78;
+    const BW=148; // ボタン幅
+
+    // ── 左クラスター (左親指: 移動) ──
+    touchZones.push({
+      key:'p0_left',  x:14,  y:y1, w:BW, h:h1,
+      icon:'◀', label:'左移動', iconSize:32,
+      color:'#1a6fff', darkColor:'#0a3fcc'
+    });
+    touchZones.push({
+      key:'p0_right', x:14+BW+6, y:y1, w:BW, h:h1,
+      icon:'▶', label:'右移動', iconSize:32,
+      color:'#1a6fff', darkColor:'#0a3fcc'
+    });
+    touchZones.push({
+      key:'p0_soft',  x:14, y:y2, w:BW*2+6, h:h2,
+      icon:'▼', label:'ソフトドロップ (長押し)', iconSize:26,
+      color:'#0077bb', darkColor:'#004488', wide:true
+    });
+
+    // ── 右クラスター (右親指: アクション) ──
+    touchZones.push({
+      key:'p0_rotl', x:572, y:y1, w:BW, h:h1,
+      icon:'↺', label:'左回転', iconSize:30,
+      color:'#00aa44', darkColor:'#007722'
+    });
+    touchZones.push({
+      key:'p0_rot',  x:572+BW+6, y:y1, w:BW, h:h1,
+      icon:'↻', label:'右回転', iconSize:30,
+      color:'#00aa44', darkColor:'#007722'
+    });
+    touchZones.push({
+      key:'p0_drop', x:572, y:y2, w:BW, h:h2,
+      icon:'⬇', label:'即落下', iconSize:28,
+      color:'#ff6600', darkColor:'#cc4400'
+    });
+    touchZones.push({
+      key:'p0_hold', x:572+BW+6, y:y2, w:BW, h:h2,
+      icon:'◈', label:'HOLD', iconSize:22,
+      color:'#9900cc', darkColor:'#660099'
+    });
+
+  } else {
+    // ── 2人プレイ: 各プレイヤー6ボタン 2段 ──
+    const y1=362, h=72, y2=444;
+    const bw2=122, gap=5;
+
+    // P1コントロール (左側)
+    const p1x=5;
+    const p1btns = [
+      {key:'p0_left',  x:p1x,                y:y1, icon:'◀', label:'左', color:'#1a6fff'},
+      {key:'p0_right', x:p1x+(bw2+gap),      y:y1, icon:'▶', label:'右', color:'#1a6fff'},
+      {key:'p0_rot',   x:p1x+(bw2+gap)*2,    y:y1, icon:'↻', label:'回転', color:'#00aa44'},
+      {key:'p0_soft',  x:p1x,                y:y2, icon:'▼', label:'↓', color:'#0077bb'},
+      {key:'p0_drop',  x:p1x+(bw2+gap),      y:y2, icon:'⬇', label:'落', color:'#ff6600'},
+      {key:'p0_hold',  x:p1x+(bw2+gap)*2,    y:y2, icon:'H', label:'HOLD', color:'#9900cc'},
+    ];
+    p1btns.forEach(b=>touchZones.push({...b, w:bw2, h, iconSize:24, darkColor:'#111122'}));
+
+    // P2コントロール (右側)
+    const p2x=900-(bw2*3+gap*2)-5;
+    const p2btns = [
+      {key:'p1_left',  x:p2x,                y:y1, icon:'◀', label:'左', color:'#ff4444'},
+      {key:'p1_right', x:p2x+(bw2+gap),      y:y1, icon:'▶', label:'右', color:'#ff4444'},
+      {key:'p1_rot',   x:p2x+(bw2+gap)*2,    y:y1, icon:'↻', label:'回転', color:'#ff8800'},
+      {key:'p1_soft',  x:p2x,                y:y2, icon:'▼', label:'↓', color:'#884400'},
+      {key:'p1_drop',  x:p2x+(bw2+gap),      y:y2, icon:'⬇', label:'落', color:'#cc3300'},
+      {key:'p1_hold',  x:p2x+(bw2+gap)*2,    y:y2, icon:'H', label:'HOLD', color:'#660066'},
+    ];
+    p2btns.forEach(b=>touchZones.push({...b, w:bw2, h, iconSize:24, darkColor:'#111122'}));
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// タッチUI描画  ── 色分け + 大型ボタン ──
+// ═══════════════════════════════════════════════════
+function drawTouchUI() {
+  // セクションラベル (1Pのみ)
+  if(gameMode===1){
+    ctx.globalAlpha=0.35;
+    ctx.font='10px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#aaa';
+    ctx.fillText('移動', 14+148+3, 472);
+    ctx.fillText('アクション', 572+148+3, 472);
+    ctx.globalAlpha=1;
+  }
+
+  for(const z of touchZones){
+    const on=!!TB[z.key];
+
+    // 外側グロー
+    if(on){
+      ctx.shadowColor=z.color; ctx.shadowBlur=18;
+    }
+
+    // ボタン背景グラデーション
+    const grd=ctx.createLinearGradient(z.x, z.y, z.x, z.y+z.h);
+    if(on){
+      grd.addColorStop(0, z.color+'ee');
+      grd.addColorStop(1, z.darkColor+'cc');
+      ctx.globalAlpha=1;
+    } else {
+      grd.addColorStop(0, '#1c1c2e');
+      grd.addColorStop(1, '#0d0d1a');
+      ctx.globalAlpha=0.88;
+    }
+    ctx.fillStyle=grd;
+    rr(z.x, z.y, z.w, z.h, 12);
+    ctx.fill();
+    ctx.shadowBlur=0;
+
+    // ボーダー
+    ctx.globalAlpha=on?1:0.55;
+    ctx.strokeStyle=on?z.color:(z.color+'55');
+    ctx.lineWidth=on?2.5:1.5;
+    rr(z.x, z.y, z.w, z.h, 12);
+    ctx.stroke();
+
+    // 上部ハイライト
+    if(!on){
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+      ctx.globalAlpha=0.6;
+      rr(z.x+2, z.y+2, z.w-4, z.h/2-2, 10);
+      ctx.fill();
+    }
+
+    // アイコン
+    ctx.globalAlpha=on?1:0.75;
+    ctx.textAlign='center';
+
+    if(z.wide){
+      // ソフトドロップ (横長ボタン)
+      ctx.font=`bold ${z.iconSize}px Arial`;
+      ctx.fillStyle=on?'#fff':'#aac8ff';
+      ctx.fillText(z.icon, z.x+z.w/2-50, z.y+z.h/2+10);
+      ctx.font=`bold 15px 'Courier New'`;
+      ctx.fillStyle=on?'#fff':'#7799cc';
+      ctx.fillText(z.label, z.x+z.w/2+25, z.y+z.h/2+6);
+    } else {
+      // 通常ボタン: アイコン + 小さいラベル
+      ctx.font=`bold ${z.iconSize}px Arial`;
+      ctx.fillStyle=on?'#fff':(z.color+'dd');
+      ctx.fillText(z.icon, z.x+z.w/2, z.y+z.h*0.52+z.iconSize*0.35);
+      if(z.label){
+        ctx.font=`10px 'Courier New'`;
+        ctx.fillStyle=on?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.4)';
+        ctx.fillText(z.label, z.x+z.w/2, z.y+z.h-7);
+      }
+    }
+    ctx.globalAlpha=1;
+  }
+  ctx.textAlign='left'; ctx.shadowBlur=0;
+}
+
+// ═══════════════════════════════════════════════════
+// タッチイベント (スワイプ対応)
+// ═══════════════════════════════════════════════════
+function getCanvasXY(t) {
+  const r=canvas.getBoundingClientRect();
+  return {x:(t.clientX-r.left)*CW/r.width, y:(t.clientY-r.top)*CH/r.height};
+}
+
+function vibrate(ms) {
+  try { navigator.vibrate && navigator.vibrate(ms); } catch(e){}
+}
+
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const {x,y}=getCanvasXY(t);
+    const id=t.identifier;
+
+    // タッチゾーンのヒット判定
+    let hitZone=false;
+    for(const z of touchZones){
+      if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h){
+        TB[z.key]=true; hitZone=true;
+      }
+    }
+
+    // ゲームボード上のスワイプ開始を記録
+    if(!hitZone){
+      const gi=getBoardForTouch(x,y);
+      if(gi>=0){
+        swipeTracks[id]={sx:x,sy:y,st:Date.now(),px:x,py:y,moved:false,gi,swipeDir:null};
+      }
+    }
+
+    // タイトル画面のタップ
+    if(gameState==='title'){
+      const bx=CW/2-150;
+      for(let i=0;i<2;i++) if(x>=bx&&x<bx+300&&y>=265+i*85&&y<325+i*85) titleSel=i;
+    }
+  }
+},{passive:false});
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  // まずボタン状態をリセット
+  for(const k in TB) TB[k]=false;
+  for(const t of e.changedTouches){
+    const {x,y}=getCanvasXY(t);
+    const id=t.identifier;
+
+    // ボタンヒット
+    for(const z of touchZones){
+      if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h) TB[z.key]=true;
+    }
+
+    // スワイプ処理
+    if(swipeTracks[id]){
+      const tr=swipeTracks[id];
+      const dx=x-tr.sx, dy=y-tr.sy;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist>TAP_MAX_DIST) tr.moved=true;
+
+      // 横スワイプ: 列移動
+      if(!tr.swipeDir && Math.abs(dx)>SWIPE_THRESHOLD && Math.abs(dx)>Math.abs(dy)*1.2){
+        tr.swipeDir='h';
+      }
+      if(tr.swipeDir==='h'){
+        const cellW=layouts[tr.gi].cell;
+        const steps=Math.round((x-tr.sx)/cellW);
+        if(steps!==0 && gameState==='playing'){
+          const g=games[tr.gi];
+          const delta=steps-(tr.hSteps||0);
+          for(let i=0;i<Math.abs(delta);i++) g.move(delta>0?1:-1);
+          tr.hSteps=steps;
+        }
+      }
+
+      tr.px=x; tr.py=y;
+    }
+  }
+},{passive:false});
+
+canvas.addEventListener('touchend', e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const {x,y}=getCanvasXY(t);
+    const id=t.identifier;
+    const tr=swipeTracks[id];
+
+    if(tr){
+      const dx=x-tr.sx, dy=y-tr.sy;
+      const dt=(Date.now()-tr.st)/1000;
+
+      if(gameState==='playing'){
+        const g=games[tr.gi];
+        if(!tr.moved){
+          // タップ = 右回転
+          g.rotate(1); vibrate(20);
+        } else if(!tr.swipeDir){
+          // 縦方向スワイプ判定
+          if(dy>SWIPE_THRESHOLD && dy>Math.abs(dx)*1.2){
+            const speed=dy/Math.max(1,dt*60);
+            if(speed>FLICK_SPEED){
+              // 高速スワイプ = ハードドロップ
+              g.hardDrop(); vibrate([30,20,30]);
+            }
+            // それ以外は何もしない (ソフトドロップはボタンで)
+          } else if(dy<-SWIPE_THRESHOLD && dy<-Math.abs(dx)*1.2){
+            // 上スワイプ = ハードドロップ
+            g.hardDrop(); vibrate([30,20,30]);
+          }
+        }
+      }
+      delete swipeTracks[id];
+    }
+
+    // ボタン状態リセット
+    for(const k in TB) TB[k]=false;
+
+    // タイトル/ゲームオーバーのタップ
+    if(gameState==='title'){
+      const bx=CW/2-150;
+      for(let i=0;i<2;i++){
+        if(x>=bx&&x<bx+300&&y>=265+i*85&&y<325+i*85){ startGame(i+1); vibrate(40); }
+      }
+    }
+    if(gameState==='gameover'){ gameState='title'; vibrate(20); }
+  }
+},{passive:false});
+
+// ═══════════════════════════════════════════════════
+// 描画ヘルパー
 // ═══════════════════════════════════════════════════
 function drawCell(x,y,sz,type,alpha) {
   if(!type) return;
   ctx.globalAlpha=alpha!=null?alpha:1;
-  // Main fill
   ctx.fillStyle=COL[type]; ctx.fillRect(x+1,y+1,sz-2,sz-2);
-  // Top/left highlight
   ctx.fillStyle=HI[type]; ctx.fillRect(x+1,y+1,sz-2,3); ctx.fillRect(x+1,y+4,3,sz-5);
-  // Bottom/right shadow
   ctx.fillStyle=SH[type]; ctx.fillRect(x+1,y+sz-4,sz-2,3); ctx.fillRect(x+sz-4,y+1,3,sz-5);
-  // Inner shine
   ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.fillRect(x+3,y+3,sz-6,sz-6);
   ctx.globalAlpha=1;
 }
-
 function drawColorCell(x,y,sz,color,alpha) {
-  // Used for board cells stored as hex color
   if(!color) return;
   ctx.globalAlpha=alpha!=null?alpha:1;
   ctx.fillStyle=color; ctx.fillRect(x+1,y+1,sz-2,sz-2);
@@ -422,15 +707,13 @@ function drawColorCell(x,y,sz,color,alpha) {
   ctx.fillStyle='rgba(255,255,255,0.1)'; ctx.fillRect(x+3,y+3,sz-6,sz-6);
   ctx.globalAlpha=1;
 }
-
-function rr(x,y,w,h,r){ // rounded rect path
+function rr(x,y,w,h,r){
   ctx.beginPath();
   ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
   ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
   ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
   ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
 }
-
 function miniPiece(type, cx, cy, cellSz) {
   if(!type) return;
   const s=SHAPES[type][0];
@@ -444,32 +727,32 @@ function miniPiece(type, cx, cy, cellSz) {
 }
 
 // ═══════════════════════════════════════════════════
-// DRAW GAME BOARD + PANELS
+// ゲームボード + パネル描画
 // ═══════════════════════════════════════════════════
 function drawBoard(g, L) {
   const {cell,bx,by,bw,bh,lx,lw,rx,rw}=L;
   const glowC = g.idx===0?'#00ff88':'#0099ff';
 
-  // Board shadow/glow
+  // ボードの枠
   ctx.shadowColor = g.garbFlash>0?'#ff3300':glowC;
   ctx.shadowBlur  = g.garbFlash>0?25:12;
   ctx.strokeStyle = g.garbFlash>0?'#ff5533':glowC;
   ctx.lineWidth=2; ctx.strokeRect(bx-.5,by-.5,bw+1,bh+1);
   ctx.shadowBlur=0;
 
-  // Background
+  // 背景
   ctx.fillStyle='#090912'; ctx.fillRect(bx,by,bw,bh);
 
-  // Subtle grid
+  // グリッド
   ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=0.5;
   for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(bx,by+r*cell);ctx.lineTo(bx+bw,by+r*cell);ctx.stroke();}
   for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(bx+c*cell,by);ctx.lineTo(bx+c*cell,by+bh);ctx.stroke();}
 
-  // Board cells
+  // ボードセル
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++)
     if(g.board[r][c]) drawColorCell(bx+c*cell, by+r*cell, cell, g.board[r][c]);
 
-  // Ghost piece
+  // ゴーストピース
   if(g.piece){
     const gy=g.ghost();
     const shape=SHAPES[g.piece.t][g.piece.r&3];
@@ -482,7 +765,7 @@ function drawBoard(g, L) {
       }
       ctx.globalAlpha=1;
     }
-    // Active piece
+    // アクティブピース
     for(let r=0;r<shape.length;r++) for(let c=0;c<shape[r].length;c++){
       if(!shape[r][c]) continue;
       const ry=g.piece.y+r; if(ry<0) continue;
@@ -490,26 +773,26 @@ function drawBoard(g, L) {
     }
   }
 
-  // Pending garbage indicator
+  // ガーベジインジケーター
   if(g.pendingGarbage>0){
     const gh=Math.min(ROWS,g.pendingGarbage);
     ctx.fillStyle='#ff3300';
     ctx.fillRect(bx-7, by+(ROWS-gh)*cell, 5, gh*cell);
   }
 
-  // ── Left panel ──
+  // ── 左パネル (HOLD + スコア) ──
   const midC='#aaa';
   ctx.font='11px Courier New'; ctx.textAlign='center';
 
-  // HOLD box
+  // HOLDボックス
   ctx.fillStyle='#0d0d1a'; rr(lx,by,lw,82,6); ctx.fill();
   ctx.strokeStyle='#2a2a44'; ctx.lineWidth=1; rr(lx,by,lw,82,6); ctx.stroke();
   ctx.fillStyle='#555'; ctx.fillText('HOLD',lx+lw/2,by+14);
   if(g.hold) miniPiece(g.hold, lx+lw/2, by+50, cell*.72);
 
-  // Score box
-  ctx.fillStyle='#0d0d1a'; rr(lx,by+90,lw,130,6); ctx.fill();
-  ctx.strokeStyle='#2a2a44'; rr(lx,by+90,lw,130,6); ctx.stroke();
+  // スコアボックス
+  ctx.fillStyle='#0d0d1a'; rr(lx,by+90,lw,140,6); ctx.fill();
+  ctx.strokeStyle='#2a2a44'; rr(lx,by+90,lw,140,6); ctx.stroke();
   const lc=lx+lw/2;
   ctx.fillStyle=midC; ctx.fillText('SCORE',lc,by+104);
   ctx.font='bold 15px Courier New'; ctx.fillStyle='#fff'; ctx.fillText(g.score,lc,by+120);
@@ -522,104 +805,35 @@ function drawBoard(g, L) {
   ctx.fillStyle='#ff0'; ctx.fillText(g.level,lc,by+190);
   if(g.combo>0){
     ctx.font='bold 11px Courier New'; ctx.fillStyle='#f80';
-    ctx.fillText('COMBO ×'+(g.combo+1),lc,by+208);
+    ctx.fillText('COMBO ×'+(g.combo+1),lc,by+210);
   }
 
-  // ── Right panel: NEXT ──
-  ctx.fillStyle='#0d0d1a'; rr(rx,by,rw,230,6); ctx.fill();
-  ctx.strokeStyle='#2a2a44'; rr(rx,by,rw,230,6); ctx.stroke();
+  // ── 右パネル (NEXT) ──
+  ctx.fillStyle='#0d0d1a'; rr(rx,by,rw,240,6); ctx.fill();
+  ctx.strokeStyle='#2a2a44'; rr(rx,by,rw,240,6); ctx.stroke();
   ctx.font='11px Courier New'; ctx.fillStyle='#555';
   ctx.fillText('NEXT',rx+rw/2,by+14);
   const nCount=Math.min(5,g.queue.length);
-  for(let i=0;i<nCount;i++) miniPiece(g.queue[i], rx+rw/2, by+42+i*38, cell*.65);
+  for(let i=0;i<nCount;i++) miniPiece(g.queue[i], rx+rw/2, by+44+i*38, cell*.65);
 
-  ctx.textAlign='left';
-}
-
-// ═══════════════════════════════════════════════════
-// TOUCH CONTROLS
-// ═══════════════════════════════════════════════════
-let touchZones=[];
-function buildTouchZones(mode) {
-  touchZones=[];
-  const BW=56, BH=52;
-  function addSet(pfx,sx) {
-    const y1=CH-66, y2=CH-126;
-    const btns=['left','right','rot','soft','drop','rotl','hold'];
-    const labels=['◀','▶','↻','▼','⬇','↺','HOLD'];
-    const xs=[0,1,2,3,4,0,1];
-    const ys=[y1,y1,y1,y1,y1,y2,y2];
-    for(let i=0;i<btns.length;i++)
-      touchZones.push({key:`${pfx}_${btns[i]}`,x:sx+xs[i]*(BW+4),y:ys[i],w:BW,h:BH,label:labels[i]});
-  }
-  if(mode===1){
-    addSet('p0', Math.round(CW/2-(5*(BW+4)-4)/2));
-  } else {
-    addSet('p0', 5);
-    addSet('p1', CW-5*(BW+4)+4-5);
-  }
-}
-
-function drawTouchUI() {
-  for(const z of touchZones){
-    const on=!!TB[z.key];
-    ctx.fillStyle=on?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.07)';
-    rr(z.x,z.y,z.w,z.h,8); ctx.fill();
-    ctx.strokeStyle=on?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.18)';
-    ctx.lineWidth=1; rr(z.x,z.y,z.w,z.h,8); ctx.stroke();
-    ctx.fillStyle=on?'#fff':'#888';
-    ctx.font=z.label.length>2?'11px Courier New':'20px Courier New';
-    ctx.textAlign='center';
-    ctx.fillText(z.label,z.x+z.w/2,z.y+z.h/2+(z.label.length>2?4:7));
+  // スワイプガイド (初回表示フェード)
+  if(frame<300 && gameMode===1){
+    const alpha=Math.max(0, 1-(frame/200));
+    ctx.globalAlpha=alpha*0.5;
+    ctx.fillStyle='#fff';
+    ctx.font='11px Courier New'; ctx.textAlign='center';
+    ctx.fillText('ボード上でスワイプ・タップ操作可', bx+bw/2, by+bh+14);
+    ctx.globalAlpha=1;
   }
   ctx.textAlign='left';
 }
 
-function getTouchXY(t) {
-  const r=canvas.getBoundingClientRect();
-  return {x:(t.clientX-r.left)*CW/r.width, y:(t.clientY-r.top)*CH/r.height};
-}
-
-canvas.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  for(const t of e.changedTouches){
-    const {x,y}=getTouchXY(t);
-    for(const z of touchZones) if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h) TB[z.key]=true;
-    if(gameState==='title'){
-      const bx=CW/2-150;
-      for(let i=0;i<2;i++) if(x>=bx&&x<bx+300&&y>=265+i*85&&y<325+i*85) titleSel=i;
-    }
-  }
-},{passive:false});
-canvas.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  for(const k in TB) TB[k]=false;
-  for(const t of e.changedTouches){
-    const {x,y}=getTouchXY(t);
-    for(const z of touchZones) if(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h) TB[z.key]=true;
-  }
-},{passive:false});
-canvas.addEventListener('touchend',e=>{
-  e.preventDefault();
-  for(const k in TB) TB[k]=false;
-  for(const t of e.changedTouches){
-    const {x,y}=getTouchXY(t);
-    if(gameState==='title'){
-      const bx=CW/2-150;
-      for(let i=0;i<2;i++) if(x>=bx&&x<bx+300&&y>=265+i*85&&y<325+i*85) startGame(i+1);
-    }
-    if(gameState==='gameover') gameState='title';
-  }
-},{passive:false});
-
 // ═══════════════════════════════════════════════════
-// GAME STATE
+// ゲーム状態
 // ═══════════════════════════════════════════════════
 let gameState='title', gameMode=1;
 let games=[], layouts=[];
 let titleSel=0, frame=0;
-
-// Starfield
 const stars=Array.from({length:120},()=>({x:Math.random()*CW,y:Math.random()*CH,
   sz:.5+Math.random()*2, ph:Math.random()*Math.PI*2}));
 
@@ -632,11 +846,12 @@ function startGame(mode) {
   buildTouchZones(mode);
   particles=[]; popups=[]; rowFlashes=[];
   screenFlashAlpha=0; shakeAmt=0;
+  swipeTracks={};
   frame=0;
 }
 
 // ═══════════════════════════════════════════════════
-// INPUT PROCESSING
+// 入力処理
 // ═══════════════════════════════════════════════════
 function processInput() {
   for(let gi=0;gi<games.length;gi++){
@@ -650,7 +865,6 @@ function processInput() {
     const HARD  =p1?'Space':'KeyF';
     const HOLD  =p1?'KeyC':'KeyE';
     const pfx=`p${gi}`;
-
     if(dasPoll(LEFT)||tDasPoll(`${pfx}_left`)) g.move(-1);
     if(dasPoll(RIGHT)||tDasPoll(`${pfx}_right`)) g.move(1);
     if(jp(ROTCW)||tjp(`${pfx}_rot`)) g.rotate(1);
@@ -664,7 +878,7 @@ function processInput() {
 }
 
 // ═══════════════════════════════════════════════════
-// TITLE SCREEN
+// タイトル画面
 // ═══════════════════════════════════════════════════
 function drawTitle() {
   ctx.fillStyle='#050510'; ctx.fillRect(0,0,CW,CH);
@@ -674,8 +888,6 @@ function drawTitle() {
     ctx.fillRect(s.x,s.y,s.sz,s.sz);
   }
   ctx.globalAlpha=1;
-
-  // Animated rainbow title
   const t=frame*.04;
   const gr=ctx.createLinearGradient(CW/2-240,0,CW/2+240,0);
   gr.addColorStop(0,`hsl(${(t*180)%360},100%,65%)`);
@@ -686,8 +898,6 @@ function drawTitle() {
   ctx.shadowColor='#0ff'; ctx.shadowBlur=30;
   ctx.fillStyle=gr; ctx.fillText('TETRIS',CW/2,155);
   ctx.shadowBlur=0;
-
-  // Animated demo pieces
   const demoTypes=['I','T','S','Z','J','L','O'];
   for(let i=0;i<demoTypes.length;i++){
     const ox=CW/2-180+i*60, oy=200+Math.sin(frame*.05+i*.7)*12;
@@ -695,8 +905,6 @@ function drawTitle() {
     miniPiece(demoTypes[i],ox,oy,12);
   }
   ctx.globalAlpha=1;
-
-  // Mode buttons
   const modes=['1人プレイ','2人 対戦'];
   for(let i=0;i<2;i++){
     const bx=CW/2-150, by=265+i*85;
@@ -710,17 +918,17 @@ function drawTitle() {
     ctx.fillText(modes[i],CW/2,by+36);
     ctx.shadowBlur=0;
   }
-
   ctx.fillStyle='#444'; ctx.font='13px Courier New';
-  ctx.fillText('↑↓で選択　Space / Enter で決定　タップで選択',CW/2,490);
-  ctx.fillStyle='#333'; ctx.font='12px Courier New';
-  ctx.fillText('P1: ←→移動 ↑回転 ↓落下 Space即落下 C:ホールド',CW/2,514);
-  ctx.fillText('P2: AD移動 W回転 S落下 F即落下 E:ホールド',CW/2,532);
+  ctx.fillText('↑↓で選択　Space/Enter/タップで決定',CW/2,500);
+  ctx.fillStyle='#336'; ctx.font='11px Courier New';
+  ctx.fillText('スマホ操作: ボタンタップ / ボード上でスワイプ・タップ',CW/2,522);
+  ctx.fillStyle='#334'; ctx.font='10px Courier New';
+  ctx.fillText('キーボード P1:←→ ↑回転 ↓落下 Space即落 C:HOLD  P2:ADWS F:即落 E:HOLD',CW/2,542);
   ctx.textAlign='left';
 }
 
 // ═══════════════════════════════════════════════════
-// GAME OVER SCREEN
+// ゲームオーバー画面
 // ═══════════════════════════════════════════════════
 function drawGameOver() {
   ctx.fillStyle='rgba(0,0,0,.78)'; ctx.fillRect(0,0,CW,CH);
@@ -729,27 +937,35 @@ function drawGameOver() {
     const a0=games[0].alive, a1=games[1].alive;
     let msg=a0?'P1 WIN!':a1?'P2 WIN!':'DRAW', c=a0?'#00ff88':a1?'#0099ff':'#fff';
     ctx.fillStyle=c; ctx.font='bold 68px Courier New';
-    ctx.shadowColor=c; ctx.shadowBlur=40; ctx.fillText(msg,CW/2,CH/2-35); ctx.shadowBlur=0;
+    ctx.shadowColor=c; ctx.shadowBlur=40; ctx.fillText(msg,CW/2,CH/2-55); ctx.shadowBlur=0;
     ctx.font='22px Courier New';
-    ctx.fillStyle='#00ff88'; ctx.fillText('P1: '+games[0].score,CW/2-90,CH/2+25);
-    ctx.fillStyle='#0099ff'; ctx.fillText('P2: '+games[1].score,CW/2+90,CH/2+25);
+    ctx.fillStyle='#00ff88'; ctx.fillText('P1: '+games[0].score,CW/2-90,CH/2+5);
+    ctx.fillStyle='#0099ff'; ctx.fillText('P2: '+games[1].score,CW/2+90,CH/2+5);
   } else {
     ctx.fillStyle='#ff3300'; ctx.font='bold 68px Courier New';
-    ctx.shadowColor='#ff3300'; ctx.shadowBlur=40; ctx.fillText('GAME OVER',CW/2,CH/2-35); ctx.shadowBlur=0;
+    ctx.shadowColor='#ff3300'; ctx.shadowBlur=40; ctx.fillText('GAME OVER',CW/2,CH/2-55); ctx.shadowBlur=0;
     ctx.fillStyle='#fff'; ctx.font='24px Courier New';
-    ctx.fillText('SCORE: '+games[0].score, CW/2, CH/2+20);
-    ctx.fillText('LINES: '+games[0].lines+'   LEVEL: '+games[0].level, CW/2, CH/2+55);
+    ctx.fillText('SCORE: '+games[0].score, CW/2, CH/2+5);
+    ctx.fillText('LINES: '+games[0].lines+'   LEVEL: '+games[0].level, CW/2, CH/2+40);
   }
-  ctx.fillStyle='#555'; ctx.font='16px Courier New';
-  ctx.fillText('Space / Enter / タップ でタイトルへ',CW/2,CH/2+105);
+
+  // もう一度ボタン
+  const btnX=CW/2-130, btnY=CH/2+75;
+  const bc='#ffcc00';
+  ctx.shadowColor=bc; ctx.shadowBlur=15;
+  ctx.fillStyle='#2a2000'; rr(btnX,btnY,260,58,12); ctx.fill();
+  ctx.strokeStyle=bc; ctx.lineWidth=2; rr(btnX,btnY,260,58,12); ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle=bc; ctx.font='bold 22px Courier New';
+  ctx.fillText('もう一度 / タイトルへ',CW/2,btnY+36);
+
   ctx.textAlign='left';
 }
 
 // ═══════════════════════════════════════════════════
-// MAIN LOOP
+// メインループ
 // ═══════════════════════════════════════════════════
 let last=0, acc=0; const STEP=1000/60;
-
 function tick() {
   frame++;
   if(gameState==='title'){
@@ -762,29 +978,20 @@ function tick() {
     updateFX(); return;
   }
   if(gameState!=='playing') return;
-
   processInput();
-
   for(let gi=0;gi<games.length;gi++){
     const g=games[gi]; if(!g.alive) continue;
     const grav=Math.max(1,GRAVITY[Math.min(g.level-1,GRAVITY.length-1)]);
     g.update(grav);
     if(g._rows){
       lineClearFX(g, layouts[gi], g._n, g._rows, g._rowData);
-      // 2P: send garbage
-      if(gameMode===2&&g._n>=2){
-        games[1-gi].pendingGarbage+=GARBAGE[g._n];
-      }
+      if(gameMode===2&&g._n>=2) games[1-gi].pendingGarbage+=GARBAGE[g._n];
     }
   }
-
-  // Game-over check
   if(gameMode===1&&!games[0].alive){ gameState='gameover'; }
   if(gameMode===2){
-    const dead=games.filter(g=>!g.alive);
-    if(dead.length>=1) gameState='gameover';
+    if(games.filter(g=>!g.alive).length>=1) gameState='gameover';
   }
-
   updateFX();
   Object.assign(prevTB, TB);
   Object.assign(prev, keys);
@@ -793,15 +1000,14 @@ function tick() {
 function render() {
   ctx.save(); ctx.translate(shakeX,shakeY);
   ctx.fillStyle='#050510'; ctx.fillRect(-5,-5,CW+10,CH+10);
-  // Stars
   for(const s of stars){
     ctx.globalAlpha=.15+.2*Math.abs(Math.sin(frame*.02+s.ph));
     ctx.fillStyle='#fff'; ctx.fillRect(s.x,s.y,s.sz,s.sz);
   }
   ctx.globalAlpha=1;
-
-  if(gameState==='title'){ drawTitle(); }
-  else {
+  if(gameState==='title'){
+    drawTitle();
+  } else {
     for(let gi=0;gi<games.length;gi++) drawBoard(games[gi],layouts[gi]);
     drawFX();
     drawTouchUI();
@@ -817,7 +1023,7 @@ function loop(ts) {
   render();
 }
 
-// Init
+// 初期化
 layouts=makeLayout(1); buildTouchZones(1);
 requestAnimationFrame(loop);
 </script>
