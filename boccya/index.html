@@ -14,12 +14,6 @@ html,body{
   font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
   overflow:hidden; /* PCでスクロール禁止 */
 }
-/* スマホは縦スクロール許可 */
-@media(max-width:639px){
-  body{ overflow-y:auto; }
-  #app{ height:auto; min-height:100%; }
-  #game{ overflow:visible; flex:none; min-height:auto; }
-}
 
 #app{ display:flex; flex-direction:column; align-items:center; height:100%; }
 h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:var(--gold); }
@@ -279,7 +273,14 @@ function initCanvas() {
     W = Math.floor(Math.min(maxW, maxH / 1.25));
     H = Math.round(W * 1.25);
   } else {
-    W = Math.min(window.innerWidth - 10, 480);
+    // スマホ: コントロール類の高さを引いた残りにキャンバスを収める
+    const HEADER_H = (document.querySelector('h1').offsetHeight || 40) + 12;
+    const LEGEND_H = 28;
+    const CONTROLS_H = 270; // スコアボード+ステータス+投球UI+ボタン+余白
+    const PADDING = 24;
+    const availH = window.innerHeight - HEADER_H - LEGEND_H - CONTROLS_H - PADDING;
+    const maxByWidth = window.innerWidth - 10;
+    W = Math.max(160, Math.min(maxByWidth, Math.floor(availH / 1.25), 480));
     H = Math.round(W * 1.25);
   }
   canvas.width  = W;
