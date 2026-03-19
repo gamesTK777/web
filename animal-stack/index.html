@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐾 どうぶつタワー - Animal Stacking Game</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Nunito',sans-serif;background:#87CEEB;min-height:100vh;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;user-select:none;touch-action:none;}
+#gc{position:relative;width:100%;max-width:600px;height:100vh;}
+canvas{display:block;width:100%;height:100%;}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+  padding:8px 10px;z-index:10;pointer-events:none;}
+.hb{background:rgba(255,255,255,0.88);border-radius:14px;padding:4px 12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);pointer-events:auto;}
+.hl{font-size:.55rem;color:#888;font-weight:700;letter-spacing:1px;}
+.hv{font-size:1.1rem;font-weight:900;color:#4A6741;}
+.hv.sc{color:#E67E22;}
+/* Turn indicator */
+#turn-box{position:absolute;top:52px;left:50%;transform:translateX(-50%);z-index:10;
+  background:rgba(255,255,255,0.92);border-radius:16px;padding:6px 18px;text-align:center;
+  box-shadow:0 2px 10px rgba(0,0,0,0.12);transition:all .3s;border:3px solid transparent;}
+#turn-text{font-size:.85rem;font-weight:900;}
+/* Next preview */
+#nbox{position:absolute;top:52px;right:8px;z-index:10;
+  background:rgba(255,255,255,0.9);border-radius:14px;padding:5px 10px;
+  text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+#nl{font-size:.5rem;color:#888;font-weight:700;}
+#na{font-size:1.6rem;line-height:1;}
+/* Rotation controls */
+#rot-controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;
+  display:none;gap:16px;align-items:center;}
+#rot-controls.show{display:flex;}
+.rot-btn{width:52px;height:52px;border:none;border-radius:50%;
+  background:rgba(255,255,255,0.9);color:#555;font-size:1.4rem;font-weight:900;cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,0.15);transition:all .1s;display:flex;align-items:center;justify-content:center;}
+.rot-btn:active{transform:scale(.9);background:#e0e0e0;}
+.rot-label{background:rgba(255,255,255,0.85);border-radius:10px;padding:3px 10px;font-size:.65rem;font-weight:700;color:#888;}
+/* Overlays */
+.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,0.5);z-index:100;
+  justify-content:center;align-items:center;backdrop-filter:blur(4px);}
+.overlay.show{display:flex;}
+.oc{background:#fff;border-radius:24px;padding:26px 32px;text-align:center;max-width:88%;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:pop .4s cubic-bezier(.3,.8,.4,1.3);}
+@keyframes pop{0%{transform:scale(.5);opacity:0;}100%{transform:scale(1);opacity:1;}}
+.oi{font-size:3.2rem;margin-bottom:4px;}
+.ot{font-size:1.4rem;font-weight:900;color:#333;margin-bottom:4px;}
+.osub{font-size:.8rem;color:#888;margin-bottom:12px;}
+.oss{display:flex;gap:10px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;}
+.os{background:#f8f8f8;border-radius:12px;padding:7px 14px;}
+.os .sv{font-size:1.2rem;font-weight:900;color:#E67E22;}
+.os .sk{font-size:.55rem;color:#aaa;margin-top:2px;}
+.ob{padding:10px 28px;border:none;border-radius:28px;
+  background:linear-gradient(135deg,#66BB6A,#43A047);
+  color:#fff;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:800;
+  cursor:pointer;box-shadow:0 4px 12px rgba(76,175,80,0.4);transition:all .15s;}
+.ob:hover{transform:translateY(-2px);}
+/* Title */
+#ts{position:absolute;inset:0;z-index:200;
+  background:linear-gradient(180deg,#87CEEB 0%,#B0E0FF 40%,#E8F5E9 70%,#C8E6C9 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+.tl{font-size:2.4rem;font-weight:900;color:#4A6741;text-shadow:0 3px 0 rgba(0,0,0,0.1);margin-bottom:2px;}
+.tsb{font-size:.85rem;color:#888;margin-bottom:16px;font-weight:700;}
+.ta{font-size:2.4rem;letter-spacing:5px;margin-bottom:18px;animation:bnc 2s ease-in-out infinite;}
+@keyframes bnc{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;width:100%;max-width:320px;}
+.mode-btn{padding:14px 10px;border:2.5px solid #ccc;border-radius:18px;background:#fff;
+  font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:800;color:#555;
+  cursor:pointer;transition:all .15s;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.06);}
+.mode-btn:hover{border-color:#66BB6A;color:#43A047;transform:translateY(-2px);box-shadow:0 5px 15px rgba(76,175,80,0.2);}
+.mode-btn .mi{font-size:1.5rem;display:block;margin-bottom:2px;}
+.th{font-size:.7rem;color:#888;max-width:300px;text-align:center;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="gc">
+<canvas id="cv"></canvas>
+<div id="hud">
+  <div class="hb"><div class="hl">スコア</div><div class="hv sc" id="hs">0</div></div>
+  <div class="hb"><div class="hl">のこり</div><div class="hv" id="hr">0</div></div>
+  <div class="hb"><div class="hl">積んだ数</div><div class="hv" id="hst">0</div></div>
+</div>
+<div id="turn-box"><div id="turn-text">P1 のターン</div></div>
+<div id="nbox"><div id="nl">NEXT</div><div id="na">🐻</div></div>
+<div id="rot-controls">
+  <button class="rot-btn" onclick="rotateLeft()">↺</button>
+  <div class="rot-label" id="rot-deg">0°</div>
+  <button class="rot-btn" onclick="rotateRight()">↻</button>
+</div>
+<!-- Game Over (1P) -->
+<div class="overlay" id="gov">
+  <div class="oc">
+    <div class="oi">😱</div><div class="ot">ガシャーン！！</div>
+    <div class="osub" id="go-sub">どうぶつが落ちちゃった…</div>
+    <div class="oss">
+      <div class="os"><div class="sv" id="gs">0</div><div class="sk">スコア</div></div>
+      <div class="os"><div class="sv" id="gn">0</div><div class="sk">積んだ数</div></div>
+    </div>
+    <button class="ob" onclick="showTitle()">🐾 タイトルへ</button>
+  </div>
+</div>
+<!-- Win -->
+<div class="overlay" id="wov">
+  <div class="oc">
+    <div class="oi" id="wi">🎉</div><div class="ot" id="wt">すごい！全部積めた！</div>
+    <div class="osub" id="wsub">どうぶつタワー完成！</div>
+    <div class="oss">
+      <div class="os"><div class="sv" id="ws">0</div><div class="sk">スコア</div></div>
+    </div>
+    <button class="ob" onclick="showTitle()">🐾 タイトルへ</button>
+  </div>
+</div>
+<!-- Title -->
+<div id="ts">
+  <div class="tl">🐾 どうぶつタワー</div>
+  <div class="tsb">ANIMAL STACKING GAME</div>
+  <div class="ta">🐘🦒🐻🐊🐧</div>
+  <div class="mode-grid">
+    <button class="mode-btn" onclick="startGame(1)"><span class="mi">🙋</span>1人プレイ</button>
+    <button class="mode-btn" onclick="startGame(2)"><span class="mi">🙋🙋</span>2人プレイ</button>
+    <button class="mode-btn" onclick="startGame(3)"><span class="mi">🙋🙋🙋</span>3人プレイ</button>
+    <button class="mode-btn" onclick="startGame(4)"><span class="mi">🙋🙋🙋🙋</span>4人プレイ</button>
+  </div>
+  <div class="th">
+    どうぶつブロックを積み上げよう！<br>
+    ← → で回転、タップ/クリックで落とす<br>
+    テーブルから落としたプレイヤーの負け！
+  </div>
+</div>
+</div>
+
+<script>
+const {Engine,Bodies,Body,Composite,Events,Vector}=Matter;
+const container=document.getElementById('gc');
+const canvas=document.getElementById('cv');
+const ctx=canvas.getContext('2d');
+
+let W,H,S;
+function updateSize(){W=container.clientWidth;H=container.clientHeight;canvas.width=W;canvas.height=H;S=W/600;}
+updateSize(); window.addEventListener('resize',updateSize);
+
+const engine=Engine.create({gravity:{x:0,y:1.8}});
+const world=engine.world;
+
+// ═════════════════════════════
+//  PLAYER COLORS
+// ═════════════════════════════
+const PCOL=['#E74C3C','#3498DB','#27AE60','#F39C12'];
+const PNAME=['P1','P2','P3','P4'];
+const PEMOJI=['🔴','🔵','🟢','🟡'];
+
+// ═════════════════════════════
+//  ANIMAL DEFINITIONS
+// ═════════════════════════════
+const ANIMALS=[
+  {id:'elephant',emoji:'🐘',name:'ゾウ',color:'#A8AAB0',accent:'#8A8C92',mass:4.2,
+    parts:[{t:'c',ox:0,oy:2,r:24},{t:'c',ox:-22,oy:-12,r:16},{t:'r',ox:-36,oy:8,w:8,h:24},
+      {t:'r',ox:-10,oy:24,w:12,h:14},{t:'r',ox:12,oy:24,w:12,h:14}],head:1,eyeOx:-22,eyeOy:-14},
+  {id:'giraffe',emoji:'🦒',name:'キリン',color:'#F5D76E',accent:'#D4A017',mass:2.8,
+    parts:[{t:'r',ox:2,oy:14,w:30,h:22},{t:'r',ox:-2,oy:-12,w:10,h:32},{t:'c',ox:-2,oy:-30,r:10},
+      {t:'r',ox:-6,oy:30,w:8,h:14},{t:'r',ox:10,oy:30,w:8,h:14}],head:2,eyeOx:-2,eyeOy:-32},
+  {id:'bear',emoji:'🐻',name:'クマ',color:'#A67B5B',accent:'#7A5230',mass:3.5,
+    parts:[{t:'c',ox:0,oy:4,r:22},{t:'c',ox:0,oy:-18,r:16},{t:'c',ox:-13,oy:-30,r:7},{t:'c',ox:13,oy:-30,r:7},
+      {t:'r',ox:-10,oy:24,w:12,h:12},{t:'r',ox:10,oy:24,w:12,h:12}],head:1,eyeOx:0,eyeOy:-20},
+  {id:'croc',emoji:'🐊',name:'ワニ',color:'#6B8E23',accent:'#4A6B10',mass:3.0,
+    parts:[{t:'r',ox:0,oy:0,w:60,h:16},{t:'r',ox:-36,oy:-2,w:20,h:10},{t:'r',ox:32,oy:-4,w:12,h:8},
+      {t:'r',ox:-14,oy:12,w:8,h:10},{t:'r',ox:14,oy:12,w:8,h:10}],head:1,eyeOx:-26,eyeOy:-6},
+  {id:'penguin',emoji:'🐧',name:'ペンギン',color:'#37474F',accent:'#1B2631',mass:2.0,
+    parts:[{t:'c',ox:0,oy:6,r:18},{t:'c',ox:0,oy:-14,r:13},{t:'r',ox:-16,oy:8,w:8,h:14},
+      {t:'r',ox:16,oy:8,w:8,h:14},{t:'r',ox:-6,oy:22,w:10,h:6},{t:'r',ox:6,oy:22,w:10,h:6}],
+    head:1,eyeOx:0,eyeOy:-16,belly:true},
+  {id:'rabbit',emoji:'🐰',name:'ウサギ',color:'#F8D7DA',accent:'#E8A0A8',mass:1.4,
+    parts:[{t:'c',ox:0,oy:8,r:16},{t:'c',ox:0,oy:-8,r:14},{t:'r',ox:-6,oy:-32,w:7,h:26},
+      {t:'r',ox:6,oy:-32,w:7,h:26},{t:'r',ox:-8,oy:22,w:10,h:10},{t:'r',ox:8,oy:22,w:10,h:10}],
+    head:1,eyeOx:0,eyeOy:-10},
+  {id:'fox',emoji:'🦊',name:'キツネ',color:'#E8703A',accent:'#C0501A',mass:2.0,
+    parts:[{t:'c',ox:0,oy:2,r:18},{t:'c',ox:-18,oy:-8,r:13},{t:'c',ox:20,oy:-2,r:14},
+      {t:'r',ox:-6,oy:18,w:10,h:12},{t:'r',ox:8,oy:18,w:10,h:12}],head:1,eyeOx:-18,eyeOy:-10,tailIdx:2},
+  {id:'lion',emoji:'🦁',name:'ライオン',color:'#DAA520',accent:'#B8860B',mass:3.8,
+    parts:[{t:'c',ox:0,oy:6,r:22},{t:'c',ox:0,oy:-18,r:22},{t:'c',ox:0,oy:-18,r:14},
+      {t:'r',ox:-10,oy:26,w:12,h:12},{t:'r',ox:10,oy:26,w:12,h:12}],head:2,eyeOx:0,eyeOy:-20,maneIdx:1},
+  {id:'panda',emoji:'🐼',name:'パンダ',color:'#F5F5F5',accent:'#333333',mass:3.2,
+    parts:[{t:'c',ox:0,oy:6,r:22},{t:'c',ox:0,oy:-16,r:17},{t:'c',ox:-14,oy:-28,r:8},{t:'c',ox:14,oy:-28,r:8},
+      {t:'r',ox:-10,oy:26,w:14,h:10},{t:'r',ox:10,oy:26,w:14,h:10}],head:1,eyeOx:0,eyeOy:-18},
+  {id:'frog',emoji:'🐸',name:'カエル',color:'#66BB6A',accent:'#388E3C',mass:1.2,
+    parts:[{t:'r',ox:0,oy:4,w:40,h:18},{t:'c',ox:-12,oy:-10,r:11},{t:'c',ox:12,oy:-10,r:11},
+      {t:'r',ox:-20,oy:14,w:14,h:8},{t:'r',ox:20,oy:14,w:14,h:8}],head:1,eyeOx:0,eyeOy:-10,dualEyes:true},
+  {id:'turtle',emoji:'🐢',name:'カメ',color:'#6D8B74',accent:'#4A6741',mass:3.0,
+    parts:[{t:'c',ox:0,oy:0,r:24},{t:'c',ox:-24,oy:4,r:9},{t:'r',ox:-12,oy:18,w:8,h:10},
+      {t:'r',ox:12,oy:18,w:8,h:10},{t:'c',ox:22,oy:6,r:6}],head:1,eyeOx:-24,eyeOy:2},
+  {id:'owl',emoji:'🦉',name:'フクロウ',color:'#8D6E63',accent:'#5D4037',mass:1.6,
+    parts:[{t:'c',ox:0,oy:4,r:18},{t:'c',ox:0,oy:-14,r:16},{t:'r',ox:-16,oy:0,w:12,h:18},
+      {t:'r',ox:16,oy:0,w:12,h:18},{t:'r',ox:-7,oy:20,w:8,h:8},{t:'r',ox:7,oy:20,w:8,h:8}],
+    head:1,eyeOx:0,eyeOy:-16,bigEyes:true},
+];
+
+// ═════════════════════════════
+//  GAME STATE
+// ═════════════════════════════
+let gameState='title', score=0, bestScore=0;
+let numPlayers=1, currentPlayer=0; // 0-indexed
+let alivePlayers=[]; // which players are still in
+let animalQueue=[], currentAnimal=null, nextAnimal=null;
+let placedAnimals=[], dropX, settleTimer=0;
+let maxHeight=0, stackedCount=0, dropDelay=0;
+let tableBody=null, tableLegL=null, tableLegR=null;
+let wallL,wallR,floorBody;
+let currentRotation=0;
+let particles=[];
+
+const TABLE_W=352, TABLE_H=18, TABLE_LEGS_H=80; // 1.6x wider table
+
+function getAnimalCount(np){ return [12,14,16,20][np-1]||12; }
+
+// ═════════════════════════════
+//  CREATE COMPOUND ANIMAL BODY
+// ═════════════════════════════
+function createAnimalBody(def, x, y, angle){
+  const parts=[];
+  for(const p of def.parts){
+    let part;
+    if(p.t==='c') part=Bodies.circle(p.ox*S, p.oy*S, p.r*S,{friction:0.7,frictionStatic:0.9,restitution:0.05});
+    else part=Bodies.rectangle(p.ox*S, p.oy*S, p.w*S, p.h*S,{friction:0.7,frictionStatic:0.9,restitution:0.05,chamfer:{radius:2*S}});
+    parts.push(part);
+  }
+  const body=Body.create({parts,friction:0.7,frictionStatic:0.9,restitution:0.05,density:def.mass*0.0008,label:'animal'});
+  body.comOx=body.position.x; body.comOy=body.position.y;
+  body.animalDef=def;
+  Body.setPosition(body,{x,y}); Body.setAngle(body,angle);
+  return body;
+}
+
+// ═════════════════════════════
+//  GAME INIT
+// ═════════════════════════════
+function showTitle(){
+  document.getElementById('ts').style.display='flex';
+  document.getElementById('gov').classList.remove('show');
+  document.getElementById('wov').classList.remove('show');
+  document.getElementById('rot-controls').classList.remove('show');
+  gameState='title';
+}
+
+function startGame(np){
+  numPlayers=np; currentPlayer=0;
+  alivePlayers=[];
+  for(let i=0;i<np;i++) alivePlayers.push(i);
+
+  document.getElementById('ts').style.display='none';
+  document.getElementById('gov').classList.remove('show');
+  document.getElementById('wov').classList.remove('show');
+  document.getElementById('rot-controls').classList.add('show');
+  Composite.clear(world,false); updateSize();
+
+  gameState='playing'; score=0; stackedCount=0; maxHeight=0;
+  placedAnimals=[]; dropDelay=0; currentRotation=0; particles=[];
+
+  const tY=H*0.72, tX=W/2;
+  const tw=TABLE_W*S, th=TABLE_H*S, legW=16*S, legH=TABLE_LEGS_H*S;
+
+  tableBody=Bodies.rectangle(tX,tY,tw,th,{isStatic:true,friction:0.95,restitution:0.02,label:'table'});
+  tableLegL=Bodies.rectangle(tX-tw/2+legW/2+5*S,tY+th/2+legH/2,legW,legH,{isStatic:true,friction:0.8,label:'tableLeg'});
+  tableLegR=Bodies.rectangle(tX+tw/2-legW/2-5*S,tY+th/2+legH/2,legW,legH,{isStatic:true,friction:0.8,label:'tableLeg'});
+  floorBody=Bodies.rectangle(W/2,H+50,W*3,100,{isStatic:true,label:'floor'});
+  wallL=Bodies.rectangle(-30,H/2,60,H*2,{isStatic:true,label:'wall'});
+  wallR=Bodies.rectangle(W+30,H/2,60,H*2,{isStatic:true,label:'wall'});
+  Composite.add(world,[tableBody,tableLegL,tableLegR,floorBody,wallL,wallR]);
+
+  Events.off(engine,'collisionStart');
+  Events.on(engine,'collisionStart',ev=>{
+    for(const pair of ev.pairs){
+      const a=pair.bodyA,b=pair.bodyB;
+      if(a.label==='animal'||b.label==='animal'){
+        const imp=Vector.magnitude(Vector.sub(a.velocity,b.velocity));
+        if(imp>2.5){
+          const cx=pair.collision.supports[0]?.x||(a.position.x+b.position.x)/2;
+          const cy=pair.collision.supports[0]?.y||(a.position.y+b.position.y)/2;
+          addBurst(cx,cy,Math.min(7,Math.floor(imp)));
+        }
+      }
+    }
+  });
+
+  // Build queue - repeat animals to fill count
+  const total=getAnimalCount(np);
+  const pool=shuffleArray([...ANIMALS]);
+  animalQueue=[];
+  for(let i=0;i<total;i++) animalQueue.push(pool[i%pool.length]);
+  animalQueue=shuffleArray(animalQueue);
+
+  currentAnimal=animalQueue.shift();
+  nextAnimal=animalQueue.length>0?animalQueue[0]:null;
+  dropX=W/2;
+  updateHUD();
+}
+
+function shuffleArray(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+// ═════════════════════════════
+//  INPUT
+// ═════════════════════════════
+let pointerX=300, isDragging=false;
+const ROT_STEP=Math.PI/8;
+
+function rotateLeft(){if(gameState==='playing')currentRotation-=ROT_STEP;updateRotLabel();}
+function rotateRight(){if(gameState==='playing')currentRotation+=ROT_STEP;updateRotLabel();}
+function updateRotLabel(){document.getElementById('rot-deg').textContent=Math.round(currentRotation*180/Math.PI)%360+'°';}
+
+document.addEventListener('keydown',e=>{
+  if(gameState==='playing'){
+    if(e.code==='ArrowLeft'||e.code==='KeyA')rotateLeft();
+    if(e.code==='ArrowRight'||e.code==='KeyD')rotateRight();
+    if(e.code==='Space')dropAnimal();
+  }
+});
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();pointerX=(e.clientX-r.left)*(W/r.width);if(gameState==='playing')dropX=pointerX;});
+canvas.addEventListener('click',()=>{if(gameState==='playing'&&currentAnimal)dropAnimal();});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();isDragging=true;const r=canvas.getBoundingClientRect(),t=e.changedTouches[0];pointerX=(t.clientX-r.left)*(W/r.width);if(gameState==='playing')dropX=pointerX;},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),t=e.changedTouches[0];pointerX=(t.clientX-r.left)*(W/r.width);if(gameState==='playing')dropX=pointerX;},{passive:false});
+canvas.addEventListener('touchend',e=>{e.preventDefault();if(isDragging&&gameState==='playing'&&currentAnimal)dropAnimal();isDragging=false;},{passive:false});
+
+// ═════════════════════════════
+//  DROP ANIMAL
+// ═════════════════════════════
+function dropAnimal(){
+  if(!currentAnimal)return;
+  const x=Math.max(50*S,Math.min(W-50*S,dropX)), y=80*S;
+  const body=createAnimalBody(currentAnimal,x,y,currentRotation);
+  body.droppedBy=currentPlayer; // track who dropped this
+  Composite.add(world,body);
+  placedAnimals.push(body);
+  stackedCount++;
+  score+=10*stackedCount;
+
+  gameState='dropping'; settleTimer=0; dropDelay=50;
+  currentRotation=0; updateRotLabel();
+
+  if(animalQueue.length>0){currentAnimal=animalQueue.shift();nextAnimal=animalQueue.length>0?animalQueue[0]:null;}
+  else{currentAnimal=null;nextAnimal=null;}
+  updateHUD();
+}
+
+// ═════════════════════════════
+//  ADVANCE TURN
+// ═════════════════════════════
+function advanceTurn(){
+  if(alivePlayers.length<=1) return;
+  const idx=alivePlayers.indexOf(currentPlayer);
+  const nextIdx=(idx+1)%alivePlayers.length;
+  currentPlayer=alivePlayers[nextIdx];
+  updateHUD();
+}
+
+function eliminateCurrentPlayer(){
+  const eliminated=currentPlayer;
+  const idx=alivePlayers.indexOf(eliminated);
+  if(idx>=0) alivePlayers.splice(idx,1);
+
+  if(numPlayers===1){
+    // 1P: game over
+    gameState='gameover';
+    document.getElementById('gs').textContent=score;
+    document.getElementById('gn').textContent=stackedCount;
+    document.getElementById('go-sub').textContent='どうぶつが落ちちゃった…';
+    document.getElementById('gov').classList.add('show');
+    document.getElementById('rot-controls').classList.remove('show');
+  } else if(alivePlayers.length<=1){
+    // Multiplayer: winner!
+    gameState='win';
+    const winner=alivePlayers[0];
+    document.getElementById('wi').textContent='🏆';
+    document.getElementById('wt').textContent=PNAME[winner]+' の勝ち！';
+    document.getElementById('wsub').textContent=PNAME[eliminated]+' がタワーを崩した！ '+PEMOJI[winner];
+    document.getElementById('ws').textContent=stackedCount+'匹';
+    document.getElementById('wov').classList.add('show');
+    document.getElementById('rot-controls').classList.remove('show');
+  } else {
+    // Player eliminated, continue
+    gameState='eliminated';
+    // Brief pause then continue
+    setTimeout(()=>{
+      if(gameState!=='eliminated') return;
+      // Move to next alive player
+      if(alivePlayers.length>0){
+        currentPlayer=alivePlayers[0];
+        // Try to find next player after eliminated
+        for(let i=eliminated+1;i<eliminated+numPlayers;i++){
+          const p=i%numPlayers;
+          if(alivePlayers.includes(p)){currentPlayer=p;break;}
+        }
+      }
+      if(currentAnimal||animalQueue.length>0){
+        if(!currentAnimal&&animalQueue.length>0){
+          currentAnimal=animalQueue.shift();
+          nextAnimal=animalQueue.length>0?animalQueue[0]:null;
+        }
+        gameState='playing';
+      } else {
+        // No more animals - whoever is left wins (or the one with most animals)
+        gameState='win';
+        document.getElementById('wi').textContent='🎉';
+        document.getElementById('wt').textContent='全部積めた！';
+        const names=alivePlayers.map(p=>PNAME[p]).join(' & ');
+        document.getElementById('wsub').textContent=names+' が生き残った！';
+        document.getElementById('ws').textContent=stackedCount+'匹';
+        document.getElementById('wov').classList.add('show');
+        document.getElementById('rot-controls').classList.remove('show');
+      }
+      updateHUD();
+    },1500);
+  }
+  updateHUD();
+}
+
+// ═════════════════════════════
+//  GAME LOGIC
+// ═════════════════════════════
+function gameLogic(){
+  if(gameState!=='dropping')return;
+  if(dropDelay>0){dropDelay--;return;}
+
+  let allSettled=true;
+  for(const b of placedAnimals){
+    if(Vector.magnitude(b.velocity)>0.25||Math.abs(b.angularVelocity)>0.015){allSettled=false;break;}
+  }
+  if(allSettled)settleTimer++; else settleTimer=0;
+
+  const tableTop=tableBody.position.y-TABLE_H*S/2;
+  const fallLine=tableTop+TABLE_LEGS_H*S+40*S;
+  for(const b of placedAnimals){
+    if(b.position.y>fallLine||b.position.x<-80||b.position.x>W+80){
+      eliminateCurrentPlayer();
+      return;
+    }
+  }
+
+  if(settleTimer>45){
+    for(const b of placedAnimals){const h=tableTop-b.position.y;if(h>maxHeight)maxHeight=h;}
+    if(!currentAnimal&&animalQueue.length===0){
+      // All animals placed!
+      if(numPlayers===1){
+        gameState='win'; score+=100;
+        document.getElementById('wi').textContent='🎉';
+        document.getElementById('wt').textContent='すごい！全部積めた！';
+        document.getElementById('wsub').textContent='どうぶつタワー完成！';
+        document.getElementById('ws').textContent=score;
+        document.getElementById('wov').classList.add('show');
+        document.getElementById('rot-controls').classList.remove('show');
+      } else {
+        gameState='win';
+        const names=alivePlayers.map(p=>PNAME[p]).join(' & ');
+        document.getElementById('wi').textContent='🎉';
+        document.getElementById('wt').textContent='全部積めた！';
+        document.getElementById('wsub').textContent=names+' 全員クリア！すごい！';
+        document.getElementById('ws').textContent=stackedCount+'匹';
+        document.getElementById('wov').classList.add('show');
+        document.getElementById('rot-controls').classList.remove('show');
+      }
+    } else {
+      advanceTurn();
+      gameState='playing';
+    }
+    updateHUD();
+  }
+}
+
+function updateHUD(){
+  document.getElementById('hs').textContent=score;
+  document.getElementById('hr').textContent=(currentAnimal?1:0)+animalQueue.length;
+  document.getElementById('hst').textContent=stackedCount;
+  document.getElementById('na').textContent=nextAnimal?nextAnimal.emoji:'—';
+  // Turn indicator
+  const tb=document.getElementById('turn-box');
+  const tt=document.getElementById('turn-text');
+  if(numPlayers>1){
+    tb.style.display='block';
+    tb.style.borderColor=PCOL[currentPlayer];
+    tt.style.color=PCOL[currentPlayer];
+    tt.textContent=PNAME[currentPlayer]+' のターン '+PEMOJI[currentPlayer];
+    if(gameState==='eliminated'){
+      tt.textContent=PNAME[currentPlayer]+' 脱落！';
+    }
+  } else {
+    tb.style.display='none';
+  }
+}
+
+// ═════════════════════════════
+//  DRAWING
+// ═════════════════════════════
+function drawBG(){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#87CEEB');g.addColorStop(0.4,'#B0E0FF');g.addColorStop(0.65,'#E8F5E9');g.addColorStop(1,'#A5D6A7');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  drawCloud(W*0.12+Math.sin(Date.now()*.0002)*20,H*0.07,1.1);
+  drawCloud(W*0.72+Math.sin(Date.now()*.00015+2)*25,H*0.13,0.8);
+  const gY=H*0.88;
+  ctx.fillStyle='#81C784';ctx.fillRect(0,gY,W,H-gY);
+  ctx.fillStyle='#66BB6A';ctx.fillRect(0,gY,W,5*S);
+}
+function drawCloud(x,y,s){
+  ctx.fillStyle='rgba(255,255,255,0.6)';ctx.beginPath();
+  ctx.arc(x,y,22*s*S,0,Math.PI*2);ctx.arc(x+18*s*S,y-7*s*S,17*s*S,0,Math.PI*2);
+  ctx.arc(x+34*s*S,y,19*s*S,0,Math.PI*2);ctx.fill();
+}
+function drawTable(){
+  if(!tableBody)return;
+  const tx=tableBody.position.x,ty=tableBody.position.y;
+  const tw=TABLE_W*S,th=TABLE_H*S,legW=16*S,legH=TABLE_LEGS_H*S;
+  ctx.fillStyle='rgba(0,0,0,0.06)';
+  ctx.beginPath();ctx.ellipse(tx,ty+th/2+legH+4*S,tw*0.5,8*S,0,0,Math.PI*2);ctx.fill();
+  const lg=ctx.createLinearGradient(0,ty+th/2,0,ty+th/2+legH);
+  lg.addColorStop(0,'#8D6E63');lg.addColorStop(1,'#5D4037');ctx.fillStyle=lg;
+  ctx.fillRect(tx-tw/2+5*S,ty+th/2,legW,legH);
+  ctx.fillRect(tx+tw/2-legW-5*S,ty+th/2,legW,legH);
+  const tg=ctx.createLinearGradient(0,ty-th/2,0,ty+th/2);
+  tg.addColorStop(0,'#A1887F');tg.addColorStop(0.4,'#8D6E63');tg.addColorStop(1,'#795548');
+  ctx.fillStyle=tg;
+  const r=5*S;ctx.beginPath();
+  ctx.moveTo(tx-tw/2+r,ty-th/2);ctx.lineTo(tx+tw/2-r,ty-th/2);
+  ctx.arcTo(tx+tw/2,ty-th/2,tx+tw/2,ty+th/2,r);ctx.lineTo(tx+tw/2,ty+th/2);
+  ctx.lineTo(tx-tw/2,ty+th/2);ctx.arcTo(tx-tw/2,ty-th/2,tx-tw/2+r,ty-th/2,r);
+  ctx.closePath();ctx.fill();
+  // Wood grain
+  ctx.strokeStyle='rgba(0,0,0,0.06)';ctx.lineWidth=1;
+  for(let i=0;i<6;i++){const gy=ty-th/2+3+i*(th/6);
+    ctx.beginPath();ctx.moveTo(tx-tw/2+5,gy);ctx.lineTo(tx+tw/2-5,gy);ctx.stroke();}
+}
+
+// ── ANIMAL DRAWING ──
+function colAdj(hex,amt){
+  let r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.max(0,Math.min(255,r+amt))},${Math.max(0,Math.min(255,g+amt))},${Math.max(0,Math.min(255,b+amt))})`;
+}
+function drawAnimalShape(def,cx,cy,angle,alpha,playerIdx){
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);ctx.globalAlpha=alpha;
+  for(let i=0;i<def.parts.length;i++){
+    const p=def.parts[i];
+    let fillCol=def.color;
+    if(def.id==='panda'&&(i>=2&&i<=5))fillCol='#333';
+    if(def.id==='penguin'&&(i===2||i===3))fillCol='#555';
+    if(def.id==='lion'&&i===1)fillCol='#C8870A';
+    if(def.id==='fox'&&i===2)fillCol=colAdj(def.color,30);
+    if(def.id==='rabbit'&&(i===2||i===3))fillCol='#F0B0B8';
+    ctx.fillStyle=fillCol;
+    if(p.t==='c'){
+      ctx.beginPath();ctx.arc(p.ox*S,p.oy*S,p.r*S,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.2)';
+      ctx.beginPath();ctx.arc((p.ox-p.r*.25)*S,(p.oy-p.r*.25)*S,p.r*.45*S,0,Math.PI*2);ctx.fill();
+    } else {
+      const w=p.w*S,h=p.h*S,x=p.ox*S-w/2,y=p.oy*S-h/2,rr=Math.min(w,h)*.2;
+      ctx.beginPath();rrect(ctx,x,y,w,h,rr);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(x+2,y+1,w-4,h*.3);
+    }
+  }
+  if(def.belly){ctx.fillStyle='#ECEFF1';ctx.beginPath();ctx.ellipse(0,8*S,10*S,12*S,0,0,Math.PI*2);ctx.fill();}
+  if(def.id==='lion'){ctx.fillStyle=def.color;ctx.beginPath();ctx.arc(0,-18*S,14*S,0,Math.PI*2);ctx.fill();}
+  if(def.id==='turtle'){ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=1.5*S;
+    for(let a=0;a<6;a++){const ang=a*Math.PI/3;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(ang)*16*S,Math.sin(ang)*16*S);ctx.stroke();}}
+  if(def.head!==undefined){
+    const ex=def.eyeOx*S,ey=def.eyeOy*S,eSize=def.bigEyes?5:3.5,gap=def.dualEyes?12:5;
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(ex-gap*S,ey,eSize*S,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex+gap*S,ey,eSize*S,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#222';const ps=def.bigEyes?2.8:2;
+    ctx.beginPath();ctx.arc(ex-gap*S+.5*S,ey+.5*S,ps*S,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex+gap*S+.5*S,ey+.5*S,ps*S,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.beginPath();ctx.arc(ex-gap*S-1*S,ey-1*S,1*S,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(ex+gap*S-1*S,ey-1*S,1*S,0,Math.PI*2);ctx.fill();
+    if(def.id==='frog'){ctx.strokeStyle='#388E3C';ctx.lineWidth=1.5*S;ctx.beginPath();ctx.arc(0,0,8*S,.1*Math.PI,.9*Math.PI);ctx.stroke();}
+    if(def.id==='bear'||def.id==='panda'){ctx.fillStyle='#333';ctx.beginPath();ctx.ellipse(ex,ey+5*S,3*S,2*S,0,0,Math.PI*2);ctx.fill();}
+  }
+  // Player color ring (multiplayer)
+  if(playerIdx!==undefined&&numPlayers>1){
+    // Find bounding
+    let minX=999,minY=999,maxX=-999,maxY=-999;
+    for(const p of def.parts){
+      if(p.t==='c'){minX=Math.min(minX,(p.ox-p.r)*S);minY=Math.min(minY,(p.oy-p.r)*S);maxX=Math.max(maxX,(p.ox+p.r)*S);maxY=Math.max(maxY,(p.oy+p.r)*S);}
+      else{minX=Math.min(minX,(p.ox-p.w/2)*S);minY=Math.min(minY,(p.oy-p.h/2)*S);maxX=Math.max(maxX,(p.ox+p.w/2)*S);maxY=Math.max(maxY,(p.oy+p.h/2)*S);}
+    }
+    const pcx=(minX+maxX)/2, pcy=minY-6*S;
+    ctx.globalAlpha=alpha*0.9;
+    ctx.fillStyle=PCOL[playerIdx];
+    ctx.beginPath();ctx.arc(pcx,pcy,5*S,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font=`bold ${6*S}px Nunito`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(PNAME[playerIdx],pcx,pcy);
+  }
+  // Outline
+  ctx.globalAlpha=alpha*.35;ctx.strokeStyle=def.accent;ctx.lineWidth=1.5*S;
+  for(const p of def.parts){
+    if(p.t==='c'){ctx.beginPath();ctx.arc(p.ox*S,p.oy*S,p.r*S,0,Math.PI*2);ctx.stroke();}
+    else{const w=p.w*S,h=p.h*S,x=p.ox*S-w/2,y=p.oy*S-h/2;ctx.beginPath();rrect(ctx,x,y,w,h,Math.min(w,h)*.2);ctx.stroke();}
+  }
+  ctx.restore();
+}
+function drawPlacedAnimal(body){
+  const def=body.animalDef;if(!def)return;
+  const pos=body.position,angle=body.angle;
+  const cox=body.comOx,coy=body.comOy;
+  const ca=Math.cos(angle),sa=Math.sin(angle);
+  const dx=cox*ca-coy*sa, dy=cox*sa+coy*ca;
+  drawAnimalShape(def,pos.x-dx,pos.y-dy,angle,1.0,body.droppedBy);
+}
+function drawPreviewAnimal(){
+  if(!currentAnimal||gameState!=='playing')return;
+  const x=Math.max(50*S,Math.min(W-50*S,dropX));
+  const y=80*S+Math.sin(Date.now()*.004)*4*S;
+  drawAnimalShape(currentAnimal,x,y,currentRotation,0.6,currentPlayer);
+  ctx.save();ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(200,80,80,0.2)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(x,y+30*S);ctx.lineTo(x,tableBody?tableBody.position.y-TABLE_H*S/2:H*.72);
+  ctx.stroke();ctx.setLineDash([]);ctx.restore();
+}
+function rrect(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+
+// ── PARTICLES ──
+function addBurst(x,y,n){const em=['⭐','✨','💫'];for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=2+Math.random()*4;
+  particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,text:em[Math.floor(Math.random()*em.length)],size:10+Math.random()*10,life:1,decay:.018+Math.random()*.01});}}
+function updateParticles(){for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=.15;p.life-=p.decay;if(p.life<=0)particles.splice(i,1);}}
+function drawParticles(){for(const p of particles){ctx.globalAlpha=Math.max(0,p.life);ctx.font=`${p.size}px Arial`;ctx.textAlign='center';ctx.fillText(p.text,p.x,p.y);}ctx.globalAlpha=1;}
+
+// ── Alive players display ──
+function drawPlayersStatus(){
+  if(numPlayers<=1)return;
+  const y=H-12*S;
+  ctx.save();ctx.textAlign='center';ctx.font=`bold ${10*S}px Nunito,sans-serif`;
+  const totalW=numPlayers*60*S;
+  const startX=W/2-totalW/2;
+  for(let i=0;i<numPlayers;i++){
+    const px=startX+i*60*S+30*S;
+    const alive=alivePlayers.includes(i);
+    ctx.globalAlpha=alive?1:0.3;
+    ctx.fillStyle=PCOL[i];
+    ctx.beginPath();ctx.arc(px,y,10*S,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.fillText(PNAME[i],px,y+3*S);
+    if(!alive){ctx.strokeStyle='#fff';ctx.lineWidth=2*S;
+      ctx.beginPath();ctx.moveTo(px-7*S,y-7*S);ctx.lineTo(px+7*S,y+7*S);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px+7*S,y-7*S);ctx.lineTo(px-7*S,y+7*S);ctx.stroke();}
+  }
+  ctx.globalAlpha=1;ctx.restore();
+}
+
+// ── MAIN LOOP ──
+let lastT=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min(ts-lastT,33);lastT=ts;
+  if(gameState!=='title'){Engine.update(engine,dt);gameLogic();updateParticles();}
+  ctx.clearRect(0,0,W,H);drawBG();
+  if(gameState!=='title'){
+    drawTable();
+    for(const b of placedAnimals)drawPlacedAnimal(b);
+    drawPreviewAnimal();
+    drawParticles();
+    drawPlayersStatus();
+    if(gameState==='dropping'&&dropDelay<=0){
+      ctx.save();ctx.globalAlpha=.5+Math.sin(Date.now()*.006)*.3;
+      ctx.font=`bold ${13*S}px Nunito,sans-serif`;ctx.textAlign='center';ctx.fillStyle='#E67E22';
+      ctx.fillText('⏳ 安定するまで待ってね...',W/2,46*S);ctx.restore();
+    }
+    if(gameState==='eliminated'){
+      ctx.save();ctx.globalAlpha=.7+Math.sin(Date.now()*.008)*.3;
+      ctx.font=`bold ${16*S}px Nunito,sans-serif`;ctx.textAlign='center';
+      ctx.fillStyle=PCOL[currentPlayer];
+      ctx.fillText(PNAME[currentPlayer]+' 脱落！💥',W/2,H/2);ctx.restore();
+    }
+  }
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
