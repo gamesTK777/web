@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GAME$ TK777 ARCADE - Ultra Collection</title>
+  <title>GAME$ TK777 ARCADE - Grand Collection</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -176,7 +176,7 @@
       box-shadow: 0 15px 45px rgba(0,0,0,0.4);
     }
 
-    /* Color Palette Cycling */
+    /* Color Palette Cycling (5 colors) */
     .game-card:nth-child(5n+1) .game-title { color: var(--accent-1); }
     .game-card:nth-child(5n+2) .game-title { color: var(--accent-2); }
     .game-card:nth-child(5n+3) .game-title { color: var(--accent-3); }
@@ -230,7 +230,7 @@
       border-color: rgba(255, 255, 255, 0.4);
     }
 
-    /* Staggered Delay for 13 cards */
+    /* Staggered Delay for 14 cards */
     .game-card:nth-child(1) { animation-delay: 0.05s; }
     .game-card:nth-child(2) { animation-delay: 0.10s; }
     .game-card:nth-child(3) { animation-delay: 0.15s; }
@@ -244,6 +244,7 @@
     .game-card:nth-child(11) { animation-delay: 0.55s; }
     .game-card:nth-child(12) { animation-delay: 0.60s; }
     .game-card:nth-child(13) { animation-delay: 0.65s; }
+    .game-card:nth-child(14) { animation-delay: 0.70s; }
 
     @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { to { opacity: 1; } }
@@ -256,10 +257,10 @@
     }
 
     .footer-line {
-      width: 240px;
+      width: 280px;
       height: 1px;
       margin: 0 auto 20px;
-      background: linear-gradient(90deg, transparent, var(--accent-1), var(--accent-5), transparent);
+      background: linear-gradient(90deg, transparent, var(--accent-1), var(--accent-3), var(--accent-5), transparent);
     }
 
     @media (max-width: 600px) {
@@ -299,7 +300,7 @@
           <span>GAME$</span>&nbsp;<span>TK777</span>&nbsp;<span>ARCADE</span>
         </div>
       </div>
-      <p class="subtitle">— RETRO, AI & PUZZLE COLLECTION —</p>
+      <p class="subtitle">— THE ULTIMATE DIGITAL PLAYGROUND —</p>
     </header>
 
     <div class="games">
@@ -391,6 +392,13 @@
         <div class="game-icon">🦒</div>
         <div class="game-title">ANIMAL STACK</div>
         <p class="game-desc">動物たちを空高く積み上げろ！絶妙なバランス感覚が問われるスタッキングパズル。</p>
+        <div class="play-btn">PLAY →</div>
+      </a>
+
+      <a href="shougi/index.html" class="game-card">
+        <div class="game-icon">🏯</div>
+        <div class="game-title">SHOUGI</div>
+        <p class="game-desc">古の知略がデジタルで蘇る。究極の頭脳戦、将棋の世界で相手の王将を追い詰めろ。</p>
         <div class="play-btn">PLAY →</div>
       </a>
     </div>
