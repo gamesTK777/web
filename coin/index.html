@@ -2,31 +2,34 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <title>コイン落としゲーム</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: radial-gradient(ellipse at center, #1a0a3a 0%, #060610 100%);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       font-family: 'Arial', sans-serif;
       user-select: none;
+      overflow: hidden;
+      touch-action: none;
     }
     #wrapper {
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: stretch;
+      width: min(100vw, 620px);
     }
     #topBar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: 620px;
-      padding: 10px 16px;
+      padding: 8px 12px;
       background: rgba(0,0,0,0.6);
       border-radius: 12px 12px 0 0;
       border: 1px solid #333;
@@ -34,6 +37,681 @@
     }
     .stat { text-align: center; }
     .stat-label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .stat-value {
+      font-size: clamp(18px, 5vw, 28px);
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 0 0 12px rgba(255,215,0,0.7);
+    }
+    canvas {
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+      width: 100%;
+      height: auto;
+      border-left: 1px solid #333;
+      border-right: 1px solid #333;
+    }
+    #bottomBar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 0 0 12px 12px;
+      border: 1px solid #333;
+      border-top: none;
+    }
+    button {
+      background: linear-gradient(to bottom, #FFE04A, #FFA000);
+      border: none;
+      padding: 10px 22px;
+      font-size: clamp(12px, 3.5vw, 14px);
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 20px;
+      color: #3a1800;
+      box-shadow: 0 3px 10px rgba(255,160,0,0.5);
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:hover { transform: translateY(-2px); box-shadow: 0 5px 14px rgba(255,160,0,0.7); }
+    button:active { transform: translateY(1px); }
+    #hint { color: #666; font-size: clamp(10px, 3vw, 12px); }
+  </style>
+</head>
+<body>
+<div id="wrapper">
+  <div id="topBar">
+    <div class="stat">
+      <div class="stat-label">スコア</div>
+      <div class="stat-value" id="scoreEl">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">手持ちコイン</div>
+      <div class="stat-value" id="playerEl">30</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">獲得コイン</div>
+      <div class="stat-value" id="earnedEl">0</div>
+    </div>
+  </div>
+
+  <canvas id="c" width="620" height="510"></canvas>
+
+  <div id="bottomBar">
+    <span id="hint">上のエリアをタップ／クリックしてコイン投入</span>
+    <button id="refillBtn">コイン補充 (+20)</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const scoreEl  = document.getElementById('scoreEl');
+const playerEl = document.getElementById('playerEl');
+const earnedEl = document.getElementById('earnedEl');
+
+const W = 620, H = 510;
+
+// ── Layout ────────────────────────────────────────────────────────
+const PL = 55,  PR = 565;          // left / right walls
+const PT = 90,  PB = 430;          // top back-wall / front collection edge
+const DROP_TOP = 76;               // drop-zone top (below cabinet header)
+
+// ── Pusher ────────────────────────────────────────────────────────
+const PUSHER_H    = 28;
+const PUSHER_MIN  = 205;
+const PUSHER_MAX  = 345;
+const PUSHER_SPD  = 0.72;
+let   pusherY     = 225;
+let   pusherDir   = 1;             // +1 = moving toward collection (downward)
+
+// ── Physics ───────────────────────────────────────────────────────
+const GRAVITY   = 0.36;
+const BOUNCE    = 0.22;
+const FRICTION  = 0.91;
+const COIN_R    = 12;
+
+// ── State ─────────────────────────────────────────────────────────
+let score       = 0;
+let playerCoins = 30;
+let earnedCoins = 0;
+let coins       = [];
+let particles   = [];
+let texts       = [];
+let mouseX      = W / 2;
+let inDrop      = false;
+let dropCD      = 0;
+let frame       = 0;
+
+// ── Audio ─────────────────────────────────────────────────────────
+let audioCtx = null;
+function ac() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function beep(freq1, freq2, dur, vol = 0.08) {
+  try {
+    const a = ac();
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.connect(g); g.connect(a.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq1, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(freq2, a.currentTime + dur);
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+    o.start(a.currentTime);
+    o.stop(a.currentTime + dur + 0.02);
+  } catch(e) {}
+}
+const playDrop    = () => beep(300, 160, 0.06, 0.07);
+const playCollect = () => beep(500 + Math.random()*300, 900 + Math.random()*400, 0.12, 0.09);
+
+// ── Particle ──────────────────────────────────────────────────────
+class Particle {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 7;
+    this.vy = -Math.random() * 5 - 1;
+    this.r  = 2 + Math.random() * 3;
+    this.life = 1;
+    this.hue  = 35 + Math.random() * 50;
+  }
+  update() {
+    this.vy += 0.2;
+    this.x  += this.vx;
+    this.y  += this.vy;
+    this.life -= 0.025;
+  }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r * this.life, 0, Math.PI * 2);
+    ctx.fillStyle = `hsl(${this.hue},100%,65%)`;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── Floating Text ─────────────────────────────────────────────────
+class FText {
+  constructor(x, y, txt, col = '#FFD700') {
+    this.x = x; this.y = y; this.txt = txt; this.col = col;
+    this.vy = -2.2; this.life = 1;
+  }
+  update() { this.y += this.vy; this.vy *= 0.95; this.life -= 0.022; }
+  draw() {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.fillStyle   = this.col;
+    ctx.shadowColor = this.col;
+    ctx.shadowBlur  = 8;
+    ctx.font        = 'bold 20px Arial';
+    ctx.textAlign   = 'center';
+    ctx.fillText(this.txt, this.x, this.y);
+    ctx.restore();
+  }
+}
+
+// ── Coin ──────────────────────────────────────────────────────────
+class Coin {
+  constructor(x, y, vx = 0, vy = 2) {
+    this.x  = x;
+    this.y  = y;
+    this.vx = vx + (Math.random() - 0.5) * 0.4;
+    this.vy = vy;
+    this.r  = COIN_R;
+    this.alive = true;
+    this.angle = Math.random() * Math.PI * 2;
+    this.spin  = (Math.random() - 0.5) * 0.08;
+    this.hue   = 38 + Math.random() * 28;
+    this.lit   = 52 + Math.random() * 16;
+  }
+
+  update() {
+    if (!this.alive) return;
+
+    this.vy    += GRAVITY;
+    this.x     += this.vx;
+    this.y     += this.vy;
+    this.angle += this.spin;
+    this.vx    *= FRICTION;
+
+    // Left wall
+    if (this.x - this.r < PL) {
+      this.x  = PL + this.r;
+      this.vx = Math.abs(this.vx) * BOUNCE + 0.1;
+    }
+    // Right wall
+    if (this.x + this.r > PR) {
+      this.x  = PR - this.r;
+      this.vx = -Math.abs(this.vx) * BOUNCE - 0.1;
+    }
+    // Top (back wall)
+    if (this.y - this.r < PT) {
+      this.y  = PT + this.r;
+      this.vy = Math.abs(this.vy) * BOUNCE;
+    }
+    // Front collection edge
+    if (this.y + this.r > PB) {
+      this.alive = false;
+      score++; earnedCoins++;
+      scoreEl.textContent  = score;
+      earnedEl.textContent = earnedCoins;
+      for (let i = 0; i < 14; i++) particles.push(new Particle(this.x, PB));
+      texts.push(new FText(this.x, PB - 18, '+1'));
+      playCollect();
+      return;
+    }
+
+    this.pusherCollision();
+  }
+
+  pusherCollision() {
+    // Pusher rect: x∈[PL,PR], y∈[pusherY, pusherY+PUSHER_H]
+    const cx = Math.max(PL, Math.min(this.x, PR));
+    const cy = Math.max(pusherY, Math.min(this.y, pusherY + PUSHER_H));
+    const dx = this.x - cx, dy = this.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist >= this.r || dist < 0.001) return;
+
+    const nx = dx / dist, ny = dy / dist;
+    // Push out
+    this.x = cx + nx * (this.r + 0.5);
+    this.y = cy + ny * (this.r + 0.5);
+
+    // Impulse relative to pusher velocity (pusher only moves in Y)
+    const pusherVy = pusherDir * PUSHER_SPD;
+    const relVx    = this.vx;
+    const relVy    = this.vy - pusherVy;
+    const dot      = relVx * nx + relVy * ny;
+    if (dot < 0) {
+      const imp  = (1 + BOUNCE) * dot;
+      this.vx   -= imp * nx;
+      this.vy   -= imp * ny;
+    }
+    // Transfer pusher momentum when pusher pushes coin forward
+    if (ny > 0.4 && pusherDir > 0) {
+      this.vy += pusherDir * PUSHER_SPD * 0.7;
+      this.vx += (Math.random() - 0.5) * 0.3;
+    }
+  }
+
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    // Coin body with radial gradient
+    const g = ctx.createRadialGradient(-this.r * 0.3, -this.r * 0.35, 0, 0, 0, this.r);
+    g.addColorStop(0,   `hsl(${this.hue}, 95%, 88%)`);
+    g.addColorStop(0.35,`hsl(${this.hue}, 95%, ${this.lit}%)`);
+    g.addColorStop(0.75,`hsl(${this.hue}, 80%, ${this.lit - 15}%)`);
+    g.addColorStop(1,   `hsl(${this.hue}, 65%, 22%)`);
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Edge
+    ctx.strokeStyle = `hsl(${this.hue}, 55%, 28%)`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Inner ring
+    ctx.beginPath();
+    ctx.arc(0, 0, this.r * 0.68, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${this.hue}, 85%, 72%, 0.45)`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(-this.r * 0.22, -this.r * 0.22, this.r * 0.28, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${this.hue}, 100%, 90%, 0.35)`;
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+// ── Collision between coins ────────────────────────────────────────
+function resolveCoins() {
+  const live = coins.filter(c => c.alive);
+  for (let i = 0; i < live.length; i++) {
+    for (let j = i + 1; j < live.length; j++) {
+      const a = live[i], b = live[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d2 = dx * dx + dy * dy;
+      const md = a.r + b.r;
+      if (d2 >= md * md) continue;
+
+      const dist = Math.sqrt(d2) || 0.001;
+      const nx = dx / dist, ny = dy / dist;
+      const ov = (md - dist) * 0.5;
+
+      a.x -= nx * ov; a.y -= ny * ov;
+      b.x += nx * ov; b.y += ny * ov;
+
+      // Clamp within platform
+      a.x = Math.max(PL + a.r, Math.min(PR - a.r, a.x));
+      b.x = Math.max(PL + b.r, Math.min(PR - b.r, b.x));
+      a.y = Math.max(PT + a.r, a.y);
+      b.y = Math.max(PT + b.r, b.y);
+
+      const rvx  = b.vx - a.vx, rvy = b.vy - a.vy;
+      const dot  = rvx * nx + rvy * ny;
+      if (dot > 0) continue;
+
+      const imp = (1 + BOUNCE) * dot * 0.5;
+      a.vx += imp * nx; a.vy += imp * ny;
+      b.vx -= imp * nx; b.vy -= imp * ny;
+    }
+  }
+}
+
+// ── Initial coin pile ─────────────────────────────────────────────
+function initCoins() {
+  const diam = COIN_R * 2 + 2;
+  const cols = Math.floor((PR - PL - COIN_R * 2) / diam);
+  const rows = 5;
+  for (let row = 0; row < rows; row++) {
+    const y      = PB - COIN_R - row * diam;
+    const offset = (row % 2) * COIN_R;
+    const startX = PL + COIN_R + Math.floor((PR - PL - cols * diam) / 2);
+    for (let col = 0; col < cols; col++) {
+      const x = startX + col * diam + offset;
+      if (x + COIN_R > PR) continue;
+      const c = new Coin(x, y, 0, 0);
+      c.vx = 0; c.vy = 0;
+      coins.push(c);
+    }
+  }
+  // Extra scattered row behind pusher
+  for (let i = 0; i < 12; i++) {
+    const x = PL + COIN_R + Math.random() * (PR - PL - COIN_R * 2);
+    const y = pusherY + PUSHER_H + COIN_R + Math.random() * 40;
+    const c = new Coin(x, y, 0, 0);
+    c.vx = 0; c.vy = 0;
+    coins.push(c);
+  }
+}
+
+// ── Drawing ───────────────────────────────────────────────────────
+function drawCabinet() {
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#22144a');
+  bg.addColorStop(1, '#0e0e22');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Cabinet header
+  const hg = ctx.createLinearGradient(0, 0, 0, DROP_TOP);
+  hg.addColorStop(0, '#3a2275');
+  hg.addColorStop(1, '#28165a');
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, 0, W, DROP_TOP);
+
+  // Gold border
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(4, 4, W - 8, DROP_TOP - 6);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD700';
+  ctx.shadowColor = '#FFD700';
+  ctx.shadowBlur = 16;
+  ctx.font = 'bold 29px Arial';
+  ctx.fillText('★  COIN  PUSHER  ★', W / 2, 40);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#FFA040';
+  ctx.font = '13px Arial';
+  ctx.fillText('コイン落としゲーム', W / 2, 58);
+
+  // Blinking lights along top
+  const lightCols = ['#FF4040','#40FF40','#4444FF','#FFFF30','#FF40FF','#30FFFF'];
+  for (let i = 0; i < 14; i++) {
+    const x  = 18 + i * 43;
+    const on = (Math.floor(frame / 14) + i) % 3 !== 0;
+    const c  = lightCols[i % lightCols.length];
+    ctx.beginPath();
+    ctx.arc(x, 7, 5, 0, Math.PI * 2);
+    if (on) { ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 9; }
+    else    { ctx.fillStyle = '#1a1a2a'; ctx.shadowBlur = 0; }
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Side walls
+  const sw = ctx.createLinearGradient(0, 0, PL, 0);
+  sw.addColorStop(0, '#0e0e22'); sw.addColorStop(1, '#1e1840');
+  ctx.fillStyle = sw;
+  ctx.fillRect(0, DROP_TOP, PL, H - DROP_TOP);
+  const sw2 = ctx.createLinearGradient(PR, 0, W, 0);
+  sw2.addColorStop(0, '#1e1840'); sw2.addColorStop(1, '#0e0e22');
+  ctx.fillStyle = sw2;
+  ctx.fillRect(PR, DROP_TOP, W - PR, H - DROP_TOP);
+}
+
+function drawPlatform() {
+  // Platform surface
+  const pg = ctx.createLinearGradient(0, PT, 0, PB);
+  pg.addColorStop(0, '#191928');
+  pg.addColorStop(1, '#0c0c18');
+  ctx.fillStyle = pg;
+  ctx.fillRect(PL, PT, PR - PL, PB - PT);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(120,120,220,0.07)';
+  ctx.lineWidth = 1;
+  for (let y = PT; y <= PB; y += 22) {
+    ctx.beginPath(); ctx.moveTo(PL, y); ctx.lineTo(PR, y); ctx.stroke();
+  }
+  for (let x = PL; x <= PR; x += 22) {
+    ctx.beginPath(); ctx.moveTo(x, PT); ctx.lineTo(x, PB); ctx.stroke();
+  }
+
+  // Platform frame
+  ctx.strokeStyle = '#2a2a48';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(PL, PT, PR - PL, PB - PT);
+
+  // Drop zone (between cabinet header and PT)
+  const dg = ctx.createLinearGradient(0, DROP_TOP, 0, PT);
+  dg.addColorStop(0, 'rgba(255,215,0,0.10)');
+  dg.addColorStop(1, 'rgba(255,215,0,0.02)');
+  ctx.fillStyle = dg;
+  ctx.fillRect(PL, DROP_TOP, PR - PL, PT - DROP_TOP);
+
+  // Drop zone dashed border
+  ctx.strokeStyle = 'rgba(255,215,0,0.28)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([7, 5]);
+  ctx.beginPath(); ctx.moveTo(PL, PT); ctx.lineTo(PR, PT); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Drop zone label
+  ctx.fillStyle = 'rgba(255,215,0,0.38)';
+  ctx.font = '11px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('▼ コイン投入エリア（タップ／クリック） ▼', W / 2, DROP_TOP + 12);
+
+  // Collection edge glow
+  ctx.shadowColor = '#FFD700';
+  ctx.shadowBlur  = 10;
+  ctx.fillStyle   = '#FFD700';
+  ctx.fillRect(PL, PB, PR - PL, 4);
+  ctx.shadowBlur  = 0;
+
+  // Collection tray
+  const tg = ctx.createLinearGradient(0, PB + 4, 0, H);
+  tg.addColorStop(0, '#1a1200');
+  tg.addColorStop(1, '#080808');
+  ctx.fillStyle = tg;
+  ctx.fillRect(PL, PB + 4, PR - PL, H - PB - 4);
+
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 15px Arial';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#FFD700';
+  ctx.shadowBlur  = 6;
+  ctx.fillText('★ コイン回収ゾーン ★', W / 2, PB + 34);
+  ctx.shadowBlur  = 0;
+}
+
+function drawPusher() {
+  const pw = PR - PL;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(PL + 4, pusherY + 4, pw, PUSHER_H);
+
+  // Body
+  const pg = ctx.createLinearGradient(0, pusherY, 0, pusherY + PUSHER_H);
+  pg.addColorStop(0,   '#e0e0e0');
+  pg.addColorStop(0.18,'#f5f5f5');
+  pg.addColorStop(0.5, '#b8b8b8');
+  pg.addColorStop(0.82,'#888');
+  pg.addColorStop(1,   '#666');
+  ctx.fillStyle = pg;
+  ctx.fillRect(PL, pusherY, pw, PUSHER_H);
+
+  // Top highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.42)';
+  ctx.fillRect(PL, pusherY, pw, 3);
+
+  // Bottom shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillRect(PL, pusherY + PUSHER_H - 3, pw, 3);
+
+  // Bolts
+  for (let x = PL + 28; x < PR - 14; x += 52) {
+    ctx.beginPath();
+    ctx.arc(x, pusherY + PUSHER_H / 2, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#555';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x - 1.2, pusherY + PUSHER_H / 2 - 1.2, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#999';
+    ctx.fill();
+  }
+
+  // Border
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(PL, pusherY, pw, PUSHER_H);
+}
+
+function drawDropGuide() {
+  if (!inDrop || playerCoins <= 0) return;
+  ctx.strokeStyle = 'rgba(255,215,0,0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(mouseX, DROP_TOP + 16);
+  ctx.lineTo(mouseX, PT);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Ghost coin
+  ctx.beginPath();
+  ctx.arc(mouseX, DROP_TOP + 22, COIN_R, 0, Math.PI * 2);
+  const gg = ctx.createRadialGradient(mouseX - 4, DROP_TOP + 18, 0, mouseX, DROP_TOP + 22, COIN_R);
+  gg.addColorStop(0, 'rgba(255,248,180,0.75)');
+  gg.addColorStop(0.5, 'rgba(255,215,0,0.55)');
+  gg.addColorStop(1, 'rgba(160,100,0,0.3)');
+  ctx.fillStyle = gg;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,165,0,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// ── Update ────────────────────────────────────────────────────────
+function update() {
+  frame++;
+
+  // Move pusher
+  pusherY += pusherDir * PUSHER_SPD;
+  if (pusherY >= PUSHER_MAX) { pusherY = PUSHER_MAX; pusherDir = -1; }
+  if (pusherY <= PUSHER_MIN) { pusherY = PUSHER_MIN; pusherDir =  1; }
+
+  if (dropCD > 0) dropCD--;
+
+  // Update coins
+  for (const c of coins) c.update();
+  coins = coins.filter(c => c.alive);
+
+  // Resolve coin-coin (multiple passes for stability)
+  resolveCoins();
+  resolveCoins();
+
+  // Particles & texts
+  for (const p of particles) p.update();
+  particles = particles.filter(p => p.life > 0);
+  for (const t of texts) t.update();
+  texts = texts.filter(t => t.life > 0);
+}
+
+// ── Draw ──────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawCabinet();
+  drawPlatform();
+  drawPusher();
+  for (const c of coins)     c.draw();
+  for (const p of particles) p.draw();
+  for (const t of texts)     t.draw();
+  drawDropGuide();
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+// ── Input helpers ─────────────────────────────────────────────────
+// Convert client coords → internal canvas coords (handles CSS scaling)
+function toCanvas(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - r.left) * (W / r.width),
+    y: (clientY - r.top)  * (H / r.height)
+  };
+}
+
+function tryDrop(cx, cy) {
+  if (cy < DROP_TOP + 14 || cy > PT || cx < PL || cx > PR) return;
+  if (playerCoins <= 0) {
+    texts.push(new FText(W / 2, 120, 'コインがありません！', '#FF5555'));
+    return;
+  }
+  if (dropCD > 0) return;
+  const x = Math.max(PL + COIN_R, Math.min(PR - COIN_R, cx));
+  coins.push(new Coin(x, PT - COIN_R, 0, 2));
+  playerCoins--;
+  playerEl.textContent = playerCoins;
+  dropCD = 12;
+  playDrop();
+}
+
+// ── Mouse events ──────────────────────────────────────────────────
+canvas.addEventListener('mousemove', e => {
+  const { x: mx, y: my } = toCanvas(e.clientX, e.clientY);
+  mouseX = Math.max(PL + COIN_R, Math.min(PR - COIN_R, mx));
+  inDrop = my >= DROP_TOP + 14 && my <= PT && mx >= PL && mx <= PR;
+});
+
+canvas.addEventListener('mouseleave', () => { inDrop = false; });
+
+canvas.addEventListener('click', e => {
+  const { x: mx, y: my } = toCanvas(e.clientX, e.clientY);
+  tryDrop(mx, my);
+});
+
+// ── Touch events ──────────────────────────────────────────────────
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  const { x: cx, y: cy } = toCanvas(t.clientX, t.clientY);
+  mouseX = Math.max(PL + COIN_R, Math.min(PR - COIN_R, cx));
+  inDrop = cy >= DROP_TOP + 14 && cy <= PT && cx >= PL && cx <= PR;
+  tryDrop(cx, cy);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  const { x: cx, y: cy } = toCanvas(t.clientX, t.clientY);
+  mouseX = Math.max(PL + COIN_R, Math.min(PR - COIN_R, cx));
+  inDrop = cy >= DROP_TOP + 14 && cy <= PT && cx >= PL && cx <= PR;
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  inDrop = false;
+}, { passive: false });
+
+document.getElementById('refillBtn').addEventListener('click', () => {
+  playerCoins += 20;
+  playerEl.textContent = playerCoins;
+  texts.push(new FText(W / 2, H - 60, '+20 コイン補充！', '#44FF99'));
+});
+
+// ── Init ──────────────────────────────────────────────────────────
+initCoins();
+loop();
+</script>
+</body>
+</html>
       font-size: 11px;
       color: #888;
       text-transform: uppercase;
