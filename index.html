@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GAME$ TK777 ARCADE - Racing Edition</title>
+  <title>GAME$ TK777 ARCADE - Ultra Collection</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
   <style>
@@ -56,7 +56,7 @@
       pointer-events: none;
       background:
         linear-gradient(180deg, rgba(5, 8, 20, 0.6) 0%, rgba(7, 8, 18, 0.5) 28%, rgba(6, 6, 14, 0.8) 100%),
-        radial-gradient(circle at 50% 18%, rgba(255, 145, 95, 0.1), transparent 25%);
+        radial-gradient(circle at 50% 18%, rgba(255, 145, 95, 0.12), transparent 25%);
     }
 
     .bg-grid {
@@ -105,7 +105,7 @@
     .container {
       position: relative;
       z-index: 4;
-      max-width: 1300px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 60px 24px 100px;
     }
@@ -124,11 +124,12 @@
       background: rgba(20, 28, 56, 0.6);
       border: 1px solid rgba(255,255,255,0.1);
       backdrop-filter: blur(8px);
+      box-shadow: 0 0 30px rgba(89, 216, 255, 0.1);
     }
 
     .logo {
       font-family: 'Press Start 2P', cursive;
-      font-size: clamp(1.2rem, 4vw, 2.5rem);
+      font-size: clamp(1.1rem, 4vw, 2.4rem);
       letter-spacing: 0.05em;
     }
 
@@ -138,7 +139,7 @@
 
     .subtitle {
       margin-top: 20px;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--text-dim);
       letter-spacing: 0.2em;
     }
@@ -158,7 +159,7 @@
       padding: 30px 20px;
       text-decoration: none;
       color: var(--text);
-      transition: all 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+      transition: all 0.35s cubic-bezier(0.2, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -175,7 +176,7 @@
       box-shadow: 0 15px 45px rgba(0,0,0,0.4);
     }
 
-    /* Color Palette Cycling (5 colors) */
+    /* Color Palette Cycling */
     .game-card:nth-child(5n+1) .game-title { color: var(--accent-1); }
     .game-card:nth-child(5n+2) .game-title { color: var(--accent-2); }
     .game-card:nth-child(5n+3) .game-title { color: var(--accent-3); }
@@ -200,13 +201,13 @@
 
     .game-title {
       font-family: 'Press Start 2P', cursive;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       margin-bottom: 15px;
       line-height: 1.5;
     }
 
     .game-desc {
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--text-dim);
       line-height: 1.6;
       margin-bottom: 25px;
@@ -229,7 +230,7 @@
       border-color: rgba(255, 255, 255, 0.4);
     }
 
-    /* Staggered Delay for 12 cards */
+    /* Staggered Delay for 13 cards */
     .game-card:nth-child(1) { animation-delay: 0.05s; }
     .game-card:nth-child(2) { animation-delay: 0.10s; }
     .game-card:nth-child(3) { animation-delay: 0.15s; }
@@ -242,6 +243,7 @@
     .game-card:nth-child(10) { animation-delay: 0.50s; }
     .game-card:nth-child(11) { animation-delay: 0.55s; }
     .game-card:nth-child(12) { animation-delay: 0.60s; }
+    .game-card:nth-child(13) { animation-delay: 0.65s; }
 
     @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { to { opacity: 1; } }
@@ -254,10 +256,10 @@
     }
 
     .footer-line {
-      width: 200px;
+      width: 240px;
       height: 1px;
       margin: 0 auto 20px;
-      background: linear-gradient(90deg, transparent, var(--accent-5), transparent);
+      background: linear-gradient(90deg, transparent, var(--accent-1), var(--accent-5), transparent);
     }
 
     @media (max-width: 600px) {
@@ -297,7 +299,7 @@
           <span>GAME$</span>&nbsp;<span>TK777</span>&nbsp;<span>ARCADE</span>
         </div>
       </div>
-      <p class="subtitle">— RETRO & AI RACING COLLECTION —</p>
+      <p class="subtitle">— RETRO, AI & PUZZLE COLLECTION —</p>
     </header>
 
     <div class="games">
@@ -382,6 +384,13 @@
         <div class="game-icon">🎩</div>
         <div class="game-title">CLAUDE CIRCUIT</div>
         <p class="game-desc">洗練されたテクニックを競え。知性と速度が交差する伝説のサーキット。</p>
+        <div class="play-btn">PLAY →</div>
+      </a>
+
+      <a href="animal-stack/index.html" class="game-card">
+        <div class="game-icon">🦒</div>
+        <div class="game-title">ANIMAL STACK</div>
+        <p class="game-desc">動物たちを空高く積み上げろ！絶妙なバランス感覚が問われるスタッキングパズル。</p>
         <div class="play-btn">PLAY →</div>
       </a>
     </div>
