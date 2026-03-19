@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ボッチャ</title>
+<style>
+:root { --bg:#1a1a2e; --card:#16213e; --gold:#f0c040; --red:#e74c3c; --blue:#3498db; }
+*{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+html,body{
+  height:100%;
+  background:var(--bg); color:#eee;
+  font-family:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+  overflow:hidden; /* PCでスクロール禁止 */
+}
+/* スマホは縦スクロール許可 */
+@media(max-width:639px){ body{ overflow-y:auto; } }
+
+#app{ display:flex; flex-direction:column; align-items:center; height:100%; }
+h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:var(--gold); }
+
+/* ===== MENU ===== */
+#menu{
+  display:flex; flex-direction:column; align-items:center;
+  gap:18px; margin-top:min(60px,8vh); padding:0 20px; width:100%;
+}
+#menu h2{ font-size:clamp(1rem,4vw,1.3rem); color:var(--gold); }
+.btn{
+  padding:13px 0; font-size:clamp(.95rem,4vw,1.05rem);
+  border:none; border-radius:10px; cursor:pointer;
+  background:var(--gold); color:#1a1a2e; font-weight:bold;
+  width:min(280px,82vw); min-height:48px;
+  transition:opacity .15s,transform .1s;
+}
+.btn:active{ opacity:.8; transform:scale(.97); }
+.btn.sec{ background:#444; color:#eee; }
+.rule-box{
+  background:var(--card); border-radius:10px; padding:14px 18px;
+  width:min(340px,90vw); font-size:clamp(.78rem,3vw,.88rem);
+  line-height:1.7; color:#ccc;
+}
+.rule-box b{ color:var(--gold); }
+
+/* ===== GAME ===== */
+#game{
+  /* display は JS で 'flex' に変更 */
+  flex:1; min-height:0;
+  flex-direction:column;      /* スマホ: 縦積み */
+  align-items:center;
+  gap:6px;
+  padding:4px 6px 10px;
+  width:100%;
+  overflow:hidden;
+}
+
+/* PC: 横並び */
+@media(min-width:640px){
+  #game{
+    flex-direction:row !important;
+    align-items:flex-start;
+    justify-content:center;
+    gap:16px;
+    padding:4px 16px 8px;
+  }
+}
+
+/* ===== LEFT COL (canvas) ===== */
+#game-left{
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  flex-shrink:0;
+}
+
+/* ===== RIGHT COL (controls) ===== */
+#game-right{
+  display:flex; flex-direction:column; align-items:stretch;
+  gap:6px; width:min(440px,98vw);
+}
+@media(min-width:640px){
+  #game-right{ width:230px; flex-shrink:0; padding-top:2px; }
+}
+
+/* ===== SCOREBOARD ===== */
+#scoreboard{
+  display:flex; gap:8px; align-items:center; justify-content:center;
+}
+.score-card{
+  flex:1; background:var(--card); border-radius:8px;
+  padding:6px 8px; text-align:center; border:2px solid transparent;
+}
+.score-card.active{ border-color:var(--gold); }
+.score-card .name{ font-size:clamp(.65rem,2.5vw,.8rem); margin-bottom:2px; }
+.score-card .pts{ font-size:clamp(1.2rem,4vw,1.6rem); font-weight:bold; }
+.score-card.red-card .pts{ color:var(--red); }
+.score-card.blue-card .pts{ color:var(--blue); }
+#round-info{ font-size:clamp(.65rem,2.5vw,.8rem); color:#aaa; text-align:center; white-space:nowrap; }
+
+/* ===== CANVAS ===== */
+#gc{ display:block; border-radius:10px; border:2px solid #444; touch-action:none; }
+
+/* ===== LEGEND ===== */
+#legend{ display:flex; gap:12px; font-size:clamp(.65rem,2.5vw,.78rem); color:#aaa; }
+.leg{ display:flex; align-items:center; gap:4px; }
+.leg-dot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+
+/* ===== STATUS ===== */
+#status-bar{
+  font-size:clamp(.78rem,3vw,.9rem); color:#ccc;
+  text-align:center; min-height:1.3em;
+  background:var(--card); border-radius:6px; padding:5px 10px;
+}
+
+/* ===== THROW UI ===== */
+#throw-ui{ background:var(--card); border-radius:10px; padding:10px 12px; }
+#throw-ui .lbl{ font-size:clamp(.72rem,2.8vw,.85rem); color:#aaa; margin-bottom:3px; }
+#power-wrap{ display:flex; align-items:center; gap:8px; }
+#power-bar-bg{
+  flex:1; height:15px; background:#333; border-radius:8px;
+  overflow:hidden; cursor:pointer; position:relative;
+}
+#power-bar{
+  height:100%; width:50%;
+  background:linear-gradient(to right,#27ae60,#f0c040,#e74c3c);
+  border-radius:8px; transition:width .04s;
+}
+#power-val{ font-size:.82rem; min-width:36px; text-align:right; color:var(--gold); }
+#angle-wrap{ display:flex; align-items:center; gap:8px; margin-top:5px; }
+#angle-slider{ flex:1; accent-color:var(--blue); height:20px; cursor:pointer; }
+#angle-val{ font-size:.82rem; min-width:36px; text-align:right; color:var(--blue); }
+#throw-btn{ margin-top:8px; width:100%; min-height:44px; }
+
+/* ===== ROUND RESULT ===== */
+#round-result{
+  display:none; background:var(--card); border-radius:10px;
+  padding:10px 14px; text-align:center;
+}
+#round-result h3{ color:var(--gold); margin-bottom:4px; font-size:1rem; }
+#round-result p{ font-size:.82rem; color:#ccc; margin-bottom:8px; white-space:pre-line; }
+#round-result .btn{ width:100%; min-height:42px; }
+
+/* ===== MENU BTN ===== */
+#back-btn{ min-height:42px; }
+
+/* ===== DIALOGS ===== */
+#overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:99; }
+#final-dialog{
+  display:none; position:fixed; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:var(--card); border:2px solid var(--gold);
+  border-radius:14px; padding:28px 24px; z-index:100;
+  text-align:center; width:min(320px,88vw);
+}
+#final-dialog h2{ color:var(--gold); font-size:1.4rem; margin-bottom:8px; }
+#final-dialog p{ color:#ccc; margin-bottom:16px; }
+#final-dialog .btn{ display:block; margin:8px auto 0; }
+</style>
+</head>
+<body>
+<div id="app">
+<h1>🎯 ボッチャ</h1>
+
+<!-- MENU -->
+<div id="menu">
+  <h2>モードを選択</h2>
+  <button class="btn" onclick="startGame('cpu')">CPU対戦</button>
+  <button class="btn sec" onclick="startGame('pvp')">対人戦（同じ画面）</button>
+  <div class="rule-box">
+    <b>ルール：</b><br>
+    白いジャックボール（目標球）に最も近いボールを持つチームが得点。<br>
+    相手の最近接より近いボール１つにつき１点。<br>
+    各ラウンド<b>各チーム6球</b>、<b>4ラウンド</b>制。
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game">
+
+  <!-- LEFT: キャンバス -->
+  <div id="game-left">
+    <canvas id="gc"></canvas>
+    <div id="legend">
+      <div class="leg"><span class="leg-dot" style="background:#f0f0f0;border:1px solid #999"></span>ジャック</div>
+      <div class="leg"><span class="leg-dot" style="background:var(--red)"></span>赤</div>
+      <div class="leg"><span class="leg-dot" style="background:var(--blue)"></span>青</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: コントロール -->
+  <div id="game-right">
+
+    <div id="scoreboard">
+      <div class="score-card red-card" id="card-red">
+        <div class="name" id="name-red">赤チーム</div>
+        <div class="pts" id="pts-red">0</div>
+      </div>
+      <div id="round-info">R1 / 4</div>
+      <div class="score-card blue-card" id="card-blue">
+        <div class="name" id="name-blue">青チーム</div>
+        <div class="pts" id="pts-blue">0</div>
+      </div>
+    </div>
+
+    <div id="status-bar">ゲーム開始！</div>
+
+    <div id="throw-ui">
+      <div class="lbl">パワー</div>
+      <div id="power-wrap">
+        <div id="power-bar-bg"><div id="power-bar"></div></div>
+        <span id="power-val">50%</span>
+      </div>
+      <div class="lbl" style="margin-top:5px;">角度</div>
+      <div id="angle-wrap">
+        <input type="range" id="angle-slider" min="-45" max="45" value="0">
+        <span id="angle-val">0°</span>
+      </div>
+      <button class="btn" id="throw-btn" onclick="throwBall()">投げる！</button>
+    </div>
+
+    <div id="round-result">
+      <h3 id="rr-title"></h3>
+      <p id="rr-body"></p>
+      <button class="btn" onclick="nextRound()">次のラウンドへ</button>
+    </div>
+
+    <button class="btn sec" id="back-btn" onclick="backToMenu()">メニューへ戻る</button>
+
+  </div><!-- /game-right -->
+</div><!-- /game -->
+</div><!-- /app -->
+
+<div id="overlay"></div>
+<div id="final-dialog">
+  <h2 id="final-title"></h2>
+  <p id="final-body"></p>
+  <button class="btn" onclick="retryGame()">もう一度</button>
+  <button class="btn sec" onclick="backToMenu()">メニューへ</button>
+</div>
+
+<script>
+// ===== CONFIG =====
+const TOTAL_ROUNDS = 4;
+const BALLS_PER_TEAM = 6;
+const JACK_R = 8;
+const BALL_R = 12;
+const RED_COLOR = '#e74c3c';
+const BLUE_COLOR = '#3498db';
+
+let canvas, ctx, W, H;
+let gameMode = 'cpu';
+let totalScore = {red:0, blue:0};
+let round = 1;
+let phase = 'jack';
+let currentTeam = 'red';
+let ballsLeft = {red:BALLS_PER_TEAM, blue:BALLS_PER_TEAM};
+let balls = [];
+let jack = null;
+let animating = false;
+let gameOver = false;
+let power = 50;
+let angle = 0;
+
+// ===== CANVAS SIZING =====
+function initCanvas() {
+  canvas = document.getElementById('gc');
+  ctx = canvas.getContext('2d');
+  const desktop = window.innerWidth >= 640;
+  if (desktop) {
+    // PC: 右カラム(230px) + gap(16px) + padding(32px) を除いた幅
+    const RIGHT = 258;
+    const PAD   = 48;
+    const HEADER = document.querySelector('h1').offsetHeight + 12;
+    const maxW = Math.min(window.innerWidth - RIGHT - PAD, 420);
+    const maxH = window.innerHeight - HEADER - 20;
+    // アスペクト比 W:H = 1:1.25
+    W = Math.floor(Math.min(maxW, maxH / 1.25));
+    H = Math.round(W * 1.25);
+  } else {
+    W = Math.min(window.innerWidth - 10, 480);
+    H = Math.round(W * 1.25);
+  }
+  canvas.width  = W;
+  canvas.height = H;
+}
+
+// ===== DRAW =====
+function drawField() {
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#1e6b20');
+  g.addColorStop(1,'#145216');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.roundRect(0,0,W,H,8);
+  ctx.fill();
+
+  ctx.strokeStyle='rgba(255,255,255,.06)';
+  ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  const ty = throwLineY();
+  ctx.setLineDash([6,5]);
+  ctx.strokeStyle='rgba(255,255,255,.3)';
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,ty);ctx.lineTo(W,ty);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.35)';
+  ctx.font=`${Math.max(10,Math.round(W*0.03))}px sans-serif`;
+  ctx.textAlign='right';
+  ctx.fillText('投球ライン', W-6, ty-4);
+}
+
+function throwLineY() { return Math.round(H * 0.78); }
+
+function lighten(hex, amt) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.min(255,r+amt*255)},${Math.min(255,g+amt*255)},${Math.min(255,b+amt*255)})`;
+}
+
+function drawBall(b) {
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,.4)';
+  ctx.shadowBlur=5; ctx.shadowOffsetX=2; ctx.shadowOffsetY=2;
+  ctx.beginPath();
+  ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+  if(b.team==='jack') {
+    const g=ctx.createRadialGradient(b.x-b.r*.3,b.y-b.r*.3,b.r*.1,b.x,b.y,b.r);
+    g.addColorStop(0,'#fff'); g.addColorStop(1,'#bbb');
+    ctx.fillStyle=g;
+  } else {
+    const base = b.team==='red' ? RED_COLOR : BLUE_COLOR;
+    const g=ctx.createRadialGradient(b.x-b.r*.3,b.y-b.r*.3,b.r*.1,b.x,b.y,b.r);
+    g.addColorStop(0,lighten(base,.4)); g.addColorStop(1,base);
+    ctx.fillStyle=g;
+  }
+  ctx.fill();
+  ctx.shadowColor='transparent';
+  ctx.strokeStyle='rgba(0,0,0,.3)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
+}
+
+function drawDistanceLine() {
+  if(!jack||balls.length===0) return;
+  const reds  = balls.filter(b=>b.team==='red');
+  const blues = balls.filter(b=>b.team==='blue');
+  const drawLine = (ball, color) => {
+    ctx.setLineDash([3,4]);
+    ctx.strokeStyle=color; ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(jack.x,jack.y);ctx.lineTo(ball.x,ball.y);ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  if(reds.length>0)  drawLine(closest(reds),  'rgba(231,76,60,.6)');
+  if(blues.length>0) drawLine(closest(blues), 'rgba(52,152,219,.6)');
+}
+
+function drawArrow() {
+  const tx=W/2, ty=throwLineY()-BALL_R-2;
+  const rad=(angle-90)*Math.PI/180;
+  const len=28+power*0.45;
+  const ex=tx+Math.cos(rad)*len, ey=ty+Math.sin(rad)*len;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,220,50,.85)'; ctx.lineWidth=3;
+  ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.setLineDash([]);
+  const hl=10, ha=Math.PI/6;
+  ctx.beginPath();
+  ctx.moveTo(ex,ey); ctx.lineTo(ex+Math.cos(rad+Math.PI-ha)*hl, ey+Math.sin(rad+Math.PI-ha)*hl);
+  ctx.moveTo(ex,ey); ctx.lineTo(ex+Math.cos(rad+Math.PI+ha)*hl, ey+Math.sin(rad+Math.PI+ha)*hl);
+  ctx.strokeStyle='rgba(255,220,50,.9)'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.restore();
+}
+
+function render() {
+  ctx.clearRect(0,0,W,H);
+  drawField();
+  if(jack){ drawDistanceLine(); drawBall(jack); }
+  balls.forEach(drawBall);
+  if(!animating && phase==='throw' && !isAutoTurn()) drawArrow();
+}
+
+// ===== PHYSICS =====
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function closest(arr){ return arr.reduce((a,b)=>dist(b,jack)<dist(a,jack)?b:a); }
+
+function launchBall(team, pw, ang) {
+  const rad=(ang-90)*Math.PI/180;
+  const speed=3+pw*0.12;
+  const ball={x:W/2, y:throwLineY()-BALL_R-2, r:BALL_R, team,
+               vx:Math.cos(rad)*speed, vy:Math.sin(rad)*speed};
+  balls.push(ball);
+  return ball;
+}
+
+function stepPhysics() {
+  const FRICTION=0.955, STOP=0.08;
+  let moving=false;
+  const moveBall = b => {
+    b.x+=b.vx; b.y+=b.vy;
+    b.vx*=FRICTION; b.vy*=FRICTION;
+    if(Math.abs(b.vx)<STOP) b.vx=0;
+    if(Math.abs(b.vy)<STOP) b.vy=0;
+    if(b.x-b.r<0){b.x=b.r; b.vx=Math.abs(b.vx)*0.5;}
+    if(b.x+b.r>W){b.x=W-b.r; b.vx=-Math.abs(b.vx)*0.5;}
+    if(b.y-b.r<0){b.y=b.r; b.vy=Math.abs(b.vy)*0.5;}
+    if(b.y+b.r>H){b.y=H-b.r; b.vy=-Math.abs(b.vy)*0.5;}
+    if(b.vx!==0||b.vy!==0) moving=true;
+  };
+  balls.forEach(moveBall);
+  if(jack){ jack.vx=jack.vx||0; jack.vy=jack.vy||0; moveBall(jack); }
+
+  // 衝突
+  const all=[...balls]; if(jack) all.push(jack);
+  for(let i=0;i<all.length;i++) for(let j=i+1;j<all.length;j++) {
+    const a=all[i], b=all[j];
+    const d=dist(a,b), minD=a.r+b.r;
+    if(d<minD && d>0.01){
+      const nx=(b.x-a.x)/d, ny=(b.y-a.y)/d;
+      const ov=(minD-d)/2;
+      a.x-=nx*ov; a.y-=ny*ov; b.x+=nx*ov; b.y+=ny*ov;
+      const dvx=(a.vx||0)-(b.vx||0), dvy=(a.vy||0)-(b.vy||0);
+      const dot=dvx*nx+dvy*ny;
+      if(dot>0){
+        const R=0.6;
+        a.vx=(a.vx||0)-dot*nx*R; a.vy=(a.vy||0)-dot*ny*R;
+        b.vx=(b.vx||0)+dot*nx*R; b.vy=(b.vy||0)+dot*ny*R;
+        moving=true;
+      }
+    }
+  }
+  return moving;
+}
+
+function animate(onDone) {
+  animating=true;
+  let frames=0;
+  const MAX=300;
+  const step=()=>{
+    frames++;
+    const moving=stepPhysics();
+    render();
+    if(moving && frames<MAX) requestAnimationFrame(step);
+    else { animating=false; onDone(); }
+  };
+  requestAnimationFrame(step);
+}
+
+// ===== GAME LOGIC =====
+function isAutoTurn(){ return gameMode==='cpu' && currentTeam==='blue'; }
+function setStatus(msg){ document.getElementById('status-bar').textContent=msg; }
+
+function startGame(mode) {
+  gameMode=mode;
+  totalScore={red:0,blue:0};
+  round=1; gameOver=false;
+  document.getElementById('menu').style.display='none';
+  document.getElementById('game').style.display='flex';
+  document.getElementById('name-red').textContent = mode==='cpu'?'あなた（赤）':'赤チーム';
+  document.getElementById('name-blue').textContent= mode==='cpu'?'CPU（青）':'青チーム';
+  initCanvas();
+  beginRound();
+}
+
+function beginRound() {
+  balls=[]; jack=null;
+  ballsLeft={red:BALLS_PER_TEAM, blue:BALLS_PER_TEAM};
+  currentTeam='red'; phase='jack';
+  document.getElementById('round-result').style.display='none';
+  document.getElementById('throw-ui').style.display='block';
+  document.getElementById('throw-btn').textContent='ジャックを投げる';
+  updateScoreboard();
+  setStatus('ラウンド'+round+'：まずジャックボールを投げます！');
+  render();
+}
+
+function updateScoreboard() {
+  document.getElementById('pts-red').textContent=totalScore.red;
+  document.getElementById('pts-blue').textContent=totalScore.blue;
+  document.getElementById('round-info').textContent=`R${round} / ${TOTAL_ROUNDS}`;
+  document.getElementById('card-red').classList.toggle('active', currentTeam==='red'&&phase==='throw');
+  document.getElementById('card-blue').classList.toggle('active', currentTeam==='blue'&&phase==='throw');
+}
+
+// ===== パワーバー操作 =====
+const powerBg = document.getElementById('power-bar-bg');
+let powerDragging = false;
+function setPower(v) {
+  power = Math.max(5, Math.min(100, Math.round(v)));
+  document.getElementById('power-bar').style.width = power+'%';
+  document.getElementById('power-val').textContent  = power+'%';
+}
+powerBg.addEventListener('pointerdown', e=>{
+  powerDragging=true; powerBg.setPointerCapture(e.pointerId);
+  const r=powerBg.getBoundingClientRect();
+  setPower(((e.clientX-r.left)/r.width)*100);
+});
+powerBg.addEventListener('pointermove', e=>{
+  if(!powerDragging) return;
+  const r=powerBg.getBoundingClientRect();
+  setPower(((e.clientX-r.left)/r.width)*100);
+});
+powerBg.addEventListener('pointerup', ()=>{ powerDragging=false; });
+setPower(50);
+
+// ===== 角度スライダー =====
+document.getElementById('angle-slider').addEventListener('input', e=>{
+  angle=parseInt(e.target.value);
+  document.getElementById('angle-val').textContent=angle+'°';
+  render();
+});
+
+// ===== 投球 =====
+function throwBall() {
+  if(animating) return;
+
+  if(phase==='jack') {
+    const pw=power, ang=angle;
+    jack={x:W/2, y:throwLineY()-JACK_R-2, r:JACK_R, team:'jack',
+          vx:Math.cos((ang-90)*Math.PI/180)*(2+pw*0.08),
+          vy:Math.sin((ang-90)*Math.PI/180)*(2+pw*0.08)};
+    animate(()=>{
+      phase='throw';
+      document.getElementById('throw-btn').textContent='投げる！';
+      setStatus('赤チームの番：'+ballsLeft.red+'球残り');
+      updateScoreboard(); render();
+      if(isAutoTurn()) setTimeout(cpuThrow, 600);
+    });
+    return;
+  }
+
+  if(phase!=='throw') return;
+  if(gameMode==='cpu' && currentTeam==='blue') return;
+  doThrow(currentTeam, power, angle);
+}
+
+function doThrow(team, pw, ang) {
+  ballsLeft[team]--;
+  launchBall(team, pw, ang);
+  animate(()=>{ render(); advanceTurn(); });
+}
+
+function advanceTurn() {
+  if(ballsLeft.red===0 && ballsLeft.blue===0){ endRound(); return; }
+
+  if(ballsLeft.red===0)       currentTeam='blue';
+  else if(ballsLeft.blue===0) currentTeam='red';
+  else {
+    const reds  = balls.filter(b=>b.team==='red');
+    const blues = balls.filter(b=>b.team==='blue');
+    if(reds.length===0)       currentTeam='red';
+    else if(blues.length===0) currentTeam='blue';
+    else {
+      const cr=dist(closest(reds), jack);
+      const cb=dist(closest(blues),jack);
+      currentTeam = cr<cb ? 'blue' : 'red';
+    }
+  }
+  updateScoreboard();
+  setStatus((currentTeam==='red'?'赤':'青')+'チームの番：'+ballsLeft[currentTeam]+'球残り');
+  render();
+  if(isAutoTurn()) setTimeout(cpuThrow, 700);
+}
+
+function endRound() {
+  phase='result';
+  gameOver = (round >= TOTAL_ROUNDS);
+  document.getElementById('throw-ui').style.display='none';
+
+  const {redPts, bluePts} = calcScore();
+  totalScore.red  += redPts;
+  totalScore.blue += bluePts;
+  updateScoreboard();
+
+  document.getElementById('rr-title').textContent=`ラウンド${round} 終了`;
+  let msg = redPts>0  ? `赤チームが${redPts}点獲得！`
+          : bluePts>0 ? `青チームが${bluePts}点獲得！`
+          : '引き分け（得点なし）';
+  msg += `\n累計：赤${totalScore.red}点 ／ 青${totalScore.blue}点`;
+  document.getElementById('rr-body').textContent=msg;
+
+  const rrEl=document.getElementById('round-result');
+  const nextBtn=rrEl.querySelector('button');
+  if(round>=TOTAL_ROUNDS){
+    nextBtn.style.display='none';
+    document.getElementById('rr-title').textContent='全ラウンド終了！';
+    setTimeout(showFinal, 500);
+  } else {
+    nextBtn.style.display='';
+  }
+  rrEl.style.display='block';
+  render();
+}
+
+function calcScore() {
+  const reds  = balls.filter(b=>b.team==='red');
+  const blues = balls.filter(b=>b.team==='blue');
+  if(!jack||reds.length===0||blues.length===0) return {redPts:0,bluePts:0};
+  const cr=dist(closest(reds), jack);
+  const cb=dist(closest(blues),jack);
+  if(cr<cb) return {redPts: reds.filter(b=>dist(b,jack)<cb).length, bluePts:0};
+  if(cb<cr) return {redPts:0, bluePts: blues.filter(b=>dist(b,jack)<cr).length};
+  return {redPts:0, bluePts:0};
+}
+
+function nextRound(){ round++; beginRound(); }
+
+function showFinal() {
+  document.getElementById('overlay').style.display='block';
+  document.getElementById('final-dialog').style.display='block';
+  const r=totalScore.red, b=totalScore.blue;
+  const title = r>b ? (gameMode==='cpu'?'あなたの勝ち！🎉':'赤チームの勝ち！🎉')
+              : b>r ? (gameMode==='cpu'?'CPUの勝ち…':'青チームの勝ち！🎉')
+              : '引き分け！';
+  const body  = r>b ? `赤 ${r}点 対 青 ${b}点`
+              : b>r ? `青 ${b}点 対 赤 ${r}点`
+              : `${r}点 対 ${b}点`;
+  document.getElementById('final-title').textContent=title;
+  document.getElementById('final-body').textContent=body;
+}
+
+function retryGame(){
+  gameOver=false;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('final-dialog').style.display='none';
+  startGame(gameMode);
+}
+function backToMenu(){
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('final-dialog').style.display='none';
+  document.getElementById('game').style.display='none';
+  document.getElementById('menu').style.display='flex';
+}
+
+// ===== CPU AI =====
+function cpuThrow() {
+  if(animating || gameOver || phase!=='throw' || currentTeam!=='blue') return;
+  const reds  = balls.filter(b=>b.team==='red');
+  const blues = balls.filter(b=>b.team==='blue');
+  let targetX = jack ? jack.x : W/2;
+  let targetY = jack ? jack.y : H*0.3;
+
+  if(jack && reds.length>0) {
+    const cr = dist(closest(reds), jack);
+    const cb = blues.length>0 ? dist(closest(blues),jack) : Infinity;
+    // 赤が近い場合、たまに赤球を狙って弾く
+    if(cb>cr && Math.random()<0.4){
+      const t=closest(reds); targetX=t.x; targetY=t.y;
+    }
+  }
+
+  const fromX=W/2, fromY=throwLineY()-BALL_R-2;
+  const dx=targetX-fromX, dy=targetY-fromY;
+  const baseAngle = Math.atan2(dx,-dy)*180/Math.PI;
+  const baseDist  = Math.hypot(dx,dy);
+  const basePower = Math.max(20, Math.min(95, baseDist/H*100+20));
+  const noise=14;
+  doThrow('blue', basePower+(Math.random()*12-6), baseAngle+(Math.random()*noise*2-noise));
+}
+
+// ===== RESIZE =====
+function onResize(){
+  if(document.getElementById('game').style.display==='none') return;
+  initCanvas(); render();
+}
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', ()=>setTimeout(onResize,200));
+</script>
+</body>
+</html>
