@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スマートボール</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080503;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    canvas { display: block; touch-action: none; cursor: default; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ─── CANVAS SETUP ──────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const BW = 560, BH = 820;
+const scale = Math.min(window.innerWidth/BW, window.innerHeight/BH, 1.4);
+canvas.width  = BW;
+canvas.height = BH;
+canvas.style.width  = (BW * scale) + 'px';
+canvas.style.height = (BH * scale) + 'px';
+
+// ─── LAYOUT ────────────────────────────────────────────────
+// Main playfield (ball falls through here)
+const FL = 30,  FR = 430;   // field left / right
+const FT = 118, FB = 645;   // field top  / bottom
+const FW = FR - FL;
+
+// Right launch channel
+const CHL = 430, CHR = 488; // channel left wall / right wall
+const CH_MID = (CHL + CHR) / 2; // 459
+
+// Launcher position
+const LX = CH_MID, LY = FB - 12; // 459, 633
+
+// Boundary where clear zone ends and obstacles begin
+const OBS_TOP = 295;  // y below which pins/holes appear
+
+// ─── PHYSICS ───────────────────────────────────────────────
+const G_CLEAR = 0.055; // gentle gravity while rolling across clear zone (top area)
+const G_OBS   = 0.27;  // normal gravity in obstacle zone
+const BALL_R  = 11;
+const PIN_R   = 5.5;
+
+// ─── HOLES ─────────────────────────────────────────────────
+// Placed in the obstacle zone where ball rolls down toward player
+const HOLES = [
+  // Row A – topmost obstacle row (高配点)
+  { x:130, y:320, r:20, pts:500,  color:'#ff3030', glow:'#ff8080' },
+  { x:240, y:302, r:27, pts:2000, color:'#ffd700', glow:'#ffee66' },
+  { x:350, y:320, r:20, pts:500,  color:'#ff3030', glow:'#ff8080' },
+  // Row B
+  { x: 78, y:408, r:16, pts:100,  color:'#33bbff', glow:'#88ddff' },
+  { x:180, y:425, r:19, pts:300,  color:'#ff8833', glow:'#ffcc77' },
+  { x:300, y:425, r:19, pts:300,  color:'#ff8833', glow:'#ffcc77' },
+  { x:402, y:408, r:16, pts:100,  color:'#33bbff', glow:'#88ddff' },
+  // Row C
+  { x:142, y:510, r:17, pts:200,  color:'#44dd55', glow:'#88ff99' },
+  { x:298, y:510, r:17, pts:200,  color:'#44dd55', glow:'#88ff99' },
+  // Row D – lowest (低配点)
+  { x: 90, y:588, r:14, pts:50,   color:'#aaaaaa', glow:'#cccccc' },
+  { x:200, y:602, r:16, pts:100,  color:'#33bbff', glow:'#88ddff' },
+  { x:310, y:602, r:16, pts:100,  color:'#33bbff', glow:'#88ddff' },
+  { x:395, y:588, r:14, pts:50,   color:'#aaaaaa', glow:'#cccccc' },
+];
+
+// ─── BUMPERS ───────────────────────────────────────────────
+const BUMPERS = [
+  { x:240, y:375, r:20, pts:50,  color:'#ff44ff', glow:'#ff99ff', flash:0 },
+  { x:148, y:466, r:16, pts:30,  color:'#44ffff', glow:'#99ffff', flash:0 },
+  { x:330, y:466, r:16, pts:30,  color:'#44ffff', glow:'#99ffff', flash:0 },
+];
+
+// ─── PINS ──────────────────────────────────────────────────
+function buildPins() {
+  const rowDefs = [
+    { y:338, n:7 }, { y:368, n:6 },
+    { y:448, n:7 }, { y:478, n:6 },
+    { y:543, n:7 }, { y:568, n:6 },
+    { y:622, n:7 },
+  ];
+  const spacing = (FW - 16) / 6;
+  const pins = [];
+  rowDefs.forEach((row, ri) => {
+    const odd = ri % 2 === 1;
+    for (let i = 0; i < row.n; i++) {
+      const px = FL + 8 + (odd ? spacing * 0.5 : 0) + i * spacing;
+      const py = row.y;
+      const tooClose =
+        HOLES.some(h => Math.hypot(px - h.x, py - h.y) < h.r + PIN_R + 10) ||
+        BUMPERS.some(b => Math.hypot(px - b.x, py - b.y) < b.r + PIN_R + 8);
+      if (!tooClose) pins.push({ x: px, y: py });
+    }
+  });
+  return pins;
+}
+const PINS = buildPins();
+
+// ─── GAME STATE ────────────────────────────────────────────
+const MAX_BALLS = 5;
+let gs = {
+  phase:      'READY',  // READY | CHARGING | CHANNEL | FLYING | CAPTURED | LOST | GAME_OVER
+  ball:       null,
+  score:      0,
+  hi:         +localStorage.getItem('sb2_hi') || 0,
+  ballsLeft:  MAX_BALLS,
+  power:      0,
+  chargeStart:0,
+  popups:     [],
+  // Entry parameters set at moment of launch
+  entryVX:    0,
+};
+
+// ─── DRAW: WOOD FRAME ──────────────────────────────────────
+function drawFrame() {
+  // Outer wood
+  const wg = ctx.createLinearGradient(0, 0, BW, 0);
+  wg.addColorStop(0,    '#1e0c04');
+  wg.addColorStop(0.12, '#5c2610');
+  wg.addColorStop(0.88, '#5c2610');
+  wg.addColorStop(1,    '#1e0c04');
+  ctx.fillStyle = wg;
+  ctx.fillRect(0, 0, BW, BH);
+
+  // Gold border
+  ctx.strokeStyle = '#b8860b';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(5, 5, BW - 10, BH - 10);
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(10, 10, BW - 20, BH - 20);
+
+  // Neon side dots
+  const dots = ['#ff2020','#ff8800','#ffff00','#00ff44','#0099ff','#cc00ff'];
+  for (let i = 0; i < 20; i++) {
+    const c = dots[i % dots.length];
+    const y = FT + 20 + (i / 19) * (FB - FT - 40);
+    ctx.shadowBlur = 12; ctx.shadowColor = c;
+    ctx.fillStyle = c;
+    [17, BW - 17].forEach(x => {
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+    });
+  }
+  ctx.shadowBlur = 0;
+}
+
+// ─── DRAW: HEADER ──────────────────────────────────────────
+function drawHeader() {
+  ctx.fillStyle = '#120700';
+  ctx.fillRect(0, 0, BW, FT);
+
+  // Neon divider
+  const dg = ctx.createLinearGradient(0, FT - 5, 0, FT);
+  dg.addColorStop(0, 'rgba(255,200,0,0)');
+  dg.addColorStop(1, 'rgba(255,200,0,0.9)');
+  ctx.fillStyle = dg;
+  ctx.fillRect(FL, FT - 5, FR - FL, 5);
+
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  // Title
+  ctx.shadowBlur = 22; ctx.shadowColor = '#ffd700';
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 30px "Hiragino Kaku Gothic ProN","MS Gothic",monospace';
+  ctx.fillText('スマートボール', BW / 2, 43);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#aa6600';
+  ctx.font = '12px monospace';
+  ctx.fillText('SMART  BALL', BW / 2, 60);
+
+  // Scores
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#777';
+  ctx.font = '11px monospace';
+  ctx.fillText('SCORE', FL + 8, 79);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText(String(gs.score).padStart(7, '0'), FL + 8, 102);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#777';
+  ctx.font = '11px monospace';
+  ctx.fillText('HI-SCORE', FR - 8, 79);
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText(String(gs.hi).padStart(7, '0'), FR - 8, 102);
+
+  // Balls
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#777';
+  ctx.font = '11px monospace';
+  ctx.fillText('のこり', BW / 2, 79);
+  for (let i = 0; i < MAX_BALLS; i++) {
+    const bx = BW / 2 - (MAX_BALLS - 1) * 12 + i * 24;
+    ctx.beginPath(); ctx.arc(bx, 96, 7, 0, Math.PI * 2);
+    ctx.fillStyle = i < gs.ballsLeft ? '#00ff88' : '#1f1f1f';
+    ctx.shadowBlur = i < gs.ballsLeft ? 10 : 0;
+    ctx.shadowColor = '#00ff88';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = i < gs.ballsLeft ? '#008844' : '#333';
+    ctx.lineWidth = 1; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─── DRAW: PLAYFIELD ───────────────────────────────────────
+function drawPlayfield() {
+  // Main field felt
+  const fg = ctx.createLinearGradient(FL, FT, FL, FB);
+  fg.addColorStop(0,   '#0a1a0a');
+  fg.addColorStop(0.45,'#0d210d');
+  fg.addColorStop(1,   '#0a1a0a');
+  ctx.fillStyle = fg;
+  ctx.fillRect(FL, FT, FW, FB - FT);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.022)';
+  ctx.lineWidth = 1;
+  for (let x = FL; x <= FR; x += 22) {
+    ctx.beginPath(); ctx.moveTo(x, FT); ctx.lineTo(x, FB); ctx.stroke();
+  }
+  for (let y = FT; y <= FB; y += 22) {
+    ctx.beginPath(); ctx.moveTo(FL, y); ctx.lineTo(FR, y); ctx.stroke();
+  }
+
+  // Dividing line: clear zone / obstacle zone
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = 'rgba(255,255,150,0.12)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(FL, OBS_TOP); ctx.lineTo(FR, OBS_TOP); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // "奥" label in clear zone
+  ctx.fillStyle = 'rgba(255,230,100,0.18)';
+  ctx.font = 'bold 80px "Hiragino Kaku Gothic ProN","MS Gothic",monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('奥', (FL + FR) / 2, OBS_TOP - 18);
+
+  // Field border
+  ctx.strokeStyle = '#7a580a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(FL, FT, FW, FB - FT);
+  ctx.strokeStyle = 'rgba(0,255,100,0.12)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(FL + 4, FT + 4, FW - 8, FB - FT - 8);
+
+  ctx.textAlign = 'left';
+}
+
+// ─── DRAW: RIGHT CHANNEL ───────────────────────────────────
+function drawChannel() {
+  // Background
+  const cg = ctx.createLinearGradient(CHL, 0, CHR, 0);
+  cg.addColorStop(0, '#1a1a1a');
+  cg.addColorStop(0.5, '#2a2a2a');
+  cg.addColorStop(1, '#1a1a1a');
+  ctx.fillStyle = cg;
+  ctx.fillRect(CHL, FT, CHR - CHL, FB - FT);
+
+  // Rails
+  ctx.strokeStyle = '#555544';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(CHL, FT, CHR - CHL, FB - FT);
+
+  // Vertical rail lines
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(CHL + 5, FT); ctx.lineTo(CHL + 5, FB); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CHR - 5, FT); ctx.lineTo(CHR - 5, FB); ctx.stroke();
+
+  // Guide marks every 40px
+  for (let y = FT + 20; y < FB; y += 40) {
+    ctx.fillStyle = 'rgba(255,255,200,0.1)';
+    ctx.fillRect(CHL + 7, y - 1, CHR - CHL - 14, 2);
+  }
+
+  // "発射" label
+  ctx.save();
+  ctx.translate(CHR - 10, (FT + FB) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = 'rgba(255,200,50,0.3)';
+  ctx.font = 'bold 13px "MS Gothic",monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('発  射  通  路', 0, 0);
+  ctx.restore();
+}
+
+// ─── DRAW: HOLES ───────────────────────────────────────────
+function drawHoles() {
+  HOLES.forEach(h => {
+    // Dark ring
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.r + 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#000'; ctx.fill();
+
+    // Pit depth gradient
+    const pg = ctx.createRadialGradient(h.x - h.r * 0.3, h.y - h.r * 0.3, 0, h.x, h.y, h.r);
+    pg.addColorStop(0, '#080808'); pg.addColorStop(1, '#141414');
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+    ctx.fillStyle = pg; ctx.fill();
+
+    // Neon rim
+    ctx.shadowBlur = 18; ctx.shadowColor = h.glow;
+    ctx.strokeStyle = h.color; ctx.lineWidth = 3; ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Score label
+    ctx.fillStyle = h.color;
+    ctx.font = `bold ${h.r > 20 ? 14 : h.r > 16 ? 12 : 10}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(h.pts, h.x, h.y + 4.5);
+  });
+  ctx.textAlign = 'left';
+}
+
+// ─── DRAW: BUMPERS ─────────────────────────────────────────
+function drawBumpers() {
+  BUMPERS.forEach(b => {
+    const bright = b.flash > 0;
+    ctx.shadowBlur = bright ? 35 : 14; ctx.shadowColor = b.glow;
+
+    const rg = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, 0, b.x, b.y, b.r);
+    rg.addColorStop(0, bright ? '#ffffff' : b.glow);
+    rg.addColorStop(1, b.color);
+
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = rg; ctx.fill();
+    ctx.strokeStyle = bright ? '#fff' : b.glow; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(b.pts, b.x, b.y + 4);
+
+    if (b.flash > 0) b.flash -= 3;
+  });
+  ctx.textAlign = 'left';
+}
+
+// ─── DRAW: PINS ────────────────────────────────────────────
+function drawPins() {
+  PINS.forEach(p => {
+    const pg = ctx.createRadialGradient(p.x - PIN_R * 0.35, p.y - PIN_R * 0.35, 0, p.x, p.y, PIN_R);
+    pg.addColorStop(0, '#eeeeee'); pg.addColorStop(0.6, '#999'); pg.addColorStop(1, '#444');
+    ctx.beginPath(); ctx.arc(p.x, p.y, PIN_R, 0, Math.PI * 2);
+    ctx.fillStyle = pg; ctx.fill();
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 0.5; ctx.stroke();
+  });
+}
+
+// ─── DRAW: LAUNCHER AREA ───────────────────────────────────
+function drawLauncherArea() {
+  // Background strip below field
+  ctx.fillStyle = '#100900';
+  ctx.fillRect(0, FB, BW, BH - FB);
+
+  // Divider
+  ctx.fillStyle = '#7a580a'; ctx.fillRect(0, FB, BW, 3);
+
+  // Power meter
+  const mx = BW / 2 - 120, my = FB + 20, mw = 240, mh = 24;
+  ctx.fillStyle = '#111'; ctx.fillRect(mx - 2, my - 2, mw + 4, mh + 4);
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.strokeRect(mx, my, mw, mh);
+
+  if (gs.phase === 'CHARGING' || gs.phase === 'READY') {
+    const fw = mw * (gs.power / 100);
+    const pwg = ctx.createLinearGradient(mx, 0, mx + mw, 0);
+    pwg.addColorStop(0, '#00ff44'); pwg.addColorStop(0.5, '#ffee00'); pwg.addColorStop(1, '#ff2200');
+    ctx.fillStyle = pwg; ctx.fillRect(mx, my, fw, mh);
+    // Segments
+    for (let i = 1; i < 10; i++) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(mx + mw * i / 10 - 1, my, 2, mh);
+    }
+  }
+
+  ctx.fillStyle = '#888'; ctx.font = '11px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('POWER', BW / 2, my - 5);
+
+  // Instruction text
+  if (gs.phase === 'READY') {
+    ctx.fillStyle = '#ffc844';
+    ctx.font = '15px "Hiragino Kaku Gothic ProN","MS Gothic",monospace';
+    ctx.fillText('クリック長押しで発射！', BW / 2, FB + 64);
+    ctx.fillStyle = '#555'; ctx.font = '11px monospace';
+    ctx.fillText('Hold & release to launch', BW / 2, FB + 81);
+  } else if (gs.phase === 'CHARGING') {
+    const p = Math.round(gs.power);
+    ctx.fillStyle = p < 50 ? '#88ff44' : p < 80 ? '#ffee00' : '#ff4422';
+    ctx.font = 'bold 15px monospace';
+    ctx.fillText('POWER  ' + p + '%', BW / 2, FB + 64);
+    ctx.fillStyle = '#555'; ctx.font = '11px monospace';
+    ctx.fillText('Release to launch!', BW / 2, FB + 81);
+  } else if (gs.phase === 'CHANNEL') {
+    ctx.fillStyle = '#888'; ctx.font = '14px monospace';
+    ctx.fillText('⬆  発射中...', BW / 2, FB + 64);
+  } else if (gs.phase === 'FLYING') {
+    ctx.fillStyle = '#555'; ctx.font = '14px monospace';
+    ctx.fillText('●  ●  ●', BW / 2, FB + 64);
+  }
+
+  // Launcher mechanism in channel bottom
+  if (gs.phase === 'READY' || gs.phase === 'CHARGING') {
+    // Spring coils
+    ctx.strokeStyle = '#665533'; ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.ellipse(LX, LY + 8 + i * 10, 9, 4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // Waiting ball in channel
+    drawMetalBall(LX, LY, BALL_R);
+    // Power arrow
+    if (gs.phase === 'CHARGING' && gs.power > 5) {
+      const arrowLen = 20 + gs.power * 0.5;
+      ctx.strokeStyle = `rgba(255,200,50,${0.3 + gs.power / 200})`;
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(LX, LY - BALL_R - 2); ctx.lineTo(LX, LY - BALL_R - arrowLen); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = `rgba(255,200,50,${0.4 + gs.power / 200})`;
+      ctx.beginPath();
+      ctx.moveTo(LX, LY - BALL_R - arrowLen - 8);
+      ctx.lineTo(LX - 6, LY - BALL_R - arrowLen + 2);
+      ctx.lineTo(LX + 6, LY - BALL_R - arrowLen + 2);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  ctx.textAlign = 'left';
+}
+
+// ─── DRAW: BALL ────────────────────────────────────────────
+function drawMetalBall(x, y, r) {
+  // Shadow
+  ctx.beginPath(); ctx.arc(x + 2, y + 3, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+  // Chrome gradient
+  const bg = ctx.createRadialGradient(x - r * 0.38, y - r * 0.38, 0, x, y, r);
+  bg.addColorStop(0, '#ffffff');
+  bg.addColorStop(0.35, '#dddddd');
+  bg.addColorStop(0.8, '#999999');
+  bg.addColorStop(1, '#666666');
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.strokeStyle = '#aaaaaa'; ctx.lineWidth = 1; ctx.stroke();
+  // Specular
+  ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.32, r * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+}
+
+function drawBall() {
+  const b = gs.ball;
+  if (!b || !b.active) return;
+  // Trail
+  if (b.trail) {
+    b.trail.forEach((t, i) => {
+      const alpha = (i / b.trail.length) * 0.3;
+      const r = BALL_R * (i / b.trail.length) * 0.75;
+      ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,215,255,${alpha})`; ctx.fill();
+    });
+  }
+  drawMetalBall(b.x, b.y, BALL_R);
+}
+
+// ─── DRAW: POPUPS ──────────────────────────────────────────
+function drawPopups() {
+  gs.popups = gs.popups.filter(p => p.life > 0);
+  gs.popups.forEach(p => {
+    ctx.globalAlpha = Math.min(1, p.life / 22);
+    ctx.fillStyle = p.color;
+    ctx.font = `bold ${p.size}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 10; ctx.shadowColor = p.color;
+    ctx.fillText('+' + p.pts, p.x, p.y);
+    ctx.shadowBlur = 0;
+    p.y -= 1.3; p.life -= 2;
+  });
+  ctx.globalAlpha = 1; ctx.textAlign = 'left';
+}
+
+// ─── DRAW: GAME OVER ───────────────────────────────────────
+function drawGameOver() {
+  if (gs.phase !== 'GAME_OVER') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(FL, FT, FW, FB - FT);
+
+  const cx = (FL + FR) / 2, cy = (FT + FB) / 2;
+  ctx.save(); ctx.textAlign = 'center';
+  ctx.shadowBlur = 25; ctx.shadowColor = '#ffd700';
+  ctx.fillStyle = '#ffd700';
+  ctx.font = 'bold 34px "Hiragino Kaku Gothic ProN","MS Gothic",monospace';
+  ctx.fillText('ゲームオーバー', cx, cy - 50);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#aa7700';
+  ctx.font = '15px monospace';
+  ctx.fillText('G A M E   O V E R', cx, cy - 22);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 26px monospace';
+  ctx.fillText('SCORE: ' + gs.score, cx, cy + 18);
+  if (gs.score >= gs.hi && gs.score > 0) {
+    ctx.shadowBlur = 18; ctx.shadowColor = '#ff4444';
+    ctx.fillStyle = '#ff4444';
+    ctx.font = 'bold 19px "Hiragino Kaku Gothic ProN","MS Gothic",monospace';
+    ctx.fillText('★ ハイスコア更新！ ★', cx, cy + 58);
+    ctx.shadowBlur = 0;
+  }
+  if (Math.floor(Date.now() / 600) % 2 === 0) {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '16px "Hiragino Kaku Gothic ProN","MS Gothic",monospace';
+    ctx.fillText('クリックでもう一度', cx, cy + 96);
+  }
+  ctx.restore();
+}
+
+// ─── PHYSICS: LAUNCH ───────────────────────────────────────
+function launch() {
+  // Ball enters channel at bottom, shoots straight up
+  const speed = 17 + (gs.power / 100) * 5; // always reach top; power adds a bit
+  gs.entryVX = -(gs.power / 100) * 3.8 - 0.4; // more power = more leftward at top
+  gs.ball = {
+    x: LX, y: LY,
+    vx: 0, vy: -speed,
+    active: true,
+    trail: [],
+    inChannel: true,
+  };
+  gs.phase = 'CHANNEL';
+  gs.power = 0;
+}
+
+// ─── PHYSICS: UPDATE ───────────────────────────────────────
+function updateBall() {
+  const b = gs.ball;
+  if (!b || !b.active) return;
+
+  // CHANNEL phase: ball goes straight up
+  if (gs.phase === 'CHANNEL') {
+    b.vy += G_CLEAR;
+    b.y += b.vy;
+
+    // Bounce off top of channel (should reach FT + small margin)
+    if (b.y - BALL_R < FT + 2) {
+      // Ball reached the top — transition to main field with leftward velocity
+      b.y = FT + BALL_R + 4;
+      b.x = CHL - BALL_R - 2;  // just inside main field right edge
+      b.vx = gs.entryVX;
+      b.vy = 0;
+      b.inChannel = false;
+      gs.phase = 'FLYING';
+    }
+    // Channel walls
+    if (b.x - BALL_R < CHL) { b.x = CHL + BALL_R; b.vx = Math.abs(b.vx) * 0.6; }
+    if (b.x + BALL_R > CHR) { b.x = CHR - BALL_R; b.vx = -Math.abs(b.vx) * 0.6; }
+    // Ball goes out bottom (shouldn't happen)
+    if (b.y > FB + 20) { ballLost(); }
+    return;
+  }
+
+  if (gs.phase !== 'FLYING') return;
+
+  // Trail
+  b.trail.push({ x: b.x, y: b.y });
+  if (b.trail.length > 10) b.trail.shift();
+
+  // Variable gravity: gentle in clear zone, normal in obstacle zone
+  const g = b.y < OBS_TOP ? G_CLEAR : G_OBS;
+  b.vy += g;
+
+  // Slight rolling friction in clear zone
+  if (b.y < OBS_TOP) b.vx *= 0.997;
+
+  b.x += b.vx;
+  b.y += b.vy;
+
+  // Wall bounces (main field)
+  if (b.x - BALL_R < FL) { b.x = FL + BALL_R; b.vx = Math.abs(b.vx) * 0.7; }
+  if (b.x + BALL_R > FR) { b.x = FR - BALL_R; b.vx = -Math.abs(b.vx) * 0.7; }
+  if (b.y - BALL_R < FT) { b.y = FT + BALL_R; b.vy = Math.abs(b.vy) * 0.6; }
+
+  // Ball exits bottom
+  if (b.y > FB + BALL_R + 10) { ballLost(); return; }
+
+  // Hole capture (only in obstacle zone)
+  if (b.y > OBS_TOP) {
+    for (const h of HOLES) {
+      const d = Math.hypot(b.x - h.x, b.y - h.y);
+      if (d < h.r - 4) { captureHole(h); return; }
+      if (d < h.r + BALL_R) {
+        // Magnetic pull into hole
+        b.vx -= (b.x - h.x) / d * 0.14;
+        b.vy -= (b.y - h.y) / d * 0.14;
+      }
+    }
+  }
+
+  // Bumper collision
+  for (const bm of BUMPERS) {
+    const d = Math.hypot(b.x - bm.x, b.y - bm.y);
+    const md = BALL_R + bm.r;
+    if (d < md && d > 0.01) {
+      const nx = (b.x - bm.x) / d, ny = (b.y - bm.y) / d;
+      b.x = bm.x + nx * (md + 1);
+      b.y = bm.y + ny * (md + 1);
+      const dot = b.vx * nx + b.vy * ny;
+      const kick = Math.max(Math.abs(dot) * 1.3, 4.5);
+      b.vx = nx * kick; b.vy = ny * kick;
+      gs.score += bm.pts; bm.flash = 24;
+      addPopup(bm.x, bm.y - bm.r - 6, bm.pts, bm.glow, 16);
+    }
+  }
+
+  // Pin collision
+  for (const p of PINS) {
+    const d = Math.hypot(b.x - p.x, b.y - p.y);
+    const md = BALL_R + PIN_R;
+    if (d < md && d > 0.01) {
+      const nx = (b.x - p.x) / d, ny = (b.y - p.y) / d;
+      b.x = p.x + nx * (md + 0.5);
+      b.y = p.y + ny * (md + 0.5);
+      const dot = b.vx * nx + b.vy * ny;
+      b.vx = (b.vx - 2 * dot * nx) * 0.80;
+      b.vy = (b.vy - 2 * dot * ny) * 0.80;
+    }
+  }
+}
+
+function captureHole(h) {
+  gs.score += h.pts;
+  if (gs.score > gs.hi) { gs.hi = gs.score; localStorage.setItem('sb2_hi', gs.hi); }
+  addPopup(h.x, h.y - h.r - 14, h.pts, h.glow, 28);
+  gs.ball.active = false;
+  gs.phase = 'CAPTURED';
+  setTimeout(nextBall, 800);
+}
+
+function ballLost() {
+  gs.ball.active = false;
+  gs.phase = 'LOST';
+  setTimeout(nextBall, 500);
+}
+
+function nextBall() {
+  gs.ballsLeft--;
+  if (gs.ballsLeft <= 0) {
+    gs.phase = 'GAME_OVER';
+  } else {
+    gs.ball = null;
+    gs.phase = 'READY';
+    gs.power = 0;
+  }
+}
+
+function addPopup(x, y, pts, color, size) {
+  gs.popups.push({ x, y, pts, color: color || '#ffd700', size: size || 20, life: 64 });
+}
+
+function resetGame() {
+  gs.score = 0; gs.ballsLeft = MAX_BALLS;
+  gs.phase = 'READY'; gs.ball = null; gs.power = 0; gs.popups = [];
+  BUMPERS.forEach(b => b.flash = 0);
+}
+
+// ─── INPUT ─────────────────────────────────────────────────
+canvas.addEventListener('mousedown', () => {
+  if (gs.phase === 'GAME_OVER') { resetGame(); return; }
+  if (gs.phase !== 'READY') return;
+  gs.chargeStart = Date.now();
+  gs.power = 0;
+  gs.phase = 'CHARGING';
+});
+canvas.addEventListener('mouseup', () => {
+  if (gs.phase !== 'CHARGING') return;
+  launch();
+});
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (gs.phase === 'GAME_OVER') { resetGame(); return; }
+  if (gs.phase !== 'READY') return;
+  gs.chargeStart = Date.now();
+  gs.power = 0;
+  gs.phase = 'CHARGING';
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (gs.phase !== 'CHARGING') return;
+  launch();
+}, { passive: false });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ─── MAIN LOOP ─────────────────────────────────────────────
+function update() {
+  if (gs.phase === 'CHARGING') {
+    gs.power = Math.min(100, (Date.now() - gs.chargeStart) / 1800 * 100);
+  }
+  updateBall();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, BW, BH);
+  drawFrame();
+  drawChannel();
+  drawPlayfield();
+  drawHeader();
+  drawHoles();
+  drawBumpers();
+  drawPins();
+  drawBall();
+  drawLauncherArea();
+  drawPopups();
+  drawGameOver();
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
