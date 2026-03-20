@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>昭和パチンコ</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: radial-gradient(ellipse at center, #2a1000 0%, #080200 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', Georgia, serif;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+h1 {
+  color: #ffd700;
+  font-size: 22px;
+  letter-spacing: 0.4em;
+  text-shadow: 0 0 20px #ff8800, 0 0 40px #ff4400, 0 2px 4px rgba(0,0,0,0.9);
+  margin-bottom: 10px;
+}
+
+#game-wrap {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+canvas { display: block; }
+
+#side-panel {
+  width: 136px;
+  background: linear-gradient(180deg, #1c0c00 0%, #100600 100%);
+  border: 2px solid #5a3a00;
+  border-radius: 6px;
+  padding: 12px 10px;
+  box-shadow: 0 0 20px rgba(255,100,0,0.15), inset 0 0 30px rgba(0,0,0,0.6);
+}
+
+.panel-label {
+  font-size: 11px;
+  color: #7a5210;
+  letter-spacing: 0.15em;
+  margin-bottom: 2px;
+}
+
+.panel-value {
+  font-size: 30px;
+  color: #ff6600;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  text-align: right;
+  text-shadow: 0 0 14px #ff4400, 0 0 6px #ff2200;
+  line-height: 1.1;
+  letter-spacing: 0.05em;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid #2a1800;
+  margin: 8px 0;
+}
+
+#power-label {
+  font-size: 11px;
+  color: #7a5210;
+  margin-bottom: 3px;
+  letter-spacing: 0.15em;
+}
+
+#power-track {
+  background: #080400;
+  border: 1px solid #2a1800;
+  border-radius: 4px;
+  height: 14px;
+  overflow: hidden;
+}
+
+#power-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #009900, #999900, #cc0000);
+  border-radius: 3px;
+  transition: width 0.02s;
+}
+
+.howto {
+  margin-top: 12px;
+  font-size: 10px;
+  color: #4a3010;
+  line-height: 1.8;
+  letter-spacing: 0.05em;
+  border-top: 1px solid #2a1800;
+  padding-top: 8px;
+}
+
+.howto strong { color: #7a5210; }
+
+#message {
+  font-size: 12px;
+  color: #ff8800;
+  margin-top: 8px;
+  min-height: 18px;
+  text-align: center;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px #ff4400;
+}
+
+#restart-btn {
+  display: none;
+  margin-top: 8px;
+  width: 100%;
+  padding: 7px 0;
+  background: #4a1400;
+  color: #ffd700;
+  border: 1px solid #8b5a00;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  letter-spacing: 0.2em;
+  transition: background 0.15s;
+}
+#restart-btn:hover { background: #6a2400; }
+</style>
+</head>
+<body>
+<h1>★ 昭和パチンコ ★</h1>
+<div id="game-wrap">
+  <canvas id="c" width="400" height="640"></canvas>
+  <div id="side-panel">
+    <div class="panel-label">持ち球</div>
+    <div class="panel-value" id="held-display">025</div>
+    <hr class="divider">
+    <div class="panel-label">獲得球</div>
+    <div class="panel-value" id="won-display">000</div>
+    <hr class="divider">
+    <div id="power-label">パワー</div>
+    <div id="power-track"><div id="power-fill"></div></div>
+    <div id="message"></div>
+    <button id="restart-btn" onclick="restart()">もう一度</button>
+    <div class="howto">
+      <strong>【操作方法】</strong><br>
+      スペース長押し<br>
+      でパワー調整<br>
+      離すと発射！<br>
+      <br>
+      またはマウス<br>
+      長押しで発射
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Canvas setup ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = canvas.width;   // 400
+const H = canvas.height;  // 640
+
+// ── Board geometry ────────────────────────────────────────────────────────────
+const BX  = 22;          // board left
+const BY  = 22;          // board top
+const BW  = 296;         // board width  → right edge at 318
+const BH  = 582;         // board height → bottom at 604
+const BCX = BX + BW / 2; // center x = 170
+
+// Launch rail (right channel)
+const RX    = BX + BW + 10; // 328 – rail center x
+const RAIL_W = 20;
+
+// ── Physics ───────────────────────────────────────────────────────────────────
+const GRAVITY      = 0.19;
+const BALL_R       = 5;
+const NAIL_R       = 3.5;
+const BUMPER_R     = 15;
+const REST_NAIL    = 0.52;
+const REST_BUMPER  = 0.88;
+const REST_WALL    = 0.48;
+const DAMPING      = 0.994;
+const MAX_SPEED    = 13;
+const MAX_ACTIVE   = 3;   // max simultaneous balls
+
+// ── Game state ────────────────────────────────────────────────────────────────
+let ballsHeld, ballsWon, balls, power, charging, gameOver;
+let tulipOpen, tulipTimer, effects, frameCount;
+
+function restart() {
+  ballsHeld  = 25;
+  ballsWon   = 0;
+  balls      = [];
+  power      = 0;
+  charging   = false;
+  gameOver   = false;
+  tulipOpen  = false;
+  tulipTimer = 0;
+  effects    = [];
+  frameCount = 0;
+  document.getElementById('restart-btn').style.display = 'none';
+  document.getElementById('message').textContent = '';
+  updateUI();
+}
+
+// ── Layout definitions ────────────────────────────────────────────────────────
+let nails, bumpers, sideWins, topWin, tulip;
+
+function initLayout() {
+  nails    = [];
+  bumpers  = [];
+  sideWins = [];
+
+  // ── Top scatter nails (天釘) ──
+  const tn = [
+    { x: BCX - 70, y: BY + 38 },
+    { x: BCX - 42, y: BY + 30 },
+    { x: BCX - 14, y: BY + 27 },
+    { x: BCX + 14, y: BY + 27 },
+    { x: BCX + 42, y: BY + 30 },
+    { x: BCX + 70, y: BY + 38 },
+    { x: BCX - 55, y: BY + 56 },
+    { x: BCX - 28, y: BY + 50 },
+    { x: BCX,      y: BY + 48 },
+    { x: BCX + 28, y: BY + 50 },
+    { x: BCX + 55, y: BY + 56 },
+  ];
+  tn.forEach(n => nails.push({ x: n.x, y: n.y, r: NAIL_R }));
+
+  // ── Main staggered nail grid ──
+  const NSX  = BX + 24;   // nail area left
+  const NSY  = BY + 82;   // nail area top
+  const CSP  = 30;        // col spacing
+  const RSP  = 30;        // row spacing
+  const ROWS = 13;
+  const COLS = 9;
+
+  for (let row = 0; row < ROWS; row++) {
+    const even   = row % 2 === 0;
+    const cols   = even ? COLS : COLS - 1;
+    const offX   = even ? 0 : CSP / 2;
+    for (let col = 0; col < cols; col++) {
+      const x = NSX + offX + col * CSP;
+      const y = NSY + row * RSP;
+      if (x < BX + 6 || x > BX + BW - 6) continue;
+      nails.push({ x, y, r: NAIL_R });
+    }
+  }
+
+  // ── Circular bumpers ──
+  bumpers.push({ x: BCX - 58, y: BY + 220, r: BUMPER_R, flash: 0 });
+  bumpers.push({ x: BCX,      y: BY + 195, r: BUMPER_R, flash: 0 });
+  bumpers.push({ x: BCX + 58, y: BY + 220, r: BUMPER_R, flash: 0 });
+
+  // ── Extra guide nails below bumpers ──
+  const en = [
+    { x: BCX - 92, y: BY + 268 },
+    { x: BCX - 58, y: BY + 288 },
+    { x: BCX - 24, y: BY + 272 },
+    { x: BCX + 24, y: BY + 272 },
+    { x: BCX + 58, y: BY + 288 },
+    { x: BCX + 92, y: BY + 268 },
+    // funnel toward bottom
+    { x: BCX - 56, y: BY + 500 },
+    { x: BCX + 56, y: BY + 500 },
+    { x: BCX - 84, y: BY + 524 },
+    { x: BCX + 84, y: BY + 524 },
+  ];
+  en.forEach(n => nails.push({ x: n.x, y: n.y, r: NAIL_R }));
+
+  // ── Top win hole (天入賞口) ──
+  topWin = { x: BCX, y: BY + 32, r: 11, reward: 10, flash: 0 };
+
+  // ── Side win holes (入賞口) ──
+  sideWins.push({ x: BX + 22,       y: BY + 472, w: 30, h: 18, reward: 5, flash: 0 });
+  sideWins.push({ x: BX + BW - 52,  y: BY + 472, w: 30, h: 18, reward: 5, flash: 0 });
+
+  // ── Tulip (チューリップ) ──
+  tulip = { x: BCX, y: BY + 514, w: 30, h: 18, reward: 15, flash: 0 };
+}
+
+// ── Collision helper ──────────────────────────────────────────────────────────
+function resolveCircle(ball, cx, cy, cr, rest) {
+  const dx   = ball.x - cx;
+  const dy   = ball.y - cy;
+  const d2   = dx * dx + dy * dy;
+  const minD = BALL_R + cr;
+  if (d2 >= minD * minD || d2 < 0.0001) return false;
+  const dist = Math.sqrt(d2);
+  const nx   = dx / dist;
+  const ny   = dy / dist;
+  // push out
+  ball.x = cx + nx * minD;
+  ball.y = cy + ny * minD;
+  // reflect
+  const dot = ball.vx * nx + ball.vy * ny;
+  if (dot < 0) {
+    ball.vx -= (1 + rest) * dot * nx;
+    ball.vy -= (1 + rest) * dot * ny;
+    // tiny random spin
+    ball.vx += (Math.random() - 0.5) * 0.35;
+  }
+  return true;
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+let spaceHeld = false;
+let mouseHeld = false;
+
+function canLaunch() {
+  return !gameOver && ballsHeld > 0 &&
+         balls.filter(b => b.active).length < MAX_ACTIVE;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code !== 'Space' || e.repeat) return;
+  e.preventDefault();
+  if (canLaunch()) { charging = true; spaceHeld = true; }
+});
+document.addEventListener('keyup', e => {
+  if (e.code !== 'Space') return;
+  e.preventDefault();
+  spaceHeld = false;
+  if (charging) fire();
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (canLaunch()) { charging = true; mouseHeld = true; }
+});
+canvas.addEventListener('mouseup', () => {
+  mouseHeld = false;
+  if (charging) fire();
+});
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (canLaunch()) charging = true;
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (charging) fire();
+}, { passive: false });
+
+function fire() {
+  if (!charging) return;
+  charging = false;
+  if (!canLaunch()) { power = 0; return; }
+  const p = power;
+  power = 0;
+  ballsHeld--;
+  // Entry point: top-right of board
+  // Low power → weak leftward push (stays right)
+  // High power → strong leftward (reaches center/left)
+  balls.push({
+    x:      BX + BW - 6,
+    y:      BY + 18,
+    vx:     -(0.7 + p * 4.5),
+    vy:     0.4,
+    active: true,
+    age:    0,
+  });
+  updateUI();
+}
+
+// ── Game update ───────────────────────────────────────────────────────────────
+function update() {
+  frameCount++;
+
+  // Charge power meter
+  if (charging && (spaceHeld || mouseHeld)) {
+    power = Math.min(1, power + 0.016);
+  }
+
+  // Tulip timer countdown
+  if (tulipOpen && --tulipTimer <= 0) {
+    tulipOpen  = false;
+    tulipTimer = 0;
+  }
+
+  // Update each ball
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const b = balls[i];
+    if (!b.active) continue;
+
+    b.age++;
+
+    // Gravity + damping
+    b.vy += GRAVITY;
+    b.vx *= DAMPING;
+    b.vy *= DAMPING;
+
+    // Clamp speed
+    const spd = Math.hypot(b.vx, b.vy);
+    if (spd > MAX_SPEED) { b.vx = b.vx / spd * MAX_SPEED; b.vy = b.vy / spd * MAX_SPEED; }
+
+    // Move
+    b.x += b.vx;
+    b.y += b.vy;
+
+    // Wall collisions
+    if (b.x - BALL_R < BX)       { b.x = BX + BALL_R;       b.vx =  Math.abs(b.vx) * REST_WALL; }
+    if (b.x + BALL_R > BX + BW)  { b.x = BX + BW - BALL_R;  b.vx = -Math.abs(b.vx) * REST_WALL; }
+    if (b.y - BALL_R < BY)       { b.y = BY + BALL_R;        b.vy =  Math.abs(b.vy) * REST_WALL; }
+
+    // Nail collisions
+    for (const n of nails) resolveCircle(b, n.x, n.y, n.r, REST_NAIL);
+
+    // Bumper collisions
+    for (const bmp of bumpers) {
+      if (resolveCircle(b, bmp.x, bmp.y, bmp.r, REST_BUMPER)) {
+        bmp.flash = 14;
+      }
+    }
+
+    // ── Pocket checks ──
+
+    // Top win hole
+    const dtx = b.x - topWin.x, dty = b.y - topWin.y;
+    if (Math.hypot(dtx, dty) < topWin.r + BALL_R - 3) {
+      award(topWin.reward, b.x, b.y, '天入賞！');
+      topWin.flash = 24;
+      b.active = false;
+      continue;
+    }
+
+    // Side win holes
+    let caught = false;
+    for (const sw of sideWins) {
+      if (b.x > sw.x && b.x < sw.x + sw.w &&
+          b.y > sw.y && b.y < sw.y + sw.h) {
+        award(sw.reward, b.x, b.y, '入賞！');
+        sw.flash = 22;
+        openTulip();
+        b.active = false;
+        caught = true;
+        break;
+      }
+    }
+    if (caught) continue;
+
+    // Tulip
+    const tw = tulipOpen ? tulip.w : 10;
+    if (b.x > tulip.x - tw && b.x < tulip.x + tw &&
+        b.y > tulip.y      && b.y < tulip.y + tulip.h) {
+      award(tulip.reward, b.x, b.y, tulipOpen ? 'チューリップ！' : '入賞');
+      tulip.flash = tulipOpen ? 34 : 16;
+      b.active = false;
+      continue;
+    }
+
+    // Drain
+    if (b.y > BY + BH) {
+      b.active = false;
+      continue;
+    }
+
+    // Safety: remove very slow stuck balls
+    if (b.age > 400 && spd < 0.6) {
+      b.active = false;
+    }
+  }
+
+  // Cleanup
+  balls = balls.filter(b => b.active);
+
+  // Flash timers
+  bumpers.forEach(bmp => { if (bmp.flash > 0) bmp.flash--; });
+  sideWins.forEach(sw  => { if (sw.flash > 0) sw.flash--; });
+  if (topWin.flash > 0) topWin.flash--;
+  if (tulip.flash  > 0) tulip.flash--;
+
+  // Effects
+  effects = effects.filter(e => e.life > 0);
+  effects.forEach(e => { e.life--; e.y -= 0.6; });
+
+  // Game over
+  if (!gameOver && ballsHeld <= 0 && balls.length === 0) {
+    gameOver = true;
+    const msg = ballsWon >= 100 ? '大当たり！すごい！' :
+                ballsWon >=  50 ? 'よくできました！' :
+                ballsWon >=  25 ? 'ちょうどトントン' : 'またどうぞ！';
+    document.getElementById('message').textContent = msg;
+    document.getElementById('restart-btn').style.display = 'block';
+  }
+
+  updateUI();
+}
+
+function openTulip() {
+  tulipOpen  = true;
+  tulipTimer = 200; // ≈3.3s at 60fps
+}
+
+function award(count, x, y, label) {
+  const n = Math.max(1, Math.round(count));
+  ballsWon  += n;
+  ballsHeld += n;
+  effects.push({ x, y,      text: `+${n}`,  life: 55, color: '#ffd700' });
+  effects.push({ x, y: y-20, text: label,    life: 75, color: '#ff6600' });
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  drawFrame();
+  drawBoard();
+  drawRail();
+  drawNails();
+  drawBumpers();
+  drawTopWin();
+  drawSideWins();
+  drawTulip();
+  drawDrain();
+  drawBalls();
+  drawEffects();
+  drawPowerIndicator();
+  if (gameOver) drawGameOver();
+}
+
+// ─ Frame (wood border) ──────────────────────────────────────────────────────
+function drawFrame() {
+  // Main wood fill
+  const wg = ctx.createLinearGradient(0, 0, W, H);
+  wg.addColorStop(0,   '#6a3800');
+  wg.addColorStop(0.25,'#8a5200');
+  wg.addColorStop(0.5, '#7a4600');
+  wg.addColorStop(0.75,'#8a5200');
+  wg.addColorStop(1,   '#5a2c00');
+  ctx.fillStyle = wg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Wood grain lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = 1;
+  for (let x = 8; x < W; x += 14) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 6, H); ctx.stroke();
+  }
+
+  // Inner gold border
+  ctx.strokeStyle = '#b08020';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(BX - 4, BY - 4, BW + 8, BH + 8);
+  ctx.strokeStyle = '#6a4a10';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(BX - 7, BY - 7, BW + 14, BH + 14);
+
+  // Corner ornaments
+  const corners = [[BX-7,BY-7],[BX+BW+7,BY-7],[BX-7,BY+BH+7],[BX+BW+7,BY+BH+7]];
+  for (const [cx, cy] of corners) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#c8a030';
+    ctx.fill();
+  }
+}
+
+// ─ Board background ──────────────────────────────────────────────────────────
+function drawBoard() {
+  // Green felt background
+  const bg = ctx.createLinearGradient(BX, BY, BX + BW, BY + BH);
+  bg.addColorStop(0,   '#001800');
+  bg.addColorStop(0.45,'#002800');
+  bg.addColorStop(1,   '#001400');
+  ctx.fillStyle = bg;
+  ctx.fillRect(BX, BY, BW, BH);
+
+  // Vignette
+  const vg = ctx.createRadialGradient(BCX, BY + BH * 0.45, 80, BCX, BY + BH * 0.45, 220);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(BX, BY, BW, BH);
+
+  // Subtle horizontal lines
+  ctx.strokeStyle = 'rgba(0, 60, 0, 0.2)';
+  ctx.lineWidth = 0.5;
+  for (let y = BY + 40; y < BY + BH - 10; y += 40) {
+    ctx.beginPath(); ctx.moveTo(BX, y); ctx.lineTo(BX + BW, y); ctx.stroke();
+  }
+}
+
+// ─ Launch rail ───────────────────────────────────────────────────────────────
+function drawRail() {
+  const rx = RX - RAIL_W / 2;
+  // Rail body
+  const rg = ctx.createLinearGradient(rx, 0, rx + RAIL_W, 0);
+  rg.addColorStop(0,   '#1e0c00');
+  rg.addColorStop(0.4, '#3a1e00');
+  rg.addColorStop(1,   '#1e0c00');
+  ctx.fillStyle = rg;
+  ctx.fillRect(rx, BY, RAIL_W, BH);
+
+  ctx.strokeStyle = '#5a3800';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(rx, BY, RAIL_W, BH);
+
+  // Tick marks on rail
+  ctx.strokeStyle = 'rgba(90,56,0,0.6)';
+  ctx.lineWidth = 0.5;
+  for (let y = BY + 20; y < BY + BH - 40; y += 30) {
+    ctx.beginPath();
+    ctx.moveTo(rx + 3, y); ctx.lineTo(rx + RAIL_W - 3, y);
+    ctx.stroke();
+  }
+
+  // Plunger handle (bottom of rail)
+  const hy = BY + BH - 40;
+  const hg = ctx.createLinearGradient(rx, hy, rx + RAIL_W, hy);
+  hg.addColorStop(0,   '#3a1a00');
+  hg.addColorStop(0.5, '#6a3600');
+  hg.addColorStop(1,   '#3a1a00');
+  ctx.fillStyle = hg;
+  ctx.fillRect(rx + 1, hy, RAIL_W - 2, 38);
+  ctx.strokeStyle = '#9a6820';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(rx + 1, hy, RAIL_W - 2, 38);
+
+  ctx.fillStyle = '#c89820';
+  ctx.font = '8px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('発射', RX, hy + 19);
+}
+
+// ─ Power indicator ────────────────────────────────────────────────────────────
+function drawPowerIndicator() {
+  if (!charging && power === 0) return;
+  const rx  = RX - RAIL_W / 2;
+  const hy  = BY + BH - 40;
+  const ph  = Math.round(38 * power);
+  const col = power < 0.35 ? '#00bb00' : power < 0.7 ? '#bbbb00' : '#cc2200';
+  ctx.fillStyle = col;
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(rx + 2, hy + 38 - ph, RAIL_W - 4, ph);
+  ctx.globalAlpha = 1;
+  // Glow
+  if (power > 0.8) {
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur  = 8;
+    ctx.fillRect(rx + 2, hy, RAIL_W - 4, 2);
+    ctx.shadowBlur  = 0;
+  }
+}
+
+// ─ Nails ─────────────────────────────────────────────────────────────────────
+function drawNails() {
+  for (const n of nails) {
+    // Shadow
+    ctx.beginPath();
+    ctx.arc(n.x + 1, n.y + 1, n.r + 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+
+    // Brass gradient
+    const ng = ctx.createRadialGradient(n.x - 1, n.y - 1.2, 0.5, n.x, n.y, n.r);
+    ng.addColorStop(0,   '#ffe898');
+    ng.addColorStop(0.45,'#d4a020');
+    ng.addColorStop(1,   '#7a5000');
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = ng;
+    ctx.fill();
+  }
+}
+
+// ─ Bumpers (丸障害釘) ─────────────────────────────────────────────────────────
+function drawBumpers() {
+  for (const b of bumpers) {
+    const fl = b.flash > 0;
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
+    ctx.fillStyle = fl ? '#aa5500' : '#3c0000';
+    ctx.fill();
+    ctx.strokeStyle = fl ? '#ffcc00' : '#880000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Body
+    const bg = ctx.createRadialGradient(b.x - 4, b.y - 4, 2, b.x, b.y, b.r);
+    bg.addColorStop(0, fl ? '#ff8800' : '#cc2200');
+    bg.addColorStop(1, fl ? '#993300' : '#440000');
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+
+    // White stripe
+    ctx.strokeStyle = fl ? '#ffffff' : 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r - 4, -Math.PI * 0.75, -Math.PI * 0.25);
+    ctx.stroke();
+
+    // Glow on hit
+    if (fl) {
+      ctx.shadowColor = '#ff6600';
+      ctx.shadowBlur  = 16;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.shadowBlur  = 0;
+    }
+  }
+}
+
+// ─ Top win hole (天入賞口) ────────────────────────────────────────────────────
+function drawTopWin() {
+  const tw = topWin;
+  const fl = tw.flash > 0;
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(tw.x, tw.y, tw.r + 3, 0, Math.PI * 2);
+  ctx.fillStyle = fl ? '#cc8800' : '#4a0000';
+  ctx.fill();
+  ctx.strokeStyle = fl ? '#ffee00' : '#880000';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Inner hole
+  const hg = ctx.createRadialGradient(tw.x - 2, tw.y - 3, 1, tw.x, tw.y, tw.r);
+  hg.addColorStop(0, fl ? '#ff6600' : '#880000');
+  hg.addColorStop(1, fl ? '#440000' : '#220000');
+  ctx.beginPath();
+  ctx.arc(tw.x, tw.y, tw.r, 0, Math.PI * 2);
+  ctx.fillStyle = hg;
+  ctx.fill();
+
+  // Label
+  if (fl) { ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 10; }
+  ctx.fillStyle = fl ? '#ffffff' : '#cc8800';
+  ctx.font = 'bold 9px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('天', tw.x, tw.y);
+  ctx.shadowBlur = 0;
+}
+
+// ─ Side win holes (入賞口) ────────────────────────────────────────────────────
+function drawSideWins() {
+  for (const sw of sideWins) {
+    const fl = sw.flash > 0;
+
+    // Frame
+    ctx.fillStyle = fl ? '#cc8800' : '#7a5000';
+    ctx.fillRect(sw.x - 2, sw.y - 2, sw.w + 4, sw.h + 4);
+
+    // Hole
+    ctx.fillStyle = fl ? '#ff4400' : '#110000';
+    ctx.fillRect(sw.x, sw.y, sw.w, sw.h);
+
+    ctx.strokeStyle = fl ? '#ffcc00' : '#aa7000';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(sw.x, sw.y, sw.w, sw.h);
+
+    if (fl) { ctx.shadowColor = '#ff8800'; ctx.shadowBlur = 10; }
+    ctx.fillStyle = fl ? '#ffff00' : '#cc8800';
+    ctx.font = 'bold 9px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('入', sw.x + sw.w / 2, sw.y + sw.h / 2);
+    ctx.shadowBlur = 0;
+  }
+}
+
+// ─ Tulip (チューリップ) ───────────────────────────────────────────────────────
+function drawTulip() {
+  const t  = tulip;
+  const fl = t.flash > 0;
+  const op = tulipOpen;
+
+  const cx   = t.x;
+  const top  = t.y;
+  const bot  = t.y + t.h;
+  const hw   = op ? t.w : 10;   // half-width of opening
+
+  // Left petal
+  ctx.beginPath();
+  if (op) {
+    ctx.moveTo(cx - 3,      bot - 2);
+    ctx.lineTo(cx - hw - 6, bot - t.h / 2);
+    ctx.lineTo(cx - hw,     top + 2);
+    ctx.lineTo(cx - 4,      top + 6);
+  } else {
+    ctx.moveTo(cx - hw, top);
+    ctx.lineTo(cx - 3,  bot);
+    ctx.lineTo(cx,      bot);
+    ctx.lineTo(cx,      top);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fl ? '#ff6600' : (op ? '#cc3300' : '#662200');
+  ctx.fill();
+  ctx.strokeStyle = fl ? '#ffcc00' : '#991100';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Right petal (mirror)
+  ctx.beginPath();
+  if (op) {
+    ctx.moveTo(cx + 3,      bot - 2);
+    ctx.lineTo(cx + hw + 6, bot - t.h / 2);
+    ctx.lineTo(cx + hw,     top + 2);
+    ctx.lineTo(cx + 4,      top + 6);
+  } else {
+    ctx.moveTo(cx + hw, top);
+    ctx.lineTo(cx + 3,  bot);
+    ctx.lineTo(cx,      bot);
+    ctx.lineTo(cx,      top);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fl ? '#ff6600' : (op ? '#cc3300' : '#662200');
+  ctx.fill();
+  ctx.strokeStyle = fl ? '#ffcc00' : '#991100';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Center hole
+  ctx.beginPath();
+  ctx.arc(cx, bot - 4, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#000000';
+  ctx.fill();
+  ctx.strokeStyle = op ? '#ff6600' : '#330000';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Label
+  if (fl || op) { ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 8; }
+  ctx.fillStyle = op ? '#ffcc00' : '#664422';
+  ctx.font = '9px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('チューリップ', cx, top - 2);
+  ctx.shadowBlur = 0;
+
+  // Open timer bar
+  if (op) {
+    const bw = 62, bx = cx - bw / 2, byy = top - 14;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(bx, byy, bw, 5);
+    const ratio = tulipTimer / 200;
+    const col = ratio > 0.5 ? '#00cc00' : ratio > 0.25 ? '#cccc00' : '#cc0000';
+    ctx.fillStyle = col;
+    ctx.fillRect(bx, byy, bw * ratio, 5);
+  }
+}
+
+// ─ Drain (アウト口) ───────────────────────────────────────────────────────────
+function drawDrain() {
+  const dw = 48;
+  const dx = BCX - dw / 2;
+  const dy = BY + BH - 20;
+
+  ctx.fillStyle = '#111111';
+  ctx.fillRect(dx, dy, dw, 20);
+
+  // Slots
+  ctx.fillStyle = '#000000';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(dx + 5 + i * 14, dy + 4, 8, 12);
+  }
+
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(dx, dy, dw, 20);
+
+  ctx.fillStyle = '#444444';
+  ctx.font = '8px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('アウト', BCX, dy + 6);
+}
+
+// ─ Balls ─────────────────────────────────────────────────────────────────────
+function drawBalls() {
+  for (const b of balls) {
+    // Shadow
+    ctx.beginPath();
+    ctx.arc(b.x + 2, b.y + 2, BALL_R, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+
+    // Metallic silver
+    const bg = ctx.createRadialGradient(b.x - 1.8, b.y - 2.2, 0.8, b.x, b.y, BALL_R);
+    bg.addColorStop(0,    '#ffffff');
+    bg.addColorStop(0.28, '#e0e0e0');
+    bg.addColorStop(0.65, '#aaaaaa');
+    bg.addColorStop(1,    '#555555');
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
+    ctx.fillStyle = bg;
+    ctx.fill();
+
+    // Specular highlight
+    ctx.beginPath();
+    ctx.arc(b.x - 1.5, b.y - 2, 1.8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fill();
+  }
+}
+
+// ─ Effects (floating text) ────────────────────────────────────────────────────
+function drawEffects() {
+  for (const e of effects) {
+    const a = Math.min(1, e.life / 40);
+    ctx.globalAlpha = a;
+    ctx.fillStyle   = e.color || '#ffd700';
+    const sz = 13 + (1 - a) * 5;
+    ctx.font = `bold ${sz}px serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    if (e.color === '#ffd700') {
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur  = 8;
+    }
+    ctx.fillText(e.text, e.x, e.y);
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─ Game over overlay ──────────────────────────────────────────────────────────
+function drawGameOver() {
+  const oy = BY + BH / 2 - 55;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  roundRect(BX + 30, oy, BW - 60, 110, 10);
+  ctx.fill();
+
+  ctx.strokeStyle = '#8b6914';
+  ctx.lineWidth = 2;
+  roundRect(BX + 30, oy, BW - 60, 110, 10);
+  ctx.stroke();
+
+  ctx.shadowColor = '#ff8800';
+  ctx.shadowBlur  = 16;
+  ctx.fillStyle   = '#ffd700';
+  ctx.font        = 'bold 20px serif';
+  ctx.textAlign   = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('ゲームオーバー', BCX, oy + 16);
+  ctx.shadowBlur  = 0;
+
+  ctx.fillStyle = '#ff8800';
+  ctx.font      = '14px serif';
+  ctx.fillText(`獲得球: ${ballsWon} 個`, BCX, oy + 50);
+
+  const rank = ballsWon >= 100 ? '★★★ 大当たり！' :
+               ballsWon >=  50 ? '★★☆ 上出来！' :
+               ballsWon >=  25 ? '★☆☆ トントン' : '☆☆☆ またどうぞ';
+  ctx.fillStyle = '#cc8800';
+  ctx.font      = '12px serif';
+  ctx.fillText(rank, BCX, oy + 76);
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function updateUI() {
+  document.getElementById('held-display').textContent = String(Math.max(0, ballsHeld)).padStart(3, '0');
+  document.getElementById('won-display').textContent  = String(ballsWon).padStart(3, '0');
+  document.getElementById('power-fill').style.width   = Math.round(power * 100) + '%';
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+function loop() {
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+initLayout();
+restart();
+loop();
+</script>
+</body>
+</html>
