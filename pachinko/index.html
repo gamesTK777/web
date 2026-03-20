@@ -2,159 +2,191 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>昭和パチンコ</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  background: #0a0400;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  touch-action: none;
+}
+
 body {
-  background: radial-gradient(ellipse at center, #2a1000 0%, #080200 100%);
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', Georgia, serif;
   user-select: none;
   -webkit-user-select: none;
-  overflow: hidden;
+}
+
+/* ── Outer wrapper that gets CSS-scaled ────────────────────────── */
+#app {
+  transform-origin: top center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 h1 {
   color: #ffd700;
-  font-size: 22px;
+  font-size: 20px;
   letter-spacing: 0.4em;
-  text-shadow: 0 0 20px #ff8800, 0 0 40px #ff4400, 0 2px 4px rgba(0,0,0,0.9);
-  margin-bottom: 10px;
+  text-shadow: 0 0 18px #ff8800, 0 0 36px #ff4400, 0 2px 3px rgba(0,0,0,1);
+  margin: 8px 0 6px;
+  white-space: nowrap;
 }
 
+/* ── Desktop: canvas left, panel right ────────────────────────── */
 #game-wrap {
   display: flex;
-  gap: 14px;
+  flex-direction: row;
+  gap: 12px;
   align-items: flex-start;
 }
 
-canvas { display: block; }
+canvas { display: block; cursor: pointer; }
 
+/* ── Side panel (desktop) ─────────────────────────────────────── */
 #side-panel {
-  width: 136px;
-  background: linear-gradient(180deg, #1c0c00 0%, #100600 100%);
-  border: 2px solid #5a3a00;
+  width: 132px;
+  background: linear-gradient(180deg, #1c0c00 0%, #0e0500 100%);
+  border: 2px solid #4a3000;
   border-radius: 6px;
-  padding: 12px 10px;
-  box-shadow: 0 0 20px rgba(255,100,0,0.15), inset 0 0 30px rgba(0,0,0,0.6);
+  padding: 10px 9px;
+  box-shadow: 0 0 18px rgba(255,100,0,0.12), inset 0 0 28px rgba(0,0,0,0.65);
+  flex-shrink: 0;
 }
 
 .panel-label {
   font-size: 11px;
   color: #7a5210;
-  letter-spacing: 0.15em;
-  margin-bottom: 2px;
+  letter-spacing: 0.1em;
+  margin-bottom: 1px;
 }
-
 .panel-value {
-  font-size: 30px;
+  font-size: 28px;
   color: #ff6600;
   font-weight: bold;
   font-family: 'Courier New', monospace;
   text-align: right;
-  text-shadow: 0 0 14px #ff4400, 0 0 6px #ff2200;
+  text-shadow: 0 0 12px #ff4400, 0 0 4px #ff2200;
   line-height: 1.1;
-  letter-spacing: 0.05em;
 }
+.divider { border: none; border-top: 1px solid #2a1800; margin: 7px 0; }
 
-.divider {
-  border: none;
-  border-top: 1px solid #2a1800;
-  margin: 8px 0;
-}
-
-#power-label {
-  font-size: 11px;
-  color: #7a5210;
-  margin-bottom: 3px;
-  letter-spacing: 0.15em;
-}
-
+#power-label { font-size: 11px; color: #7a5210; margin-bottom: 3px; letter-spacing: 0.1em; }
 #power-track {
-  background: #080400;
-  border: 1px solid #2a1800;
-  border-radius: 4px;
-  height: 14px;
-  overflow: hidden;
+  background: #080400; border: 1px solid #2a1800; border-radius: 4px; height: 13px; overflow: hidden;
 }
-
 #power-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, #009900, #999900, #cc0000);
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #009900, #999900, #bb0000);
   border-radius: 3px;
-  transition: width 0.02s;
 }
-
-.howto {
-  margin-top: 12px;
-  font-size: 10px;
-  color: #4a3010;
-  line-height: 1.8;
-  letter-spacing: 0.05em;
-  border-top: 1px solid #2a1800;
-  padding-top: 8px;
-}
-
-.howto strong { color: #7a5210; }
 
 #message {
-  font-size: 12px;
-  color: #ff8800;
-  margin-top: 8px;
-  min-height: 18px;
-  text-align: center;
-  letter-spacing: 0.1em;
-  text-shadow: 0 0 8px #ff4400;
+  font-size: 11px; color: #ff8800; margin-top: 7px;
+  min-height: 16px; text-align: center;
+  letter-spacing: 0.08em; text-shadow: 0 0 8px #ff4400;
+  line-height: 1.4;
 }
-
 #restart-btn {
-  display: none;
-  margin-top: 8px;
-  width: 100%;
-  padding: 7px 0;
-  background: #4a1400;
-  color: #ffd700;
-  border: 1px solid #8b5a00;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  letter-spacing: 0.2em;
+  display: none; margin-top: 7px; width: 100%;
+  padding: 6px 0; background: #4a1400; color: #ffd700;
+  border: 1px solid #7a4a00; border-radius: 4px; font-family: inherit;
+  font-size: 13px; cursor: pointer; letter-spacing: 0.2em;
   transition: background 0.15s;
 }
-#restart-btn:hover { background: #6a2400; }
+#restart-btn:hover, #restart-btn:active { background: #6a2400; }
+
+.howto {
+  margin-top: 10px; font-size: 10px; color: #4a3010; line-height: 1.8;
+  letter-spacing: 0.04em; border-top: 1px solid #221200; padding-top: 7px;
+}
+.howto strong { color: #7a5210; }
+
+/* ── Mobile: canvas full-width, compact stat bar below ────────── */
+#stat-bar {
+  display: none;
+  width: 100%;
+  background: linear-gradient(180deg, #1c0c00 0%, #0e0500 100%);
+  border: 1px solid #4a3000;
+  border-radius: 0 0 6px 6px;
+  padding: 6px 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.sbar-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.sbar-label { font-size: 10px; color: #7a5210; letter-spacing: 0.08em; }
+.sbar-value {
+  font-size: 22px; color: #ff6600; font-weight: bold;
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px #ff4400;
+  line-height: 1;
+}
+#sbar-power-wrap { flex: 1.5; }
+#sbar-power-track {
+  background: #080400; border: 1px solid #2a1800; border-radius: 4px; height: 11px; overflow: hidden; margin-top: 2px;
+}
+#sbar-power-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #009900, #999900, #bb0000);
+  border-radius: 3px;
+}
+#sbar-msg { font-size: 10px; color: #ff8800; text-align: center; min-height: 14px; margin-top: 2px; }
+#sbar-restart { display: none; font-size: 11px; color: #ffd700; background: #4a1400; border: 1px solid #7a4a00; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
 </style>
 </head>
 <body>
-<h1>★ 昭和パチンコ ★</h1>
-<div id="game-wrap">
-  <canvas id="c" width="400" height="640"></canvas>
-  <div id="side-panel">
-    <div class="panel-label">持ち球</div>
-    <div class="panel-value" id="held-display">025</div>
-    <hr class="divider">
-    <div class="panel-label">獲得球</div>
-    <div class="panel-value" id="won-display">000</div>
-    <hr class="divider">
-    <div id="power-label">パワー</div>
-    <div id="power-track"><div id="power-fill"></div></div>
-    <div id="message"></div>
-    <button id="restart-btn" onclick="restart()">もう一度</button>
-    <div class="howto">
-      <strong>【操作方法】</strong><br>
-      スペース長押し<br>
-      でパワー調整<br>
-      離すと発射！<br>
-      <br>
-      またはマウス<br>
-      長押しで発射
+<div id="app">
+  <h1>★ 昭和パチンコ ★</h1>
+  <div id="game-wrap">
+    <canvas id="c" width="400" height="640"></canvas>
+
+    <!-- Desktop panel -->
+    <div id="side-panel">
+      <div class="panel-label">持ち球</div>
+      <div class="panel-value" id="held-display">025</div>
+      <hr class="divider">
+      <div class="panel-label">獲得球</div>
+      <div class="panel-value" id="won-display">000</div>
+      <hr class="divider">
+      <div id="power-label">パワー</div>
+      <div id="power-track"><div id="power-fill"></div></div>
+      <div id="message"></div>
+      <button id="restart-btn" onclick="restart()">もう一度</button>
+      <div class="howto">
+        <strong>【操作方法】</strong><br>
+        スペース長押し<br>でパワー調整<br>離すと発射！<br><br>
+        またはタップ<br>長押しで発射
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile stat bar -->
+  <div id="stat-bar">
+    <div class="sbar-item">
+      <span class="sbar-label">持ち球</span>
+      <span class="sbar-value" id="m-held">025</span>
+    </div>
+    <div class="sbar-item">
+      <span class="sbar-label">獲得球</span>
+      <span class="sbar-value" id="m-won">000</span>
+    </div>
+    <div class="sbar-item" id="sbar-power-wrap">
+      <span class="sbar-label">パワー</span>
+      <div id="sbar-power-track"><div id="sbar-power-fill"></div></div>
+    </div>
+    <div class="sbar-item" style="flex:0.6">
+      <div id="sbar-msg"></div>
+      <button id="sbar-restart" onclick="restart()">再戦</button>
     </div>
   </div>
 </div>
@@ -162,38 +194,140 @@ canvas { display: block; }
 <script>
 'use strict';
 
-// ── Canvas setup ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Constants & canvas setup
+// ══════════════════════════════════════════════════════════════════════════════
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
-const W = canvas.width;   // 400
-const H = canvas.height;  // 640
+const W = 400, H = 640;
 
-// ── Board geometry ────────────────────────────────────────────────────────────
-const BX  = 22;          // board left
-const BY  = 22;          // board top
-const BW  = 296;         // board width  → right edge at 318
-const BH  = 582;         // board height → bottom at 604
-const BCX = BX + BW / 2; // center x = 170
+// Board rect
+const BX = 22, BY = 22, BW = 296, BH = 578;
+const BCX = BX + BW / 2; // 170
 
-// Launch rail (right channel)
-const RX    = BX + BW + 10; // 328 – rail center x
+// Right launch rail
+const RX     = BX + BW + 10; // 328
 const RAIL_W = 20;
 
-// ── Physics ───────────────────────────────────────────────────────────────────
-const GRAVITY      = 0.19;
-const BALL_R       = 5;
-const NAIL_R       = 3.5;
-const BUMPER_R     = 15;
-const REST_NAIL    = 0.52;
-const REST_BUMPER  = 0.88;
-const REST_WALL    = 0.48;
-const DAMPING      = 0.994;
-const MAX_SPEED    = 13;
-const MAX_ACTIVE   = 3;   // max simultaneous balls
+// Physics
+const GRAVITY   = 0.19;
+const BALL_R    = 5;
+const NAIL_R    = 3.5;
+const BUMPER_R  = 15;
+const REST_NAIL = 0.50;
+const REST_BMP  = 0.88;
+const REST_WALL = 0.46;
+const DAMPING   = 0.994;
+const MAX_SPD   = 13;
+const MAX_ACT   = 3;
 
-// ── Game state ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Pre-rendered textures
+// ══════════════════════════════════════════════════════════════════════════════
+let feltPattern, woodImg;
+
+// Seeded PRNG for deterministic textures
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function buildFeltTexture() {
+  const SZ = 128;
+  const tc = document.createElement('canvas');
+  tc.width = tc.height = SZ;
+  const fc = tc.getContext('2d');
+  const r = mulberry32(0xDEADBEEF);
+
+  // Base green
+  fc.fillStyle = '#162616';
+  fc.fillRect(0, 0, SZ, SZ);
+
+  // Short fiber strokes
+  for (let i = 0; i < 3200; i++) {
+    const x = r() * SZ, y = r() * SZ;
+    const ang = r() * Math.PI;
+    const len = 1.5 + r() * 3.5;
+    const br  = r() * 25;
+    const al  = 0.035 + r() * 0.07;
+    fc.strokeStyle = `rgba(${55+br},${82+br},${55+br},${al})`;
+    fc.lineWidth = 0.4 + r() * 0.6;
+    fc.beginPath();
+    fc.moveTo(x, y);
+    fc.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+    fc.stroke();
+  }
+
+  // Subtle color patches
+  for (let i = 0; i < 80; i++) {
+    const x = r() * SZ, y = r() * SZ;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 8 + r() * 16);
+    const light = r() > 0.5;
+    g.addColorStop(0,   light ? 'rgba(40,70,40,0.06)' : 'rgba(0,0,0,0.08)');
+    g.addColorStop(1,   'rgba(0,0,0,0)');
+    fc.fillStyle = g;
+    fc.fillRect(0, 0, SZ, SZ);
+  }
+
+  feltPattern = ctx.createPattern(tc, 'repeat');
+}
+
+function buildWoodTexture() {
+  const tw = document.createElement('canvas');
+  tw.width = W; tw.height = H;
+  const wc = tw.getContext('2d');
+  const r = mulberry32(0xCAFEBABE);
+
+  // Base walnut
+  const base = wc.createLinearGradient(0, 0, W, H);
+  base.addColorStop(0,    '#3a1c00');
+  base.addColorStop(0.3,  '#4e2600');
+  base.addColorStop(0.6,  '#442000');
+  base.addColorStop(1,    '#321600');
+  wc.fillStyle = base;
+  wc.fillRect(0, 0, W, H);
+
+  // Grain lines (sinusoidal, horizontal-ish)
+  for (let i = 0; i < 60; i++) {
+    const baseY  = r() * H;
+    const freq   = 0.008 + r() * 0.018;
+    const amp    = 4 + r() * 14;
+    const phase  = r() * Math.PI * 2;
+    const dark   = r() > 0.4;
+    const alpha  = 0.08 + r() * 0.22;
+    const col    = dark
+      ? `rgba(${10+Math.floor(r()*15)},${4+Math.floor(r()*8)},0,${alpha})`
+      : `rgba(${80+Math.floor(r()*40)},${30+Math.floor(r()*20)},0,${alpha * 0.5})`;
+    wc.strokeStyle = col;
+    wc.lineWidth   = 0.4 + r() * 1.8;
+    wc.beginPath();
+    wc.moveTo(-10, baseY);
+    for (let x = -10; x < W + 10; x += 4) {
+      const y = baseY + Math.sin(x * freq + phase) * amp + Math.sin(x * freq * 3.1 + phase) * (amp * 0.25);
+      wc.lineTo(x, y);
+    }
+    wc.stroke();
+  }
+
+  // Edge darkening
+  const ed = wc.createRadialGradient(W/2, H/2, Math.min(W,H)*0.3, W/2, H/2, Math.max(W,H)*0.75);
+  ed.addColorStop(0, 'rgba(0,0,0,0)');
+  ed.addColorStop(1, 'rgba(0,0,0,0.45)');
+  wc.fillStyle = ed;
+  wc.fillRect(0, 0, W, H);
+
+  woodImg = tw;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Game state
+// ══════════════════════════════════════════════════════════════════════════════
 let ballsHeld, ballsWon, balls, power, charging, gameOver;
-let tulipOpen, tulipTimer, effects, frameCount;
+let tulipOpen, tulipTimer, effects;
 
 function restart() {
   ballsHeld  = 25;
@@ -205,313 +339,192 @@ function restart() {
   tulipOpen  = false;
   tulipTimer = 0;
   effects    = [];
-  frameCount = 0;
-  document.getElementById('restart-btn').style.display = 'none';
-  document.getElementById('message').textContent = '';
+  document.getElementById('restart-btn').style.display  = 'none';
+  document.getElementById('sbar-restart').style.display = 'none';
+  document.getElementById('message').textContent  = '';
+  document.getElementById('sbar-msg').textContent = '';
   updateUI();
 }
 
-// ── Layout definitions ────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Layout
+// ══════════════════════════════════════════════════════════════════════════════
 let nails, bumpers, sideWins, topWin, tulip;
 
 function initLayout() {
-  nails    = [];
-  bumpers  = [];
-  sideWins = [];
+  nails = []; bumpers = []; sideWins = [];
 
-  // ── Top scatter nails (天釘) ──
-  const tn = [
-    { x: BCX - 70, y: BY + 38 },
-    { x: BCX - 42, y: BY + 30 },
-    { x: BCX - 14, y: BY + 27 },
-    { x: BCX + 14, y: BY + 27 },
-    { x: BCX + 42, y: BY + 30 },
-    { x: BCX + 70, y: BY + 38 },
-    { x: BCX - 55, y: BY + 56 },
-    { x: BCX - 28, y: BY + 50 },
-    { x: BCX,      y: BY + 48 },
-    { x: BCX + 28, y: BY + 50 },
-    { x: BCX + 55, y: BY + 56 },
+  // Top scatter nails (天釘)
+  const topNailDef = [
+    [BCX-68,BY+37],[BCX-40,BY+29],[BCX-12,BY+26],[BCX+12,BY+26],[BCX+40,BY+29],[BCX+68,BY+37],
+    [BCX-54,BY+55],[BCX-26,BY+49],[BCX,BY+47],[BCX+26,BY+49],[BCX+54,BY+55],
   ];
-  tn.forEach(n => nails.push({ x: n.x, y: n.y, r: NAIL_R }));
+  topNailDef.forEach(([x,y]) => nails.push({ x, y, r: NAIL_R }));
 
-  // ── Main staggered nail grid ──
-  const NSX  = BX + 24;   // nail area left
-  const NSY  = BY + 82;   // nail area top
-  const CSP  = 30;        // col spacing
-  const RSP  = 30;        // row spacing
-  const ROWS = 13;
-  const COLS = 9;
-
-  for (let row = 0; row < ROWS; row++) {
-    const even   = row % 2 === 0;
-    const cols   = even ? COLS : COLS - 1;
-    const offX   = even ? 0 : CSP / 2;
-    for (let col = 0; col < cols; col++) {
-      const x = NSX + offX + col * CSP;
-      const y = NSY + row * RSP;
-      if (x < BX + 6 || x > BX + BW - 6) continue;
+  // Main staggered grid
+  const NSX=BX+24, NSY=BY+80, CSP=30, RSP=30, ROWS=13, COLS=9;
+  for (let row=0; row<ROWS; row++) {
+    const even=row%2===0, cols=even?COLS:COLS-1, offX=even?0:CSP/2;
+    for (let col=0; col<cols; col++) {
+      const x=NSX+offX+col*CSP, y=NSY+row*RSP;
+      if (x<BX+5||x>BX+BW-5) continue;
       nails.push({ x, y, r: NAIL_R });
     }
   }
 
-  // ── Circular bumpers ──
-  bumpers.push({ x: BCX - 58, y: BY + 220, r: BUMPER_R, flash: 0 });
-  bumpers.push({ x: BCX,      y: BY + 195, r: BUMPER_R, flash: 0 });
-  bumpers.push({ x: BCX + 58, y: BY + 220, r: BUMPER_R, flash: 0 });
+  // Bumpers
+  bumpers.push({ x:BCX-57, y:BY+218, r:BUMPER_R, flash:0 });
+  bumpers.push({ x:BCX,    y:BY+193, r:BUMPER_R, flash:0 });
+  bumpers.push({ x:BCX+57, y:BY+218, r:BUMPER_R, flash:0 });
 
-  // ── Extra guide nails below bumpers ──
-  const en = [
-    { x: BCX - 92, y: BY + 268 },
-    { x: BCX - 58, y: BY + 288 },
-    { x: BCX - 24, y: BY + 272 },
-    { x: BCX + 24, y: BY + 272 },
-    { x: BCX + 58, y: BY + 288 },
-    { x: BCX + 92, y: BY + 268 },
-    // funnel toward bottom
-    { x: BCX - 56, y: BY + 500 },
-    { x: BCX + 56, y: BY + 500 },
-    { x: BCX - 84, y: BY + 524 },
-    { x: BCX + 84, y: BY + 524 },
-  ];
-  en.forEach(n => nails.push({ x: n.x, y: n.y, r: NAIL_R }));
+  // Extra guide nails
+  [[BCX-90,BY+265],[BCX-56,BY+285],[BCX-22,BY+268],
+   [BCX+22,BY+268],[BCX+56,BY+285],[BCX+90,BY+265],
+   [BCX-56,BY+498],[BCX+56,BY+498],
+   [BCX-84,BY+522],[BCX+84,BY+522]
+  ].forEach(([x,y]) => nails.push({ x, y, r: NAIL_R }));
 
-  // ── Top win hole (天入賞口) ──
-  topWin = { x: BCX, y: BY + 32, r: 11, reward: 10, flash: 0 };
+  // Top win hole
+  topWin = { x:BCX, y:BY+30, r:11, reward:10, flash:0 };
 
-  // ── Side win holes (入賞口) ──
-  sideWins.push({ x: BX + 22,       y: BY + 472, w: 30, h: 18, reward: 5, flash: 0 });
-  sideWins.push({ x: BX + BW - 52,  y: BY + 472, w: 30, h: 18, reward: 5, flash: 0 });
+  // Side win holes
+  sideWins.push({ x:BX+22,       y:BY+470, w:30, h:18, reward:5, flash:0 });
+  sideWins.push({ x:BX+BW-52,    y:BY+470, w:30, h:18, reward:5, flash:0 });
 
-  // ── Tulip (チューリップ) ──
-  tulip = { x: BCX, y: BY + 514, w: 30, h: 18, reward: 15, flash: 0 };
+  // Tulip
+  tulip = { x:BCX, y:BY+512, w:30, h:18, reward:15, flash:0 };
 }
 
-// ── Collision helper ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Physics helper
+// ══════════════════════════════════════════════════════════════════════════════
 function resolveCircle(ball, cx, cy, cr, rest) {
-  const dx   = ball.x - cx;
-  const dy   = ball.y - cy;
-  const d2   = dx * dx + dy * dy;
-  const minD = BALL_R + cr;
-  if (d2 >= minD * minD || d2 < 0.0001) return false;
-  const dist = Math.sqrt(d2);
-  const nx   = dx / dist;
-  const ny   = dy / dist;
-  // push out
-  ball.x = cx + nx * minD;
-  ball.y = cy + ny * minD;
-  // reflect
-  const dot = ball.vx * nx + ball.vy * ny;
-  if (dot < 0) {
-    ball.vx -= (1 + rest) * dot * nx;
-    ball.vy -= (1 + rest) * dot * ny;
-    // tiny random spin
-    ball.vx += (Math.random() - 0.5) * 0.35;
+  const dx=ball.x-cx, dy=ball.y-cy, d2=dx*dx+dy*dy, md=BALL_R+cr;
+  if (d2>=md*md||d2<0.0001) return false;
+  const d=Math.sqrt(d2), nx=dx/d, ny=dy/d;
+  ball.x=cx+nx*md; ball.y=cy+ny*md;
+  const dot=ball.vx*nx+ball.vy*ny;
+  if (dot<0) {
+    ball.vx-=(1+rest)*dot*nx;
+    ball.vy-=(1+rest)*dot*ny;
+    ball.vx+=(Math.random()-0.5)*0.35;
   }
   return true;
 }
 
-// ── Input ─────────────────────────────────────────────────────────────────────
-let spaceHeld = false;
-let mouseHeld = false;
-
+// ══════════════════════════════════════════════════════════════════════════════
+//  Input
+// ══════════════════════════════════════════════════════════════════════════════
+let spaceHeld=false, mouseHeld=false;
 function canLaunch() {
-  return !gameOver && ballsHeld > 0 &&
-         balls.filter(b => b.active).length < MAX_ACTIVE;
+  return !gameOver && ballsHeld>0 && balls.filter(b=>b.active).length<MAX_ACT;
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code !== 'Space' || e.repeat) return;
+  if (e.code!=='Space'||e.repeat) return;
   e.preventDefault();
-  if (canLaunch()) { charging = true; spaceHeld = true; }
+  if (canLaunch()) { charging=true; spaceHeld=true; }
 });
 document.addEventListener('keyup', e => {
-  if (e.code !== 'Space') return;
-  e.preventDefault();
-  spaceHeld = false;
-  if (charging) fire();
+  if (e.code!=='Space') return; e.preventDefault();
+  spaceHeld=false; if (charging) fire();
 });
-
-canvas.addEventListener('mousedown', e => {
-  if (canLaunch()) { charging = true; mouseHeld = true; }
-});
-canvas.addEventListener('mouseup', () => {
-  mouseHeld = false;
-  if (charging) fire();
-});
-canvas.addEventListener('touchstart', e => {
-  e.preventDefault();
-  if (canLaunch()) charging = true;
-}, { passive: false });
-canvas.addEventListener('touchend', e => {
-  e.preventDefault();
-  if (charging) fire();
-}, { passive: false });
+canvas.addEventListener('mousedown', () => { if (canLaunch()) { charging=true; mouseHeld=true; } });
+canvas.addEventListener('mouseup',   () => { mouseHeld=false; if (charging) fire(); });
+canvas.addEventListener('touchstart', e => { e.preventDefault(); if (canLaunch()) charging=true; }, { passive:false });
+canvas.addEventListener('touchend',   e => { e.preventDefault(); if (charging) fire(); },            { passive:false });
 
 function fire() {
-  if (!charging) return;
-  charging = false;
-  if (!canLaunch()) { power = 0; return; }
-  const p = power;
-  power = 0;
-  ballsHeld--;
-  // Entry point: top-right of board
-  // Low power → weak leftward push (stays right)
-  // High power → strong leftward (reaches center/left)
-  balls.push({
-    x:      BX + BW - 6,
-    y:      BY + 18,
-    vx:     -(0.7 + p * 4.5),
-    vy:     0.4,
-    active: true,
-    age:    0,
-  });
+  if (!charging) return; charging=false;
+  if (!canLaunch()) { power=0; return; }
+  const p=power; power=0; ballsHeld--;
+  balls.push({ x:BX+BW-6, y:BY+18, vx:-(0.7+p*4.5), vy:0.4, active:true, age:0 });
   updateUI();
 }
 
-// ── Game update ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Update
+// ══════════════════════════════════════════════════════════════════════════════
 function update() {
-  frameCount++;
+  if (charging && (spaceHeld||mouseHeld)) power=Math.min(1, power+0.016);
+  if (tulipOpen && --tulipTimer<=0) { tulipOpen=false; tulipTimer=0; }
 
-  // Charge power meter
-  if (charging && (spaceHeld || mouseHeld)) {
-    power = Math.min(1, power + 0.016);
-  }
-
-  // Tulip timer countdown
-  if (tulipOpen && --tulipTimer <= 0) {
-    tulipOpen  = false;
-    tulipTimer = 0;
-  }
-
-  // Update each ball
-  for (let i = balls.length - 1; i >= 0; i--) {
-    const b = balls[i];
-    if (!b.active) continue;
-
+  for (let i=balls.length-1; i>=0; i--) {
+    const b=balls[i]; if (!b.active) continue;
     b.age++;
+    b.vy+=GRAVITY; b.vx*=DAMPING; b.vy*=DAMPING;
+    const spd=Math.hypot(b.vx,b.vy);
+    if (spd>MAX_SPD) { b.vx=b.vx/spd*MAX_SPD; b.vy=b.vy/spd*MAX_SPD; }
+    b.x+=b.vx; b.y+=b.vy;
 
-    // Gravity + damping
-    b.vy += GRAVITY;
-    b.vx *= DAMPING;
-    b.vy *= DAMPING;
+    if (b.x-BALL_R<BX)      { b.x=BX+BALL_R;      b.vx= Math.abs(b.vx)*REST_WALL; }
+    if (b.x+BALL_R>BX+BW)   { b.x=BX+BW-BALL_R;   b.vx=-Math.abs(b.vx)*REST_WALL; }
+    if (b.y-BALL_R<BY)       { b.y=BY+BALL_R;       b.vy= Math.abs(b.vy)*REST_WALL; }
 
-    // Clamp speed
-    const spd = Math.hypot(b.vx, b.vy);
-    if (spd > MAX_SPEED) { b.vx = b.vx / spd * MAX_SPEED; b.vy = b.vy / spd * MAX_SPEED; }
+    for (const n of nails)    resolveCircle(b,n.x,n.y,n.r,REST_NAIL);
+    for (const bmp of bumpers) if (resolveCircle(b,bmp.x,bmp.y,bmp.r,REST_BMP)) bmp.flash=15;
 
-    // Move
-    b.x += b.vx;
-    b.y += b.vy;
-
-    // Wall collisions
-    if (b.x - BALL_R < BX)       { b.x = BX + BALL_R;       b.vx =  Math.abs(b.vx) * REST_WALL; }
-    if (b.x + BALL_R > BX + BW)  { b.x = BX + BW - BALL_R;  b.vx = -Math.abs(b.vx) * REST_WALL; }
-    if (b.y - BALL_R < BY)       { b.y = BY + BALL_R;        b.vy =  Math.abs(b.vy) * REST_WALL; }
-
-    // Nail collisions
-    for (const n of nails) resolveCircle(b, n.x, n.y, n.r, REST_NAIL);
-
-    // Bumper collisions
-    for (const bmp of bumpers) {
-      if (resolveCircle(b, bmp.x, bmp.y, bmp.r, REST_BUMPER)) {
-        bmp.flash = 14;
-      }
+    // Top win
+    if (Math.hypot(b.x-topWin.x, b.y-topWin.y) < topWin.r+BALL_R-3) {
+      award(topWin.reward,b.x,b.y,'天入賞！'); topWin.flash=25; b.active=false; continue;
     }
 
-    // ── Pocket checks ──
-
-    // Top win hole
-    const dtx = b.x - topWin.x, dty = b.y - topWin.y;
-    if (Math.hypot(dtx, dty) < topWin.r + BALL_R - 3) {
-      award(topWin.reward, b.x, b.y, '天入賞！');
-      topWin.flash = 24;
-      b.active = false;
-      continue;
-    }
-
-    // Side win holes
-    let caught = false;
+    // Side wins
+    let caught=false;
     for (const sw of sideWins) {
-      if (b.x > sw.x && b.x < sw.x + sw.w &&
-          b.y > sw.y && b.y < sw.y + sw.h) {
-        award(sw.reward, b.x, b.y, '入賞！');
-        sw.flash = 22;
-        openTulip();
-        b.active = false;
-        caught = true;
-        break;
+      if (b.x>sw.x&&b.x<sw.x+sw.w&&b.y>sw.y&&b.y<sw.y+sw.h) {
+        award(sw.reward,b.x,b.y,'入賞！'); sw.flash=22; openTulip(); b.active=false; caught=true; break;
       }
     }
     if (caught) continue;
 
     // Tulip
-    const tw = tulipOpen ? tulip.w : 10;
-    if (b.x > tulip.x - tw && b.x < tulip.x + tw &&
-        b.y > tulip.y      && b.y < tulip.y + tulip.h) {
-      award(tulip.reward, b.x, b.y, tulipOpen ? 'チューリップ！' : '入賞');
-      tulip.flash = tulipOpen ? 34 : 16;
-      b.active = false;
-      continue;
+    const tw2=tulipOpen?tulip.w:10;
+    if (b.x>tulip.x-tw2&&b.x<tulip.x+tw2&&b.y>tulip.y&&b.y<tulip.y+tulip.h) {
+      award(tulip.reward,b.x,b.y,tulipOpen?'チューリップ！':'入賞');
+      tulip.flash=tulipOpen?36:16; b.active=false; continue;
     }
 
-    // Drain
-    if (b.y > BY + BH) {
-      b.active = false;
-      continue;
-    }
-
-    // Safety: remove very slow stuck balls
-    if (b.age > 400 && spd < 0.6) {
-      b.active = false;
-    }
+    if (b.y>BY+BH) { b.active=false; continue; }
+    if (b.age>420 && spd<0.7) { b.active=false; }
   }
 
-  // Cleanup
-  balls = balls.filter(b => b.active);
+  balls=balls.filter(b=>b.active);
+  bumpers.forEach(bmp=>{ if(bmp.flash>0) bmp.flash--; });
+  sideWins.forEach(sw=> { if(sw.flash>0)  sw.flash--; });
+  if (topWin.flash>0) topWin.flash--;
+  if (tulip.flash>0)  tulip.flash--;
+  effects=effects.filter(e=>e.life>0);
+  effects.forEach(e=>{ e.life--; e.y-=0.55; });
 
-  // Flash timers
-  bumpers.forEach(bmp => { if (bmp.flash > 0) bmp.flash--; });
-  sideWins.forEach(sw  => { if (sw.flash > 0) sw.flash--; });
-  if (topWin.flash > 0) topWin.flash--;
-  if (tulip.flash  > 0) tulip.flash--;
-
-  // Effects
-  effects = effects.filter(e => e.life > 0);
-  effects.forEach(e => { e.life--; e.y -= 0.6; });
-
-  // Game over
-  if (!gameOver && ballsHeld <= 0 && balls.length === 0) {
-    gameOver = true;
-    const msg = ballsWon >= 100 ? '大当たり！すごい！' :
-                ballsWon >=  50 ? 'よくできました！' :
-                ballsWon >=  25 ? 'ちょうどトントン' : 'またどうぞ！';
-    document.getElementById('message').textContent = msg;
-    document.getElementById('restart-btn').style.display = 'block';
+  if (!gameOver && ballsHeld<=0 && balls.length===0) {
+    gameOver=true;
+    const msg = ballsWon>=100?'大当たり！すごい！':ballsWon>=50?'よくできました！':ballsWon>=25?'ちょうどトントン':'またどうぞ！';
+    document.getElementById('message').textContent  = msg;
+    document.getElementById('sbar-msg').textContent = msg;
+    document.getElementById('restart-btn').style.display  = 'block';
+    document.getElementById('sbar-restart').style.display = 'inline-block';
   }
-
   updateUI();
 }
 
-function openTulip() {
-  tulipOpen  = true;
-  tulipTimer = 200; // ≈3.3s at 60fps
+function openTulip() { tulipOpen=true; tulipTimer=200; }
+function award(count,x,y,label) {
+  const n=Math.max(1,Math.round(count));
+  ballsWon+=n; ballsHeld+=n;
+  effects.push({ x, y,      text:`+${n}`, life:55, color:'#ffd700' });
+  effects.push({ x, y:y-22, text:label,   life:80, color:'#ff8800' });
 }
 
-function award(count, x, y, label) {
-  const n = Math.max(1, Math.round(count));
-  ballsWon  += n;
-  ballsHeld += n;
-  effects.push({ x, y,      text: `+${n}`,  life: 55, color: '#ffd700' });
-  effects.push({ x, y: y-20, text: label,    life: 75, color: '#ff6600' });
-}
-
-// ── Rendering ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  Render
+// ══════════════════════════════════════════════════════════════════════════════
 function render() {
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0,0,W,H);
   drawFrame();
   drawBoard();
-  drawRail();
+  drawRailChannel();
+  drawDecorativeLines();
   drawNails();
   drawBumpers();
   drawTopWin();
@@ -521,478 +534,576 @@ function render() {
   drawBalls();
   drawEffects();
   drawPowerIndicator();
+  drawGlassOverlay();
   if (gameOver) drawGameOver();
 }
 
-// ─ Frame (wood border) ──────────────────────────────────────────────────────
+// ─── Frame ────────────────────────────────────────────────────────────────────
 function drawFrame() {
-  // Main wood fill
-  const wg = ctx.createLinearGradient(0, 0, W, H);
-  wg.addColorStop(0,   '#6a3800');
-  wg.addColorStop(0.25,'#8a5200');
-  wg.addColorStop(0.5, '#7a4600');
-  wg.addColorStop(0.75,'#8a5200');
-  wg.addColorStop(1,   '#5a2c00');
-  ctx.fillStyle = wg;
-  ctx.fillRect(0, 0, W, H);
+  // Wood background from pre-rendered texture
+  ctx.drawImage(woodImg, 0, 0);
 
-  // Wood grain lines
-  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  // Dark inset shadow around board area
+  const inset = ctx.createLinearGradient(BX-8, BY-8, BX+BW+8, BY+BH+8);
+  inset.addColorStop(0,   'rgba(0,0,0,0.0)');
+  inset.addColorStop(0.05,'rgba(0,0,0,0.3)');
+  inset.addColorStop(0.95,'rgba(0,0,0,0.3)');
+  inset.addColorStop(1,   'rgba(0,0,0,0.0)');
+
+  // Outer chrome bezel
+  ctx.strokeStyle = '#b08030';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(BX-5, BY-5, BW+10, BH+10);
+  ctx.strokeStyle = '#7a5820';
   ctx.lineWidth = 1;
-  for (let x = 8; x < W; x += 14) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 6, H); ctx.stroke();
-  }
+  ctx.strokeRect(BX-8, BY-8, BW+16, BH+16);
 
-  // Inner gold border
-  ctx.strokeStyle = '#b08020';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(BX - 4, BY - 4, BW + 8, BH + 8);
-  ctx.strokeStyle = '#6a4a10';
+  // Bright top bevel
+  ctx.strokeStyle = 'rgba(220,170,60,0.7)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(BX - 7, BY - 7, BW + 14, BH + 14);
+  ctx.beginPath();
+  ctx.moveTo(BX-8, BY-8); ctx.lineTo(BX+BW+8, BY-8);
+  ctx.moveTo(BX-8, BY-8); ctx.lineTo(BX-8, BY+BH+8);
+  ctx.stroke();
 
-  // Corner ornaments
-  const corners = [[BX-7,BY-7],[BX+BW+7,BY-7],[BX-7,BY+BH+7],[BX+BW+7,BY+BH+7]];
-  for (const [cx, cy] of corners) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#c8a030';
-    ctx.fill();
+  // Corner screws
+  const screw_pos = [[BX-6,BY-6],[BX+BW+6,BY-6],[BX-6,BY+BH+6],[BX+BW+6,BY+BH+6]];
+  for (const [sx,sy] of screw_pos) {
+    const sg = ctx.createRadialGradient(sx-1,sy-1,0.5, sx,sy,5);
+    sg.addColorStop(0, '#e0c060');
+    sg.addColorStop(0.5,'#9a7020');
+    sg.addColorStop(1, '#3a2000');
+    ctx.beginPath(); ctx.arc(sx,sy,5,0,Math.PI*2);
+    ctx.fillStyle=sg; ctx.fill();
+    // Slot
+    ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(sx-2.5,sy); ctx.lineTo(sx+2.5,sy); ctx.stroke();
   }
 }
 
-// ─ Board background ──────────────────────────────────────────────────────────
+// ─── Board ────────────────────────────────────────────────────────────────────
 function drawBoard() {
-  // Green felt background
-  const bg = ctx.createLinearGradient(BX, BY, BX + BW, BY + BH);
-  bg.addColorStop(0,   '#001800');
-  bg.addColorStop(0.45,'#002800');
-  bg.addColorStop(1,   '#001400');
-  ctx.fillStyle = bg;
+  // Felt texture
+  ctx.fillStyle = feltPattern;
   ctx.fillRect(BX, BY, BW, BH);
 
-  // Vignette
-  const vg = ctx.createRadialGradient(BCX, BY + BH * 0.45, 80, BCX, BY + BH * 0.45, 220);
-  vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(0,0,0,0.45)');
-  ctx.fillStyle = vg;
-  ctx.fillRect(BX, BY, BW, BH);
+  // Darker border
+  const brd = ctx.createLinearGradient(BX,BY,BX+BW,BY+BH);
+  brd.addColorStop(0,   'rgba(0,0,0,0.35)');
+  brd.addColorStop(0.08,'rgba(0,0,0,0)');
+  brd.addColorStop(0.92,'rgba(0,0,0,0)');
+  brd.addColorStop(1,   'rgba(0,0,0,0.35)');
+  ctx.fillStyle=brd; ctx.fillRect(BX,BY,BW,BH);
 
-  // Subtle horizontal lines
-  ctx.strokeStyle = 'rgba(0, 60, 0, 0.2)';
-  ctx.lineWidth = 0.5;
-  for (let y = BY + 40; y < BY + BH - 10; y += 40) {
-    ctx.beginPath(); ctx.moveTo(BX, y); ctx.lineTo(BX + BW, y); ctx.stroke();
-  }
+  // Overhead light (elliptical bright spot top-center)
+  const light = ctx.createRadialGradient(BCX, BY+80, 20, BCX, BY+120, 180);
+  light.addColorStop(0,   'rgba(255,255,240,0.07)');
+  light.addColorStop(0.5, 'rgba(255,255,240,0.02)');
+  light.addColorStop(1,   'rgba(0,0,0,0)');
+  ctx.fillStyle=light; ctx.fillRect(BX,BY,BW,BH);
 }
 
-// ─ Launch rail ───────────────────────────────────────────────────────────────
-function drawRail() {
-  const rx = RX - RAIL_W / 2;
-  // Rail body
-  const rg = ctx.createLinearGradient(rx, 0, rx + RAIL_W, 0);
-  rg.addColorStop(0,   '#1e0c00');
-  rg.addColorStop(0.4, '#3a1e00');
-  rg.addColorStop(1,   '#1e0c00');
-  ctx.fillStyle = rg;
-  ctx.fillRect(rx, BY, RAIL_W, BH);
+// ─── Rail channel ─────────────────────────────────────────────────────────────
+function drawRailChannel() {
+  const rx = RX-RAIL_W/2;
+  // Rail body with 3D look
+  const rg = ctx.createLinearGradient(rx, 0, rx+RAIL_W, 0);
+  rg.addColorStop(0,   '#100800');
+  rg.addColorStop(0.2, '#2a1600');
+  rg.addColorStop(0.5, '#3a2000');
+  rg.addColorStop(0.8, '#2a1600');
+  rg.addColorStop(1,   '#100800');
+  ctx.fillStyle=rg; ctx.fillRect(rx, BY, RAIL_W, BH);
 
-  ctx.strokeStyle = '#5a3800';
-  ctx.lineWidth = 1;
+  // Side highlight lines (simulating rounded channel)
+  ctx.strokeStyle='rgba(120,80,20,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rx+2,BY); ctx.lineTo(rx+2,BY+BH); ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(rx+RAIL_W-2,BY); ctx.lineTo(rx+RAIL_W-2,BY+BH); ctx.stroke();
+
+  // Rail border
+  ctx.strokeStyle='#5a3810'; ctx.lineWidth=1;
   ctx.strokeRect(rx, BY, RAIL_W, BH);
 
-  // Tick marks on rail
-  ctx.strokeStyle = 'rgba(90,56,0,0.6)';
-  ctx.lineWidth = 0.5;
-  for (let y = BY + 20; y < BY + BH - 40; y += 30) {
-    ctx.beginPath();
-    ctx.moveTo(rx + 3, y); ctx.lineTo(rx + RAIL_W - 3, y);
-    ctx.stroke();
+  // Tick marks
+  ctx.strokeStyle='rgba(80,50,10,0.4)'; ctx.lineWidth=0.5;
+  for (let y=BY+25; y<BY+BH-45; y+=28) {
+    ctx.beginPath(); ctx.moveTo(rx+3,y); ctx.lineTo(rx+RAIL_W-3,y); ctx.stroke();
   }
 
-  // Plunger handle (bottom of rail)
-  const hy = BY + BH - 40;
-  const hg = ctx.createLinearGradient(rx, hy, rx + RAIL_W, hy);
-  hg.addColorStop(0,   '#3a1a00');
-  hg.addColorStop(0.5, '#6a3600');
-  hg.addColorStop(1,   '#3a1a00');
-  ctx.fillStyle = hg;
-  ctx.fillRect(rx + 1, hy, RAIL_W - 2, 38);
-  ctx.strokeStyle = '#9a6820';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(rx + 1, hy, RAIL_W - 2, 38);
+  // Plunger handle
+  const hy = BY+BH-44;
+  const hg = ctx.createLinearGradient(rx, hy, rx+RAIL_W, hy);
+  hg.addColorStop(0,   '#281200');
+  hg.addColorStop(0.3, '#4e2800');
+  hg.addColorStop(0.7, '#5a3000');
+  hg.addColorStop(1,   '#281200');
+  ctx.fillStyle=hg; ctx.fillRect(rx+1, hy, RAIL_W-2, 42);
+  ctx.strokeStyle='#9a6820'; ctx.lineWidth=1.5;
+  ctx.strokeRect(rx+1, hy, RAIL_W-2, 42);
 
-  ctx.fillStyle = '#c89820';
-  ctx.font = '8px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('発射', RX, hy + 19);
-}
-
-// ─ Power indicator ────────────────────────────────────────────────────────────
-function drawPowerIndicator() {
-  if (!charging && power === 0) return;
-  const rx  = RX - RAIL_W / 2;
-  const hy  = BY + BH - 40;
-  const ph  = Math.round(38 * power);
-  const col = power < 0.35 ? '#00bb00' : power < 0.7 ? '#bbbb00' : '#cc2200';
-  ctx.fillStyle = col;
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(rx + 2, hy + 38 - ph, RAIL_W - 4, ph);
-  ctx.globalAlpha = 1;
-  // Glow
-  if (power > 0.8) {
-    ctx.shadowColor = '#ff0000';
-    ctx.shadowBlur  = 8;
-    ctx.fillRect(rx + 2, hy, RAIL_W - 4, 2);
-    ctx.shadowBlur  = 0;
+  // Handle knurling
+  ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=0.5;
+  for (let yy=hy+5; yy<hy+38; yy+=5) {
+    ctx.beginPath(); ctx.moveTo(rx+3,yy); ctx.lineTo(rx+RAIL_W-3,yy); ctx.stroke();
   }
+
+  ctx.fillStyle='#c8a040';
+  ctx.font='bold 8px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('発射', RX, hy+21);
 }
 
-// ─ Nails ─────────────────────────────────────────────────────────────────────
+// ─── Decorative lines on board ────────────────────────────────────────────────
+function drawDecorativeLines() {
+  // Outer lane guide lines (thin golden lines left/right)
+  ctx.strokeStyle='rgba(180,130,20,0.25)'; ctx.lineWidth=1;
+  // Left guide
+  ctx.beginPath(); ctx.moveTo(BX+8,BY+70); ctx.lineTo(BX+8,BY+BH-30); ctx.stroke();
+  // Right guide
+  ctx.beginPath(); ctx.moveTo(BX+BW-8,BY+70); ctx.lineTo(BX+BW-8,BY+BH-30); ctx.stroke();
+
+  // Separator line above pocket area
+  ctx.strokeStyle='rgba(150,100,20,0.3)'; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(BX+4,BY+455); ctx.lineTo(BX+BW-4,BY+455); ctx.stroke();
+
+  // Bottom pocket separator
+  ctx.beginPath(); ctx.moveTo(BX+4,BY+BH-30); ctx.lineTo(BX+BW-4,BY+BH-30); ctx.stroke();
+}
+
+// ─── Nails ────────────────────────────────────────────────────────────────────
 function drawNails() {
   for (const n of nails) {
-    // Shadow
+    // Cast shadow
     ctx.beginPath();
-    ctx.arc(n.x + 1, n.y + 1, n.r + 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fill();
+    ctx.ellipse(n.x+1.2, n.y+n.r+1, n.r*1.3, n.r*0.45, 0, 0, Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.38)'; ctx.fill();
 
-    // Brass gradient
-    const ng = ctx.createRadialGradient(n.x - 1, n.y - 1.2, 0.5, n.x, n.y, n.r);
-    ng.addColorStop(0,   '#ffe898');
-    ng.addColorStop(0.45,'#d4a020');
-    ng.addColorStop(1,   '#7a5000');
+    // Nail body – cylindrical brass
+    const ng = ctx.createRadialGradient(n.x-n.r*0.42, n.y-n.r*0.42, 0.3, n.x, n.y, n.r);
+    ng.addColorStop(0,    '#fff0b0');   // bright highlight
+    ng.addColorStop(0.18, '#e8c048');   // warm gold
+    ng.addColorStop(0.5,  '#c09020');   // mid brass
+    ng.addColorStop(0.78, '#8a6010');   // shadow side
+    ng.addColorStop(1,    '#3a2200');   // deep shadow
+    ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+    ctx.fillStyle=ng; ctx.fill();
+
+    // Key-light highlight arc (top-left)
+    ctx.strokeStyle='rgba(255,240,160,0.75)'; ctx.lineWidth=0.9;
     ctx.beginPath();
-    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-    ctx.fillStyle = ng;
-    ctx.fill();
+    ctx.arc(n.x-0.4, n.y-0.4, n.r-1.1, Math.PI*1.0, Math.PI*1.75);
+    ctx.stroke();
+
+    // Tiny specular point
+    ctx.beginPath(); ctx.arc(n.x-n.r*0.38, n.y-n.r*0.38, 0.6, 0, Math.PI*2);
+    ctx.fillStyle='rgba(255,255,220,0.9)'; ctx.fill();
   }
 }
 
-// ─ Bumpers (丸障害釘) ─────────────────────────────────────────────────────────
+// ─── Bumpers ──────────────────────────────────────────────────────────────────
 function drawBumpers() {
   for (const b of bumpers) {
-    const fl = b.flash > 0;
+    const fl = b.flash>0;
+    if (fl) { ctx.shadowColor='#ff6600'; ctx.shadowBlur=20; }
 
-    // Outer ring
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r + 4, 0, Math.PI * 2);
-    ctx.fillStyle = fl ? '#aa5500' : '#3c0000';
-    ctx.fill();
-    ctx.strokeStyle = fl ? '#ffcc00' : '#880000';
-    ctx.lineWidth = 2;
+    // Base plate (chrome ring)
+    const plateG = ctx.createRadialGradient(b.x-3, b.y-3, 1, b.x, b.y, b.r+6);
+    plateG.addColorStop(0,    fl?'#ffe0a0':'#c0c0c0');
+    plateG.addColorStop(0.35, fl?'#d08000':'#808080');
+    plateG.addColorStop(0.7,  fl?'#804000':'#404040');
+    plateG.addColorStop(1,    '#181818');
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r+6, 0, Math.PI*2);
+    ctx.fillStyle=plateG; ctx.fill();
+
+    // Chrome ring highlight
+    ctx.strokeStyle = fl?'rgba(255,200,50,0.8)':'rgba(240,240,240,0.55)';
+    ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(b.x-1.5, b.y-2, b.r+4, Math.PI*0.85, Math.PI*1.9);
     ctx.stroke();
 
-    // Body
-    const bg = ctx.createRadialGradient(b.x - 4, b.y - 4, 2, b.x, b.y, b.r);
-    bg.addColorStop(0, fl ? '#ff8800' : '#cc2200');
-    bg.addColorStop(1, fl ? '#993300' : '#440000');
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fillStyle = bg;
-    ctx.fill();
+    // Red dome body
+    const dg = ctx.createRadialGradient(b.x-4, b.y-5, 1, b.x, b.y, b.r);
+    dg.addColorStop(0,   fl?'#ff9040':'#ff4820');
+    dg.addColorStop(0.4, fl?'#dd4000':'#cc2000');
+    dg.addColorStop(0.8, fl?'#882000':'#880000');
+    dg.addColorStop(1,   '#3a0000');
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fillStyle=dg; ctx.fill();
 
-    // White stripe
-    ctx.strokeStyle = fl ? '#ffffff' : 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r - 4, -Math.PI * 0.75, -Math.PI * 0.25);
+    // White score ring
+    ctx.strokeStyle=fl?'rgba(255,255,200,0.9)':'rgba(255,255,255,0.55)';
+    ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r-3.5, 0, Math.PI*2);
     ctx.stroke();
 
-    // Glow on hit
+    // Dome highlight (gloss)
+    const hl = ctx.createRadialGradient(b.x-4.5, b.y-5.5, 0.5, b.x-4, b.y-5, b.r*0.85);
+    hl.addColorStop(0,   'rgba(255,255,255,0.55)');
+    hl.addColorStop(0.4, 'rgba(255,255,255,0.15)');
+    hl.addColorStop(1,   'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fillStyle=hl; ctx.fill();
+
+    ctx.shadowBlur=0;
+
+    // Hit flash glow dot
     if (fl) {
-      ctx.shadowColor = '#ff6600';
-      ctx.shadowBlur  = 16;
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-      ctx.strokeStyle = '#ffcc00';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.shadowBlur  = 0;
+      ctx.shadowColor='#ffcc00'; ctx.shadowBlur=14;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+      ctx.fillStyle='#ffff88'; ctx.fill();
+      ctx.shadowBlur=0;
     }
   }
 }
 
-// ─ Top win hole (天入賞口) ────────────────────────────────────────────────────
+// ─── Top win hole ─────────────────────────────────────────────────────────────
 function drawTopWin() {
-  const tw = topWin;
-  const fl = tw.flash > 0;
+  const tw=topWin, fl=tw.flash>0;
+  if (fl) { ctx.shadowColor='#ffaa00'; ctx.shadowBlur=18; }
 
-  // Outer ring
-  ctx.beginPath();
-  ctx.arc(tw.x, tw.y, tw.r + 3, 0, Math.PI * 2);
-  ctx.fillStyle = fl ? '#cc8800' : '#4a0000';
-  ctx.fill();
-  ctx.strokeStyle = fl ? '#ffee00' : '#880000';
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  // Outer bezel
+  const og = ctx.createRadialGradient(tw.x-3, tw.y-3, 1, tw.x, tw.y, tw.r+5);
+  og.addColorStop(0,   fl?'#ffc060':'#b08030');
+  og.addColorStop(0.5, fl?'#c06000':'#7a5020');
+  og.addColorStop(1,   '#2a1800');
+  ctx.beginPath(); ctx.arc(tw.x, tw.y, tw.r+5, 0, Math.PI*2);
+  ctx.fillStyle=og; ctx.fill();
 
-  // Inner hole
-  const hg = ctx.createRadialGradient(tw.x - 2, tw.y - 3, 1, tw.x, tw.y, tw.r);
-  hg.addColorStop(0, fl ? '#ff6600' : '#880000');
-  hg.addColorStop(1, fl ? '#440000' : '#220000');
-  ctx.beginPath();
-  ctx.arc(tw.x, tw.y, tw.r, 0, Math.PI * 2);
-  ctx.fillStyle = hg;
-  ctx.fill();
+  // Hole inside
+  const hg = ctx.createRadialGradient(tw.x-2, tw.y-3, 0.5, tw.x, tw.y, tw.r);
+  hg.addColorStop(0,   fl?'#ff8800':'#aa1100');
+  hg.addColorStop(0.6, fl?'#660000':'#440000');
+  hg.addColorStop(1,   '#110000');
+  ctx.beginPath(); ctx.arc(tw.x, tw.y, tw.r, 0, Math.PI*2);
+  ctx.fillStyle=hg; ctx.fill();
 
-  // Label
-  if (fl) { ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 10; }
-  ctx.fillStyle = fl ? '#ffffff' : '#cc8800';
-  ctx.font = 'bold 9px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  // Label 天
+  ctx.fillStyle=fl?'#ffffff':'#ddaa44';
+  ctx.font='bold 9px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('天', tw.x, tw.y);
-  ctx.shadowBlur = 0;
+  ctx.shadowBlur=0;
 }
 
-// ─ Side win holes (入賞口) ────────────────────────────────────────────────────
+// ─── Side win holes ───────────────────────────────────────────────────────────
 function drawSideWins() {
   for (const sw of sideWins) {
-    const fl = sw.flash > 0;
+    const fl=sw.flash>0;
+    if (fl) { ctx.shadowColor='#ff8800'; ctx.shadowBlur=12; }
 
-    // Frame
-    ctx.fillStyle = fl ? '#cc8800' : '#7a5000';
-    ctx.fillRect(sw.x - 2, sw.y - 2, sw.w + 4, sw.h + 4);
+    // Outer bezel
+    ctx.fillStyle=fl?'#c8a030':'#7a5830';
+    ctx.fillRect(sw.x-2, sw.y-2, sw.w+4, sw.h+4);
 
-    // Hole
-    ctx.fillStyle = fl ? '#ff4400' : '#110000';
+    // Inner hole with gradient
+    const hg=ctx.createLinearGradient(sw.x,sw.y,sw.x,sw.y+sw.h);
+    hg.addColorStop(0, fl?'#aa3300':'#220000');
+    hg.addColorStop(1, '#000000');
+    ctx.fillStyle=hg;
     ctx.fillRect(sw.x, sw.y, sw.w, sw.h);
 
-    ctx.strokeStyle = fl ? '#ffcc00' : '#aa7000';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(sw.x, sw.y, sw.w, sw.h);
+    // Top rim highlight
+    ctx.strokeStyle=fl?'#ffe860':'rgba(220,180,80,0.6)'; ctx.lineWidth=1.2;
+    ctx.beginPath(); ctx.moveTo(sw.x,sw.y); ctx.lineTo(sw.x+sw.w,sw.y); ctx.stroke();
 
-    if (fl) { ctx.shadowColor = '#ff8800'; ctx.shadowBlur = 10; }
-    ctx.fillStyle = fl ? '#ffff00' : '#cc8800';
-    ctx.font = 'bold 9px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('入', sw.x + sw.w / 2, sw.y + sw.h / 2);
-    ctx.shadowBlur = 0;
+    ctx.fillStyle=fl?'#ffee88':'#cc9930';
+    ctx.font='bold 9px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('入', sw.x+sw.w/2, sw.y+sw.h/2);
+    ctx.shadowBlur=0;
   }
 }
 
-// ─ Tulip (チューリップ) ───────────────────────────────────────────────────────
+// ─── Tulip ────────────────────────────────────────────────────────────────────
 function drawTulip() {
-  const t  = tulip;
-  const fl = t.flash > 0;
-  const op = tulipOpen;
+  const t=tulip, fl=t.flash>0, op=tulipOpen;
+  const cx=t.x, top=t.y, bot=t.y+t.h, hw=op?t.w:10;
 
-  const cx   = t.x;
-  const top  = t.y;
-  const bot  = t.y + t.h;
-  const hw   = op ? t.w : 10;   // half-width of opening
+  if (fl||op) { ctx.shadowColor='#ff6600'; ctx.shadowBlur=14; }
 
-  // Left petal
-  ctx.beginPath();
-  if (op) {
-    ctx.moveTo(cx - 3,      bot - 2);
-    ctx.lineTo(cx - hw - 6, bot - t.h / 2);
-    ctx.lineTo(cx - hw,     top + 2);
-    ctx.lineTo(cx - 4,      top + 6);
-  } else {
-    ctx.moveTo(cx - hw, top);
-    ctx.lineTo(cx - 3,  bot);
-    ctx.lineTo(cx,      bot);
-    ctx.lineTo(cx,      top);
+  // Petal color
+  const pc = fl?'#ff8800': op?'#cc2800':'#661800';
+  const sc = fl?'#ffcc00': op?'#ff4400':'#aa2000';
+
+  function petal(sign) {
+    ctx.beginPath();
+    if (op) {
+      ctx.moveTo(cx+sign*3,       bot-2);
+      ctx.quadraticCurveTo(cx+sign*(hw+10), bot-t.h*0.4, cx+sign*hw,     top+3);
+      ctx.lineTo(cx+sign*4, top+7);
+    } else {
+      ctx.moveTo(cx+sign*hw, top);
+      ctx.quadraticCurveTo(cx+sign*hw*0.8, top+t.h*0.6, cx+sign*3, bot);
+      ctx.lineTo(cx, bot);
+    }
+    ctx.closePath();
+    ctx.fillStyle=pc; ctx.fill();
+    ctx.strokeStyle=sc; ctx.lineWidth=1; ctx.stroke();
+
+    // Petal vein
+    ctx.strokeStyle='rgba(255,255,200,0.25)'; ctx.lineWidth=0.6;
+    ctx.beginPath();
+    if (op) ctx.moveTo(cx+sign*4, top+7), ctx.lineTo(cx+sign*(hw-2), top+3);
+    else ctx.moveTo(cx+sign*2, bot-4), ctx.lineTo(cx+sign*(hw*0.6), top+4);
+    ctx.stroke();
   }
-  ctx.closePath();
-  ctx.fillStyle = fl ? '#ff6600' : (op ? '#cc3300' : '#662200');
-  ctx.fill();
-  ctx.strokeStyle = fl ? '#ffcc00' : '#991100';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Right petal (mirror)
-  ctx.beginPath();
-  if (op) {
-    ctx.moveTo(cx + 3,      bot - 2);
-    ctx.lineTo(cx + hw + 6, bot - t.h / 2);
-    ctx.lineTo(cx + hw,     top + 2);
-    ctx.lineTo(cx + 4,      top + 6);
-  } else {
-    ctx.moveTo(cx + hw, top);
-    ctx.lineTo(cx + 3,  bot);
-    ctx.lineTo(cx,      bot);
-    ctx.lineTo(cx,      top);
-  }
-  ctx.closePath();
-  ctx.fillStyle = fl ? '#ff6600' : (op ? '#cc3300' : '#662200');
-  ctx.fill();
-  ctx.strokeStyle = fl ? '#ffcc00' : '#991100';
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  petal(-1); petal(1);
 
   // Center hole
-  ctx.beginPath();
-  ctx.arc(cx, bot - 4, 4.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#000000';
-  ctx.fill();
-  ctx.strokeStyle = op ? '#ff6600' : '#330000';
-  ctx.lineWidth = 1;
+  const cg=ctx.createRadialGradient(cx,bot-5,0.5, cx,bot-5,5.5);
+  cg.addColorStop(0, '#111111');
+  cg.addColorStop(0.7,'#220000');
+  cg.addColorStop(1,  '#440000');
+  ctx.beginPath(); ctx.arc(cx, bot-4, 5, 0, Math.PI*2);
+  ctx.fillStyle=cg; ctx.fill();
+  ctx.strokeStyle=op?'#ff4400':'rgba(100,0,0,0.5)'; ctx.lineWidth=0.8;
   ctx.stroke();
+
+  ctx.shadowBlur=0;
 
   // Label
-  if (fl || op) { ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 8; }
-  ctx.fillStyle = op ? '#ffcc00' : '#664422';
-  ctx.font = '9px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText('チューリップ', cx, top - 2);
-  ctx.shadowBlur = 0;
+  ctx.fillStyle=op?'#ffe860':'#664422';
+  ctx.font='9px serif'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('チューリップ', cx, top-3);
 
-  // Open timer bar
+  // Timer bar
   if (op) {
-    const bw = 62, bx = cx - bw / 2, byy = top - 14;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(bx, byy, bw, 5);
-    const ratio = tulipTimer / 200;
-    const col = ratio > 0.5 ? '#00cc00' : ratio > 0.25 ? '#cccc00' : '#cc0000';
-    ctx.fillStyle = col;
-    ctx.fillRect(bx, byy, bw * ratio, 5);
+    const bw=60, bx=cx-bw/2, by2=top-16;
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bx,by2,bw,5);
+    const ratio=tulipTimer/200;
+    ctx.fillStyle=ratio>0.5?'#00cc00':ratio>0.25?'#cccc00':'#cc2200';
+    ctx.fillRect(bx,by2,bw*ratio,5);
+    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=0.5;
+    ctx.strokeRect(bx,by2,bw,5);
   }
 }
 
-// ─ Drain (アウト口) ───────────────────────────────────────────────────────────
+// ─── Drain ────────────────────────────────────────────────────────────────────
 function drawDrain() {
-  const dw = 48;
-  const dx = BCX - dw / 2;
-  const dy = BY + BH - 20;
-
-  ctx.fillStyle = '#111111';
-  ctx.fillRect(dx, dy, dw, 20);
+  const dw=50, dx=BCX-dw/2, dy=BY+BH-22;
+  const dg=ctx.createLinearGradient(dx,dy,dx+dw,dy+22);
+  dg.addColorStop(0,'#0a0a0a'); dg.addColorStop(1,'#000000');
+  ctx.fillStyle=dg; ctx.fillRect(dx,dy,dw,22);
 
   // Slots
-  ctx.fillStyle = '#000000';
-  for (let i = 0; i < 3; i++) {
-    ctx.fillRect(dx + 5 + i * 14, dy + 4, 8, 12);
+  for (let i=0;i<4;i++) {
+    const sg=ctx.createLinearGradient(dx+5+i*11,dy+3,dx+5+i*11,dy+16);
+    sg.addColorStop(0,'#000000'); sg.addColorStop(1,'#0a0a0a');
+    ctx.fillStyle=sg; ctx.fillRect(dx+5+i*11,dy+3,7,14);
   }
+  ctx.strokeStyle='rgba(60,40,10,0.8)'; ctx.lineWidth=1;
+  ctx.strokeRect(dx,dy,dw,22);
 
-  ctx.strokeStyle = '#2a2a2a';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(dx, dy, dw, 20);
-
-  ctx.fillStyle = '#444444';
-  ctx.font = '8px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText('アウト', BCX, dy + 6);
+  ctx.fillStyle='rgba(80,60,20,0.7)';
+  ctx.font='8px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('アウト', BCX, dy+8);
 }
 
-// ─ Balls ─────────────────────────────────────────────────────────────────────
+// ─── Balls ────────────────────────────────────────────────────────────────────
 function drawBalls() {
   for (const b of balls) {
-    // Shadow
+    // Cast shadow (elliptical)
     ctx.beginPath();
-    ctx.arc(b.x + 2, b.y + 2, BALL_R, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fill();
+    ctx.ellipse(b.x+3, b.y+BALL_R+2, BALL_R*1.6, BALL_R*0.5, 0, 0, Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.fill();
 
-    // Metallic silver
-    const bg = ctx.createRadialGradient(b.x - 1.8, b.y - 2.2, 0.8, b.x, b.y, BALL_R);
-    bg.addColorStop(0,    '#ffffff');
-    bg.addColorStop(0.28, '#e0e0e0');
-    bg.addColorStop(0.65, '#aaaaaa');
-    bg.addColorStop(1,    '#555555');
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, BALL_R, 0, Math.PI * 2);
-    ctx.fillStyle = bg;
-    ctx.fill();
+    // Ambient occlusion ring
+    const ao=ctx.createRadialGradient(b.x,b.y,BALL_R*0.6,b.x,b.y,BALL_R*1.35);
+    ao.addColorStop(0,'rgba(0,0,0,0)'); ao.addColorStop(1,'rgba(0,0,0,0.22)');
+    ctx.beginPath(); ctx.arc(b.x,b.y,BALL_R*1.35,0,Math.PI*2);
+    ctx.fillStyle=ao; ctx.fill();
 
-    // Specular highlight
-    ctx.beginPath();
-    ctx.arc(b.x - 1.5, b.y - 2, 1.8, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fill();
+    // Main diffuse sphere
+    const sg=ctx.createRadialGradient(b.x-1.6,b.y-2.2,0.4, b.x,b.y,BALL_R);
+    sg.addColorStop(0,    '#f8f8f6');   // near-white at lit point
+    sg.addColorStop(0.28, '#d8d8d4');
+    sg.addColorStop(0.58, '#a0a09a');
+    sg.addColorStop(0.82, '#6a6a64');
+    sg.addColorStop(1,    '#2a2a28');
+    ctx.beginPath(); ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
+    ctx.fillStyle=sg; ctx.fill();
+
+    // Broad specular highlight
+    const spec=ctx.createRadialGradient(b.x-1.8,b.y-2.5,0, b.x-1.8,b.y-2.5,BALL_R*0.82);
+    spec.addColorStop(0,  'rgba(255,255,255,0.88)');
+    spec.addColorStop(0.3,'rgba(255,255,255,0.38)');
+    spec.addColorStop(0.7,'rgba(255,255,255,0.08)');
+    spec.addColorStop(1,  'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
+    ctx.fillStyle=spec; ctx.fill();
+
+    // Sharp specular point
+    ctx.beginPath(); ctx.arc(b.x-1.9,b.y-2.6,1.1,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.97)'; ctx.fill();
+
+    // Rim light (opposite side – subtle blue reflection)
+    const rim=ctx.createRadialGradient(b.x+3,b.y+3,BALL_R*0.45, b.x+3,b.y+3,BALL_R*1.1);
+    rim.addColorStop(0, 'rgba(160,190,230,0.13)');
+    rim.addColorStop(1, 'rgba(160,190,230,0)');
+    ctx.beginPath(); ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
+    ctx.fillStyle=rim; ctx.fill();
   }
 }
 
-// ─ Effects (floating text) ────────────────────────────────────────────────────
+// ─── Effects ─────────────────────────────────────────────────────────────────
 function drawEffects() {
   for (const e of effects) {
-    const a = Math.min(1, e.life / 40);
-    ctx.globalAlpha = a;
-    ctx.fillStyle   = e.color || '#ffd700';
-    const sz = 13 + (1 - a) * 5;
-    ctx.font = `bold ${sz}px serif`;
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    if (e.color === '#ffd700') {
-      ctx.shadowColor = '#ff8800';
-      ctx.shadowBlur  = 8;
-    }
+    const a=Math.min(1, e.life/40);
+    ctx.globalAlpha=a;
+    if (e.color==='#ffd700') { ctx.shadowColor='#ff8800'; ctx.shadowBlur=10; }
+    ctx.fillStyle=e.color||'#ffd700';
+    ctx.font=`bold ${12+(1-a)*5}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(e.text, e.x, e.y);
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur=0;
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha=1;
 }
 
-// ─ Game over overlay ──────────────────────────────────────────────────────────
+// ─── Power indicator ──────────────────────────────────────────────────────────
+function drawPowerIndicator() {
+  if (!charging && power===0) return;
+  const rx=RX-RAIL_W/2, hy=BY+BH-44;
+  const ph=Math.round(42*power);
+  const col=power<0.35?'#00aa00':power<0.7?'#aaaa00':'#bb1100';
+  ctx.globalAlpha=0.82;
+  ctx.fillStyle=col;
+  ctx.fillRect(rx+2, hy+42-ph, RAIL_W-4, ph);
+  ctx.globalAlpha=1;
+  if (power>0.78) {
+    ctx.shadowColor='#ff2200'; ctx.shadowBlur=10;
+    ctx.strokeStyle='rgba(255,100,0,0.7)'; ctx.lineWidth=1;
+    ctx.strokeRect(rx+2, hy+42-ph, RAIL_W-4, ph);
+    ctx.shadowBlur=0;
+  }
+}
+
+// ─── Glass overlay ────────────────────────────────────────────────────────────
+function drawGlassOverlay() {
+  // Subtle left-to-right sheen (simulating glass surface)
+  const gl=ctx.createLinearGradient(BX,BY,BX+BW,BY);
+  gl.addColorStop(0,    'rgba(255,255,255,0.04)');
+  gl.addColorStop(0.18, 'rgba(255,255,255,0.09)');
+  gl.addColorStop(0.22, 'rgba(255,255,255,0.03)');
+  gl.addColorStop(0.5,  'rgba(255,255,255,0.0)');
+  gl.addColorStop(1,    'rgba(255,255,255,0.02)');
+  ctx.fillStyle=gl; ctx.fillRect(BX,BY,BW,BH);
+
+  // Top-left corner glare spot
+  const gs=ctx.createRadialGradient(BX+30,BY+25,5, BX+30,BY+25,60);
+  gs.addColorStop(0, 'rgba(255,255,255,0.08)');
+  gs.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle=gs; ctx.fillRect(BX,BY,BW,BH);
+}
+
+// ─── Game over overlay ────────────────────────────────────────────────────────
 function drawGameOver() {
-  const oy = BY + BH / 2 - 55;
-  ctx.fillStyle = 'rgba(0,0,0,0.72)';
-  roundRect(BX + 30, oy, BW - 60, 110, 10);
-  ctx.fill();
+  const oy=BY+BH/2-58;
+  ctx.fillStyle='rgba(0,0,0,0.75)'; roundRect(BX+28,oy,BW-56,116,10); ctx.fill();
+  ctx.strokeStyle='#8b6914'; ctx.lineWidth=2; roundRect(BX+28,oy,BW-56,116,10); ctx.stroke();
 
-  ctx.strokeStyle = '#8b6914';
-  ctx.lineWidth = 2;
-  roundRect(BX + 30, oy, BW - 60, 110, 10);
-  ctx.stroke();
+  ctx.shadowColor='#ff8800'; ctx.shadowBlur=18;
+  ctx.fillStyle='#ffd700'; ctx.font='bold 22px serif';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('ゲームオーバー', BCX, oy+14);
+  ctx.shadowBlur=0;
 
-  ctx.shadowColor = '#ff8800';
-  ctx.shadowBlur  = 16;
-  ctx.fillStyle   = '#ffd700';
-  ctx.font        = 'bold 20px serif';
-  ctx.textAlign   = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText('ゲームオーバー', BCX, oy + 16);
-  ctx.shadowBlur  = 0;
+  ctx.fillStyle='#ff8800'; ctx.font='15px serif';
+  ctx.fillText(`獲得球: ${ballsWon} 個`, BCX, oy+50);
 
-  ctx.fillStyle = '#ff8800';
-  ctx.font      = '14px serif';
-  ctx.fillText(`獲得球: ${ballsWon} 個`, BCX, oy + 50);
-
-  const rank = ballsWon >= 100 ? '★★★ 大当たり！' :
-               ballsWon >=  50 ? '★★☆ 上出来！' :
-               ballsWon >=  25 ? '★☆☆ トントン' : '☆☆☆ またどうぞ';
-  ctx.fillStyle = '#cc8800';
-  ctx.font      = '12px serif';
-  ctx.fillText(rank, BCX, oy + 76);
+  const rank=ballsWon>=100?'★★★ 大当たり！':ballsWon>=50?'★★☆ 上出来！':ballsWon>=25?'★☆☆ トントン':'☆☆☆ またどうぞ';
+  ctx.fillStyle='#cc8800'; ctx.font='12px serif';
+  ctx.fillText(rank, BCX, oy+80);
 }
 
-function roundRect(x, y, w, h, r) {
+function roundRect(x,y,w,h,r) {
   ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
   ctx.closePath();
 }
 
-// ── UI ────────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  UI update
+// ══════════════════════════════════════════════════════════════════════════════
 function updateUI() {
-  document.getElementById('held-display').textContent = String(Math.max(0, ballsHeld)).padStart(3, '0');
-  document.getElementById('won-display').textContent  = String(ballsWon).padStart(3, '0');
-  document.getElementById('power-fill').style.width   = Math.round(power * 100) + '%';
+  const h=String(Math.max(0,ballsHeld)).padStart(3,'0');
+  const w=String(ballsWon).padStart(3,'0');
+  const p=Math.round(power*100)+'%';
+  document.getElementById('held-display').textContent = h;
+  document.getElementById('won-display').textContent  = w;
+  document.getElementById('power-fill').style.width   = p;
+  document.getElementById('m-held').textContent = h;
+  document.getElementById('m-won').textContent  = w;
+  document.getElementById('sbar-power-fill').style.width = p;
 }
 
-// ── Main loop ─────────────────────────────────────────────────────────────────
-function loop() {
-  update();
-  render();
-  requestAnimationFrame(loop);
+// ══════════════════════════════════════════════════════════════════════════════
+//  Responsive layout
+// ══════════════════════════════════════════════════════════════════════════════
+const NATURAL_W = 400 + 12 + 132; // canvas + gap + panel ≈ 544
+const NATURAL_H = 640 + 36;       // canvas + title margin ≈ 676
+
+function adjustLayout() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const app     = document.getElementById('app');
+  const panel   = document.getElementById('side-panel');
+  const statBar = document.getElementById('stat-bar');
+  const wrap    = document.getElementById('game-wrap');
+  const isMobile = vw < 580;
+
+  if (isMobile) {
+    // Mobile: canvas full-width, stat bar below
+    panel.style.display   = 'none';
+    statBar.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.alignItems    = 'center';
+
+    // Scale canvas to fit width
+    const scale = Math.min(vw / 400, 1.0);
+    canvas.style.width  = (400 * scale) + 'px';
+    canvas.style.height = (640 * scale) + 'px';
+    statBar.style.width = (400 * scale) + 'px';
+
+    // Scale the whole app to fit height if needed
+    const totalH = 640 * scale + 80 + 32; // canvas + statbar + title
+    const vScale = totalH > vh ? vh / totalH : 1.0;
+    app.style.transform = vScale < 1 ? `scale(${vScale})` : '';
+    document.body.style.height = (totalH * vScale) + 'px';
+  } else {
+    // Desktop: side by side
+    panel.style.display   = 'block';
+    statBar.style.display = 'none';
+    wrap.style.flexDirection = 'row';
+    wrap.style.alignItems    = 'flex-start';
+    canvas.style.width  = '';
+    canvas.style.height = '';
+
+    // Fit to viewport
+    const scaleX = vw / NATURAL_W;
+    const scaleY = vh / NATURAL_H;
+    const scale  = Math.min(scaleX, scaleY, 1.0);
+    app.style.transform    = scale < 1 ? `scale(${scale})` : '';
+    app.style.transformOrigin = 'top center';
+    document.body.style.height = (NATURAL_H * Math.min(scale, 1)) + 'px';
+  }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', adjustLayout);
+window.addEventListener('orientationchange', () => setTimeout(adjustLayout, 150));
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Main loop
+// ══════════════════════════════════════════════════════════════════════════════
+function loop() { update(); render(); requestAnimationFrame(loop); }
+
+// Init
+buildFeltTexture();
+buildWoodTexture();
 initLayout();
 restart();
+adjustLayout();
 loop();
 </script>
 </body>
