@@ -122,9 +122,6 @@ h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:v
   border-radius:8px; transition:width .04s;
 }
 #power-val{ font-size:.82rem; min-width:36px; text-align:right; color:var(--gold); }
-#angle-wrap{ display:flex; align-items:center; gap:8px; margin-top:5px; }
-#angle-slider{ flex:1; accent-color:var(--blue); height:20px; cursor:pointer; }
-#angle-val{ font-size:.82rem; min-width:36px; text-align:right; color:var(--blue); }
 #throw-btn{ margin-top:8px; width:100%; min-height:44px; }
 
 /* ===== ROUND RESULT ===== */
@@ -205,11 +202,6 @@ h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:v
       <div id="power-wrap">
         <div id="power-bar-bg"><div id="power-bar"></div></div>
         <span id="power-val">50%</span>
-      </div>
-      <div class="lbl" style="margin-top:5px;">角度</div>
-      <div id="angle-wrap">
-        <input type="range" id="angle-slider" min="-45" max="45" value="0">
-        <span id="angle-val">0°</span>
       </div>
       <button class="btn" id="throw-btn" onclick="throwBall()">投げる！</button>
     </div>
@@ -358,7 +350,9 @@ function drawDistanceLine() {
 }
 
 function drawArrow() {
-  const tx=W/2, ty=throwLineY()-BALL_R-2;
+  const isJackPhase = phase==='jack';
+  const r = isJackPhase ? JACK_R : BALL_R;
+  const tx=W/2, ty=throwLineY()-r-2;
   const rad=(angle-90)*Math.PI/180;
   const len=28+power*0.45;
   const ex=tx+Math.cos(rad)*len, ey=ty+Math.sin(rad)*len;
@@ -375,12 +369,43 @@ function drawArrow() {
   ctx.restore();
 }
 
+function drawControlBall() {
+  const isJackPhase = phase==='jack';
+  const r = isJackPhase ? JACK_R : BALL_R;
+  const bx=W/2, by=throwLineY()-r-2;
+  const team = isJackPhase ? 'jack' : currentTeam;
+
+  // インタラクティブを示す破線リング
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,.5)';
+  ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.arc(bx,by,r+5,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+
+  drawBall({x:bx, y:by, r, team});
+
+  // ◀ ▶ ヒントと角度表示
+  const fs=Math.max(9,Math.round(W*0.028));
+  ctx.save();
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.font=`${fs}px sans-serif`;
+  ctx.fillStyle='rgba(255,255,255,.8)';
+  ctx.fillText('◀  ▶', bx, by+r+4);
+  ctx.font=`bold ${Math.max(10,Math.round(W*0.034))}px sans-serif`;
+  ctx.fillStyle='rgba(255,220,50,.95)';
+  ctx.fillText(angle+'°', bx, by+r+fs+7);
+  ctx.restore();
+}
+
 function render() {
   ctx.clearRect(0,0,W,H);
   drawField();
   if(jack){ drawDistanceLine(); drawBall(jack); }
   balls.forEach(drawBall);
-  if(!animating && phase==='throw' && !isAutoTurn()) drawArrow();
+  if(!animating && (phase==='throw'||phase==='jack') && !isAutoTurn()) {
+    drawControlBall();
+    drawArrow();
+  }
 }
 
 // ===== PHYSICS =====
@@ -468,7 +493,7 @@ function startGame(mode) {
 function beginRound() {
   balls=[]; jack=null;
   ballsLeft={red:BALLS_PER_TEAM, blue:BALLS_PER_TEAM};
-  currentTeam='red'; phase='jack';
+  currentTeam='red'; phase='jack'; angle=0;
   document.getElementById('round-result').style.display='none';
   document.getElementById('throw-ui').style.display='block';
   document.getElementById('throw-btn').textContent='ジャックを投げる';
@@ -506,12 +531,34 @@ powerBg.addEventListener('pointermove', e=>{
 powerBg.addEventListener('pointerup', ()=>{ powerDragging=false; });
 setPower(50);
 
-// ===== 角度スライダー =====
-document.getElementById('angle-slider').addEventListener('input', e=>{
-  angle=parseInt(e.target.value);
-  document.getElementById('angle-val').textContent=angle+'°';
-  render();
-});
+// ===== 角度操作（キャンバス上のボールを左右ドラッグ） =====
+let angleDragging=false, angleDragStartX=0, angleDragStartAngle=0;
+function setupAngleDrag() {
+  const c=document.getElementById('gc');
+  c.addEventListener('pointerdown', e=>{
+    if(animating||phase==='result'||isAutoTurn()) return;
+    const rect=c.getBoundingClientRect();
+    const scaleX=W/rect.width, scaleY=H/rect.height;
+    const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
+    const r=phase==='jack'?JACK_R:BALL_R;
+    const bx=W/2, by=throwLineY()-r-2;
+    if(Math.hypot(cx-bx,cy-by)<r*2.8){
+      angleDragging=true; c.setPointerCapture(e.pointerId);
+      angleDragStartX=cx; angleDragStartAngle=angle;
+    }
+  });
+  c.addEventListener('pointermove', e=>{
+    if(!angleDragging) return;
+    const rect=c.getBoundingClientRect();
+    const cx=(e.clientX-rect.left)*(W/rect.width);
+    const delta=cx-angleDragStartX;
+    angle=Math.max(-45,Math.min(45,Math.round(angleDragStartAngle+delta/(W/2)*45)));
+    render();
+  });
+  c.addEventListener('pointerup',  ()=>{ angleDragging=false; });
+  c.addEventListener('pointercancel',()=>{ angleDragging=false; });
+}
+setupAngleDrag();
 
 // ===== 投球 =====
 function throwBall() {
