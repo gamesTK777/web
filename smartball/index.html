@@ -301,6 +301,30 @@ function drawChannel() {
 // ─── DRAW: HOLES ───────────────────────────────────────────
 function drawHoles() {
   HOLES.forEach(h => {
+    if (h.blocked) {
+      // 塞がれた穴：金属板で覆われた表現
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.r + 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#000'; ctx.fill();
+
+      const pg = ctx.createRadialGradient(h.x - h.r * 0.2, h.y - h.r * 0.2, 0, h.x, h.y, h.r);
+      pg.addColorStop(0, '#4a4a4a'); pg.addColorStop(0.7, '#2a2a2a'); pg.addColorStop(1, '#1a1a1a');
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+      ctx.fillStyle = pg; ctx.fill();
+
+      // 封鎖を示すバツ印
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 2;
+      const s = h.r * 0.5;
+      ctx.beginPath(); ctx.moveTo(h.x - s, h.y - s); ctx.lineTo(h.x + s, h.y + s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(h.x + s, h.y - s); ctx.lineTo(h.x - s, h.y + s); ctx.stroke();
+
+      // 暗いリム
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2); ctx.stroke();
+      return;
+    }
+
     // Dark ring
     ctx.beginPath();
     ctx.arc(h.x, h.y, h.r + 5, 0, Math.PI * 2);
@@ -557,10 +581,11 @@ function updateBall() {
     // Bounce off top of channel (should reach FT + small margin)
     if (b.y - BALL_R < FT + 2) {
       // Ball reached the top — transition to main field with leftward velocity
-      b.y = FT + BALL_R + 4;
-      b.x = CHL - BALL_R - 2;  // just inside main field right edge
+      b.y = FT + BALL_R + 2;
+      b.x = CHL - BALL_R;  // just at the main field right edge
       b.vx = gs.entryVX;
-      b.vy = 0;
+      // 天井から跳ね返る自然なバウンド（上昇速度の一部を下向きに変換）
+      b.vy = Math.abs(b.vy) * 0.15;
       b.inChannel = false;
       gs.phase = 'FLYING';
     }
@@ -599,6 +624,7 @@ function updateBall() {
   // Hole capture (only in obstacle zone)
   if (b.y > OBS_TOP) {
     for (const h of HOLES) {
+      if (h.blocked) continue;  // 塞がれた穴はスキップ
       const d = Math.hypot(b.x - h.x, b.y - h.y);
       if (d < h.r - 4) { captureHole(h); return; }
       if (d < h.r + BALL_R) {
@@ -644,6 +670,7 @@ function captureHole(h) {
   gs.score += h.pts;
   if (gs.score > gs.hi) { gs.hi = gs.score; localStorage.setItem('sb2_hi', gs.hi); }
   addPopup(h.x, h.y - h.r - 14, h.pts, h.glow, 28);
+  h.blocked = true;  // 穴を塞ぐ（次回以降ボールが入らない）
   gs.ball.active = false;
   gs.phase = 'CAPTURED';
   setTimeout(nextBall, 800);
@@ -674,6 +701,7 @@ function resetGame() {
   gs.score = 0; gs.ballsLeft = MAX_BALLS;
   gs.phase = 'READY'; gs.ball = null; gs.power = 0; gs.popups = [];
   BUMPERS.forEach(b => b.flash = 0);
+  HOLES.forEach(h => h.blocked = false);  // ゲームリセット時に全穴を開放
 }
 
 // ─── INPUT ─────────────────────────────────────────────────
