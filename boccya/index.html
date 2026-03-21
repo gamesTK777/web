@@ -183,6 +183,17 @@ h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:v
   <!-- RIGHT: コントロール -->
   <div id="game-right">
 
+    <div id="throw-ui">
+      <div class="lbl">パワー</div>
+      <div id="power-wrap">
+        <div id="power-bar-bg"><div id="power-bar"></div></div>
+        <span id="power-val">50%</span>
+      </div>
+      <button class="btn" id="throw-btn" onclick="throwBall()">投げる！</button>
+    </div>
+
+    <div id="status-bar">ゲーム開始！</div>
+
     <div id="scoreboard">
       <div class="score-card red-card" id="card-red">
         <div class="name" id="name-red">赤チーム</div>
@@ -193,17 +204,6 @@ h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:v
         <div class="name" id="name-blue">青チーム</div>
         <div class="pts" id="pts-blue">0</div>
       </div>
-    </div>
-
-    <div id="status-bar">ゲーム開始！</div>
-
-    <div id="throw-ui">
-      <div class="lbl">パワー</div>
-      <div id="power-wrap">
-        <div id="power-bar-bg"><div id="power-bar"></div></div>
-        <span id="power-val">50%</span>
-      </div>
-      <button class="btn" id="throw-btn" onclick="throwBall()">投げる！</button>
     </div>
 
     <div id="round-result">
