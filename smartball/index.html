@@ -47,6 +47,13 @@ const LX = CH_MID, LY = FB - 12; // 459, 633
 // Boundary where clear zone ends and obstacles begin
 const OBS_TOP = 295;  // y below which pins/holes appear
 
+// Curved back wall
+const BACK_CURVE = 35; // depth of curve at center (pixels)
+function backWallY(x) {
+  const t = Math.max(0, Math.min(1, (x - FL) / (FR - FL)));
+  return FT + BACK_CURVE * 4 * t * (1 - t);
+}
+
 // ─── PHYSICS ───────────────────────────────────────────────
 const G_CLEAR = 0.055; // gentle gravity while rolling across clear zone (top area)
 const G_OBS   = 0.27;  // normal gravity in obstacle zone
@@ -118,8 +125,6 @@ let gs = {
   power:      0,
   chargeStart:0,
   popups:     [],
-  // Entry parameters set at moment of launch
-  entryVX:    0,
 };
 
 // ─── DRAW: WOOD FRAME ──────────────────────────────────────
@@ -249,13 +254,45 @@ function drawPlayfield() {
   ctx.textAlign = 'center';
   ctx.fillText('奥', (FL + FR) / 2, OBS_TOP - 18);
 
-  // Field border
+  // Curved back wall fill (covers top area above curve)
+  const cwMid = (FL + FR) / 2;
+  ctx.beginPath();
+  ctx.moveTo(FL, FT);
+  ctx.quadraticCurveTo(cwMid, FT + BACK_CURVE, FR, FT);
+  ctx.lineTo(FL, FT);
+  ctx.fillStyle = '#100600';
+  ctx.fill();
+
+  // Field border: sides and bottom straight, top curved
+  ctx.beginPath();
+  ctx.moveTo(FL, FB);
+  ctx.lineTo(FL, FT);
+  ctx.quadraticCurveTo(cwMid, FT + BACK_CURVE, FR, FT);
+  ctx.lineTo(FR, FB);
+  ctx.lineTo(FL, FB);
   ctx.strokeStyle = '#7a580a';
   ctx.lineWidth = 3;
-  ctx.strokeRect(FL, FT, FW, FB - FT);
+  ctx.stroke();
+
+  // Inner border
+  ctx.beginPath();
+  ctx.moveTo(FL + 4, FB - 4);
+  ctx.lineTo(FL + 4, FT + 4);
+  ctx.quadraticCurveTo(cwMid, FT + BACK_CURVE + 4, FR - 4, FT + 4);
+  ctx.lineTo(FR - 4, FB - 4);
   ctx.strokeStyle = 'rgba(0,255,100,0.12)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(FL + 4, FT + 4, FW - 8, FB - FT - 8);
+  ctx.stroke();
+
+  // Curved wall glow
+  ctx.shadowBlur = 12; ctx.shadowColor = '#ffd700';
+  ctx.beginPath();
+  ctx.moveTo(FL, FT);
+  ctx.quadraticCurveTo(cwMid, FT + BACK_CURVE, FR, FT);
+  ctx.strokeStyle = '#b8860b';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
 
   ctx.textAlign = 'left';
 }
@@ -556,7 +593,6 @@ function drawGameOver() {
 function launch() {
   // Ball enters channel at bottom, shoots straight up
   const speed = 17 + (gs.power / 100) * 5; // always reach top; power adds a bit
-  gs.entryVX = -(gs.power / 100) * 3.8 - 0.4; // more power = more leftward at top
   gs.ball = {
     x: LX, y: LY,
     vx: 0, vy: -speed,
@@ -578,14 +614,15 @@ function updateBall() {
     b.vy += G_CLEAR;
     b.y += b.vy;
 
-    // Bounce off top of channel (should reach FT + small margin)
+    // Ball reached the top — transition to main field
     if (b.y - BALL_R < FT + 2) {
-      // Ball reached the top — transition to main field with leftward velocity
-      b.y = FT + BALL_R + 2;
-      b.x = CHL - BALL_R;  // just at the main field right edge
-      b.vx = gs.entryVX;
-      // 天井から跳ね返る自然なバウンド（上昇速度の一部を下向きに変換）
-      b.vy = Math.abs(b.vy) * 0.15;
+      const entryX = CHL - BALL_R;
+      b.x = entryX;
+      b.y = backWallY(entryX) + BALL_R;
+      // Preserve speed: redirect upward velocity to leftward (smooth arc)
+      const spd = Math.abs(b.vy);
+      b.vx = -(spd * 0.75 + 0.5);
+      b.vy = spd * 0.15;
       b.inChannel = false;
       gs.phase = 'FLYING';
     }
@@ -616,7 +653,16 @@ function updateBall() {
   // Wall bounces (main field)
   if (b.x - BALL_R < FL) { b.x = FL + BALL_R; b.vx = Math.abs(b.vx) * 0.7; }
   if (b.x + BALL_R > FR) { b.x = FR - BALL_R; b.vx = -Math.abs(b.vx) * 0.7; }
-  if (b.y - BALL_R < FT) { b.y = FT + BALL_R; b.vy = Math.abs(b.vy) * 0.6; }
+  // Curved back wall collision
+  const wY = backWallY(b.x);
+  if (b.y - BALL_R < wY) {
+    b.y = wY + BALL_R;
+    b.vy = Math.abs(b.vy) * 0.6;
+    // Slope-based horizontal deflection from curved wall
+    const t = Math.max(0, Math.min(1, (b.x - FL) / (FR - FL)));
+    const slope = BACK_CURVE * 4 * (1 - 2 * t) / (FR - FL);
+    b.vx -= slope * b.vy * 0.5;
+  }
 
   // Ball exits bottom
   if (b.y > FB + BALL_R + 10) { ballLost(); return; }
