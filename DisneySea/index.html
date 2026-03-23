@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TDS Dashboard - 東京ディズニーシー 待ち時間 & パス情報</title>
+<style>
+  :root {
+    --primary: #1a3a5c;
+    --accent: #4fc3f7;
+    --accent2: #ff9800;
+    --bg: #0d1b2a;
+    --card: #1b2838;
+    --card-hover: #223347;
+    --text: #e0e6ed;
+    --text-muted: #8899aa;
+    --green: #4caf50;
+    --red: #ef5350;
+    --yellow: #ffc107;
+    --purple: #ab47bc;
+    --blue: #42a5f5;
+    --orange: #ff9800;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #0d2137 0%, #1a3a5c 50%, #0d4a6b 100%);
+    padding: 16px 20px;
+    text-align: center;
+    border-bottom: 2px solid var(--accent);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header h1 { font-size: 1.4em; color: var(--accent); margin-bottom: 2px; }
+  .header .subtitle { color: var(--text-muted); font-size: 0.8em; }
+  .header .visit-date {
+    display: inline-block; background: var(--accent2); color: #000;
+    padding: 2px 12px; border-radius: 12px; font-weight: bold; font-size: 0.78em; margin-top: 4px;
+  }
+  .countdown { font-size: 0.75em; color: var(--accent); margin-top: 2px; }
+
+  .controls {
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    padding: 10px 20px; background: var(--card); flex-wrap: wrap;
+  }
+  .controls button {
+    background: var(--primary); color: var(--text); border: 1px solid var(--accent);
+    padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 0.82em; transition: all 0.2s;
+  }
+  .controls button:hover { background: var(--accent); color: #000; }
+  .controls .last-update { color: var(--text-muted); font-size: 0.78em; }
+  .auto-refresh-toggle { display: flex; align-items: center; gap: 5px; font-size: 0.78em; color: var(--text-muted); }
+  .auto-refresh-toggle input { accent-color: var(--accent); }
+
+  /* Status indicator */
+  .status-bar {
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    padding: 6px; font-size: 0.75em;
+  }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.warn { background: var(--yellow); }
+  .status-dot.err { background: var(--red); }
+  .status-dot.closed { background: var(--text-muted); }
+
+  .tabs {
+    display: flex; justify-content: center; gap: 4px; padding: 8px 20px;
+    background: var(--bg); flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: var(--card); color: var(--text-muted); border: none;
+    padding: 7px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 0.82em; transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--primary); color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+  .content { padding: 10px 16px 80px; max-width: 1200px; margin: 0 auto; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .summary-bar {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px; margin-bottom: 14px;
+  }
+  .summary-card {
+    background: var(--card); border-radius: 10px; padding: 10px; text-align: center;
+  }
+  .summary-card .label { font-size: 0.68em; color: var(--text-muted); margin-bottom: 3px; }
+  .summary-card .value { font-size: 1.3em; font-weight: bold; }
+  .summary-card .value.low { color: var(--green); }
+  .summary-card .value.med { color: var(--yellow); }
+  .summary-card .value.high { color: var(--orange); }
+  .summary-card .value.vhigh { color: var(--red); }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .filter-bar select, .filter-bar input {
+    background: var(--card); color: var(--text); border: 1px solid #334;
+    padding: 5px 10px; border-radius: 6px; font-size: 0.82em;
+  }
+  .filter-bar label { font-size: 0.78em; color: var(--text-muted); }
+
+  .attraction-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 8px;
+  }
+  .attraction-card {
+    background: var(--card); border-radius: 10px; padding: 12px;
+    transition: all 0.2s; border-left: 4px solid transparent; position: relative;
+  }
+  .attraction-card:hover { background: var(--card-hover); }
+  .attraction-card.wait-low { border-left-color: var(--green); }
+  .attraction-card.wait-med { border-left-color: var(--yellow); }
+  .attraction-card.wait-high { border-left-color: var(--orange); }
+  .attraction-card.wait-vhigh { border-left-color: var(--red); }
+  .attraction-card.closed { border-left-color: #555; opacity: 0.6; }
+  .attraction-card .name { font-weight: bold; font-size: 0.9em; margin-bottom: 5px; padding-right: 60px; }
+  .attraction-card .wait-badge {
+    position: absolute; top: 12px; right: 12px; font-size: 1.3em;
+    font-weight: bold; min-width: 50px; text-align: right;
+  }
+  .attraction-card .wait-badge .unit { font-size: 0.5em; color: var(--text-muted); }
+  .attraction-card .tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
+  .tag { font-size: 0.62em; padding: 2px 7px; border-radius: 10px; font-weight: bold; }
+  .tag-dpa { background: #e91e63; color: #fff; }
+  .tag-pp { background: #2196f3; color: #fff; }
+  .tag-sp { background: #9c27b0; color: #fff; }
+  .tag-closed { background: #555; color: #aaa; }
+  .tag-area { background: #37474f; color: #90a4ae; }
+  .attraction-card .meta { font-size: 0.72em; color: var(--text-muted); margin-top: 3px; }
+  /* Mini sparkline */
+  .attraction-card .sparkline { margin-top: 4px; }
+  .attraction-card .sparkline canvas { border-radius: 4px; }
+
+  .restaurant-card {
+    background: var(--card); border-radius: 10px; padding: 12px;
+    transition: all 0.2s; border-left: 4px solid var(--accent);
+  }
+  .restaurant-card:hover { background: var(--card-hover); }
+  .restaurant-card .name { font-weight: bold; font-size: 0.9em; margin-bottom: 3px; }
+  .restaurant-card .type { font-size: 0.72em; color: var(--text-muted); }
+
+  .info-section {
+    background: var(--card); border-radius: 10px; padding: 14px; margin-bottom: 10px;
+  }
+  .info-section h3 {
+    color: var(--accent); font-size: 0.95em; margin-bottom: 8px;
+    border-bottom: 1px solid #334; padding-bottom: 5px;
+  }
+  .info-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px;
+  }
+  .info-item { background: var(--bg); border-radius: 8px; padding: 10px; }
+  .info-item .label { font-size: 0.72em; color: var(--text-muted); margin-bottom: 3px; }
+  .info-item .value { font-size: 0.9em; }
+  .info-item a { color: var(--accent); text-decoration: none; }
+  .info-item a:hover { text-decoration: underline; }
+
+  .link-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px;
+  }
+  .link-card {
+    background: var(--bg); border-radius: 8px; padding: 10px; text-decoration: none;
+    color: var(--text); border: 1px solid #223; transition: all 0.2s; display: block;
+  }
+  .link-card:hover { border-color: var(--accent); background: var(--card-hover); }
+  .link-card .link-title { font-weight: bold; font-size: 0.85em; color: var(--accent); margin-bottom: 3px; }
+  .link-card .link-desc { font-size: 0.72em; color: var(--text-muted); }
+
+  .loading { text-align: center; padding: 40px; color: var(--text-muted); }
+  .loading .spinner {
+    display: inline-block; width: 30px; height: 30px;
+    border: 3px solid var(--primary); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 10px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: #3e1a1a; border: 1px solid var(--red); border-radius: 8px;
+    padding: 12px; color: var(--red); margin: 10px 0; font-size: 0.82em;
+  }
+  .warn-msg {
+    background: #3e3a1a; border: 1px solid var(--yellow); border-radius: 8px;
+    padding: 12px; color: var(--yellow); margin: 10px 0; font-size: 0.82em;
+  }
+
+  .crowd-meter { height: 8px; background: #223; border-radius: 4px; overflow: hidden; margin: 6px 0; }
+  .crowd-meter .fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  .powered-by { text-align: center; padding: 14px; font-size: 0.68em; color: var(--text-muted); }
+  .powered-by a { color: var(--accent); text-decoration: none; }
+
+  /* History tab */
+  .history-controls {
+    display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .history-controls select, .history-controls button {
+    background: var(--card); color: var(--text); border: 1px solid #334;
+    padding: 5px 10px; border-radius: 6px; font-size: 0.82em; cursor: pointer;
+  }
+  .history-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 8px; margin-bottom: 12px;
+  }
+  .history-stat-card {
+    background: var(--card); border-radius: 8px; padding: 10px;
+  }
+  .history-stat-card .hs-label { font-size: 0.7em; color: var(--text-muted); }
+  .history-stat-card .hs-value { font-size: 1.1em; font-weight: bold; margin-top: 2px; }
+  #history-chart-container {
+    background: var(--card); border-radius: 10px; padding: 14px; margin-bottom: 12px;
+    overflow-x: auto;
+  }
+  #history-chart { width: 100%; height: 300px; }
+  .history-log {
+    background: var(--card); border-radius: 10px; padding: 14px; max-height: 400px;
+    overflow-y: auto; font-size: 0.78em;
+  }
+  .history-log table { width: 100%; border-collapse: collapse; }
+  .history-log th, .history-log td {
+    padding: 4px 8px; text-align: left; border-bottom: 1px solid #223;
+  }
+  .history-log th { color: var(--accent); position: sticky; top: 0; background: var(--card); }
+
+  .data-mgmt {
+    margin-top: 12px; padding: 12px; background: var(--card); border-radius: 10px;
+  }
+  .data-mgmt h4 { color: var(--accent); font-size: 0.85em; margin-bottom: 8px; }
+  .data-mgmt button {
+    background: var(--primary); color: var(--text); border: 1px solid #445;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.78em; margin-right: 6px;
+  }
+  .data-mgmt button.danger { border-color: var(--red); color: var(--red); }
+  .data-mgmt button:hover { opacity: 0.8; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.1em; }
+    .attraction-grid { grid-template-columns: 1fr; }
+    .summary-bar { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Tokyo DisneySea Dashboard</h1>
+  <div class="subtitle">リアルタイム待ち時間 & パス情報 ＋ データ蓄積</div>
+  <div class="visit-date">訪問予定日: 2026年3月29日(日)</div>
+  <div class="countdown" id="countdown"></div>
+</div>
+
+<div class="status-bar" id="status-bar">
+  <span class="status-dot closed" id="status-dot"></span>
+  <span id="status-text" style="color:var(--text-muted)">接続確認中...</span>
+</div>
+
+<div class="controls">
+  <button onclick="fetchData()" id="refresh-btn">更新</button>
+  <div class="auto-refresh-toggle">
+    <input type="checkbox" id="auto-refresh" checked>
+    <label for="auto-refresh">自動更新 (60秒)</label>
+  </div>
+  <span class="last-update" id="last-update">最終更新: ---</span>
+  <span style="font-size:0.72em;color:var(--text-muted);" id="record-count">蓄積: 0件</span>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="attractions">アトラクション</button>
+  <button class="tab-btn" data-tab="restaurants">レストラン</button>
+  <button class="tab-btn" data-tab="history">履歴・トレンド</button>
+  <button class="tab-btn" data-tab="info">便利情報</button>
+</div>
+
+<div class="content">
+
+  <!-- ===== アトラクションタブ ===== -->
+  <div class="tab-content active" id="tab-attractions">
+    <div class="summary-bar" id="summary-bar">
+      <div class="summary-card"><div class="label">平均待ち時間</div><div class="value" id="avg-wait">--</div></div>
+      <div class="summary-card"><div class="label">最長待ち時間</div><div class="value" id="max-wait">--</div></div>
+      <div class="summary-card"><div class="label">運営中</div><div class="value" id="open-count">--</div></div>
+      <div class="summary-card"><div class="label">混雑度</div><div class="value" id="crowd-level">--</div></div>
+      <div class="summary-card"><div class="label">30分以下</div><div class="value low" id="short-wait-count">--</div></div>
+    </div>
+    <div class="crowd-meter"><div class="fill" id="crowd-fill" style="width:0%;background:var(--green);"></div></div>
+
+    <div id="park-closed-msg" class="warn-msg" style="display:none;">
+      現在パークは営業時間外のため、全アトラクションが休止中として表示されています。営業時間中（通常 9:00〜21:00）にアクセスするとリアルタイムの待ち時間が表示されます。
+    </div>
+
+    <div class="filter-bar">
+      <label>並替:</label>
+      <select id="sort-select">
+        <option value="wait-desc">待ち時間 長い順</option>
+        <option value="wait-asc">待ち時間 短い順</option>
+        <option value="name">名前順</option>
+        <option value="area">エリア順</option>
+      </select>
+      <label>絞込:</label>
+      <select id="filter-select">
+        <option value="all">すべて</option>
+        <option value="open">運営中のみ</option>
+        <option value="dpa">DPA対象</option>
+        <option value="pp">プライオリティパス対象</option>
+        <option value="short">30分以下</option>
+      </select>
+      <input type="text" id="search-input" placeholder="検索..." style="flex:1;min-width:100px;">
+    </div>
+    <div id="attraction-container" class="attraction-grid">
+      <div class="loading"><div class="spinner"></div><br>データ取得中...</div>
+    </div>
+  </div>
+
+  <!-- ===== レストランタブ ===== -->
+  <div class="tab-content" id="tab-restaurants">
+    <div class="info-section">
+      <h3>レストラン情報について</h3>
+      <p style="font-size:0.82em;color:var(--text-muted);margin-bottom:8px;">
+        レストランの待ち時間・予約枠は東京ディズニーリゾート公式アプリでリアルタイム確認できます。<br>
+        PS(プライオリティ・シーティング)対象レストランは事前予約が可能です。
+        <a href="https://reserve.tokyodisneyresort.jp/" target="_blank" style="color:var(--accent);">オンライン予約はこちら →</a>
+      </p>
+    </div>
+    <div class="filter-bar">
+      <label>絞込:</label>
+      <select id="restaurant-filter">
+        <option value="all">すべて</option>
+        <option value="ps">PS対応(予約可)</option>
+        <option value="counter">カウンターサービス</option>
+        <option value="buffet">ブッフェ</option>
+      </select>
+      <input type="text" id="restaurant-search" placeholder="検索..." style="flex:1;min-width:100px;">
+    </div>
+    <div id="restaurant-container" class="attraction-grid"></div>
+  </div>
+
+  <!-- ===== 履歴・トレンドタブ ===== -->
+  <div class="tab-content" id="tab-history">
+    <div class="info-section">
+      <h3>データ蓄積・トレンド分析 (3/24〜3/29)</h3>
+      <p style="font-size:0.82em;color:var(--text-muted);">
+        ページを開いている間、60秒ごとにデータを自動蓄積します。蓄積データはブラウザのIndexedDBに保存されるため、ページを閉じても保持されます。日別の傾向を確認して当日の回り方を計画しましょう。
+      </p>
+    </div>
+
+    <div class="history-controls">
+      <label style="font-size:0.78em;color:var(--text-muted);">日付:</label>
+      <select id="history-date-select">
+        <option value="all">全期間</option>
+        <option value="2026-03-24">3/24 (月)</option>
+        <option value="2026-03-25">3/25 (火)</option>
+        <option value="2026-03-26">3/26 (水)</option>
+        <option value="2026-03-27">3/27 (木)</option>
+        <option value="2026-03-28">3/28 (金)</option>
+        <option value="2026-03-29">3/29 (日) 当日</option>
+      </select>
+      <label style="font-size:0.78em;color:var(--text-muted);">アトラクション:</label>
+      <select id="history-ride-select"><option value="__avg__">全体平均</option></select>
+      <button onclick="renderHistory()">表示更新</button>
+    </div>
+
+    <div class="history-stats" id="history-stats"></div>
+
+    <div id="history-chart-container">
+      <canvas id="history-chart"></canvas>
+    </div>
+
+    <div class="history-log" id="history-log">
+      <p style="color:var(--text-muted);text-align:center;padding:20px;">蓄積データがまだありません。ページを開いたままにすることでデータが蓄積されます。</p>
+    </div>
+
+    <div class="data-mgmt">
+      <h4>データ管理</h4>
+      <button onclick="exportData()">JSONエクスポート</button>
+      <button onclick="exportCSV()">CSVエクスポート</button>
+      <button onclick="document.getElementById('import-file').click()">JSONインポート</button>
+      <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(event)">
+      <button class="danger" onclick="clearData()">全データ削除</button>
+      <p style="font-size:0.7em;color:var(--text-muted);margin-top:6px;" id="storage-info">IndexedDB: 0件</p>
+    </div>
+  </div>
+
+  <!-- ===== 便利情報タブ ===== -->
+  <div class="tab-content" id="tab-info">
+    <div class="info-section">
+      <h3>2026/3/29 訪問日情報</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">天気予報</div>
+          <div class="value"><a href="https://tenki.jp/forecast/3/16/4510/12227/" target="_blank">浦安市の天気予報を確認 →</a></div>
+        </div>
+        <div class="info-item">
+          <div class="label">開園・閉園時間</div>
+          <div class="value"><a href="https://www.tokyodisneyresort.jp/tds/monthly/calendar.html" target="_blank">公式カレンダーで確認 →</a></div>
+        </div>
+        <div class="info-item">
+          <div class="label">混雑予想</div>
+          <div class="value"><a href="https://urtrip.jp/tds-crowd-calendar/" target="_blank">混雑予想カレンダーで確認 →</a></div>
+        </div>
+        <div class="info-item">
+          <div class="label">ショースケジュール</div>
+          <div class="value"><a href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank">公式ショースケジュール →</a></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>パスシステム解説</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">DPA (ディズニー・プレミアアクセス)</div>
+          <div class="value" style="font-size:0.78em;">
+            有料パス。体験時間を選んで購入。<br>料金: 1,500〜2,000円/回 (ショー2,500円)<br>
+            <a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/disneypremieraccess.html" target="_blank">公式 →</a>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="label">40周年記念プライオリティパス</div>
+          <div class="value" style="font-size:0.78em;">
+            無料パス。次に利用可能な時間帯が自動割当。<br>
+            <a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/prioritypass.html" target="_blank">公式 →</a>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="label">スタンバイパス</div>
+          <div class="value" style="font-size:0.78em;">
+            無料パス。指定時間に列に並べる権利。混雑時に発行。<br>
+            <a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/standbypass.html" target="_blank">公式 →</a>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="label">取得ルール</div>
+          <div class="value" style="font-size:0.78em;">
+            ・DPA: 購入後すぐ次を購入可(同施設は利用後)<br>
+            ・PP: 取得後60分経過 or 利用後に次を取得可<br>
+            ・入園後にアプリから取得
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>便利リンク集</h3>
+      <div class="link-grid">
+        <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/attraction.html" target="_blank">
+          <div class="link-title">公式 アトラクション一覧</div><div class="link-desc">詳細情報・休止情報</div>
+        </a>
+        <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/restaurant.html" target="_blank">
+          <div class="link-title">公式 レストラン一覧</div><div class="link-desc">メニュー・営業時間・PS</div>
+        </a>
+        <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/map.html" target="_blank">
+          <div class="link-title">公式 パークマップ</div><div class="link-desc">インタラクティブマップ</div>
+        </a>
+        <a class="link-card" href="https://disneyreal.asumirai.info/realtime/disneysea-wait-today.html" target="_blank">
+          <div class="link-title">リアルタイム待ち時間推移</div><div class="link-desc">時間帯別グラフ (ディズニーリアル)</div>
+        </a>
+        <a class="link-card" href="https://urtrip.jp/tds-attraction-waitingtime-realtime/" target="_blank">
+          <div class="link-title">DPA・パス発券状況</div><div class="link-desc">リアルタイム終了時間 (URTRIP)</div>
+        </a>
+        <a class="link-card" href="https://www.tokyodisneyresort.jp/tdr/guide/app_service.html" target="_blank">
+          <div class="link-title">公式アプリ案内</div><div class="link-desc">ダウンロード・使い方</div>
+        </a>
+        <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank">
+          <div class="link-title">ショースケジュール</div><div class="link-desc">公演時間</div>
+        </a>
+        <a class="link-card" href="https://www.tokyodisneyresort.jp/special/fantasysprings/" target="_blank">
+          <div class="link-title">ファンタジースプリングス</div><div class="link-desc">新エリア特設ページ</div>
+        </a>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <h3>持ち物チェックリスト</h3>
+      <div style="font-size:0.82em;line-height:1.8;" id="checklist"></div>
+    </div>
+  </div>
+</div>
+
+<div class="powered-by">
+  待ち時間データ Powered by <a href="https://queue-times.com/" target="_blank">Queue-Times.com</a>
+</div>
+
+<script>
+// ==========================================
+// CONFIG
+// ==========================================
+const PARK_ID = 275;
+const API_BASE = 'https://queue-times.com/parks/' + PARK_ID + '/queue_times.json';
+// CORS proxies as fallbacks (tried in order)
+const CORS_PROXIES = [
+  '', // Direct first
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+];
+const REFRESH_INTERVAL = 60000;
+const DB_NAME = 'TDS_Dashboard';
+const DB_VERSION = 1;
+const STORE_NAME = 'waitHistory';
+const VISIT_DATE = new Date('2026-03-29T00:00:00+09:00');
+
+let autoRefreshTimer = null;
+let allRides = [];
+let db = null;
+let currentProxyIndex = 0;
+
+// ==========================================
+// DPA / PP / SP metadata
+// ==========================================
+const passInfo = {
+  dpa: [
+    'soaring', 'toy story', 'tower of terror', 'center of the earth',
+    'peter pan', 'rapunzel', 'frozen journey', 'anna and elsa', 'believe'
+  ],
+  dpaPrice: {
+    'soaring': 2000, 'toy story': 2000, 'tower of terror': 2000,
+    'center of the earth': 2000, 'peter pan': 2000, 'rapunzel': 2000,
+    'frozen journey': 2000, 'anna and elsa': 2000, 'believe': 2500,
+  },
+  pp: [
+    'indiana jones', 'raging spirits', '20,000 leagues', '20000 leagues',
+    'magic lamp', 'nemo', 'searider',
+  ],
+};
+function isDPA(name) {
+  const n = name.toLowerCase();
+  return passInfo.dpa.some(k => n.includes(k));
+}
+function isPP(name) {
+  const n = name.toLowerCase();
+  return passInfo.pp.some(k => n.includes(k));
+}
+function getDPAPrice(name) {
+  const n = name.toLowerCase();
+  for (const [k, v] of Object.entries(passInfo.dpaPrice)) {
+    if (n.includes(k)) return v;
+  }
+  return isDPA(name) ? 2000 : null;
+}
+
+// ==========================================
+// RESTAURANTS
+// ==========================================
+const restaurants = [
+  { name: 'マゼランズ', area: 'メディテレーニアンハーバー', type: 'テーブルサービス', ps: true, cuisine: 'コース料理', price: '¥¥¥¥' },
+  { name: 'リストランテ・ディ・カナレット', area: 'メディテレーニアンハーバー', type: 'テーブルサービス', ps: true, cuisine: 'イタリアン', price: '¥¥¥' },
+  { name: 'カフェ・ポルトフィーノ', area: 'メディテレーニアンハーバー', type: 'バフェテリアサービス', ps: false, cuisine: 'パスタ・グラタン', price: '¥¥' },
+  { name: 'ザンビーニ・ブラザーズ・リストランテ', area: 'メディテレーニアンハーバー', type: 'カウンターサービス', ps: false, cuisine: 'ピザ・パスタ', price: '¥' },
+  { name: 'マンマ・ビスコッティーズ・ベーカリー', area: 'メディテレーニアンハーバー', type: 'カウンターサービス', ps: false, cuisine: 'パン・サンドイッチ', price: '¥' },
+  { name: 'S.S.コロンビア・ダイニングルーム', area: 'アメリカンウォーターフロント', type: 'テーブルサービス', ps: true, cuisine: 'コース料理', price: '¥¥¥¥' },
+  { name: 'テディ・ルーズヴェルト・ラウンジ', area: 'アメリカンウォーターフロント', type: 'ラウンジ', ps: true, cuisine: 'カクテル・軽食', price: '¥¥¥' },
+  { name: 'ケープコッド・クックオフ', area: 'アメリカンウォーターフロント', type: 'カウンターサービス', ps: false, cuisine: 'バーガー', price: '¥' },
+  { name: 'ニューヨーク・デリ', area: 'アメリカンウォーターフロント', type: 'カウンターサービス', ps: false, cuisine: 'サンドイッチ', price: '¥' },
+  { name: 'ドックサイドダイナー', area: 'アメリカンウォーターフロント', type: 'カウンターサービス', ps: false, cuisine: 'チキン・ライス', price: '¥' },
+  { name: 'レストラン櫻', area: 'アメリカンウォーターフロント', type: 'テーブルサービス', ps: true, cuisine: '和食', price: '¥¥¥' },
+  { name: 'ユカタン・ベースキャンプ・グリル', area: 'ロストリバーデルタ', type: 'バフェテリアサービス', ps: false, cuisine: 'スモークチキン', price: '¥¥' },
+  { name: 'ミゲルズ・エルドラド・キャンティーナ', area: 'ロストリバーデルタ', type: 'カウンターサービス', ps: false, cuisine: 'メキシカン', price: '¥' },
+  { name: 'カスバ・フードコート', area: 'アラビアンコースト', type: 'カウンターサービス', ps: false, cuisine: 'カレー', price: '¥' },
+  { name: 'ヴォルケイニア・レストラン', area: 'ミステリアスアイランド', type: 'バフェテリアサービス', ps: false, cuisine: '中華', price: '¥¥' },
+  { name: 'ノーチラスギャレー', area: 'ミステリアスアイランド', type: 'カウンターサービス', ps: false, cuisine: '餃子ドッグ', price: '¥' },
+  { name: 'セバスチャンのカリプソキッチン', area: 'マーメイドラグーン', type: 'カウンターサービス', ps: false, cuisine: 'ピザ', price: '¥' },
+  { name: 'ホライズンベイ・レストラン', area: 'ポートディスカバリー', type: 'バフェテリアサービス', ps: true, cuisine: 'ハンバーグ・ローストビーフ', price: '¥¥' },
+  { name: 'ロイヤルバンケットホール', area: 'ファンタジースプリングス', type: 'テーブルサービス', ps: true, cuisine: 'コース料理', price: '¥¥¥¥' },
+  { name: 'ルックアウト・クックアウト', area: 'ファンタジースプリングス', type: 'カウンターサービス', ps: false, cuisine: '軽食', price: '¥' },
+  { name: 'スナグリーダックリング', area: 'ファンタジースプリングス', type: 'カウンターサービス', ps: false, cuisine: '軽食', price: '¥' },
+];
+
+// ==========================================
+// IndexedDB
+// ==========================================
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+        store.createIndex('date', 'date', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function saveSnapshot(rides) {
+  if (!db) return;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+  const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  const openRides = rides.filter(r => r.is_open);
+  const waits = openRides.map(r => r.wait_time).filter(w => w > 0);
+  const avg = waits.length ? Math.round(waits.reduce((a,b)=>a+b,0)/waits.length) : 0;
+
+  // Only save if park is open (at least some rides running)
+  const record = {
+    timestamp: now.getTime(),
+    date: dateStr,
+    time: timeStr,
+    avgWait: avg,
+    maxWait: waits.length ? Math.max(...waits) : 0,
+    openCount: openRides.length,
+    totalCount: rides.length,
+    parkOpen: openRides.length > 0 && avg > 0,
+    rides: rides.map(r => ({
+      name: r.name,
+      area: r._area || '',
+      wait: r.wait_time,
+      open: r.is_open,
+    })),
+  };
+
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).add(record);
+  updateRecordCount();
+}
+
+async function getRecords(dateFilter) {
+  if (!db) return [];
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const records = [];
+    const req = dateFilter && dateFilter !== 'all'
+      ? store.index('date').openCursor(IDBKeyRange.only(dateFilter))
+      : store.openCursor();
+    req.onsuccess = (e) => {
+      const cursor = e.target.result;
+      if (cursor) { records.push(cursor.value); cursor.continue(); }
+      else resolve(records);
+    };
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function getAllRecords() {
+  if (!db) return [];
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => resolve([]);
+  });
+}
+
+async function updateRecordCount() {
+  if (!db) return;
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const req = tx.objectStore(STORE_NAME).count();
+  req.onsuccess = () => {
+    const count = req.result;
+    document.getElementById('record-count').textContent = `蓄積: ${count}件`;
+    document.getElementById('storage-info').textContent = `IndexedDB: ${count}件`;
+  };
+}
+
+// ==========================================
+// FETCH (with CORS proxy fallback)
+// ==========================================
+async function fetchWithProxy(proxyIndex) {
+  const url = CORS_PROXIES[proxyIndex] + API_BASE;
+  const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return resp.json();
+}
+
+async function fetchData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = '更新中...';
+  btn.disabled = true;
+
+  let data = null;
+  let lastError = null;
+
+  // Try each proxy in order
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    try {
+      data = await fetchWithProxy(i);
+      currentProxyIndex = i; // remember working proxy
+      break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (data) {
+    processData(data);
+    setStatus('ok', 'API接続中 — データ取得成功');
+    document.getElementById('last-update').textContent =
+      `最終更新: ${new Date().toLocaleTimeString('ja-JP')}`;
+  } else {
+    setStatus('err', `API接続エラー: ${lastError?.message || '不明'}`);
+    document.getElementById('attraction-container').innerHTML =
+      `<div class="error-msg">
+        データの取得に失敗しました: ${lastError?.message || '不明なエラー'}<br>
+        <small>CORS制限の可能性があります。CORSプロキシ経由でも取得できませんでした。<br>
+        ・パークが営業時間外の場合でもAPI自体は応答するはずです。<br>
+        ・ネットワーク接続を確認してください。<br>
+        ・しばらく待ってから再試行してください。</small>
+      </div>`;
+  }
+
+  btn.textContent = '更新';
+  btn.disabled = false;
+}
+
+function setStatus(type, text) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  dot.className = 'status-dot ' + type;
+  txt.textContent = text;
+  txt.style.color = type === 'ok' ? 'var(--green)' : type === 'warn' ? 'var(--yellow)' : type === 'err' ? 'var(--red)' : 'var(--text-muted)';
+}
+
+function processData(data) {
+  allRides = [];
+  if (Array.isArray(data.lands)) {
+    data.lands.forEach(land => {
+      if (Array.isArray(land.rides)) {
+        land.rides.forEach(ride => {
+          ride._area = land.name;
+          ride._dpa = isDPA(ride.name);
+          ride._pp = isPP(ride.name);
+          allRides.push(ride);
+        });
+      }
+    });
+  }
+
+  // Check if park is open
+  const openRides = allRides.filter(r => r.is_open);
+  const waits = openRides.map(r => r.wait_time).filter(w => w > 0);
+  const parkOpen = openRides.length > 0 && waits.length > 0;
+
+  document.getElementById('park-closed-msg').style.display = parkOpen ? 'none' : 'block';
+
+  if (parkOpen) {
+    setStatus('ok', `API接続中 — パーク営業中 (${openRides.length}施設運営)`);
+  } else if (openRides.length === 0) {
+    setStatus('closed', 'API接続中 — パーク営業時間外');
+  } else {
+    setStatus('warn', 'API接続中 — 待ち時間データなし');
+  }
+
+  updateSummary();
+  renderAttractions();
+  saveSnapshot(allRides);
+  populateRideSelector();
+}
+
+// ==========================================
+// UI rendering
+// ==========================================
+function updateSummary() {
+  const openRides = allRides.filter(r => r.is_open);
+  const waits = openRides.map(r => r.wait_time).filter(w => w > 0);
+  const avg = waits.length ? Math.round(waits.reduce((a,b)=>a+b,0)/waits.length) : 0;
+  const max = waits.length ? Math.max(...waits) : 0;
+  const shortCount = waits.filter(w => w <= 30).length;
+
+  const setVal = (id, text, cls) => {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    if (cls !== undefined) el.className = 'value ' + cls;
+  };
+
+  setVal('avg-wait', avg ? avg+'分' : '--', getCrowdClass(avg));
+  setVal('max-wait', max ? max+'分' : '--', getCrowdClass(max));
+  document.getElementById('open-count').textContent = `${openRides.length}/${allRides.length}`;
+  document.getElementById('short-wait-count').textContent = shortCount || '--';
+
+  let level = '低い', cls = 'low';
+  if (avg > 60) { level = '非常に混雑'; cls = 'vhigh'; }
+  else if (avg > 40) { level = '混雑'; cls = 'high'; }
+  else if (avg > 25) { level = 'やや混雑'; cls = 'med'; }
+  else if (avg === 0) { level = '営業時間外'; cls = ''; }
+  setVal('crowd-level', level, cls);
+
+  const pct = Math.min(100, (avg / 80) * 100);
+  const fill = document.getElementById('crowd-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = avg > 60 ? 'var(--red)' : avg > 40 ? 'var(--orange)' : avg > 25 ? 'var(--yellow)' : 'var(--green)';
+}
+
+function getCrowdClass(w) {
+  if (w > 60) return 'vhigh';
+  if (w > 40) return 'high';
+  if (w > 20) return 'med';
+  return 'low';
+}
+
+function renderAttractions() {
+  let rides = [...allRides];
+  const filter = document.getElementById('filter-select').value;
+  if (filter === 'open') rides = rides.filter(r => r.is_open);
+  else if (filter === 'dpa') rides = rides.filter(r => r._dpa);
+  else if (filter === 'pp') rides = rides.filter(r => r._pp);
+  else if (filter === 'short') rides = rides.filter(r => r.is_open && r.wait_time <= 30);
+
+  const query = document.getElementById('search-input').value.toLowerCase();
+  if (query) rides = rides.filter(r =>
+    r.name.toLowerCase().includes(query) || (r._area||'').toLowerCase().includes(query));
+
+  const sort = document.getElementById('sort-select').value;
+  rides.sort((a,b) => {
+    if (sort === 'wait-desc') return (b.is_open ? b.wait_time : -1) - (a.is_open ? a.wait_time : -1);
+    if (sort === 'wait-asc') return (a.is_open ? a.wait_time : 9999) - (b.is_open ? b.wait_time : 9999);
+    if (sort === 'name') return a.name.localeCompare(b.name);
+    if (sort === 'area') return (a._area||'').localeCompare(b._area||'');
+    return 0;
+  });
+
+  const container = document.getElementById('attraction-container');
+  if (!rides.length) {
+    container.innerHTML = '<div style="padding:20px;color:var(--text-muted);text-align:center;">該当なし</div>';
+    return;
+  }
+
+  container.innerHTML = rides.map(r => {
+    const wc = !r.is_open ? 'closed' : r.wait_time > 60 ? 'wait-vhigh' : r.wait_time > 40 ? 'wait-high' : r.wait_time > 20 ? 'wait-med' : 'wait-low';
+    const wColor = !r.is_open ? '#777' : r.wait_time > 60 ? 'var(--red)' : r.wait_time > 40 ? 'var(--orange)' : r.wait_time > 20 ? 'var(--yellow)' : 'var(--green)';
+    const tags = [];
+    if (r._dpa) { const p = getDPAPrice(r.name); tags.push(`<span class="tag tag-dpa">DPA${p?' ¥'+p:''}</span>`); }
+    if (r._pp) tags.push('<span class="tag tag-pp">プライオリティパス</span>');
+    if (!r.is_open) tags.push('<span class="tag tag-closed">休止中</span>');
+    tags.push(`<span class="tag tag-area">${r._area||'---'}</span>`);
+
+    return `<div class="attraction-card ${wc}">
+      <div class="name">${r.name}</div>
+      <div class="wait-badge" style="color:${wColor}">${r.is_open ? r.wait_time : '--'}<span class="unit">${r.is_open?'分':''}</span></div>
+      <div class="tags">${tags.join('')}</div>
+      <div class="meta">${r.last_updated ? '更新: '+new Date(r.last_updated).toLocaleTimeString('ja-JP') : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRestaurants() {
+  let list = [...restaurants];
+  const filter = document.getElementById('restaurant-filter').value;
+  const query = document.getElementById('restaurant-search').value.toLowerCase();
+  if (filter === 'ps') list = list.filter(r => r.ps);
+  else if (filter === 'counter') list = list.filter(r => r.type === 'カウンターサービス');
+  else if (filter === 'buffet') list = list.filter(r => r.type.includes('ブッフェ') || r.type.includes('バフェテリア'));
+  if (query) list = list.filter(r => r.name.toLowerCase().includes(query) || r.area.toLowerCase().includes(query) || r.cuisine.toLowerCase().includes(query));
+
+  document.getElementById('restaurant-container').innerHTML = list.map(r => `
+    <div class="restaurant-card">
+      <div class="name">${r.name}</div>
+      <div class="tags" style="margin:4px 0;">
+        <span class="tag tag-area">${r.area}</span>
+        ${r.ps ? '<span class="tag tag-dpa">PS予約可</span>' : ''}
+        <span class="tag" style="background:#455a64;color:#cfd8dc;">${r.type}</span>
+      </div>
+      <div class="type">${r.cuisine} ｜ ${r.price}</div>
+    </div>`).join('');
+}
+
+// ==========================================
+// HISTORY & TREND
+// ==========================================
+function populateRideSelector() {
+  const sel = document.getElementById('history-ride-select');
+  const current = sel.value;
+  const names = new Set();
+  allRides.forEach(r => names.add(r.name));
+  // Keep __avg__ and add new rides
+  const opts = ['<option value="__avg__">全体平均</option>'];
+  [...names].sort().forEach(n => opts.push(`<option value="${n}">${n}</option>`));
+  sel.innerHTML = opts.join('');
+  sel.value = current || '__avg__';
+}
+
+async function renderHistory() {
+  const dateFilter = document.getElementById('history-date-select').value;
+  const rideFilter = document.getElementById('history-ride-select').value;
+  const records = await getRecords(dateFilter);
+
+  // Stats
+  const statsEl = document.getElementById('history-stats');
+  const logEl = document.getElementById('history-log');
+
+  if (!records.length) {
+    statsEl.innerHTML = '';
+    logEl.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">選択した期間にデータがありません。</p>';
+    clearChart();
+    return;
+  }
+
+  const parkOpenRecords = records.filter(r => r.parkOpen);
+  const avgOfAvg = parkOpenRecords.length ? Math.round(parkOpenRecords.reduce((a,r)=>a+r.avgWait,0)/parkOpenRecords.length) : 0;
+  const maxOfMax = parkOpenRecords.length ? Math.max(...parkOpenRecords.map(r=>r.maxWait)) : 0;
+  const uniqueDates = [...new Set(records.map(r => r.date))];
+
+  statsEl.innerHTML = `
+    <div class="history-stat-card"><div class="hs-label">記録数</div><div class="hs-value">${records.length}</div></div>
+    <div class="history-stat-card"><div class="hs-label">記録日数</div><div class="hs-value">${uniqueDates.length}日</div></div>
+    <div class="history-stat-card"><div class="hs-label">平均待ち(営業中)</div><div class="hs-value" style="color:${avgOfAvg>40?'var(--orange)':'var(--green)'}">${avgOfAvg}分</div></div>
+    <div class="history-stat-card"><div class="hs-label">最長待ち(全期間)</div><div class="hs-value" style="color:var(--red)">${maxOfMax}分</div></div>
+  `;
+
+  // Chart
+  drawChart(parkOpenRecords, rideFilter);
+
+  // Log table (last 50)
+  const recent = records.slice(-50).reverse();
+  let tableHTML = '<table><tr><th>日付</th><th>時刻</th><th>平均</th><th>最長</th><th>運営</th></tr>';
+  recent.forEach(r => {
+    tableHTML += `<tr>
+      <td>${r.date}</td><td>${r.time}</td>
+      <td style="color:${r.avgWait>40?'var(--orange)':'var(--green)'}">${r.avgWait}分</td>
+      <td style="color:${r.maxWait>60?'var(--red)':'var(--yellow)'}">${r.maxWait}分</td>
+      <td>${r.openCount}/${r.totalCount}</td>
+    </tr>`;
+  });
+  tableHTML += '</table>';
+  logEl.innerHTML = tableHTML;
+}
+
+function drawChart(records, rideFilter) {
+  const canvas = document.getElementById('history-chart');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = Math.max(rect.width - 28, 600);
+  canvas.height = 300;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!records.length) { clearChart(); return; }
+
+  // Get data points
+  let dataPoints;
+  if (rideFilter === '__avg__') {
+    dataPoints = records.map(r => ({ t: r.time, d: r.date, v: r.avgWait }));
+  } else {
+    dataPoints = records.map(r => {
+      const ride = r.rides.find(rd => rd.name === rideFilter);
+      return { t: r.time, d: r.date, v: ride && ride.open ? ride.wait : null };
+    }).filter(p => p.v !== null);
+  }
+
+  if (!dataPoints.length) { clearChart(); return; }
+
+  const maxVal = Math.max(...dataPoints.map(p => p.v), 10);
+  const padTop = 30, padBottom = 40, padLeft = 50, padRight = 20;
+  const chartW = canvas.width - padLeft - padRight;
+  const chartH = canvas.height - padTop - padBottom;
+
+  // Grid
+  ctx.strokeStyle = '#223';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padTop + (chartH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(padLeft, y); ctx.lineTo(padLeft + chartW, y); ctx.stroke();
+    ctx.fillStyle = '#667';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxVal - (maxVal / 4) * i) + '分', padLeft - 6, y + 4);
+  }
+
+  // Data line
+  ctx.beginPath();
+  ctx.strokeStyle = '#4fc3f7';
+  ctx.lineWidth = 2;
+  dataPoints.forEach((p, i) => {
+    const x = padLeft + (i / Math.max(dataPoints.length - 1, 1)) * chartW;
+    const y = padTop + chartH - (p.v / maxVal) * chartH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Fill
+  ctx.lineTo(padLeft + chartW, padTop + chartH);
+  ctx.lineTo(padLeft, padTop + chartH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(79,195,247,0.1)';
+  ctx.fill();
+
+  // X labels (every few points)
+  ctx.fillStyle = '#667';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(dataPoints.length / 10));
+  for (let i = 0; i < dataPoints.length; i += step) {
+    const x = padLeft + (i / Math.max(dataPoints.length - 1, 1)) * chartW;
+    ctx.fillText(dataPoints[i].d.slice(5) + ' ' + dataPoints[i].t, x, canvas.height - 8);
+  }
+
+  // Title
+  ctx.fillStyle = '#4fc3f7';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(rideFilter === '__avg__' ? '全体平均待ち時間推移' : rideFilter + ' 待ち時間推移', padLeft, 18);
+}
+
+function clearChart() {
+  const canvas = document.getElementById('history-chart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.getBoundingClientRect().width - 28;
+  canvas.height = 300;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#556';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('データがありません', canvas.width/2, 150);
+}
+
+// ==========================================
+// Data export / import
+// ==========================================
+async function exportData() {
+  const records = await getAllRecords();
+  const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, `tds-data-${new Date().toLocaleDateString('sv-SE')}.json`);
+}
+
+async function exportCSV() {
+  const records = await getAllRecords();
+  if (!records.length) { alert('エクスポートするデータがありません'); return; }
+  let csv = 'date,time,avgWait,maxWait,openCount,totalCount,parkOpen\n';
+  records.forEach(r => {
+    csv += `${r.date},${r.time},${r.avgWait},${r.maxWait},${r.openCount},${r.totalCount},${r.parkOpen}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  downloadBlob(blob, `tds-data-${new Date().toLocaleDateString('sv-SE')}.csv`);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const records = JSON.parse(e.target.result);
+      if (!Array.isArray(records)) throw new Error('Invalid format');
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      for (const rec of records) {
+        delete rec.id; // let autoIncrement assign new id
+        store.add(rec);
+      }
+      tx.oncomplete = () => {
+        updateRecordCount();
+        renderHistory();
+        alert(`${records.length}件のデータをインポートしました`);
+      };
+    } catch (err) {
+      alert('インポートエラー: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function clearData() {
+  if (!confirm('蓄積した全データを削除しますか？この操作は取り消せません。')) return;
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  tx.objectStore(STORE_NAME).clear();
+  tx.oncomplete = () => {
+    updateRecordCount();
+    renderHistory();
+  };
+}
+
+// ==========================================
+// Checklist
+// ==========================================
+function renderChecklist() {
+  const items = [
+    'パークチケット (アプリに表示確認)',
+    'スマートフォン & モバイルバッテリー',
+    '東京ディズニーリゾート公式アプリ (最新版に更新)',
+    'クレジットカード / 電子マネー',
+    '雨具 (折りたたみ傘 / レインコート)',
+    '動きやすい靴',
+    '日焼け止め',
+    '飲み物 (ペットボトル)',
+    'レジャーシート (ショー鑑賞用)',
+    'プライオリティシーティング予約確認',
+    'モバイルSuica / PASMO (交通系ICカード)',
+  ];
+  document.getElementById('checklist').innerHTML = items.map(item =>
+    `<label style="display:block;cursor:pointer;padding:3px 0;">
+      <input type="checkbox" style="accent-color:var(--accent);margin-right:8px;"
+        onchange="this.parentElement.style.textDecoration=this.checked?'line-through':'none';this.parentElement.style.opacity=this.checked?'0.5':'1';">
+      ${item}
+    </label>`).join('');
+}
+
+// ==========================================
+// Countdown
+// ==========================================
+function updateCountdown() {
+  const now = new Date();
+  const diff = VISIT_DATE - now;
+  if (diff <= 0) {
+    document.getElementById('countdown').textContent = '本日が訪問日です！楽しんできてください！';
+    return;
+  }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  document.getElementById('countdown').textContent = `訪問まであと ${days}日 ${hours}時間`;
+}
+
+// ==========================================
+// Tabs
+// ==========================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'history') renderHistory();
+  });
+});
+
+// Filters
+document.getElementById('sort-select').addEventListener('change', renderAttractions);
+document.getElementById('filter-select').addEventListener('change', renderAttractions);
+document.getElementById('search-input').addEventListener('input', renderAttractions);
+document.getElementById('restaurant-filter').addEventListener('change', renderRestaurants);
+document.getElementById('restaurant-search').addEventListener('input', renderRestaurants);
+document.getElementById('history-date-select').addEventListener('change', renderHistory);
+
+// Auto refresh
+document.getElementById('auto-refresh').addEventListener('change', function() {
+  if (this.checked) startAutoRefresh(); else stopAutoRefresh();
+});
+function startAutoRefresh() {
+  stopAutoRefresh();
+  autoRefreshTimer = setInterval(fetchData, REFRESH_INTERVAL);
+}
+function stopAutoRefresh() {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+}
+
+// ==========================================
+// INIT
+// ==========================================
+(async function init() {
+  try {
+    await openDB();
+    await updateRecordCount();
+  } catch (e) {
+    console.warn('IndexedDB init error:', e);
+  }
+  renderRestaurants();
+  renderChecklist();
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+  fetchData();
+  startAutoRefresh();
+})();
+</script>
+</body>
+</html>
