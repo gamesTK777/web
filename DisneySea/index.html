@@ -358,7 +358,7 @@ const restaurants=[
   {name:'ノーチラスギャレー',area:'ミステリアスアイランド',type:'カウンター',ps:false,cuisine:'餃子ドッグ',price:'¥',tip:'食べ歩きに最適'},
   {name:'セバスチャンのカリプソキッチン',area:'マーメイドラグーン',type:'カウンター',ps:false,cuisine:'ピザ・チキン',price:'¥',tip:'室内で天候に左右されない'},
   {name:'ホライズンベイ・レストラン',area:'ポートディスカバリー',type:'バフェテリア',ps:true,cuisine:'ハンバーグ・ローストビーフ',price:'¥¥',tip:'メニュー豊富で家族向け'},
-  {name:'ロイヤルバンケットホール',area:'ファンタジースプリングス',type:'テーブルサービス',ps:true,cuisine:'コース料理',price:'¥¥¥¥',tip:'新エリアの目玉レストラン。予約困難'},
+  {name:'アレンデール ロイヤルバンケット',area:'ファンタジースプリングス',type:'テーブルサービス',ps:true,cuisine:'コース料理',price:'¥¥¥¥',tip:'新エリアの目玉レストラン。予約困難'},
   {name:'ルックアウト・クックアウト',area:'ファンタジースプリングス',type:'カウンター',ps:false,cuisine:'軽食',price:'¥',tip:'ピーターパンエリアのフード'},
   {name:'スナグリーダックリング',area:'ファンタジースプリングス',type:'カウンター',ps:false,cuisine:'軽食',price:'¥',tip:'ラプンツェルエリアのフード'},
 ];
@@ -421,11 +421,17 @@ async function fetchDPAStatus(){
 }
 
 // FETCH: レストラン待ち時間
+// レストランページはcorsproxy(403)/allorigins(タイムアウト)ではなくcodetabsのみ動作するため専用順序で試行
+const REST_PROXY_BUILDERS=[
+  u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+  u=>'https://corsproxy.io/?'+encodeURIComponent(u),
+];
 async function fetchRestaurantWait(){
   debugLog('=== レストラン待ち時間取得開始 ===');
-  for(let i=1;i<CORS_PROXY_BUILDERS.length;i++){
+  for(let i=0;i<REST_PROXY_BUILDERS.length;i++){
     try{
-      const url=CORS_PROXY_BUILDERS[i](DISNEYREAL_REST_URL);
+      const url=REST_PROXY_BUILDERS[i](DISNEYREAL_REST_URL);
       debugLog(`レストラン試行#${i}`);
       const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),12000);
       const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);
@@ -439,11 +445,20 @@ async function fetchRestaurantWait(){
         const h4=desc.querySelector('h4');if(!h4)return;
         const name=h4.textContent.trim();if(name.length<2||name.length>40)return;
         const parentUl=desc.parentElement;
-        const timeEl=parentUl?parentUl.querySelector('li.time time'):null;
-        const waitRange=timeEl?timeEl.textContent.trim():null;
+        // li[class*="time"] で li.time / li.time m 両方をカバー
+        const timeLi=parentUl?parentUl.querySelector('li[class*="time"]'):null;
+        const timeEl=timeLi?timeLi.querySelector('time'):null;
+        let waitRange=timeEl?timeEl.textContent.trim():null;
+        // <time>タグがない場合はpテキストから数値範囲を抽出
+        if(!waitRange&&timeLi){
+          const pText=timeLi.querySelector('p')?timeLi.querySelector('p').textContent:'';
+          const cleaned=pText.replace('待ち時間','').replace(/分.*$/,'').trim();
+          if(/^\d/.test(cleaned))waitRange=cleaned;
+        }
         const statusP=desc.querySelector('p');
-        const closed=!!(statusP&&statusP.textContent.includes('運営・公演中止'));
-        const mobileOrder=!!(statusP&&statusP.textContent.includes('モバイルオーダー'));
+        const pText=statusP?statusP.textContent:'';
+        const closed=!!(pText.includes('中止')||pText.includes('休止')||pText.includes('運営停止'));
+        const mobileOrder=!!(pText.includes('モバイルオーダー'));
         if(waitRange||closed||mobileOrder)rw[name]={waitRange,closed,mobileOrder};
       });
       restaurantWaitData=rw;
@@ -596,10 +611,15 @@ function renderAttractions(){
 }
 
 // UI: Restaurants
+function normRest(s){return s.replace(/[\s\u3000\u30FB\.\-・（）()「」『』]/g,'');}
 function getRestaurantWait(name){
   if(restaurantWaitData[name])return restaurantWaitData[name];
-  const n2=name.replace(/[\s\u3000\u30FB]/g,'');
-  for(const[k,v] of Object.entries(restaurantWaitData)){const k2=k.replace(/[\s\u3000\u30FB]/g,'');if(n2.includes(k2)||k2.includes(n2))return v;if(n2.length>4&&k2.length>4&&n2.substring(0,4)===k2.substring(0,4))return v}
+  const n2=normRest(name);
+  for(const[k,v] of Object.entries(restaurantWaitData)){
+    const k2=normRest(k);
+    if(n2===k2||n2.includes(k2)||k2.includes(n2))return v;
+    if(n2.length>4&&k2.length>4&&n2.substring(0,4)===k2.substring(0,4))return v;
+  }
   return null;
 }
 function renderRestaurants(){
