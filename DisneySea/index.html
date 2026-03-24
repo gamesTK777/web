@@ -49,17 +49,19 @@
   .attraction-card .wait-badge .unit{font-size:.5em;color:var(--text-muted)}
   .attraction-card .tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
   .tag{font-size:.62em;padding:2px 7px;border-radius:10px;font-weight:bold}
-  .tag-dpa{background:#e91e63;color:#fff}.tag-dpa-off{background:#880e4f;color:#999}.tag-pp{background:#2196f3;color:#fff}.tag-pp-off{background:#0d47a1;color:#999}
+  .tag-dpa{background:#e91e63;color:#fff}.tag-pp{background:#2196f3;color:#fff}
   .tag-closed{background:#555;color:#aaa}.tag-area{background:#37474f;color:#90a4ae}
   .tag-selling{background:#4caf50;color:#fff;animation:pulse 2s infinite}.tag-soldout{background:#555;color:#ef5350}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
   .attraction-card .meta{font-size:.7em;color:var(--text-muted);margin-top:3px}
-  .restaurant-card{background:var(--card);border-radius:10px;padding:12px;transition:all .2s;border-left:4px solid var(--accent)}
+  .restaurant-card{background:var(--card);border-radius:10px;padding:12px;transition:all .2s;border-left:4px solid var(--accent);position:relative}
   .restaurant-card:hover{background:var(--card-hover)}
-  .restaurant-card .name{font-weight:bold;font-size:.9em;margin-bottom:3px}
+  .restaurant-card .name{font-weight:bold;font-size:.9em;margin-bottom:3px;padding-right:65px}
   .restaurant-card .type{font-size:.72em;color:var(--text-muted)}
   .restaurant-card .tags{display:flex;gap:3px;flex-wrap:wrap;margin:4px 0}
   .restaurant-card .wait-info{font-size:.78em;margin-top:4px;padding:4px 8px;background:var(--bg);border-radius:6px}
+  .restaurant-card .wait-badge{position:absolute;top:12px;right:12px;font-size:1.1em;font-weight:bold;min-width:50px;text-align:right;color:var(--accent)}
+  .restaurant-card .wait-badge .unit{font-size:.5em;color:var(--text-muted)}
   .info-section{background:var(--card);border-radius:10px;padding:14px;margin-bottom:10px}
   .info-section h3{color:var(--accent);font-size:.92em;margin-bottom:8px;border-bottom:1px solid #334;padding-bottom:5px}
   .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
@@ -99,18 +101,33 @@
   .data-mgmt button{background:var(--primary);color:var(--text);border:1px solid #445;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:.76em;margin-right:5px}
   .data-mgmt button.danger{border-color:var(--red);color:var(--red)}
   .data-mgmt button:hover{opacity:.8}
-  .dpa-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-bottom:12px}
-  .dpa-item{background:var(--card);border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center}
-  .dpa-item .dpa-name{font-size:.85em;font-weight:bold}
-  .dpa-item .dpa-status{font-size:.75em;padding:3px 10px;border-radius:12px;font-weight:bold}
-  .dpa-item .dpa-status.selling{background:#4caf50;color:#fff}.dpa-item .dpa-status.soldout{background:#333;color:var(--red)}
+  .show-card{background:var(--card);border-radius:10px;padding:12px;border-left:4px solid var(--purple);transition:all .2s}
+  .show-card:hover{background:var(--card-hover)}
+  .show-card .name{font-weight:bold;font-size:.9em;margin-bottom:4px}
+  .show-card .show-times{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
+  .show-time{background:var(--bg);color:var(--accent);padding:3px 10px;border-radius:12px;font-size:.76em;font-weight:bold}
+  .show-time.next{background:var(--accent);color:#000}
+  .show-card .show-info{font-size:.74em;color:var(--text-muted);margin-top:4px}
+  .weather-widget{background:var(--card);border-radius:10px;padding:14px;margin-bottom:10px}
+  .weather-hourly{display:flex;gap:6px;overflow-x:auto;padding:8px 0}
+  .weather-hour{background:var(--bg);border-radius:8px;padding:8px;text-align:center;min-width:60px;flex-shrink:0}
+  .weather-hour .wh-time{font-size:.68em;color:var(--text-muted)}
+  .weather-hour .wh-icon{font-size:1.4em;margin:3px 0}
+  .weather-hour .wh-temp{font-size:.82em;font-weight:bold}
+  .weather-hour .wh-rain{font-size:.62em;color:var(--blue)}
+  .weather-daily{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:8px}
+  .weather-day{background:var(--bg);border-radius:8px;padding:8px;text-align:center}
+  .weather-day .wd-date{font-size:.72em;color:var(--text-muted)}
+  .weather-day .wd-icon{font-size:1.3em;margin:2px 0}
+  .weather-day .wd-temp{font-size:.78em}
+  .weather-day.visit-day{border:2px solid var(--accent2);background:#1e2a1e}
   @media(max-width:600px){.header h1{font-size:1.1em}.attraction-grid{grid-template-columns:1fr}.summary-bar{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="header">
   <h1>Tokyo DisneySea Dashboard</h1>
-  <div class="subtitle">リアルタイム待ち時間 & DPA/パス販売状況 ＋ データ蓄積</div>
+  <div class="subtitle">リアルタイム待ち時間 & パス販売状況 ＋ データ蓄積</div>
   <div class="visit-date">訪問予定日: 2026年3月29日(日)</div>
   <div class="countdown" id="countdown"></div>
 </div>
@@ -126,8 +143,8 @@
 </div>
 <div class="tabs">
   <button class="tab-btn active" data-tab="attractions">アトラクション</button>
-  <button class="tab-btn" data-tab="dpa">DPA/パス状況</button>
   <button class="tab-btn" data-tab="restaurants">レストラン</button>
+  <button class="tab-btn" data-tab="shows">ショー・パレード</button>
   <button class="tab-btn" data-tab="history">履歴・トレンド</button>
   <button class="tab-btn" data-tab="info">便利情報</button>
 </div>
@@ -144,6 +161,13 @@
   </div>
   <div class="crowd-meter"><div class="fill" id="crowd-fill" style="width:0%"></div></div>
   <div id="park-closed-msg" class="warn-msg" style="display:none">現在パークは営業時間外のため、全アトラクションが休止中として表示されています。</div>
+  <div class="info-section" id="dpa-strategy-box" style="margin-bottom:10px">
+    <h3>DPA / プライオリティパス 戦略ヒント</h3>
+    <div class="info-grid">
+      <div class="info-item"><div class="label">DPA優先順位（おすすめ）</div><div class="value" style="font-size:.78em">①アナ雪 → ②ソアリン → ③センター → ④トイマニ<br><small style="color:var(--text-muted)">※売切が早い順。入園直後にアナ雪を最優先で購入</small></div></div>
+      <div class="info-item"><div class="label">PP優先順位</div><div class="value" style="font-size:.78em">①レイジングスピリッツ → ②ニモ → ③タートルトーク<br><small style="color:var(--text-muted)">※PP取得後60分で次を取得可能</small></div></div>
+    </div>
+  </div>
   <div class="filter-bar">
     <label>並替:</label>
     <select id="sort-select"><option value="wait-desc">待ち時間 長い順</option><option value="wait-asc">待ち時間 短い順</option><option value="name">名前順</option><option value="area">エリア順</option></select>
@@ -154,40 +178,20 @@
   <div id="attraction-container" class="attraction-grid"><div class="loading"><div class="spinner"></div><br>データ取得中...</div></div>
 </div>
 
-<!-- DPA/パス状況タブ -->
-<div class="tab-content" id="tab-dpa">
-  <div class="info-section">
-    <h3>DPA（ディズニー・プレミアアクセス）販売状況</h3>
-    <p style="font-size:.78em;color:var(--text-muted);margin-bottom:8px">リアルタイムのDPA販売状況です。「販売中」の施設はアプリから購入可能です。データは<a href="https://disneyreal.asumirai.info/" target="_blank" style="color:var(--accent)">ディズニーリアル</a>より取得しています。</p>
-    <div class="dpa-summary" id="dpa-list"><div style="color:var(--text-muted);text-align:center;padding:20px">読み込み中...</div></div>
-  </div>
-  <div class="info-section">
-    <h3>40周年記念プライオリティパス 発行状況</h3>
-    <p style="font-size:.78em;color:var(--text-muted);margin-bottom:8px">無料のプライオリティパスの発行状況です。「発行中」の施設はアプリから取得可能です。</p>
-    <div class="dpa-summary" id="pp-list"><div style="color:var(--text-muted);text-align:center;padding:20px">読み込み中...</div></div>
-  </div>
-  <div class="info-section">
-    <h3>パス取得の戦略ヒント</h3>
-    <div class="info-grid">
-      <div class="info-item"><div class="label">DPA優先順位（おすすめ）</div><div class="value" style="font-size:.78em">①アナ雪 → ②ソアリン → ③センター → ④トイマニ<br><small style="color:var(--text-muted)">※売切が早い順。入園直後にアナ雪を最優先で購入</small></div></div>
-      <div class="info-item"><div class="label">PP優先順位</div><div class="value" style="font-size:.78em">①レイジングスピリッツ → ②ニモ → ③タートルトーク<br><small style="color:var(--text-muted)">※PP取得後60分で次を取得可能</small></div></div>
-    </div>
-  </div>
-</div>
-
 <!-- レストランタブ -->
 <div class="tab-content" id="tab-restaurants">
   <div class="info-section">
-    <h3>レストラン情報</h3>
-    <p style="font-size:.8em;color:var(--text-muted);margin-bottom:8px">
-      レストランの待ち時間は<strong style="color:var(--accent)">TDR公式アプリ</strong>でリアルタイム確認できます。<br>
-      PS(プライオリティ・シーティング)対象レストランは<a href="https://reserve.tokyodisneyresort.jp/" target="_blank" style="color:var(--accent)">オンライン予約サイト</a>から事前予約が可能です。
-      当日枠は朝9時にアプリから予約できます。
+    <h3>レストラン リアルタイム情報</h3>
+    <p style="font-size:.8em;color:var(--text-muted);margin-bottom:4px">
+      待ち時間は<a href="https://disneyreal.asumirai.info/" target="_blank" style="color:var(--accent)">ディズニーリアル</a>からの取得を試みます。取得できない場合は<strong style="color:var(--accent)">TDR公式アプリ</strong>で確認してください。<br>
+      PS(プライオリティ・シーティング)対象レストランは<a href="https://reserve.tokyodisneyresort.jp/" target="_blank" style="color:var(--accent)">オンライン予約サイト</a>から事前予約が可能です。当日枠は朝9時にアプリから。
     </p>
   </div>
   <div class="filter-bar">
+    <label>並替:</label>
+    <select id="restaurant-sort"><option value="default">エリア順</option><option value="wait-desc">待ち時間 長い順</option><option value="wait-asc">待ち時間 短い順</option></select>
     <label>絞込:</label>
-    <select id="restaurant-filter"><option value="all">すべて</option><option value="ps">PS対応(予約可)</option><option value="counter">カウンターサービス</option><option value="table">テーブルサービス</option></select>
+    <select id="restaurant-filter"><option value="all">すべて</option><option value="ps">PS対応(予約可)</option><option value="counter">カウンターサービス</option><option value="table">テーブルサービス</option><option value="buffet">バフェテリア</option></select>
     <input type="text" id="restaurant-search" placeholder="検索..." style="flex:1;min-width:100px">
   </div>
   <div id="restaurant-container" class="attraction-grid"></div>
@@ -197,6 +201,26 @@
       <div class="info-item"><div class="label">ピーク時間帯</div><div class="value" style="font-size:.78em">11:30〜13:30（ランチ）/ 17:30〜19:00（ディナー）</div></div>
       <div class="info-item"><div class="label">おすすめ時間帯</div><div class="value" style="font-size:.78em">10:30〜11:00 / 14:00〜15:00 / 19:30以降</div></div>
       <div class="info-item"><div class="label">PS予約のコツ</div><div class="value" style="font-size:.78em">来園1ヶ月前の10時から予約開始。当日枠は朝9時にアプリから。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ショー・パレードタブ -->
+<div class="tab-content" id="tab-shows">
+  <div class="info-section">
+    <h3>ショー・パレード スケジュール</h3>
+    <p style="font-size:.8em;color:var(--text-muted);margin-bottom:4px">
+      当日の公演スケジュールと抽選/DPA情報です。次の公演は<span style="color:var(--accent);font-weight:bold">水色ハイライト</span>で表示されます。<br>
+      最新スケジュールは<a href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank" style="color:var(--accent)">公式サイト</a>でもご確認ください。
+    </p>
+  </div>
+  <div id="show-container" class="attraction-grid"></div>
+  <div class="info-section" style="margin-top:10px">
+    <h3>ショー鑑賞の戦略ヒント</h3>
+    <div class="info-grid">
+      <div class="info-item"><div class="label">ビリーヴ！（DPA）</div><div class="value" style="font-size:.78em">DPA ¥2,500で鑑賞エリア確保可。人気のため早めに購入。無料エリアは2時間前から場所取り推奨。</div></div>
+      <div class="info-item"><div class="label">抽選ショー</div><div class="value" style="font-size:.78em">入園後すぐにアプリで抽選。外れた場合は自由席エリアへ。</div></div>
+      <div class="info-item"><div class="label">ハーバーショー</div><div class="value" style="font-size:.78em">リドアイル・ピアッツァトポリーノ周辺が人気。立ち見なら30分前でも見やすい場所あり。</div></div>
     </div>
   </div>
 </div>
@@ -230,31 +254,41 @@
 
 <!-- 便利情報タブ -->
 <div class="tab-content" id="tab-info">
+  <div class="weather-widget" id="weather-widget">
+    <h3 style="color:var(--accent);font-size:.92em;margin-bottom:8px;border-bottom:1px solid #334;padding-bottom:5px">天気予報（浦安市 / Open-Meteo）</h3>
+    <div id="weather-content"><div class="loading"><div class="spinner"></div><br>天気データ取得中...</div></div>
+  </div>
+
   <div class="info-section"><h3>2026/3/29 訪問日情報</h3>
     <div class="info-grid">
-      <div class="info-item"><div class="label">天気予報</div><div class="value"><a href="https://tenki.jp/forecast/3/16/4510/12227/" target="_blank">浦安市の天気予報 →</a></div></div>
-      <div class="info-item"><div class="label">開園・閉園時間</div><div class="value"><a href="https://www.tokyodisneyresort.jp/tds/monthly/calendar.html" target="_blank">公式カレンダー →</a></div></div>
-      <div class="info-item"><div class="label">混雑予想</div><div class="value"><a href="https://urtrip.jp/tds-crowd-calendar/" target="_blank">混雑予想カレンダー →</a></div></div>
-      <div class="info-item"><div class="label">ショースケジュール</div><div class="value"><a href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank">公式ショースケジュール →</a></div></div>
+      <div class="info-item"><div class="label">開園・閉園時間</div><div class="value" id="park-hours-info">取得中...</div></div>
+      <div class="info-item"><div class="label">訪問日の天気・混雑予想</div><div class="value" id="crowd-forecast-info">取得中...</div></div>
+      <div class="info-item"><div class="label">日の出・日の入</div><div class="value" id="sunrise-info">取得中...</div></div>
+      <div class="info-item"><div class="label">訪問日の曜日</div><div class="value">日曜日（春休み期間中 — 混雑が予想されます）</div></div>
     </div>
   </div>
+
   <div class="info-section"><h3>パスシステム解説</h3>
     <div class="info-grid">
-      <div class="info-item"><div class="label">DPA (有料)</div><div class="value" style="font-size:.76em">体験時間を選んで購入。1,500〜2,000円/回(ショー2,500円)。購入後すぐ次を購入可(同施設は利用後)。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/disneypremieraccess.html" target="_blank">公式 →</a></div></div>
-      <div class="info-item"><div class="label">40周年記念プライオリティパス (無料)</div><div class="value" style="font-size:.76em">次に利用可能な時間帯が自動割当。取得後60分経過 or 利用後に次を取得可。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/prioritypass.html" target="_blank">公式 →</a></div></div>
-      <div class="info-item"><div class="label">スタンバイパス (無料)</div><div class="value" style="font-size:.76em">指定時間に列に並べる権利。混雑時に発行。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/standbypass.html" target="_blank">公式 →</a></div></div>
+      <div class="info-item"><div class="label">DPA (有料)</div><div class="value" style="font-size:.76em">体験時間を選んで購入。1,500〜2,000円/回(ショー2,500円)。購入後すぐ次を購入可(同施設は利用後)。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/disneypremieraccess.html" target="_blank">公式ガイド →</a></div></div>
+      <div class="info-item"><div class="label">40周年記念プライオリティパス (無料)</div><div class="value" style="font-size:.76em">次に利用可能な時間帯が自動割当。取得後60分経過 or 利用後に次を取得可。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/prioritypass.html" target="_blank">公式ガイド →</a></div></div>
+      <div class="info-item"><div class="label">スタンバイパス (無料)</div><div class="value" style="font-size:.76em">指定時間に列に並べる権利。混雑時に発行。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/standbypass.html" target="_blank">公式ガイド →</a></div></div>
     </div>
   </div>
+
   <div class="info-section"><h3>便利リンク集</h3>
     <div class="link-grid">
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/attraction.html" target="_blank"><div class="link-title">公式 アトラクション一覧</div><div class="link-desc">詳細情報・休止情報</div></a>
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/restaurant.html" target="_blank"><div class="link-title">公式 レストラン一覧</div><div class="link-desc">メニュー・営業時間・PS</div></a>
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/map.html" target="_blank"><div class="link-title">公式 パークマップ</div><div class="link-desc">インタラクティブマップ</div></a>
+      <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank"><div class="link-title">公式 ショースケジュール</div><div class="link-desc">当日の公演時間</div></a>
       <a class="link-card" href="https://disneyreal.asumirai.info/realtime/disneysea-wait-today.html" target="_blank"><div class="link-title">リアルタイム待ち時間推移</div><div class="link-desc">時間帯別グラフ(ディズニーリアル)</div></a>
       <a class="link-card" href="https://urtrip.jp/tds-attraction-waitingtime-realtime/" target="_blank"><div class="link-title">DPA・パス発券状況</div><div class="link-desc">リアルタイム終了時間(URTRIP)</div></a>
       <a class="link-card" href="https://www.tokyodisneyresort.jp/special/fantasysprings/" target="_blank"><div class="link-title">ファンタジースプリングス</div><div class="link-desc">新エリア特設ページ</div></a>
+      <a class="link-card" href="https://reserve.tokyodisneyresort.jp/" target="_blank"><div class="link-title">レストラン予約(PS)</div><div class="link-desc">プライオリティ・シーティング予約</div></a>
     </div>
   </div>
+
   <div class="info-section"><h3>持ち物チェックリスト</h3><div style="font-size:.8em;line-height:1.8" id="checklist"></div></div>
 </div>
 </div>
@@ -263,80 +297,24 @@
   <h3 style="cursor:pointer;color:var(--accent)" onclick="document.getElementById('debug-log').style.display=document.getElementById('debug-log').style.display==='none'?'block':'none'">デバッグログ (クリックで開閉)</h3>
   <pre id="debug-log" style="display:none;background:#0a0a0a;color:#0f0;padding:8px;border-radius:6px;font-size:.7em;max-height:250px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></pre>
 </div>
-<div class="powered-by">待ち時間データ: <a href="https://queue-times.com/" target="_blank">Queue-Times.com</a> ／ DPA・パス状況: <a href="https://disneyreal.asumirai.info/" target="_blank">ディズニーリアル</a></div>
+<div class="powered-by">待ち時間データ: <a href="https://queue-times.com/" target="_blank">Queue-Times.com</a> ／ DPA・パス状況: <a href="https://disneyreal.asumirai.info/" target="_blank">ディズニーリアル</a> ／ 天気: <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a></div>
 
 <script>
-// ==========================================
-// CONFIG
-// ==========================================
-const PARK_ID = 275;
-const API_BASE = 'https://queue-times.com/parks/' + PARK_ID + '/queue_times.json';
-const DISNEYREAL_URL = 'https://disneyreal.asumirai.info/realtime/disneysea-wait-today.html';
-const CORS_PROXY_BUILDERS = [
-  u => u,
-  u => 'https://corsproxy.io/?' + encodeURIComponent(u),
-  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
-];
-const REFRESH_INTERVAL = 60000;
-const DB_NAME = 'TDS_Dashboard';
-const DB_VERSION = 1;
-const STORE_NAME = 'waitHistory';
-const VISIT_DATE = new Date('2026-03-29T00:00:00+09:00');
+const PARK_ID=275;
+const API_BASE='https://queue-times.com/parks/'+PARK_ID+'/queue_times.json';
+const DISNEYREAL_URL='https://disneyreal.asumirai.info/realtime/disneysea-wait-today.html';
+const DISNEYREAL_REST_URL='https://disneyreal.asumirai.info/realtime/disneysea-restaurant-today.html';
+const CORS_PROXY_BUILDERS=[u=>u,u=>'https://corsproxy.io/?'+encodeURIComponent(u),u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)];
+const REFRESH_INTERVAL=60000;
+const DB_NAME='TDS_Dashboard';const DB_VERSION=1;const STORE_NAME='waitHistory';
+const VISIT_DATE=new Date('2026-03-29T00:00:00+09:00');
 
-let autoRefreshTimer = null;
-let allRides = [];
-let dpaStatusData = {};  // {name: '販売中'|'販売なし'}
-let ppStatusData = {};   // {name: '発行中'|'発行なし'}
-let db = null;
-let currentProxyIndex = 0;
+let autoRefreshTimer=null,allRides=[],dpaStatusData={},ppStatusData={},restaurantWaitData={},db=null,currentProxyIndex=0;
 
-// ==========================================
-// 英語→日本語 アトラクション名マッピング
-// ==========================================
-const nameJP = {
-  "20,000 Leagues Under the Sea": "海底2万マイル",
-  "Anna and Elsa's Frozen Journey": "アナとエルサのフローズンジャーニー",
-  "Aquatopia": "アクアトピア",
-  "Ariel's Playground": "アリエルのプレイグラウンド",
-  "Big City Vehicles": "ビッグシティ・ヴィークル",
-  "Blowfish Balloon Race": "ブローフィッシュ・バルーンレース",
-  "Caravan Carousel": "キャラバンカルーセル",
-  "DisneySea Electric Railway (American Waterfront)": "エレクトリックレールウェイ（アメフロ）",
-  "DisneySea Electric Railway (Port Discovery)": "エレクトリックレールウェイ（ポートディスカバリー）",
-  "DisneySea Transit Steamer Line (American Waterfront)": "トランジットスチーマーライン（アメフロ）",
-  "DisneySea Transit Steamer Line (Lost River Delta)": "トランジットスチーマーライン（ロストリバーデルタ）",
-  "DisneySea Transit Steamer Line (Mediterranean Harbor)": "トランジットスチーマーライン（メディテレーニアンハーバー）",
-  "Fairy Tinker Bell's Busy Buggies": "ティンカーベルのビジーバギー",
-  "Flounder's Flying Fish Coaster": "フランダーのフライングフィッシュコースター",
-  "Fortress Explorations": "フォートレス・エクスプロレーション",
-  "Indiana Jones Adventure®: Temple of the Crystal Skull": "インディ・ジョーンズ・アドベンチャー：クリスタルスカルの魔宮",
-  "Indiana Jones Adventure: Temple of the Crystal Skull": "インディ・ジョーンズ・アドベンチャー：クリスタルスカルの魔宮",
-  "Jasmine's Flying Carpets": "ジャスミンのフライングカーペット",
-  "Journey to the Center of the Earth": "センター・オブ・ジ・アース",
-  "Jumpin' Jellyfish": "ジャンピン・ジェリーフィッシュ",
-  "Mermaid Lagoon Theater": "マーメイドラグーンシアター",
-  "Nemo & Friends SeaRider": "ニモ&フレンズ・シーライダー",
-  "Peter Pan's Never Land Adventure": "ピーターパンのネバーランドアドベンチャー",
-  "Raging Spirits": "レイジングスピリッツ",
-  "Rapunzel's Lantern Festival": "ラプンツェルのランタンフェスティバル",
-  "Scuttle's Scooters": "スカットルのスクーター",
-  "Sindbad's Storybook Voyage": "シンドバッド・ストーリーブック・ヴォヤッジ",
-  "Soaring: Fantastic Flight": "ソアリン：ファンタスティック・フライト",
-  "The Leonardo Challenge": "ザ・レオナルドチャレンジ",
-  "The Magic Lamp Theater": "マジックランプシアター",
-  "The Whirlpool": "ワールプール",
-  "Tower of Terror": "タワー・オブ・テラー",
-  "Toy Story Mania!": "トイ・ストーリー・マニア！",
-  "Turtle Talk": "タートル・トーク",
-  "Venetian Gondolas": "ヴェネツィアン・ゴンドラ",
-};
+const nameJP={"20,000 Leagues Under the Sea":"海底2万マイル","Anna and Elsa's Frozen Journey":"アナとエルサのフローズンジャーニー","Aquatopia":"アクアトピア","Ariel's Playground":"アリエルのプレイグラウンド","Big City Vehicles":"ビッグシティ・ヴィークル","Blowfish Balloon Race":"ブローフィッシュ・バルーンレース","Caravan Carousel":"キャラバンカルーセル","DisneySea Electric Railway (American Waterfront)":"エレクトリックレールウェイ（アメフロ）","DisneySea Electric Railway (Port Discovery)":"エレクトリックレールウェイ（ポートディスカバリー）","DisneySea Transit Steamer Line (American Waterfront)":"トランジットスチーマーライン（アメフロ）","DisneySea Transit Steamer Line (Lost River Delta)":"トランジットスチーマーライン（ロストリバーデルタ）","DisneySea Transit Steamer Line (Mediterranean Harbor)":"トランジットスチーマーライン（メディテレーニアンハーバー）","Fairy Tinker Bell's Busy Buggies":"ティンカーベルのビジーバギー","Flounder's Flying Fish Coaster":"フランダーのフライングフィッシュコースター","Fortress Explorations":"フォートレス・エクスプロレーション","Indiana Jones Adventure\u00ae: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Indiana Jones Adventure: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Jasmine's Flying Carpets":"ジャスミンのフライングカーペット","Journey to the Center of the Earth":"センター・オブ・ジ・アース","Jumpin' Jellyfish":"ジャンピン・ジェリーフィッシュ","Mermaid Lagoon Theater":"マーメイドラグーンシアター","Nemo & Friends SeaRider":"ニモ&フレンズ・シーライダー","Peter Pan's Never Land Adventure":"ピーターパンのネバーランドアドベンチャー","Raging Spirits":"レイジングスピリッツ","Rapunzel's Lantern Festival":"ラプンツェルのランタンフェスティバル","Scuttle's Scooters":"スカットルのスクーター","Sindbad's Storybook Voyage":"シンドバッド・ストーリーブック・ヴォヤッジ","Soaring: Fantastic Flight":"ソアリン：ファンタスティック・フライト","The Leonardo Challenge":"ザ・レオナルドチャレンジ","The Magic Lamp Theater":"マジックランプシアター","The Whirlpool":"ワールプール","Tower of Terror":"タワー・オブ・テラー","Toy Story Mania!":"トイ・ストーリー・マニア！","Turtle Talk":"タートル・トーク","Venetian Gondolas":"ヴェネツィアン・ゴンドラ"};
 
-// ==========================================
-// DPA / PP 対象定義 & エリア推定
-// ==========================================
-const dpaKeywords = ['soaring','toy story','tower of terror','center of the earth','journey to the center','peter pan','rapunzel','frozen journey','anna and elsa','believe'];
-const ppKeywords = ['indiana jones','raging spirits','20,000 leagues','magic lamp','nemo','searider','turtle talk'];
+const dpaKeywords=['soaring','toy story','tower of terror','center of the earth','journey to the center','peter pan','rapunzel','frozen journey','anna and elsa','believe'];
+const ppKeywords=['indiana jones','raging spirits','20,000 leagues','magic lamp','nemo','searider','turtle talk'];
 function isDPA(n){const l=n.toLowerCase();return dpaKeywords.some(k=>l.includes(k))}
 function isPP(n){const l=n.toLowerCase();return ppKeywords.some(k=>l.includes(k))}
 function getDPAPrice(n){const l=n.toLowerCase();if(l.includes('believe'))return 2500;if(isDPA(n))return 2000;return null}
@@ -356,15 +334,12 @@ function guessArea(name){
   if(n.includes('steamer')&&n.includes('lost'))return 'ロストリバーデルタ';
   if(n.includes('center of the earth')||n.includes('journey to')||n.includes('20,000'))return 'ミステリアスアイランド';
   if(n.includes('magic lamp')||n.includes('sindbad')||n.includes('jasmine')||n.includes('caravan')||n.includes('whirlpool'))return 'アラビアンコースト';
-  if(n.includes('mermaid')||n.includes('ariel')||n.includes('blowfish')||n.includes('scuttle')||n.includes('flounder')||n.includes('jumpin')||n.includes('jellyfish')||n.includes('sebastian'))return 'マーメイドラグーン';
-  if(n.includes('nemo')||n.includes('aquatopia')||n.includes('electric railway')&&n.includes('port'))return 'ポートディスカバリー';
+  if(n.includes('mermaid')||n.includes('ariel')||n.includes('blowfish')||n.includes('scuttle')||n.includes('flounder')||n.includes('jumpin')||n.includes('jellyfish'))return 'マーメイドラグーン';
+  if(n.includes('nemo')||n.includes('aquatopia'))return 'ポートディスカバリー';
   return 'ディズニーシー';
 }
 
-// ==========================================
-// RESTAURANTS
-// ==========================================
-const restaurants = [
+const restaurants=[
   {name:'マゼランズ',area:'メディテレーニアンハーバー',type:'テーブルサービス',ps:true,cuisine:'コース料理',price:'¥¥¥¥',tip:'予約必須の人気店。記念日におすすめ'},
   {name:'リストランテ・ディ・カナレット',area:'メディテレーニアンハーバー',type:'テーブルサービス',ps:true,cuisine:'イタリアン',price:'¥¥¥',tip:'運河沿いテラス席が人気'},
   {name:'カフェ・ポルトフィーノ',area:'メディテレーニアンハーバー',type:'バフェテリア',ps:false,cuisine:'パスタ・グラタン',price:'¥¥',tip:'座席数多め。ピーク時でも回転早い'},
@@ -388,85 +363,177 @@ const restaurants = [
   {name:'スナグリーダックリング',area:'ファンタジースプリングス',type:'カウンター',ps:false,cuisine:'軽食',price:'¥',tip:'ラプンツェルエリアのフード'},
 ];
 
-// ==========================================
+const shows=[
+  {name:'ビリーヴ！～シー・オブ・ドリームス～',area:'メディテレーニアンハーバー',type:'ナイトショー',duration:30,dpa:true,dpaPrice:2500,lottery:false,times:['19:30'],note:'ハーバーの夜間ショー。DPA ¥2,500で鑑賞エリア確保可。'},
+  {name:'ジャンボリミッキー！レッツ・ダンス！',area:'ドックサイドステージ',type:'ステージショー',duration:25,dpa:false,lottery:false,times:['10:40','12:00','14:25','16:45'],note:'参加型ダンスショー。開始30分前には並びましょう。'},
+  {name:'ビッグバンドビート ～ア・スペシャルトリート～',area:'ブロードウェイ・ミュージックシアター',type:'ステージショー',duration:25,dpa:false,lottery:true,times:['11:15','12:45','14:15','15:55','17:25'],note:'生演奏ジャズショー。抽選制あり。'},
+  {name:'マイ・フレンド・ダッフィー',area:'ケープコッド・クックオフ',type:'ショーレストラン',duration:20,dpa:false,lottery:false,times:['営業時間中随時'],note:'食事をしながら鑑賞。'},
+  {name:'シャイニング・ウィズ・ユー',area:'ハンガーステージ',type:'ステージショー',duration:25,dpa:false,lottery:true,times:['10:30','11:55','13:20','14:55','16:20'],note:'体験型ショー。抽選制あり。'},
+  {name:'ダッフィー＆フレンズのワンダフル・フレンドシップ',area:'メディテレーニアンハーバー',type:'ハーバーグリーティング',duration:15,dpa:false,lottery:false,times:['11:00','15:00'],note:'ダッフィーたちがボートで登場。'},
+  {name:'ディズニーシー・トランジットスチーマーライン（グリーティング）',area:'ハーバー周辺',type:'グリーティング船',duration:10,dpa:false,lottery:false,times:['不定期'],note:'キャラクターがスチーマーに乗って登場。アプリでチェック。'},
+];
+
 // DEBUG
-// ==========================================
 const debugLogs=[];
 function debugLog(msg){const ts=new Date().toLocaleTimeString('ja-JP');debugLogs.push(`[${ts}] ${msg}`);if(debugLogs.length>100)debugLogs.shift();console.log('[TDS]',msg);const el=document.getElementById('debug-log');if(el){el.textContent=debugLogs.slice(-20).join('\n');el.scrollTop=el.scrollHeight}}
 
-// ==========================================
 // IndexedDB
-// ==========================================
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE_NAME)){const s=d.createObjectStore(STORE_NAME,{keyPath:'id',autoIncrement:true});s.createIndex('timestamp','timestamp',{unique:false});s.createIndex('date','date',{unique:false})}};req.onsuccess=e=>{db=e.target.result;resolve(db)};req.onerror=e=>reject(e.target.error)})}
 function saveSnapshot(rides){if(!db)return;const now=new Date();const dateStr=now.toLocaleDateString('sv-SE');const timeStr=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});const openR=rides.filter(r=>r.is_open);const waits=openR.map(r=>r.wait_time).filter(w=>w>0);const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):0;const rec={timestamp:now.getTime(),date:dateStr,time:timeStr,avgWait:avg,maxWait:waits.length?Math.max(...waits):0,openCount:openR.length,totalCount:rides.length,parkOpen:openR.length>0&&avg>0,rides:rides.map(r=>({name:nameJP[r.name]||r.name,area:r._area||'',wait:r.wait_time,open:r.is_open}))};const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).add(rec);updateRecordCount()}
 async function getRecords(df){if(!db)return[];return new Promise(res=>{const tx=db.transaction(STORE_NAME,'readonly');const s=tx.objectStore(STORE_NAME);const recs=[];const req=df&&df!=='all'?s.index('date').openCursor(IDBKeyRange.only(df)):s.openCursor();req.onsuccess=e=>{const c=e.target.result;if(c){recs.push(c.value);c.continue()}else res(recs)};req.onerror=()=>res([])})}
 async function getAllRecords(){if(!db)return[];return new Promise(res=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).getAll();req.onsuccess=()=>res(req.result||[]);req.onerror=()=>res([])})}
 async function updateRecordCount(){if(!db)return;const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).count();req.onsuccess=()=>{const c=req.result;document.getElementById('record-count').textContent=`蓄積:${c}件`;document.getElementById('storage-info').textContent=`IndexedDB: ${c}件`}}
 
-// ==========================================
 // FETCH: Queue-Times API
-// ==========================================
-async function fetchWithProxy(pi){const url=CORS_PROXY_BUILDERS[pi](API_BASE);const pn=pi===0?'Direct':new URL(url).hostname;debugLog(`試行#${pi+1}(${pn})`);const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),10000);try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);debugLog(`  → HTTP ${r.status}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const txt=await r.text();let json;try{json=JSON.parse(txt)}catch(e){debugLog(`  → JSONパースエラー`);throw new Error('JSON parse error')}if(!json.lands&&!json.rides){if(json.contents){json=JSON.parse(json.contents)}}debugLog(`  → lands:${json.lands?.length||0}, rides:${json.rides?.length||0}`);return json}catch(e){clearTimeout(t);debugLog(`  → エラー: ${e.message}`);throw e}}
+async function fetchWithProxy(pi){const url=CORS_PROXY_BUILDERS[pi](API_BASE);const pn=pi===0?'Direct':new URL(url).hostname;debugLog(`試行#${pi+1}(${pn})`);const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),10000);try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);debugLog(`  → HTTP ${r.status}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const txt=await r.text();let json;try{json=JSON.parse(txt)}catch(e){throw new Error('JSON parse error')}if(!json.lands&&!json.rides){if(json.contents){json=JSON.parse(json.contents)}}debugLog(`  → lands:${json.lands?.length||0}, rides:${json.rides?.length||0}`);return json}catch(e){clearTimeout(t);debugLog(`  → エラー: ${e.message}`);throw e}}
 
-// ==========================================
-// FETCH: ディズニーリアル (DPA/PP status)
-// ==========================================
+// FETCH: ディズニーリアル (DPA/PP)
 async function fetchDPAStatus(){
   debugLog('=== DPA/PPステータス取得開始 ===');
   for(let i=1;i<CORS_PROXY_BUILDERS.length;i++){
     try{
       const url=CORS_PROXY_BUILDERS[i](DISNEYREAL_URL);
-      debugLog(`DPA試行#${i}: ${url.substring(0,60)}...`);
-      const ctrl=new AbortController();
-      const t=setTimeout(()=>ctrl.abort(),12000);
-      const r=await fetch(url,{signal:ctrl.signal});
-      clearTimeout(t);
+      debugLog(`DPA試行#${i}`);
+      const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),12000);
+      const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);
       if(!r.ok)throw new Error(`HTTP ${r.status}`);
       const html=await r.text();
-      debugLog(`  → HTML取得成功: ${html.length}文字`);
-      const parser=new DOMParser();
-      const doc=parser.parseFromString(html,'text/html');
+      debugLog(`  → HTML取得: ${html.length}文字`);
+      const doc=new DOMParser().parseFromString(html,'text/html');
       const h4s=doc.querySelectorAll('h4');
       const dpaSt={},ppSt={};
       h4s.forEach(h4=>{
-        const name=h4.textContent.trim();
-        if(name.length<3||name.length>40)return;
-        const parent=h4.closest('li')||h4.parentElement;
-        if(!parent)return;
-        const passDiv=parent.querySelector('.pass')||parent.parentElement?.querySelector('.pass');
-        if(!passDiv)return;
-        const capts=passDiv.querySelectorAll('.capt');
-        capts.forEach(c=>{
-          const stEl=c.nextElementSibling;
-          const st=stEl?stEl.textContent.trim():'';
+        const name=h4.textContent.trim();if(name.length<3||name.length>40)return;
+        const parent=h4.closest('li')||h4.parentElement;if(!parent)return;
+        const passDiv=parent.querySelector('.pass')||parent.parentElement?.querySelector('.pass');if(!passDiv)return;
+        passDiv.querySelectorAll('.capt').forEach(c=>{
+          const stEl=c.nextElementSibling;const st=stEl?stEl.textContent.trim():'';
           if(c.classList.contains('dpa'))dpaSt[name]=st;
           else if(c.classList.contains('pp'))ppSt[name]=st;
         });
       });
-      dpaStatusData=dpaSt;
-      ppStatusData=ppSt;
-      debugLog(`  → DPA: ${Object.keys(dpaSt).length}件, PP: ${Object.keys(ppSt).length}件`);
-      renderDPATab();
+      dpaStatusData=dpaSt;ppStatusData=ppSt;
+      debugLog(`  → DPA:${Object.keys(dpaSt).length}件, PP:${Object.keys(ppSt).length}件`);
       return;
     }catch(e){debugLog(`  → DPAエラー: ${e.message}`)}
   }
   debugLog('=== DPA取得失敗 ===');
 }
 
-// ==========================================
+// FETCH: レストラン待ち時間
+async function fetchRestaurantWait(){
+  debugLog('=== レストラン待ち時間取得開始 ===');
+  for(let i=1;i<CORS_PROXY_BUILDERS.length;i++){
+    try{
+      const url=CORS_PROXY_BUILDERS[i](DISNEYREAL_REST_URL);
+      debugLog(`レストラン試行#${i}`);
+      const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),12000);
+      const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const html=await r.text();
+      debugLog(`  → レストランHTML: ${html.length}文字`);
+      const doc=new DOMParser().parseFromString(html,'text/html');
+      const items=doc.querySelectorAll('li');
+      const rw={};
+      items.forEach(li=>{
+        const h4=li.querySelector('h4');if(!h4)return;
+        const name=h4.textContent.trim();if(name.length<2||name.length>40)return;
+        const waitEl=li.querySelector('.wait')||li.querySelector('.time')||li.querySelector('.min');
+        const allSpans=li.querySelectorAll('span');
+        let wait=null;
+        if(waitEl){const m=waitEl.textContent.match(/(\d+)/);if(m)wait=parseInt(m[1])}
+        if(wait===null){allSpans.forEach(s=>{const m=s.textContent.match(/(\d+)\s*分/);if(m&&!wait)wait=parseInt(m[1])})}
+        const statusEl=li.querySelector('.fp')||li.querySelector('.status');
+        const status=statusEl?statusEl.textContent.trim():'';
+        if(wait!==null||status)rw[name]={wait,status};
+      });
+      restaurantWaitData=rw;
+      debugLog(`  → レストラン: ${Object.keys(rw).length}件`);
+      renderRestaurants();
+      return;
+    }catch(e){debugLog(`  → レストランエラー: ${e.message}`)}
+  }
+  debugLog('=== レストラン待ち時間取得失敗 ===');
+  renderRestaurants();
+}
+
+// FETCH: Open-Meteo Weather
+async function fetchWeather(){
+  debugLog('=== 天気取得開始 ===');
+  try{
+    const url='https://api.open-meteo.com/v1/forecast?latitude=35.6539&longitude=139.8838&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=Asia%2FTokyo&forecast_days=7';
+    const r=await fetch(url);
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const data=await r.json();
+    debugLog('  → 天気データ取得成功');
+    renderWeather(data);
+  }catch(e){
+    debugLog(`  → 天気エラー: ${e.message}`);
+    document.getElementById('weather-content').innerHTML='<div class="error-msg">天気データの取得に失敗しました。</div>';
+    document.getElementById('park-hours-info').innerHTML='8:30〜21:00（予想）<br><small style="color:var(--text-muted)"><a href="https://www.tokyodisneyresort.jp/tds/monthly/calendar.html" target="_blank" style="color:var(--accent)">公式カレンダーで確認 →</a></small>';
+    document.getElementById('crowd-forecast-info').textContent='春休み日曜日のため高混雑が予想されます';
+    document.getElementById('sunrise-info').textContent='天気データ取得失敗';
+  }
+}
+
+function weatherIcon(code){
+  if(code<=1)return '\u2600\uFE0F';if(code<=3)return '\u26C5';if(code<=48)return '\uD83C\uDF2B\uFE0F';
+  if(code<=55)return '\uD83C\uDF26\uFE0F';if(code<=57)return '\uD83C\uDF27\uFE0F';if(code<=65)return '\uD83C\uDF27\uFE0F';
+  if(code<=67)return '\uD83C\uDF27\uFE0F';if(code<=75)return '\uD83C\uDF28\uFE0F';if(code<=77)return '\uD83C\uDF28\uFE0F';
+  if(code<=82)return '\uD83C\uDF27\uFE0F';if(code<=86)return '\uD83C\uDF28\uFE0F';if(code<=99)return '\u26C8\uFE0F';
+  return '\uD83C\uDF24\uFE0F';
+}
+function weatherText(code){
+  if(code===0)return '快晴';if(code<=3)return '晴れ/曇り';if(code<=48)return '霧';
+  if(code<=55)return '小雨';if(code<=57)return '霧雨';if(code<=65)return '雨';
+  if(code<=67)return '着氷雨';if(code<=75)return '雪';if(code<=77)return 'あられ';
+  if(code<=82)return 'にわか雨';if(code<=86)return 'にわか雪';if(code<=99)return '雷雨';
+  return '不明';
+}
+
+function renderWeather(data){
+  const now=new Date();const currentHour=now.getHours();const todayStr=now.toLocaleDateString('sv-SE');const visitStr='2026-03-29';
+  let html='<div style="font-size:.78em;color:var(--text-muted);margin-bottom:4px">今日の時間帯別予報</div><div class="weather-hourly">';
+  const hTimes=data.hourly.time;let shown=0;
+  for(let i=0;i<hTimes.length&&shown<16;i++){
+    const dt=new Date(hTimes[i]);if(dt.toLocaleDateString('sv-SE')!==todayStr)continue;if(dt.getHours()<currentHour-1)continue;
+    html+=`<div class="weather-hour"><div class="wh-time">${dt.getHours()}:00</div><div class="wh-icon">${weatherIcon(data.hourly.weather_code[i])}</div><div class="wh-temp">${Math.round(data.hourly.temperature_2m[i])}\u00B0</div><div class="wh-rain">\u2602${data.hourly.precipitation_probability[i]}%</div></div>`;
+    shown++;
+  }
+  html+='</div><div style="font-size:.78em;color:var(--text-muted);margin:8px 0 4px">週間予報</div><div class="weather-daily">';
+  const dDays=data.daily.time;const dayNames=['\u65E5','\u6708','\u706B','\u6C34','\u6728','\u91D1','\u571F'];
+  for(let i=0;i<dDays.length;i++){
+    const d=new Date(dDays[i]+'T00:00:00+09:00');const isVisit=dDays[i]===visitStr;
+    html+=`<div class="weather-day ${isVisit?'visit-day':''}"><div class="wd-date">${d.getMonth()+1}/${d.getDate()}(${dayNames[d.getDay()]})${isVisit?' \u8A2A\u554F\u65E5':''}</div><div class="wd-icon">${weatherIcon(data.daily.weather_code[i])}</div><div class="wd-temp" style="color:var(--red)">${Math.round(data.daily.temperature_2m_max[i])}\u00B0</div><div class="wd-temp" style="color:var(--blue)">${Math.round(data.daily.temperature_2m_min[i])}\u00B0</div><div style="font-size:.66em;color:var(--text-muted)">\u2602${data.daily.precipitation_probability_max[i]}% ${weatherText(data.daily.weather_code[i])}</div></div>`;
+  }
+  html+='</div>';
+  document.getElementById('weather-content').innerHTML=html;
+
+  const visitIdx=dDays.indexOf(visitStr);
+  if(visitIdx>=0){
+    const sr=data.daily.sunrise[visitIdx];const ss=data.daily.sunset[visitIdx];
+    document.getElementById('sunrise-info').innerHTML=`\u65E5\u306E\u51FA: ${new Date(sr).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})} \uFF0F \u65E5\u306E\u5165: ${new Date(ss).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`;
+    const hi=Math.round(data.daily.temperature_2m_max[visitIdx]);const lo=Math.round(data.daily.temperature_2m_min[visitIdx]);
+    const wc=data.daily.weather_code[visitIdx];const rain=data.daily.precipitation_probability_max[visitIdx];
+    document.getElementById('crowd-forecast-info').innerHTML=`${weatherIcon(wc)} ${weatherText(wc)} \uFF0F ${hi}\u00B0/${lo}\u00B0 \uFF0F \u964D\u6C34\u78BA\u7387${rain}%<br><small style="color:var(--text-muted)">\u6625\u4F11\u307F\u65E5\u66DC\u65E5\u306E\u305F\u3081\u9AD8\u6DF7\u96D1\u304C\u4E88\u60F3\u3055\u308C\u307E\u3059</small>`;
+  }else{
+    document.getElementById('sunrise-info').textContent='\u8A2A\u554F\u65E5\u30C7\u30FC\u30BF\u306F\u4E88\u5831\u671F\u9593\u5916\u3067\u3059';
+    document.getElementById('crowd-forecast-info').textContent='\u6625\u4F11\u307F\u65E5\u66DC\u65E5\u306E\u305F\u3081\u9AD8\u6DF7\u96D1\u304C\u4E88\u60F3\u3055\u308C\u307E\u3059';
+  }
+  document.getElementById('park-hours-info').innerHTML='8:30\u301C21:00\uFF08\u4E88\u60F3\uFF09<br><small style="color:var(--text-muted)"><a href="https://www.tokyodisneyresort.jp/tds/monthly/calendar.html" target="_blank" style="color:var(--accent)">\u516C\u5F0F\u30AB\u30EC\u30F3\u30C0\u30FC\u3067\u78BA\u8A8D \u2192</a></small>';
+}
+
 // MAIN FETCH
-// ==========================================
 async function fetchAll(){
-  const btn=document.getElementById('refresh-btn');
-  btn.textContent='更新中...';btn.disabled=true;
-  debugLog('=== データ取得開始 ===');
+  const btn=document.getElementById('refresh-btn');btn.textContent='\u66F4\u65B0\u4E2D...';btn.disabled=true;
+  debugLog('=== \u30C7\u30FC\u30BF\u53D6\u5F97\u958B\u59CB ===');
   let data=null,lastErr=null;
   for(let i=0;i<CORS_PROXY_BUILDERS.length;i++){try{data=await fetchWithProxy(i);currentProxyIndex=i;break}catch(e){lastErr=e}}
-  if(data&&(data.lands||data.rides)){processData(data);const pn=currentProxyIndex===0?'Direct':`Proxy#${currentProxyIndex+1}`;setStatus('ok',`API接続中(${pn}) — データ取得成功`);document.getElementById('last-update').textContent=`最終更新: ${new Date().toLocaleTimeString('ja-JP')}`;debugLog('=== データ取得完了 ===')}
-  else{setStatus('err',`API接続エラー: ${lastErr?.message||'不明'}`);document.getElementById('attraction-container').innerHTML=`<div class="error-msg">データ取得失敗: ${lastErr?.message||'不明'}</div>`}
-  btn.textContent='更新';btn.disabled=false;
-  // Fetch DPA status in parallel on first load, then periodically
-  fetchDPAStatus();
+  if(data&&(data.lands||data.rides)){processData(data);const pn=currentProxyIndex===0?'Direct':`Proxy#${currentProxyIndex+1}`;setStatus('ok',`API\u63A5\u7D9A\u4E2D(${pn}) \u2014 \u30C7\u30FC\u30BF\u53D6\u5F97\u6210\u529F`);document.getElementById('last-update').textContent=`\u6700\u7D42\u66F4\u65B0: ${new Date().toLocaleTimeString('ja-JP')}`;debugLog('=== \u30C7\u30FC\u30BF\u53D6\u5F97\u5B8C\u4E86 ===')}
+  else{setStatus('err',`API\u63A5\u7D9A\u30A8\u30E9\u30FC: ${lastErr?.message||'\u4E0D\u660E'}`);document.getElementById('attraction-container').innerHTML=`<div class="error-msg">\u30C7\u30FC\u30BF\u53D6\u5F97\u5931\u6557: ${lastErr?.message||'\u4E0D\u660E'}</div>`}
+  btn.textContent='\u66F4\u65B0';btn.disabled=false;
+  fetchDPAStatus().then(()=>{renderAttractions()});
+  fetchRestaurantWait();
 }
 
 function setStatus(type,text){const d=document.getElementById('status-dot');const t2=document.getElementById('status-text');d.className='status-dot '+type;t2.textContent=text;t2.style.color=type==='ok'?'var(--green)':type==='warn'?'var(--yellow)':type==='err'?'var(--red)':'var(--text-muted)'}
@@ -475,58 +542,34 @@ function processData(data){
   allRides=[];
   if(Array.isArray(data.lands)&&data.lands.length>0){data.lands.forEach(land=>{if(Array.isArray(land.rides))land.rides.forEach(ride=>{ride._area=land.name;ride._dpa=isDPA(ride.name);ride._pp=isPP(ride.name);allRides.push(ride)})})}
   if(Array.isArray(data.rides)&&data.rides.length>0){data.rides.forEach(ride=>{if(!allRides.find(r=>r.id===ride.id)){ride._area=guessArea(ride.name);ride._dpa=isDPA(ride.name);ride._pp=isPP(ride.name);allRides.push(ride)}})}
-  debugLog(`合計:${allRides.length}施設`);
+  debugLog(`\u5408\u8A08:${allRides.length}\u65BD\u8A2D`);
   const openR=allRides.filter(r=>r.is_open);const waits=openR.map(r=>r.wait_time).filter(w=>w>0);const parkOpen=openR.length>0&&waits.length>0;
   document.getElementById('park-closed-msg').style.display=parkOpen?'none':'block';
-  if(parkOpen)setStatus('ok',`API接続中 — パーク営業中(${openR.length}施設)`);
-  else if(!openR.length)setStatus('closed','API接続中 — パーク営業時間外');
-  else setStatus('warn','API接続中 — 待ち時間データなし');
+  if(parkOpen)setStatus('ok',`API\u63A5\u7D9A\u4E2D \u2014 \u30D1\u30FC\u30AF\u55B6\u696D\u4E2D(${openR.length}\u65BD\u8A2D)`);
+  else if(!openR.length)setStatus('closed','API\u63A5\u7D9A\u4E2D \u2014 \u30D1\u30FC\u30AF\u55B6\u696D\u6642\u9593\u5916');
+  else setStatus('warn','API\u63A5\u7D9A\u4E2D \u2014 \u5F85\u3061\u6642\u9593\u30C7\u30FC\u30BF\u306A\u3057');
   updateSummary();renderAttractions();saveSnapshot(allRides);populateRideSelector();
 }
 
-// ==========================================
 // UI: Summary
-// ==========================================
 function updateSummary(){
   const openR=allRides.filter(r=>r.is_open);const waits=openR.map(r=>r.wait_time).filter(w=>w>0);
   const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):0;
   const max=waits.length?Math.max(...waits):0;
   const setV=(id,t,c)=>{const e=document.getElementById(id);e.textContent=t;if(c!==undefined)e.className='value '+c};
-  setV('avg-wait',avg?avg+'分':'--',crowdCls(avg));
-  setV('max-wait',max?max+'分':'--',crowdCls(max));
+  setV('avg-wait',avg?avg+'\u5206':'--',crowdCls(avg));setV('max-wait',max?max+'\u5206':'--',crowdCls(max));
   document.getElementById('open-count').textContent=`${openR.length}/${allRides.length}`;
   document.getElementById('short-wait-count').textContent=waits.filter(w=>w<=30).length||'--';
-  let lv='低い',cl='low';if(avg>60){lv='非常に混雑';cl='vhigh'}else if(avg>40){lv='混雑';cl='high'}else if(avg>25){lv='やや混雑';cl='med'}else if(!avg){lv='営業時間外';cl=''}
+  let lv='\u4F4E\u3044',cl='low';if(avg>60){lv='\u975E\u5E38\u306B\u6DF7\u96D1';cl='vhigh'}else if(avg>40){lv='\u6DF7\u96D1';cl='high'}else if(avg>25){lv='\u3084\u3084\u6DF7\u96D1';cl='med'}else if(!avg){lv='\u55B6\u696D\u6642\u9593\u5916';cl=''}
   setV('crowd-level',lv,cl);
   const pct=Math.min(100,(avg/80)*100);const f=document.getElementById('crowd-fill');f.style.width=pct+'%';f.style.background=avg>60?'var(--red)':avg>40?'var(--orange)':avg>25?'var(--yellow)':'var(--green)';
 }
 function crowdCls(w){return w>60?'vhigh':w>40?'high':w>20?'med':'low'}
 
-// ==========================================
 // UI: Attractions
-// ==========================================
 function getJPName(en){return nameJP[en]||en}
-
-// Match DPA status from disneyreal data to queue-times ride name
-function getDPAStatusForRide(enName){
-  const jp=getJPName(enName);
-  // Direct match
-  for(const[k,v] of Object.entries(dpaStatusData)){
-    if(jp.includes(k)||k.includes(jp.replace(/[・：]/g,'')))return v;
-    // Fuzzy: remove spaces/special chars
-    const k2=k.replace(/[\s　・]/g,'');const j2=jp.replace(/[\s　・：]/g,'');
-    if(j2.includes(k2)||k2.includes(j2))return v;
-  }
-  return null;
-}
-function getPPStatusForRide(enName){
-  const jp=getJPName(enName);
-  for(const[k,v] of Object.entries(ppStatusData)){
-    const k2=k.replace(/[\s　・]/g,'');const j2=jp.replace(/[\s　・：]/g,'');
-    if(j2.includes(k2)||k2.includes(j2))return v;
-  }
-  return null;
-}
+function getDPAStatusForRide(enName){const jp=getJPName(enName);for(const[k,v] of Object.entries(dpaStatusData)){if(jp.includes(k)||k.includes(jp.replace(/[\u30FB\uFF1A]/g,'')))return v;const k2=k.replace(/[\s\u3000\u30FB]/g,'');const j2=jp.replace(/[\s\u3000\u30FB\uFF1A]/g,'');if(j2.includes(k2)||k2.includes(j2))return v}return null}
+function getPPStatusForRide(enName){const jp=getJPName(enName);for(const[k,v] of Object.entries(ppStatusData)){const k2=k.replace(/[\s\u3000\u30FB]/g,'');const j2=jp.replace(/[\s\u3000\u30FB\uFF1A]/g,'');if(j2.includes(k2)||k2.includes(j2))return v}return null}
 
 function renderAttractions(){
   let rides=[...allRides];
@@ -540,132 +583,98 @@ function renderAttractions(){
   const sort=document.getElementById('sort-select').value;
   rides.sort((a,b)=>{if(sort==='wait-desc')return(b.is_open?b.wait_time:-1)-(a.is_open?a.wait_time:-1);if(sort==='wait-asc')return(a.is_open?a.wait_time:9999)-(b.is_open?b.wait_time:9999);if(sort==='name')return getJPName(a.name).localeCompare(getJPName(b.name));if(sort==='area')return(a._area||'').localeCompare(b._area||'');return 0});
   const c=document.getElementById('attraction-container');
-  if(!rides.length){c.innerHTML='<div style="padding:20px;color:var(--text-muted);text-align:center">該当なし</div>';return}
+  if(!rides.length){c.innerHTML='<div style="padding:20px;color:var(--text-muted);text-align:center">\u8A72\u5F53\u306A\u3057</div>';return}
   c.innerHTML=rides.map(r=>{
     const jp=getJPName(r.name);
     const wc=!r.is_open?'closed':r.wait_time>60?'wait-vhigh':r.wait_time>40?'wait-high':r.wait_time>20?'wait-med':'wait-low';
     const wCol=!r.is_open?'#777':r.wait_time>60?'var(--red)':r.wait_time>40?'var(--orange)':r.wait_time>20?'var(--yellow)':'var(--green)';
     const tags=[];
-    if(r._dpa){
-      const price=getDPAPrice(r.name);
-      const dSt=getDPAStatusForRide(r.name);
-      tags.push(`<span class="tag tag-dpa">DPA ¥${price||2000}</span>`);
-      if(dSt==='販売中')tags.push('<span class="tag tag-selling">販売中</span>');
-      else if(dSt==='販売なし')tags.push('<span class="tag tag-soldout">販売終了</span>');
-    }
-    if(r._pp){
-      const pSt=getPPStatusForRide(r.name);
-      tags.push('<span class="tag tag-pp">プライオリティパス</span>');
-      if(pSt==='発行中')tags.push('<span class="tag tag-selling">発行中</span>');
-      else if(pSt==='発行なし')tags.push('<span class="tag tag-soldout">発行終了</span>');
-    }
-    if(!r.is_open)tags.push('<span class="tag tag-closed">休止中</span>');
+    if(r._dpa){const price=getDPAPrice(r.name);const dSt=getDPAStatusForRide(r.name);tags.push(`<span class="tag tag-dpa">DPA \u00A5${price||2000}</span>`);if(dSt==='\u8CA9\u58F2\u4E2D')tags.push('<span class="tag tag-selling">\u8CA9\u58F2\u4E2D</span>');else if(dSt==='\u8CA9\u58F2\u306A\u3057')tags.push('<span class="tag tag-soldout">\u8CA9\u58F2\u7D42\u4E86</span>')}
+    if(r._pp){const pSt=getPPStatusForRide(r.name);tags.push('<span class="tag tag-pp">\u30D7\u30E9\u30A4\u30AA\u30EA\u30C6\u30A3\u30D1\u30B9</span>');if(pSt==='\u767A\u884C\u4E2D')tags.push('<span class="tag tag-selling">\u767A\u884C\u4E2D</span>');else if(pSt==='\u767A\u884C\u306A\u3057')tags.push('<span class="tag tag-soldout">\u767A\u884C\u7D42\u4E86</span>')}
+    if(!r.is_open)tags.push('<span class="tag tag-closed">\u4F11\u6B62\u4E2D</span>');
     tags.push(`<span class="tag tag-area">${r._area||'---'}</span>`);
-    return `<div class="attraction-card ${wc}">
-      <div class="name">${jp}</div>
-      <div class="name-en">${r.name!==jp?r.name:''}</div>
-      <div class="wait-badge" style="color:${wCol}">${r.is_open?r.wait_time:'--'}<span class="unit">${r.is_open?'分':''}</span></div>
-      <div class="tags">${tags.join('')}</div>
-      <div class="meta">${r.last_updated?'更新:'+new Date(r.last_updated).toLocaleTimeString('ja-JP'):''}</div>
-    </div>`}).join('');
+    return `<div class="attraction-card ${wc}"><div class="name">${jp}</div><div class="name-en">${r.name!==jp?r.name:''}</div><div class="wait-badge" style="color:${wCol}">${r.is_open?r.wait_time:'--'}<span class="unit">${r.is_open?'\u5206':''}</span></div><div class="tags">${tags.join('')}</div><div class="meta">${r.last_updated?'\u66F4\u65B0:'+new Date(r.last_updated).toLocaleTimeString('ja-JP'):''}</div></div>`}).join('');
 }
 
-// ==========================================
-// UI: DPA/PP Tab
-// ==========================================
-function renderDPATab(){
-  // DPA list
-  const dpaEl=document.getElementById('dpa-list');
-  const dpaEntries=Object.entries(dpaStatusData).filter(([k])=>k.length>3&&!k.includes('CHECK')&&!k.includes('新着'));
-  if(dpaEntries.length){
-    dpaEl.innerHTML=dpaEntries.map(([name,status])=>{
-      const isSelling=status==='販売中';
-      const ride=allRides.find(r=>getJPName(r.name).replace(/[・：\s]/g,'').includes(name.replace(/[\s　]/g,'')));
-      const wait=ride&&ride.is_open?ride.wait_time+'分':'--';
-      return `<div class="dpa-item">
-        <div><div class="dpa-name">${name}</div><div style="font-size:.7em;color:var(--text-muted)">待ち: ${wait}</div></div>
-        <div class="dpa-status ${isSelling?'selling':'soldout'}">${isSelling?'● 販売中':'✕ 販売終了'}</div>
-      </div>`}).join('');
-  }else{dpaEl.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:16px">データ取得中... パーク営業時間外の場合は表示されません。</div>'}
-
-  // PP list
-  const ppEl=document.getElementById('pp-list');
-  const ppEntries=Object.entries(ppStatusData).filter(([k])=>k.length>3&&!k.includes('リアルタイム')&&!k.includes('今日'));
-  if(ppEntries.length){
-    ppEl.innerHTML=ppEntries.map(([name,status])=>{
-      const isIssuing=status==='発行中';
-      const ride=allRides.find(r=>getJPName(r.name).replace(/[・：\s]/g,'').includes(name.replace(/[\s　]/g,'')));
-      const wait=ride&&ride.is_open?ride.wait_time+'分':'--';
-      return `<div class="dpa-item">
-        <div><div class="dpa-name">${name}</div><div style="font-size:.7em;color:var(--text-muted)">待ち: ${wait}</div></div>
-        <div class="dpa-status ${isIssuing?'selling':'soldout'}">${isIssuing?'● 発行中':'✕ 発行終了'}</div>
-      </div>`}).join('');
-  }else{ppEl.innerHTML='<div style="color:var(--text-muted);text-align:center;padding:16px">データ取得中...</div>'}
-}
-
-// ==========================================
 // UI: Restaurants
-// ==========================================
+function getRestaurantWait(name){
+  if(restaurantWaitData[name])return restaurantWaitData[name];
+  const n2=name.replace(/[\s\u3000\u30FB]/g,'');
+  for(const[k,v] of Object.entries(restaurantWaitData)){const k2=k.replace(/[\s\u3000\u30FB]/g,'');if(n2.includes(k2)||k2.includes(n2))return v;if(n2.length>4&&k2.length>4&&n2.substring(0,4)===k2.substring(0,4))return v}
+  return null;
+}
 function renderRestaurants(){
   let list=[...restaurants];
-  const f=document.getElementById('restaurant-filter').value;
-  const q=document.getElementById('restaurant-search').value.toLowerCase();
-  if(f==='ps')list=list.filter(r=>r.ps);
-  else if(f==='counter')list=list.filter(r=>r.type==='カウンター');
-  else if(f==='table')list=list.filter(r=>r.type==='テーブルサービス'||r.type==='ラウンジ');
+  const f=document.getElementById('restaurant-filter').value;const q=document.getElementById('restaurant-search').value.toLowerCase();const sort=document.getElementById('restaurant-sort').value;
+  if(f==='ps')list=list.filter(r=>r.ps);else if(f==='counter')list=list.filter(r=>r.type==='\u30AB\u30A6\u30F3\u30BF\u30FC');else if(f==='table')list=list.filter(r=>r.type==='\u30C6\u30FC\u30D6\u30EB\u30B5\u30FC\u30D3\u30B9'||r.type==='\u30E9\u30A6\u30F3\u30B8');else if(f==='buffet')list=list.filter(r=>r.type==='\u30D0\u30D5\u30A7\u30C6\u30EA\u30A2');
   if(q)list=list.filter(r=>r.name.toLowerCase().includes(q)||r.area.includes(q)||r.cuisine.includes(q));
-  document.getElementById('restaurant-container').innerHTML=list.map(r=>`
-    <div class="restaurant-card">
-      <div class="name">${r.name}</div>
-      <div class="tags">
-        <span class="tag tag-area">${r.area}</span>
-        ${r.ps?'<span class="tag tag-dpa">PS予約可</span>':''}
-        <span class="tag" style="background:#455a64;color:#cfd8dc">${r.type}</span>
-        <span class="tag" style="background:#333;color:#aaa">${r.price}</span>
-      </div>
-      <div class="type">${r.cuisine}</div>
-      <div class="wait-info">💡 ${r.tip}</div>
-    </div>`).join('');
+  list.forEach(r=>{r._liveWait=getRestaurantWait(r.name)});
+  if(sort==='wait-desc')list.sort((a,b)=>((b._liveWait?.wait)||0)-((a._liveWait?.wait)||0));
+  else if(sort==='wait-asc')list.sort((a,b)=>((a._liveWait?.wait)||999)-((b._liveWait?.wait)||999));
+  const hasLive=Object.keys(restaurantWaitData).length>0;
+  document.getElementById('restaurant-container').innerHTML=list.map(r=>{
+    const lw=r._liveWait;
+    const waitDisplay=lw&&lw.wait!==null?`${lw.wait}<span class="unit">\u5206</span>`:hasLive?'--':'';
+    const waitColor=lw&&lw.wait!==null?(lw.wait>40?'var(--red)':lw.wait>20?'var(--orange)':'var(--green)'):'var(--text-muted)';
+    const statusTag=lw&&lw.status?`<span class="tag" style="background:${lw.status.includes('\u7D42\u4E86')||lw.status.includes('\u306A\u3057')?'#555;color:var(--red)':'var(--green);color:#fff'}">${lw.status}</span>`:'';
+    return `<div class="restaurant-card"><div class="name">${r.name}</div>${waitDisplay?`<div class="wait-badge" style="color:${waitColor}">${waitDisplay}</div>`:''}<div class="tags"><span class="tag tag-area">${r.area}</span>${r.ps?'<span class="tag tag-dpa">PS\u4E88\u7D04\u53EF</span>':''}<span class="tag" style="background:#455a64;color:#cfd8dc">${r.type}</span><span class="tag" style="background:#333;color:#aaa">${r.price}</span>${statusTag}</div><div class="type">${r.cuisine}</div><div class="wait-info">\uD83D\uDCA1 ${r.tip}</div></div>`}).join('');
 }
 
-// ==========================================
+// UI: Shows
+function renderShows(){
+  const now=new Date();const cm=now.getHours()*60+now.getMinutes();
+  document.getElementById('show-container').innerHTML=shows.map(s=>{
+    const timeBadges=s.times.map(t=>{
+      if(t==='\u55B6\u696D\u6642\u9593\u4E2D\u968F\u6642'||t==='\u4E0D\u5B9A\u671F')return `<span class="show-time">${t}</span>`;
+      const[h,m]=t.split(':').map(Number);const sm=h*60+m;
+      const isNext=sm>cm&&sm-cm<=120;const isPast=sm<cm;
+      return `<span class="show-time ${isNext?'next':''}" style="${isPast?'opacity:.5':''}">${t}${isNext?' \u2190 \u6B21':''}</span>`;
+    }).join('');
+    const tags=[];
+    if(s.dpa)tags.push(`<span class="tag tag-dpa">DPA \u00A5${s.dpaPrice}</span>`);
+    if(s.lottery)tags.push('<span class="tag" style="background:var(--purple);color:#fff">\u62BD\u9078\u3042\u308A</span>');
+    tags.push(`<span class="tag" style="background:#455a64;color:#cfd8dc">${s.type}</span>`);
+    tags.push(`<span class="tag tag-area">${s.area}</span>`);
+    return `<div class="show-card"><div class="name">${s.name}</div><div class="tags">${tags.join('')}</div><div class="show-times">${timeBadges}</div><div class="show-info">\u23F1 ${s.duration}\u5206 \uFF0F ${s.note}</div></div>`}).join('');
+}
+
 // HISTORY
-// ==========================================
-function populateRideSelector(){const s=document.getElementById('history-ride-select');const cur=s.value;const names=new Set();allRides.forEach(r=>names.add(getJPName(r.name)));const opts=['<option value="__avg__">全体平均</option>'];[...names].sort().forEach(n=>opts.push(`<option value="${n}">${n}</option>`));s.innerHTML=opts.join('');s.value=cur||'__avg__'}
-async function renderHistory(){const df=document.getElementById('history-date-select').value;const rf=document.getElementById('history-ride-select').value;const recs=await getRecords(df);const stEl=document.getElementById('history-stats');const logEl=document.getElementById('history-log');if(!recs.length){stEl.innerHTML='';logEl.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">選択期間にデータなし</p>';clearChart();return}const por=recs.filter(r=>r.parkOpen);const aoa=por.length?Math.round(por.reduce((a,r)=>a+r.avgWait,0)/por.length):0;const mom=por.length?Math.max(...por.map(r=>r.maxWait)):0;const ud=[...new Set(recs.map(r=>r.date))];stEl.innerHTML=`<div class="history-stat-card"><div class="hs-label">記録数</div><div class="hs-value">${recs.length}</div></div><div class="history-stat-card"><div class="hs-label">記録日数</div><div class="hs-value">${ud.length}日</div></div><div class="history-stat-card"><div class="hs-label">平均待ち(営業中)</div><div class="hs-value" style="color:${aoa>40?'var(--orange)':'var(--green)'}">${aoa}分</div></div><div class="history-stat-card"><div class="hs-label">最長待ち(全期間)</div><div class="hs-value" style="color:var(--red)">${mom}分</div></div>`;drawChart(por,rf);const recent=recs.slice(-50).reverse();let th='<table><tr><th>日付</th><th>時刻</th><th>平均</th><th>最長</th><th>運営</th></tr>';recent.forEach(r=>{th+=`<tr><td>${r.date}</td><td>${r.time}</td><td style="color:${r.avgWait>40?'var(--orange)':'var(--green)'}">${r.avgWait}分</td><td style="color:${r.maxWait>60?'var(--red)':'var(--yellow)'}">${r.maxWait}分</td><td>${r.openCount}/${r.totalCount}</td></tr>`});th+='</table>';logEl.innerHTML=th}
-function drawChart(recs,rf){const cv=document.getElementById('history-chart');const ctx=cv.getContext('2d');const rect=cv.parentElement.getBoundingClientRect();cv.width=Math.max(rect.width-24,500);cv.height=280;ctx.clearRect(0,0,cv.width,cv.height);if(!recs.length){clearChart();return}let pts;if(rf==='__avg__')pts=recs.map(r=>({t:r.time,d:r.date,v:r.avgWait}));else pts=recs.map(r=>{const rd=r.rides.find(x=>x.name===rf);return{t:r.time,d:r.date,v:rd&&rd.open?rd.wait:null}}).filter(p=>p.v!==null);if(!pts.length){clearChart();return}const mx=Math.max(...pts.map(p=>p.v),10);const pT=28,pB=36,pL=46,pR=16;const cW=cv.width-pL-pR,cH=cv.height-pT-pB;ctx.strokeStyle='#223';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y=pT+(cH/4)*i;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(pL+cW,y);ctx.stroke();ctx.fillStyle='#667';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(mx-(mx/4)*i)+'分',pL-5,y+4)}ctx.beginPath();ctx.strokeStyle='#4fc3f7';ctx.lineWidth=2;pts.forEach((p,i)=>{const x=pL+(i/Math.max(pts.length-1,1))*cW;const y=pT+cH-(p.v/mx)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();ctx.lineTo(pL+cW,pT+cH);ctx.lineTo(pL,pT+cH);ctx.closePath();ctx.fillStyle='rgba(79,195,247,.1)';ctx.fill();ctx.fillStyle='#667';ctx.font='9px sans-serif';ctx.textAlign='center';const step=Math.max(1,Math.floor(pts.length/10));for(let i=0;i<pts.length;i+=step){const x=pL+(i/Math.max(pts.length-1,1))*cW;ctx.fillText(pts[i].d.slice(5)+' '+pts[i].t,x,cv.height-6)}ctx.fillStyle='#4fc3f7';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.fillText(rf==='__avg__'?'全体平均待ち時間推移':rf+' 待ち時間推移',pL,16)}
-function clearChart(){const cv=document.getElementById('history-chart');const ctx=cv.getContext('2d');cv.width=cv.parentElement.getBoundingClientRect().width-24;cv.height=280;ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#556';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('データなし',cv.width/2,140)}
+function populateRideSelector(){const s=document.getElementById('history-ride-select');const cur=s.value;const names=new Set();allRides.forEach(r=>names.add(getJPName(r.name)));const opts=['<option value="__avg__">\u5168\u4F53\u5E73\u5747</option>'];[...names].sort().forEach(n=>opts.push(`<option value="${n}">${n}</option>`));s.innerHTML=opts.join('');s.value=cur||'__avg__'}
+async function renderHistory(){const df=document.getElementById('history-date-select').value;const rf=document.getElementById('history-ride-select').value;const recs=await getRecords(df);const stEl=document.getElementById('history-stats');const logEl=document.getElementById('history-log');if(!recs.length){stEl.innerHTML='';logEl.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">\u9078\u629E\u671F\u9593\u306B\u30C7\u30FC\u30BF\u306A\u3057</p>';clearChart();return}const por=recs.filter(r=>r.parkOpen);const aoa=por.length?Math.round(por.reduce((a,r)=>a+r.avgWait,0)/por.length):0;const mom=por.length?Math.max(...por.map(r=>r.maxWait)):0;const ud=[...new Set(recs.map(r=>r.date))];stEl.innerHTML=`<div class="history-stat-card"><div class="hs-label">\u8A18\u9332\u6570</div><div class="hs-value">${recs.length}</div></div><div class="history-stat-card"><div class="hs-label">\u8A18\u9332\u65E5\u6570</div><div class="hs-value">${ud.length}\u65E5</div></div><div class="history-stat-card"><div class="hs-label">\u5E73\u5747\u5F85\u3061(\u55B6\u696D\u4E2D)</div><div class="hs-value" style="color:${aoa>40?'var(--orange)':'var(--green)'}">${aoa}\u5206</div></div><div class="history-stat-card"><div class="hs-label">\u6700\u9577\u5F85\u3061(\u5168\u671F\u9593)</div><div class="hs-value" style="color:var(--red)">${mom}\u5206</div></div>`;drawChart(por,rf);const recent=recs.slice(-50).reverse();let th='<table><tr><th>\u65E5\u4ED8</th><th>\u6642\u523B</th><th>\u5E73\u5747</th><th>\u6700\u9577</th><th>\u904B\u55B6</th></tr>';recent.forEach(r=>{th+=`<tr><td>${r.date}</td><td>${r.time}</td><td style="color:${r.avgWait>40?'var(--orange)':'var(--green)'}">${r.avgWait}\u5206</td><td style="color:${r.maxWait>60?'var(--red)':'var(--yellow)'}">${r.maxWait}\u5206</td><td>${r.openCount}/${r.totalCount}</td></tr>`});th+='</table>';logEl.innerHTML=th}
+function drawChart(recs,rf){const cv=document.getElementById('history-chart');const ctx=cv.getContext('2d');const rect=cv.parentElement.getBoundingClientRect();cv.width=Math.max(rect.width-24,500);cv.height=280;ctx.clearRect(0,0,cv.width,cv.height);if(!recs.length){clearChart();return}let pts;if(rf==='__avg__')pts=recs.map(r=>({t:r.time,d:r.date,v:r.avgWait}));else pts=recs.map(r=>{const rd=r.rides.find(x=>x.name===rf);return{t:r.time,d:r.date,v:rd&&rd.open?rd.wait:null}}).filter(p=>p.v!==null);if(!pts.length){clearChart();return}const mx=Math.max(...pts.map(p=>p.v),10);const pT=28,pB=36,pL=46,pR=16;const cW=cv.width-pL-pR,cH=cv.height-pT-pB;ctx.strokeStyle='#223';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y=pT+(cH/4)*i;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(pL+cW,y);ctx.stroke();ctx.fillStyle='#667';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(mx-(mx/4)*i)+'\u5206',pL-5,y+4)}ctx.beginPath();ctx.strokeStyle='#4fc3f7';ctx.lineWidth=2;pts.forEach((p,i)=>{const x=pL+(i/Math.max(pts.length-1,1))*cW;const y=pT+cH-(p.v/mx)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();ctx.lineTo(pL+cW,pT+cH);ctx.lineTo(pL,pT+cH);ctx.closePath();ctx.fillStyle='rgba(79,195,247,.1)';ctx.fill();ctx.fillStyle='#667';ctx.font='9px sans-serif';ctx.textAlign='center';const step=Math.max(1,Math.floor(pts.length/10));for(let i=0;i<pts.length;i+=step){const x=pL+(i/Math.max(pts.length-1,1))*cW;ctx.fillText(pts[i].d.slice(5)+' '+pts[i].t,x,cv.height-6)}ctx.fillStyle='#4fc3f7';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.fillText(rf==='__avg__'?'\u5168\u4F53\u5E73\u5747\u5F85\u3061\u6642\u9593\u63A8\u79FB':rf+' \u5F85\u3061\u6642\u9593\u63A8\u79FB',pL,16)}
+function clearChart(){const cv=document.getElementById('history-chart');const ctx=cv.getContext('2d');cv.width=cv.parentElement.getBoundingClientRect().width-24;cv.height=280;ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#556';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('\u30C7\u30FC\u30BF\u306A\u3057',cv.width/2,140)}
 
-// ==========================================
 // Data mgmt
-// ==========================================
-async function exportData(){const r=await getAllRecords();const b=new Blob([JSON.stringify(r,null,2)],{type:'application/json'});dl(b,`tds-${new Date().toLocaleDateString('sv-SE')}.json`)}
-async function exportCSV(){const r=await getAllRecords();if(!r.length){alert('データなし');return}let c='date,time,avgWait,maxWait,openCount,totalCount\n';r.forEach(x=>{c+=`${x.date},${x.time},${x.avgWait},${x.maxWait},${x.openCount},${x.totalCount}\n`});dl(new Blob([c],{type:'text/csv'}),`tds-${new Date().toLocaleDateString('sv-SE')}.csv`)}
+async function exportData(){const r=await getAllRecords();dl(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}),`tds-${new Date().toLocaleDateString('sv-SE')}.json`)}
+async function exportCSV(){const r=await getAllRecords();if(!r.length){alert('\u30C7\u30FC\u30BF\u306A\u3057');return}let c='date,time,avgWait,maxWait,openCount,totalCount\n';r.forEach(x=>{c+=`${x.date},${x.time},${x.avgWait},${x.maxWait},${x.openCount},${x.totalCount}\n`});dl(new Blob([c],{type:'text/csv'}),`tds-${new Date().toLocaleDateString('sv-SE')}.csv`)}
 function dl(b,f){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const recs=JSON.parse(ev.target.result);if(!Array.isArray(recs))throw new Error('Invalid');const tx=db.transaction(STORE_NAME,'readwrite');const s=tx.objectStore(STORE_NAME);for(const rec of recs){delete rec.id;s.add(rec)}tx.oncomplete=()=>{updateRecordCount();renderHistory();alert(`${recs.length}件インポート完了`)}}catch(err){alert('エラー:'+err.message)}};r.readAsText(f);e.target.value=''}
-function clearData(){if(!confirm('全データを削除しますか？'))return;const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).clear();tx.oncomplete=()=>{updateRecordCount();renderHistory()}}
+function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const recs=JSON.parse(ev.target.result);if(!Array.isArray(recs))throw new Error('Invalid');const tx=db.transaction(STORE_NAME,'readwrite');const s=tx.objectStore(STORE_NAME);for(const rec of recs){delete rec.id;s.add(rec)}tx.oncomplete=()=>{updateRecordCount();renderHistory();alert(`${recs.length}\u4EF6\u30A4\u30F3\u30DD\u30FC\u30C8\u5B8C\u4E86`)}}catch(err){alert('\u30A8\u30E9\u30FC:'+err.message)}};r.readAsText(f);e.target.value=''}
+function clearData(){if(!confirm('\u5168\u30C7\u30FC\u30BF\u3092\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F'))return;const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).clear();tx.oncomplete=()=>{updateRecordCount();renderHistory()}}
 
-// ==========================================
 // Checklist & Countdown
-// ==========================================
-function renderChecklist(){const items=['パークチケット(アプリに表示確認)','スマートフォン & モバイルバッテリー','TDR公式アプリ(最新版に更新)','クレジットカード / 電子マネー','雨具(折りたたみ傘/レインコート)','動きやすい靴','日焼け止め','飲み物(ペットボトル)','レジャーシート(ショー鑑賞用)','PS予約確認','モバイルSuica/PASMO'];document.getElementById('checklist').innerHTML=items.map(i=>`<label style="display:block;cursor:pointer;padding:2px 0"><input type="checkbox" style="accent-color:var(--accent);margin-right:8px" onchange="this.parentElement.style.textDecoration=this.checked?'line-through':'none';this.parentElement.style.opacity=this.checked?'.5':'1'">${i}</label>`).join('')}
-function updateCountdown(){const d=VISIT_DATE-new Date();if(d<=0){document.getElementById('countdown').textContent='本日が訪問日です！楽しんできてください！';return}document.getElementById('countdown').textContent=`訪問まであと ${Math.floor(d/864e5)}日 ${Math.floor((d%864e5)/36e5)}時間`}
+function renderChecklist(){const items=['\u30D1\u30FC\u30AF\u30C1\u30B1\u30C3\u30C8(\u30A2\u30D7\u30EA\u306B\u8868\u793A\u78BA\u8A8D)','\u30B9\u30DE\u30FC\u30C8\u30D5\u30A9\u30F3 & \u30E2\u30D0\u30A4\u30EB\u30D0\u30C3\u30C6\u30EA\u30FC','TDR\u516C\u5F0F\u30A2\u30D7\u30EA(\u6700\u65B0\u7248\u306B\u66F4\u65B0)','\u30AF\u30EC\u30B8\u30C3\u30C8\u30AB\u30FC\u30C9 / \u96FB\u5B50\u30DE\u30CD\u30FC','\u96E8\u5177(\u6298\u308A\u305F\u305F\u307F\u5098/\u30EC\u30A4\u30F3\u30B3\u30FC\u30C8)','\u52D5\u304D\u3084\u3059\u3044\u9774','\u65E5\u713C\u3051\u6B62\u3081','\u98F2\u307F\u7269(\u30DA\u30C3\u30C8\u30DC\u30C8\u30EB)','\u30EC\u30B8\u30E3\u30FC\u30B7\u30FC\u30C8(\u30B7\u30E7\u30FC\u89B3\u8CDE\u7528)','PS\u4E88\u7D04\u78BA\u8A8D','\u30E2\u30D0\u30A4\u30EBSuica/PASMO'];document.getElementById('checklist').innerHTML=items.map(i=>`<label style="display:block;cursor:pointer;padding:2px 0"><input type="checkbox" style="accent-color:var(--accent);margin-right:8px" onchange="this.parentElement.style.textDecoration=this.checked?'line-through':'none';this.parentElement.style.opacity=this.checked?'.5':'1'">${i}</label>`).join('')}
+function updateCountdown(){const d=VISIT_DATE-new Date();if(d<=0){document.getElementById('countdown').textContent='\u672C\u65E5\u304C\u8A2A\u554F\u65E5\u3067\u3059\uFF01\u697D\u3057\u3093\u3067\u304D\u3066\u304F\u3060\u3055\u3044\uFF01';return}document.getElementById('countdown').textContent=`\u8A2A\u554F\u307E\u3067\u3042\u3068 ${Math.floor(d/864e5)}\u65E5 ${Math.floor((d%864e5)/36e5)}\u6642\u9593`}
 
-// ==========================================
 // TABS & INIT
-// ==========================================
 document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='history')renderHistory()})});
 document.getElementById('sort-select').addEventListener('change',renderAttractions);
 document.getElementById('filter-select').addEventListener('change',renderAttractions);
 document.getElementById('search-input').addEventListener('input',renderAttractions);
 document.getElementById('restaurant-filter').addEventListener('change',renderRestaurants);
 document.getElementById('restaurant-search').addEventListener('input',renderRestaurants);
+document.getElementById('restaurant-sort').addEventListener('change',renderRestaurants);
 document.getElementById('history-date-select').addEventListener('change',renderHistory);
 document.getElementById('auto-refresh').addEventListener('change',function(){this.checked?startAR():stopAR()});
 function startAR(){stopAR();autoRefreshTimer=setInterval(fetchAll,REFRESH_INTERVAL)}
 function stopAR(){if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null}}
+setInterval(renderShows,60000);
 
-(async function init(){try{await openDB();await updateRecordCount()}catch(e){console.warn('DB init error:',e)}renderRestaurants();renderChecklist();updateCountdown();setInterval(updateCountdown,60000);fetchAll();startAR()})();
+(async function init(){
+  try{await openDB();await updateRecordCount()}catch(e){console.warn('DB init error:',e)}
+  renderRestaurants();renderShows();renderChecklist();updateCountdown();
+  setInterval(updateCountdown,60000);
+  fetchAll();fetchWeather();startAR();
+})();
 </script>
 </body>
 </html>
