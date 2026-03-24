@@ -102,12 +102,42 @@
       100% { transform: translateY(-10vh) scale(1); opacity: 0; }
     }
 
+    /* 右上特設ボタン */
+    .special-btn {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      z-index: 10;
+      padding: 12px 20px;
+      background: rgba(20, 28, 56, 0.7);
+      border: 1px solid var(--accent-5);
+      border-radius: 12px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 15px rgba(89, 216, 255, 0.2);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .special-btn:hover {
+      background: var(--accent-5);
+      color: var(--bg-dark);
+      box-shadow: 0 0 25px rgba(89, 216, 255, 0.5);
+      transform: translateY(-2px);
+    }
+
     .container {
       position: relative;
       z-index: 4;
       max-width: 1400px;
       margin: 0 auto;
-      padding: 60px 24px 100px;
+      padding: 80px 24px 100px;
     }
 
     header {
@@ -124,7 +154,6 @@
       background: rgba(20, 28, 56, 0.6);
       border: 1px solid rgba(255,255,255,0.1);
       backdrop-filter: blur(8px);
-      box-shadow: 0 0 30px rgba(89, 216, 255, 0.1);
     }
 
     .logo {
@@ -176,7 +205,6 @@
       box-shadow: 0 15px 45px rgba(0,0,0,0.4);
     }
 
-    /* 5色サイクル設定 */
     .game-card:nth-child(5n+1) .game-title { color: var(--accent-1); }
     .game-card:nth-child(5n+2) .game-title { color: var(--accent-2); }
     .game-card:nth-child(5n+3) .game-title { color: var(--accent-3); }
@@ -230,21 +258,8 @@
       border-color: rgba(255, 255, 255, 0.4);
     }
 
-    /* Staggered Delay for 14 cards */
-    .game-card:nth-child(1) { animation-delay: 0.05s; }
-    .game-card:nth-child(2) { animation-delay: 0.10s; }
-    .game-card:nth-child(3) { animation-delay: 0.15s; }
-    .game-card:nth-child(4) { animation-delay: 0.20s; }
-    .game-card:nth-child(5) { animation-delay: 0.25s; }
-    .game-card:nth-child(6) { animation-delay: 0.30s; }
-    .game-card:nth-child(7) { animation-delay: 0.35s; }
-    .game-card:nth-child(8) { animation-delay: 0.40s; }
-    .game-card:nth-child(9) { animation-delay: 0.45s; }
-    .game-card:nth-child(10) { animation-delay: 0.50s; }
-    .game-card:nth-child(11) { animation-delay: 0.55s; }
-    .game-card:nth-child(12) { animation-delay: 0.60s; }
-    .game-card:nth-child(13) { animation-delay: 0.65s; }
-    .game-card:nth-child(14) { animation-delay: 0.70s; }
+    /* Staggered Delay */
+    .game-card:nth-child(n) { animation-delay: calc(0.05s * var(--i)); }
 
     @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { to { opacity: 1; } }
@@ -264,8 +279,9 @@
     }
 
     @media (max-width: 600px) {
-      .container { padding: 40px 15px; }
+      .container { padding: 80px 15px 60px; }
       .games { grid-template-columns: 1fr; }
+      .special-btn { top: 12px; right: 12px; font-size: 0.7rem; padding: 8px 14px; }
     }
   </style>
 </head>
@@ -274,6 +290,10 @@
   <div class="bg-overlay"></div>
   <div class="bg-grid"></div>
   <div class="scanlines"></div>
+
+  <a href="web/DisneySea/index.html" class="special-btn">
+    <span>🚢</span> Disney Seaインフォ
+  </a>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -290,6 +310,11 @@
         p.style.boxShadow = `0 0 10px ${p.style.color}`;
         document.body.appendChild(p);
       }
+
+      // 遅延アニメーション用のインデックス付与
+      document.querySelectorAll('.game-card').forEach((card, i) => {
+        card.style.setProperty('--i', i + 1);
+      });
     });
   </script>
 
@@ -363,7 +388,7 @@
       <a href="animal-stack/index.html" class="game-card">
         <div class="game-icon">🦒</div>
         <div class="game-title">ANIMAL STACK</div>
-        <p class="game-desc">動物たちを空高く積み上げろ！絶妙なバランス感覚が問われるスタッキングパズル。</p>
+        <p class="game-desc">動物たちを空高く積み上げろ！絶妙なバランス感覚が問われるスタッキング。</p>
         <div class="play-btn">PLAY →</div>
       </a>
 
@@ -391,7 +416,7 @@
       <a href="smartball/index.html" class="game-card">
         <div class="game-icon">🔮</div>
         <div class="game-title">SMART BALL</div>
-        <p class="game-desc">狙いを定めて玉を打ち出せ。穴に入れば景品獲得、シンプルながら奥深い盤上の攻防。</p>
+        <p class="game-desc">狙いを定めて玉を打ち出せ。穴に入れば景品獲得、奥深い盤上の攻防。</p>
         <div class="play-btn">PLAY →</div>
       </a>
 
