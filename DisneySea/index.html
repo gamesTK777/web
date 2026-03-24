@@ -708,7 +708,7 @@ async function fetchWithProxy(proxyIndex) {
       throw new Error('JSON parse error: ' + text.substring(0, 100));
     }
     // Validate structure
-    if (!json.lands && !Array.isArray(json)) {
+    if (!json.lands && !json.rides && !Array.isArray(json)) {
       debugLog(`  → 想定外のデータ構造: keys=${Object.keys(json).join(',')}`);
       // allorigins wraps in {contents:...} when using /get endpoint
       if (json.contents) {
@@ -716,9 +716,9 @@ async function fetchWithProxy(proxyIndex) {
         json = JSON.parse(json.contents);
       }
     }
-    if (json.lands) {
-      debugLog(`  → 成功！ lands数: ${json.lands.length}`);
-    }
+    const landCount = json.lands?.length || 0;
+    const rideCount = json.rides?.length || 0;
+    debugLog(`  → 成功！ lands: ${landCount}, rides(top): ${rideCount}`);
     return json;
   } catch (err) {
     clearTimeout(timer);
@@ -750,7 +750,7 @@ async function fetchData() {
     }
   }
 
-  if (data && data.lands) {
+  if (data && (data.lands || data.rides)) {
     processData(data);
     const proxyName = currentProxyIndex === 0 ? 'Direct' : `Proxy #${currentProxyIndex+1}`;
     setStatus('ok', `API接続中 (${proxyName}) — データ取得成功`);
@@ -784,10 +784,30 @@ function setStatus(type, text) {
   txt.style.color = type === 'ok' ? 'var(--green)' : type === 'warn' ? 'var(--yellow)' : type === 'err' ? 'var(--red)' : 'var(--text-muted)';
 }
 
+// Area guessing based on ride name (for top-level rides without area info)
+function guessArea(name) {
+  const n = name.toLowerCase();
+  if (n.includes('frozen') || n.includes('anna') || n.includes('elsa')) return 'Fantasy Springs';
+  if (n.includes('rapunzel') || n.includes('lantern')) return 'Fantasy Springs';
+  if (n.includes('peter pan') || n.includes('never land')) return 'Fantasy Springs';
+  if (n.includes('fairy tinker')) return 'Fantasy Springs';
+  if (n.includes('soaring') || n.includes('venetian') || n.includes('gondol')) return 'Mediterranean Harbor';
+  if (n.includes('tower') || n.includes('toy story') || n.includes('transit steamer') || n.includes('big city') || n.includes('electric railway') || n.includes('turtle talk') || n.includes('cape cod')) return 'American Waterfront';
+  if (n.includes('indiana') || n.includes('raging')) return 'Lost River Delta';
+  if (n.includes('center of the earth') || n.includes('20,000') || n.includes('journey to') || n.includes('nautilus')) return 'Mysterious Island';
+  if (n.includes('magic lamp') || n.includes('sindbad') || n.includes('jasmine') || n.includes('caravan') || n.includes('whirlpool')) return 'Arabian Coast';
+  if (n.includes('mermaid') || n.includes('ariel') || n.includes('blowfish') || n.includes('scuttle') || n.includes('flounder') || n.includes('jumpin') || n.includes('sebastian')) return 'Mermaid Lagoon';
+  if (n.includes('nemo') || n.includes('aquatopia')) return 'Port Discovery';
+  if (n.includes('fortress')) return 'Mediterranean Harbor';
+  return 'Tokyo DisneySea';
+}
+
 function processData(data) {
   allRides = [];
-  debugLog(`processData: lands=${data.lands?.length || 0}`);
-  if (Array.isArray(data.lands)) {
+  debugLog(`processData: lands=${data.lands?.length || 0}, top-level rides=${data.rides?.length || 0}`);
+
+  // Pattern 1: rides nested inside lands (documented format)
+  if (Array.isArray(data.lands) && data.lands.length > 0) {
     data.lands.forEach(land => {
       debugLog(`  エリア: ${land.name} (rides: ${land.rides?.length || 0})`);
       if (Array.isArray(land.rides)) {
@@ -800,6 +820,20 @@ function processData(data) {
       }
     });
   }
+
+  // Pattern 2: rides at top level (actual current TDS API response)
+  if (Array.isArray(data.rides) && data.rides.length > 0) {
+    debugLog(`  トップレベルrides検出: ${data.rides.length}施設`);
+    data.rides.forEach(ride => {
+      if (!allRides.find(r => r.id === ride.id)) {
+        ride._area = ride.area || guessArea(ride.name);
+        ride._dpa = isDPA(ride.name);
+        ride._pp = isPP(ride.name);
+        allRides.push(ride);
+      }
+    });
+  }
+
   debugLog(`合計: ${allRides.length}施設`);
 
   // Check if park is open
