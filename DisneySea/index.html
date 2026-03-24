@@ -56,6 +56,7 @@
   .attraction-card .meta{font-size:.7em;color:var(--text-muted);margin-top:3px}
   .restaurant-card{background:var(--card);border-radius:10px;padding:12px;transition:all .2s;border-left:4px solid var(--accent);position:relative}
   .restaurant-card:hover{background:var(--card-hover)}
+  .restaurant-card.closed{opacity:.55;border-left-color:#555}
   .restaurant-card .name{font-weight:bold;font-size:.9em;margin-bottom:3px;padding-right:65px}
   .restaurant-card .type{font-size:.72em;color:var(--text-muted)}
   .restaurant-card .tags{display:flex;gap:3px;flex-wrap:wrap;margin:4px 0}
@@ -459,7 +460,12 @@ async function fetchRestaurantWait(){
         const pText=statusP?statusP.textContent:'';
         const closed=!!(pText.includes('中止')||pText.includes('休止')||pText.includes('運営停止'));
         const mobileOrder=!!(pText.includes('モバイルオーダー'));
-        if(waitRange||closed||mobileOrder)rw[name]={waitRange,closed,mobileOrder};
+        const ended=!!(pText.includes('案内終了'));
+        const operating=!!(pText.includes('運営中')&&!closed);
+        // 営業時間を抽出 (例: "10:30-20:00")
+        const hoursMatch=pText.match(/(\d{1,2}:\d{2})\s*[-～〜]\s*(\d{1,2}:\d{2})/);
+        const hours=hoursMatch?hoursMatch[0]:null;
+        if(waitRange||closed||mobileOrder||ended||operating)rw[name]={waitRange,closed,mobileOrder,ended,operating,hours};
       });
       restaurantWaitData=rw;
       debugLog(`  → レストラン: ${Object.keys(rw).length}件`);
@@ -633,11 +639,18 @@ function renderRestaurants(){
   const hasLive=Object.keys(restaurantWaitData).length>0;
   document.getElementById('restaurant-container').innerHTML=list.map(r=>{
     const lw=r._liveWait;
-    const waitDisplay=lw&&lw.waitRange?`${lw.waitRange}<span class="unit">\u5206</span>`:hasLive?'--':'';
+    const waitDisplay=lw&&lw.waitRange?`${lw.waitRange}<span class="unit">分</span>`:hasLive?(lw&&lw.ended?'終了':lw&&lw.closed?'休止':'--'):'';
     const maxWait=lw&&lw.waitRange?parseInt(lw.waitRange.split('-')[1]||lw.waitRange)||0:0;
-    const waitColor=lw&&lw.waitRange?(maxWait>40?'var(--red)':maxWait>20?'var(--orange)':'var(--green)'):'var(--text-muted)';
-    const statusTag=lw&&lw.closed?'<span class="tag" style="background:#555;color:var(--red)">\u4F11\u6B62\u4E2D</span>':lw&&lw.mobileOrder?'<span class="tag" style="background:#1565c0;color:#fff">\u30E2\u30D0\u30A4\u30EB\u30AA\u30FC\u30C0\u30FC</span>':'';
-    return `<div class="restaurant-card"><div class="name">${r.name}</div>${waitDisplay?`<div class="wait-badge" style="color:${waitColor}">${waitDisplay}</div>`:''}<div class="tags"><span class="tag tag-area">${r.area}</span>${r.ps?'<span class="tag tag-dpa">PS\u4E88\u7D04\u53EF</span>':''}<span class="tag" style="background:#455a64;color:#cfd8dc">${r.type}</span><span class="tag" style="background:#333;color:#aaa">${r.price}</span>${statusTag}</div><div class="type">${r.cuisine}</div><div class="wait-info">\uD83D\uDCA1 ${r.tip}</div></div>`}).join('');
+    const waitColor=lw&&lw.waitRange?(maxWait>40?'var(--red)':maxWait>20?'var(--orange)':'var(--green)'):(lw&&(lw.ended||lw.closed)?'var(--text-muted)':'var(--text-muted)');
+    // ステータスタグ
+    let statusTag='';
+    if(lw&&lw.closed)statusTag='<span class="tag" style="background:#555;color:var(--red)">休止中</span>';
+    else if(lw&&lw.ended)statusTag='<span class="tag" style="background:#555;color:var(--yellow)">案内終了</span>';
+    else if(lw&&lw.mobileOrder)statusTag='<span class="tag" style="background:#1565c0;color:#fff">モバイルオーダー</span>';
+    else if(lw&&lw.operating)statusTag='<span class="tag" style="background:var(--green);color:#fff">営業中</span>';
+    // 営業時間タグ
+    const hoursTag=lw&&lw.hours?`<span class="tag" style="background:#333;color:var(--accent)">${lw.hours}</span>`:'';
+    return `<div class="restaurant-card${lw&&(lw.closed||lw.ended)?' closed':''}">${waitDisplay?`<div class="wait-badge" style="color:${waitColor}">${waitDisplay}</div>`:''}<div class="name">${r.name}</div><div class="tags"><span class="tag tag-area">${r.area}</span>${r.ps?'<span class="tag tag-dpa">PS予約可</span>':''}<span class="tag" style="background:#455a64;color:#cfd8dc">${r.type}</span><span class="tag" style="background:#333;color:#aaa">${r.price}</span>${statusTag}${hoursTag}</div><div class="type">${r.cuisine}</div><div class="wait-info">💡 ${r.tip}</div></div>`}).join('');
 }
 
 // DPA status lookup for shows (fuzzy match on show name)
