@@ -211,7 +211,7 @@
     <h3>ショー・パレード スケジュール</h3>
     <p style="font-size:.8em;color:var(--text-muted);margin-bottom:4px">
       当日の公演スケジュールと抽選/DPA情報です。次の公演は<span style="color:var(--accent);font-weight:bold">水色ハイライト</span>で表示されます。<br>
-      最新スケジュールは<a href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank" style="color:var(--accent)">公式サイト</a>でもご確認ください。
+      最新スケジュールは<a href="https://www.tokyodisneyresort.jp/tds/show.html" target="_blank" style="color:var(--accent)">公式サイト</a>でもご確認ください。
     </p>
   </div>
   <div id="show-container" class="attraction-grid"></div>
@@ -281,7 +281,7 @@
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/attraction.html" target="_blank"><div class="link-title">公式 アトラクション一覧</div><div class="link-desc">詳細情報・休止情報</div></a>
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/restaurant.html" target="_blank"><div class="link-title">公式 レストラン一覧</div><div class="link-desc">メニュー・営業時間・PS</div></a>
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/map.html" target="_blank"><div class="link-title">公式 パークマップ</div><div class="link-desc">インタラクティブマップ</div></a>
-      <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/show/schedule.html" target="_blank"><div class="link-title">公式 ショースケジュール</div><div class="link-desc">当日の公演時間</div></a>
+      <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/show.html" target="_blank"><div class="link-title">公式 ショースケジュール</div><div class="link-desc">当日の公演時間</div></a>
       <a class="link-card" href="https://disneyreal.asumirai.info/realtime/disneysea-wait-today.html" target="_blank"><div class="link-title">リアルタイム待ち時間推移</div><div class="link-desc">時間帯別グラフ(ディズニーリアル)</div></a>
       <a class="link-card" href="https://urtrip.jp/tds-attraction-waitingtime-realtime/" target="_blank"><div class="link-title">DPA・パス発券状況</div><div class="link-desc">リアルタイム終了時間(URTRIP)</div></a>
       <a class="link-card" href="https://www.tokyodisneyresort.jp/special/fantasysprings/" target="_blank"><div class="link-title">ファンタジースプリングス</div><div class="link-desc">新エリア特設ページ</div></a>
@@ -433,19 +433,18 @@ async function fetchRestaurantWait(){
       const html=await r.text();
       debugLog(`  → レストランHTML: ${html.length}文字`);
       const doc=new DOMParser().parseFromString(html,'text/html');
-      const items=doc.querySelectorAll('li');
+      const descs=doc.querySelectorAll('li.desc');
       const rw={};
-      items.forEach(li=>{
-        const h4=li.querySelector('h4');if(!h4)return;
+      descs.forEach(desc=>{
+        const h4=desc.querySelector('h4');if(!h4)return;
         const name=h4.textContent.trim();if(name.length<2||name.length>40)return;
-        const waitEl=li.querySelector('.wait')||li.querySelector('.time')||li.querySelector('.min');
-        const allSpans=li.querySelectorAll('span');
-        let wait=null;
-        if(waitEl){const m=waitEl.textContent.match(/(\d+)/);if(m)wait=parseInt(m[1])}
-        if(wait===null){allSpans.forEach(s=>{const m=s.textContent.match(/(\d+)\s*分/);if(m&&!wait)wait=parseInt(m[1])})}
-        const statusEl=li.querySelector('.fp')||li.querySelector('.status');
-        const status=statusEl?statusEl.textContent.trim():'';
-        if(wait!==null||status)rw[name]={wait,status};
+        const parentUl=desc.parentElement;
+        const timeEl=parentUl?parentUl.querySelector('li.time time'):null;
+        const waitRange=timeEl?timeEl.textContent.trim():null;
+        const statusP=desc.querySelector('p');
+        const closed=!!(statusP&&statusP.textContent.includes('運営・公演中止'));
+        const mobileOrder=!!(statusP&&statusP.textContent.includes('モバイルオーダー'));
+        if(waitRange||closed||mobileOrder)rw[name]={waitRange,closed,mobileOrder};
       });
       restaurantWaitData=rw;
       debugLog(`  → レストラン: ${Object.keys(rw).length}件`);
@@ -532,7 +531,7 @@ async function fetchAll(){
   if(data&&(data.lands||data.rides)){processData(data);const pn=currentProxyIndex===0?'Direct':`Proxy#${currentProxyIndex+1}`;setStatus('ok',`API\u63A5\u7D9A\u4E2D(${pn}) \u2014 \u30C7\u30FC\u30BF\u53D6\u5F97\u6210\u529F`);document.getElementById('last-update').textContent=`\u6700\u7D42\u66F4\u65B0: ${new Date().toLocaleTimeString('ja-JP')}`;debugLog('=== \u30C7\u30FC\u30BF\u53D6\u5F97\u5B8C\u4E86 ===')}
   else{setStatus('err',`API\u63A5\u7D9A\u30A8\u30E9\u30FC: ${lastErr?.message||'\u4E0D\u660E'}`);document.getElementById('attraction-container').innerHTML=`<div class="error-msg">\u30C7\u30FC\u30BF\u53D6\u5F97\u5931\u6557: ${lastErr?.message||'\u4E0D\u660E'}</div>`}
   btn.textContent='\u66F4\u65B0';btn.disabled=false;
-  fetchDPAStatus().then(()=>{renderAttractions()});
+  fetchDPAStatus().then(()=>{renderAttractions();renderShows()});
   fetchRestaurantWait();
 }
 
@@ -614,10 +613,21 @@ function renderRestaurants(){
   const hasLive=Object.keys(restaurantWaitData).length>0;
   document.getElementById('restaurant-container').innerHTML=list.map(r=>{
     const lw=r._liveWait;
-    const waitDisplay=lw&&lw.wait!==null?`${lw.wait}<span class="unit">\u5206</span>`:hasLive?'--':'';
-    const waitColor=lw&&lw.wait!==null?(lw.wait>40?'var(--red)':lw.wait>20?'var(--orange)':'var(--green)'):'var(--text-muted)';
-    const statusTag=lw&&lw.status?`<span class="tag" style="background:${lw.status.includes('\u7D42\u4E86')||lw.status.includes('\u306A\u3057')?'#555;color:var(--red)':'var(--green);color:#fff'}">${lw.status}</span>`:'';
+    const waitDisplay=lw&&lw.waitRange?`${lw.waitRange}<span class="unit">\u5206</span>`:hasLive?'--':'';
+    const maxWait=lw&&lw.waitRange?parseInt(lw.waitRange.split('-')[1]||lw.waitRange)||0:0;
+    const waitColor=lw&&lw.waitRange?(maxWait>40?'var(--red)':maxWait>20?'var(--orange)':'var(--green)'):'var(--text-muted)';
+    const statusTag=lw&&lw.closed?'<span class="tag" style="background:#555;color:var(--red)">\u4F11\u6B62\u4E2D</span>':lw&&lw.mobileOrder?'<span class="tag" style="background:#1565c0;color:#fff">\u30E2\u30D0\u30A4\u30EB\u30AA\u30FC\u30C0\u30FC</span>':'';
     return `<div class="restaurant-card"><div class="name">${r.name}</div>${waitDisplay?`<div class="wait-badge" style="color:${waitColor}">${waitDisplay}</div>`:''}<div class="tags"><span class="tag tag-area">${r.area}</span>${r.ps?'<span class="tag tag-dpa">PS\u4E88\u7D04\u53EF</span>':''}<span class="tag" style="background:#455a64;color:#cfd8dc">${r.type}</span><span class="tag" style="background:#333;color:#aaa">${r.price}</span>${statusTag}</div><div class="type">${r.cuisine}</div><div class="wait-info">\uD83D\uDCA1 ${r.tip}</div></div>`}).join('');
+}
+
+// DPA status lookup for shows (fuzzy match on show name)
+function getDPAStatusForShow(showName){
+  const s2=showName.replace(/[\s\u3000\u30FB\uFF5E\uFF01]/g,'');
+  for(const[k,v] of Object.entries(dpaStatusData)){
+    const k2=k.replace(/[\s\u3000\u30FB\uFF5E\uFF01]/g,'');
+    if(s2.includes(k2)||k2.includes(s2)||s2.substring(0,Math.min(s2.length,5))===k2.substring(0,Math.min(k2.length,5)))return v;
+  }
+  return null;
 }
 
 // UI: Shows
@@ -631,7 +641,12 @@ function renderShows(){
       return `<span class="show-time ${isNext?'next':''}" style="${isPast?'opacity:.5':''}">${t}${isNext?' \u2190 \u6B21':''}</span>`;
     }).join('');
     const tags=[];
-    if(s.dpa)tags.push(`<span class="tag tag-dpa">DPA \u00A5${s.dpaPrice}</span>`);
+    if(s.dpa){
+      tags.push(`<span class="tag tag-dpa">DPA \u00A5${s.dpaPrice}</span>`);
+      const dpaSt=getDPAStatusForShow(s.name);
+      if(dpaSt==='\u8CA9\u58F2\u4E2D')tags.push('<span class="tag tag-selling">\u8CA9\u58F2\u4E2D</span>');
+      else if(dpaSt==='\u8CA9\u58F2\u306A\u3057')tags.push('<span class="tag tag-soldout">\u8CA9\u58F2\u7D42\u4E86</span>');
+    }
     if(s.lottery)tags.push('<span class="tag" style="background:var(--purple);color:#fff">\u62BD\u9078\u3042\u308A</span>');
     tags.push(`<span class="tag" style="background:#455a64;color:#cfd8dc">${s.type}</span>`);
     tags.push(`<span class="tag tag-area">${s.area}</span>`);
