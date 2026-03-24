@@ -310,7 +310,7 @@ const REFRESH_INTERVAL=60000;
 const DB_NAME='TDS_Dashboard';const DB_VERSION=1;const STORE_NAME='waitHistory';
 const VISIT_DATE=new Date('2026-03-29T00:00:00+09:00');
 
-let autoRefreshTimer=null,allRides=[],dpaStatusData={},ppStatusData={},restaurantWaitData={},db=null,currentProxyIndex=0;
+let autoRefreshTimer=null,allRides=[],dpaStatusData={},ppStatusData={},disneyRealWaitData={},restaurantWaitData={},db=null,currentProxyIndex=0;
 
 const nameJP={"20,000 Leagues Under the Sea":"海底2万マイル","Anna and Elsa's Frozen Journey":"アナとエルサのフローズンジャーニー","Aquatopia":"アクアトピア","Ariel's Playground":"アリエルのプレイグラウンド","Big City Vehicles":"ビッグシティ・ヴィークル","Blowfish Balloon Race":"ブローフィッシュ・バルーンレース","Caravan Carousel":"キャラバンカルーセル","DisneySea Electric Railway (American Waterfront)":"エレクトリックレールウェイ（アメフロ）","DisneySea Electric Railway (Port Discovery)":"エレクトリックレールウェイ（ポートディスカバリー）","DisneySea Transit Steamer Line (American Waterfront)":"トランジットスチーマーライン（アメフロ）","DisneySea Transit Steamer Line (Lost River Delta)":"トランジットスチーマーライン（ロストリバーデルタ）","DisneySea Transit Steamer Line (Mediterranean Harbor)":"トランジットスチーマーライン（メディテレーニアンハーバー）","Fairy Tinker Bell's Busy Buggies":"ティンカーベルのビジーバギー","Flounder's Flying Fish Coaster":"フランダーのフライングフィッシュコースター","Fortress Explorations":"フォートレス・エクスプロレーション","Indiana Jones Adventure\u00ae: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Indiana Jones Adventure: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Jasmine's Flying Carpets":"ジャスミンのフライングカーペット","Journey to the Center of the Earth":"センター・オブ・ジ・アース","Jumpin' Jellyfish":"ジャンピン・ジェリーフィッシュ","Mermaid Lagoon Theater":"マーメイドラグーンシアター","Nemo & Friends SeaRider":"ニモ&フレンズ・シーライダー","Peter Pan's Never Land Adventure":"ピーターパンのネバーランドアドベンチャー","Raging Spirits":"レイジングスピリッツ","Rapunzel's Lantern Festival":"ラプンツェルのランタンフェスティバル","Scuttle's Scooters":"スカットルのスクーター","Sindbad's Storybook Voyage":"シンドバッド・ストーリーブック・ヴォヤッジ","Soaring: Fantastic Flight":"ソアリン：ファンタスティック・フライト","The Leonardo Challenge":"ザ・レオナルドチャレンジ","The Magic Lamp Theater":"マジックランプシアター","The Whirlpool":"ワールプール","Tower of Terror":"タワー・オブ・テラー","Toy Story Mania!":"トイ・ストーリー・マニア！","Turtle Talk":"タートル・トーク","Venetian Gondolas":"ヴェネツィアン・ゴンドラ"};
 
@@ -388,12 +388,18 @@ async function updateRecordCount(){if(!db)return;const tx=db.transaction(STORE_N
 // FETCH: Queue-Times API
 async function fetchWithProxy(pi){const url=CORS_PROXY_BUILDERS[pi](API_BASE);const pn=pi===0?'Direct':new URL(url).hostname;debugLog(`試行#${pi+1}(${pn})`);const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),10000);try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);debugLog(`  → HTTP ${r.status}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const txt=await r.text();let json;try{json=JSON.parse(txt)}catch(e){throw new Error('JSON parse error')}if(!json.lands&&!json.rides){if(json.contents){json=JSON.parse(json.contents)}}debugLog(`  → lands:${json.lands?.length||0}, rides:${json.rides?.length||0}`);return json}catch(e){clearTimeout(t);debugLog(`  → エラー: ${e.message}`);throw e}}
 
-// FETCH: ディズニーリアル (DPA/PP)
+// FETCH: ディズニーリアル (DPA/PP + アトラクション待ち時間)
+// codetabsを最優先（corsproxy/alloriginsは不安定）
+const ATTR_PROXY_BUILDERS=[
+  u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+  u=>'https://corsproxy.io/?'+encodeURIComponent(u),
+  u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+];
 async function fetchDPAStatus(){
-  debugLog('=== DPA/PPステータス取得開始 ===');
-  for(let i=1;i<CORS_PROXY_BUILDERS.length;i++){
+  debugLog('=== DPA/PP + ディズニーリアル待ち時間取得開始 ===');
+  for(let i=0;i<ATTR_PROXY_BUILDERS.length;i++){
     try{
-      const url=CORS_PROXY_BUILDERS[i](DISNEYREAL_URL);
+      const url=ATTR_PROXY_BUILDERS[i](DISNEYREAL_URL);
       debugLog(`DPA試行#${i}`);
       const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),12000);
       const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);
@@ -401,6 +407,7 @@ async function fetchDPAStatus(){
       const html=await r.text();
       debugLog(`  → HTML取得: ${html.length}文字`);
       const doc=new DOMParser().parseFromString(html,'text/html');
+      // DPA/PPステータス抽出
       const h4s=doc.querySelectorAll('h4');
       const dpaSt={},ppSt={};
       h4s.forEach(h4=>{
@@ -415,6 +422,28 @@ async function fetchDPAStatus(){
       });
       dpaStatusData=dpaSt;ppStatusData=ppSt;
       debugLog(`  → DPA:${Object.keys(dpaSt).length}件, PP:${Object.keys(ppSt).length}件`);
+      // アトラクション待ち時間抽出（Queue-Timesの補正用）
+      const drWait={};
+      const descs=doc.querySelectorAll('li.desc');
+      descs.forEach(desc=>{
+        const h4=desc.querySelector('h4');if(!h4)return;
+        const name=h4.textContent.trim();if(name.length<2||name.length>40)return;
+        const pEl=desc.querySelector('p');
+        const pText=pEl?pEl.textContent:'';
+        const parentUl=desc.parentElement;
+        const timeLi=parentUl?parentUl.querySelector('li[class*="time"]'):null;
+        const timeEl=timeLi?timeLi.querySelector('time'):null;
+        let wait=timeEl?parseInt(timeEl.textContent.trim())||0:0;
+        if(!wait&&timeLi){
+          const tp=timeLi.querySelector('p')?timeLi.querySelector('p').textContent:'';
+          const cleaned=tp.replace('待ち時間','').replace(/分.*$/,'').trim();
+          if(/^\d/.test(cleaned))wait=parseInt(cleaned)||0;
+        }
+        const closed=pText.includes('中止')||pText.includes('休止');
+        if(wait>0||closed)drWait[name]={wait,closed};
+      });
+      disneyRealWaitData=drWait;
+      debugLog(`  → ディズニーリアル待ち時間: ${Object.keys(drWait).length}件`);
       return;
     }catch(e){debugLog(`  → DPAエラー: ${e.message}`)}
   }
@@ -552,8 +581,45 @@ async function fetchAll(){
   if(data&&(data.lands||data.rides)){processData(data);const pn=currentProxyIndex===0?'Direct':`Proxy#${currentProxyIndex+1}`;setStatus('ok',`API\u63A5\u7D9A\u4E2D(${pn}) \u2014 \u30C7\u30FC\u30BF\u53D6\u5F97\u6210\u529F`);document.getElementById('last-update').textContent=`\u6700\u7D42\u66F4\u65B0: ${new Date().toLocaleTimeString('ja-JP')}`;debugLog('=== \u30C7\u30FC\u30BF\u53D6\u5F97\u5B8C\u4E86 ===')}
   else{setStatus('err',`API\u63A5\u7D9A\u30A8\u30E9\u30FC: ${lastErr?.message||'\u4E0D\u660E'}`);document.getElementById('attraction-container').innerHTML=`<div class="error-msg">\u30C7\u30FC\u30BF\u53D6\u5F97\u5931\u6557: ${lastErr?.message||'\u4E0D\u660E'}</div>`}
   btn.textContent='\u66F4\u65B0';btn.disabled=false;
-  fetchDPAStatus().then(()=>{renderAttractions();renderShows()});
+  fetchDPAStatus().then(()=>{crossRefWaitData();renderAttractions();renderShows()});
   fetchRestaurantWait();
+}
+
+// Queue-Times is_open=false をディズニーリアルのデータで補正
+function crossRefWaitData(){
+  if(!Object.keys(disneyRealWaitData).length)return;
+  let corrected=0;
+  allRides.forEach(ride=>{
+    const jp=getJPName(ride.name);
+    // ディズニーリアルの名前でマッチ（部分一致・正規化マッチ）
+    let drEntry=null;
+    const jpNorm=jp.replace(/[\s\u3000\u30FB\.\-・（）()「」『』]/g,'');
+    for(const[k,v] of Object.entries(disneyRealWaitData)){
+      const kNorm=k.replace(/[\s\u3000\u30FB\.\-・（）()「」『』]/g,'');
+      if(jpNorm===kNorm||jpNorm.includes(kNorm)||kNorm.includes(jpNorm)){drEntry=v;break}
+      if(jpNorm.length>4&&kNorm.length>4&&jpNorm.substring(0,4)===kNorm.substring(0,4)){drEntry=v;break}
+    }
+    if(!drEntry)return;
+    // Queue-Timesがis_open=falseだが、ディズニーリアルでは待ち時間がある→補正
+    if(!ride.is_open&&drEntry.wait>0&&!drEntry.closed){
+      debugLog(`補正: ${jp} → is_open=true, wait=${drEntry.wait}分 (ディズニーリアル)`);
+      ride.is_open=true;
+      ride.wait_time=drEntry.wait;
+      ride._correctedByDR=true;
+      corrected++;
+    }
+    // Queue-Timesがis_open=trueでwait=0だが、ディズニーリアルでは待ち時間がある→待ち時間を補正
+    else if(ride.is_open&&ride.wait_time===0&&drEntry.wait>0){
+      debugLog(`補正(待ち時間): ${jp} → wait=${drEntry.wait}分 (ディズニーリアル)`);
+      ride.wait_time=drEntry.wait;
+      ride._correctedByDR=true;
+      corrected++;
+    }
+  });
+  if(corrected>0){
+    debugLog(`  → ${corrected}件のアトラクションをディズニーリアルで補正`);
+    updateSummary();
+  }
 }
 
 function setStatus(type,text){const d=document.getElementById('status-dot');const t2=document.getElementById('status-text');d.className='status-dot '+type;t2.textContent=text;t2.style.color=type==='ok'?'var(--green)':type==='warn'?'var(--yellow)':type==='err'?'var(--red)':'var(--text-muted)'}
@@ -611,9 +677,11 @@ function renderAttractions(){
     const tags=[];
     if(r._dpa){const price=getDPAPrice(r.name);const dSt=getDPAStatusForRide(r.name);tags.push(`<span class="tag tag-dpa">DPA \u00A5${price||2000}</span>`);if(dSt==='\u8CA9\u58F2\u4E2D')tags.push('<span class="tag tag-selling">\u8CA9\u58F2\u4E2D</span>');else if(dSt==='\u8CA9\u58F2\u306A\u3057')tags.push('<span class="tag tag-soldout">\u8CA9\u58F2\u7D42\u4E86</span>')}
     if(r._pp){const pSt=getPPStatusForRide(r.name);tags.push('<span class="tag tag-pp">\u30D7\u30E9\u30A4\u30AA\u30EA\u30C6\u30A3\u30D1\u30B9</span>');if(pSt==='\u767A\u884C\u4E2D')tags.push('<span class="tag tag-selling">\u767A\u884C\u4E2D</span>');else if(pSt==='\u767A\u884C\u306A\u3057')tags.push('<span class="tag tag-soldout">\u767A\u884C\u7D42\u4E86</span>')}
-    if(!r.is_open)tags.push('<span class="tag tag-closed">\u4F11\u6B62\u4E2D</span>');
+    if(!r.is_open)tags.push('<span class="tag tag-closed">休止中</span>');
+    if(r._correctedByDR)tags.push('<span class="tag" style="background:#00695c;color:#80cbc4">DR補正</span>');
     tags.push(`<span class="tag tag-area">${r._area||'---'}</span>`);
-    return `<div class="attraction-card ${wc}"><div class="name">${jp}</div><div class="name-en">${r.name!==jp?r.name:''}</div><div class="wait-badge" style="color:${wCol}">${r.is_open?r.wait_time:'--'}<span class="unit">${r.is_open?'\u5206':''}</span></div><div class="tags">${tags.join('')}</div><div class="meta">${r.last_updated?'\u66F4\u65B0:'+new Date(r.last_updated).toLocaleTimeString('ja-JP'):''}</div></div>`}).join('');
+    const src=r._correctedByDR?'ディズニーリアル':'Queue-Times';
+    return `<div class="attraction-card ${wc}"><div class="name">${jp}</div><div class="name-en">${r.name!==jp?r.name:''}</div><div class="wait-badge" style="color:${wCol}">${r.is_open?r.wait_time:'--'}<span class="unit">${r.is_open?'分':''}</span></div><div class="tags">${tags.join('')}</div><div class="meta">${r.last_updated?'更新:'+new Date(r.last_updated).toLocaleTimeString('ja-JP'):''} (${src})</div></div>`}).join('');
 }
 
 // UI: Restaurants
