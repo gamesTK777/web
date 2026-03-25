@@ -93,17 +93,24 @@ def collect():
         sys.exit(1)
 
     # ライドデータを抽出
+    # APIは2パターン: (A) lands配列の中にrides (B) トップレベルにrides直置き
     rides = []
+    raw_rides = []
     for land in data.get("lands", []):
-        for ride in land.get("rides", []):
-            name_en = ride.get("name", "")
-            rides.append({
-                "name": NAME_JP.get(name_en, name_en),
-                "name_en": name_en,
-                "area": guess_area(name_en),
-                "wait": ride.get("wait_time", 0),
-                "open": ride.get("is_open", False),
-            })
+        raw_rides.extend(land.get("rides", []))
+    # トップレベルのridesも取得（landsが空の場合のフォールバック）
+    if not raw_rides:
+        raw_rides = data.get("rides", [])
+
+    for ride in raw_rides:
+        name_en = ride.get("name", "")
+        rides.append({
+            "name": NAME_JP.get(name_en, name_en),
+            "name_en": name_en,
+            "area": guess_area(name_en),
+            "wait": ride.get("wait_time", 0),
+            "open": ride.get("is_open", False),
+        })
 
     # 集計
     open_rides = [r for r in rides if r["open"]]
