@@ -907,6 +907,12 @@ async function fetchAll(){
 // Queue-Times is_open=false をディズニーリアルのデータで補正
 function crossRefWaitData(){
   if(!Object.keys(disneyRealWaitData).length)return;
+  // パーク閉園判定: Queue-Timesで全アトラクションがis_open=falseなら補正をスキップ
+  const qtOpenCount=allRides.filter(r=>r.is_open).length;
+  if(qtOpenCount===0){
+    debugLog('パーク閉園中のため、ディズニーリアル補正をスキップ');
+    return;
+  }
   let corrected=0;
   allRides.forEach(ride=>{
     const jp=getJPName(ride.name);
