@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 TDS Wait Time Collector
-GitHub Actionsから10分ごとに実行し、Queue-Times APIからデータを収集して
+GitHub Actionsから5分ごとに実行し、Queue-Times APIからデータを収集して
 data/YYYY-MM-DD.json に蓄積する。
 また data/index.json に利用可能な日付一覧を保持する。
 """
@@ -9,6 +9,7 @@ data/YYYY-MM-DD.json に蓄積する。
 import json
 import os
 import sys
+import time
 from datetime import datetime, timezone, timedelta
 
 import requests
@@ -80,17 +81,25 @@ def collect():
         print(f"[{now.isoformat()}] Outside park hours ({hour}:xx JST), skipping.")
         return
 
-    # Queue-Times API からデータ取得
+    # Queue-Times API からデータ取得（リトライ付き）
     print(f"[{now.isoformat()}] Fetching data from Queue-Times API...")
-    try:
-        resp = requests.get(API_URL, timeout=30, headers={
-            "User-Agent": "TDS-Dashboard-Collector/1.0"
-        })
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        print(f"ERROR: Failed to fetch API: {e}", file=sys.stderr)
-        sys.exit(1)
+    resp = None
+    for attempt in range(3):
+        try:
+            resp = requests.get(API_URL, timeout=30, headers={
+                "User-Agent": "TDS-Dashboard-Collector/1.0"
+            })
+            resp.raise_for_status()
+            break
+        except Exception as e:
+            print(f"  Attempt {attempt+1}/3 failed: {e}")
+            if attempt < 2:
+                time.sleep(5)
+            else:
+                print(f"ERROR: All retries failed", file=sys.stderr)
+                sys.exit(1)
+
+    data = resp.json()
 
     # ライドデータを抽出
     # APIは2パターン: (A) lands配列の中にrides (B) トップレベルにrides直置き
@@ -143,11 +152,16 @@ def collect():
     else:
         daily_data = []
 
-    # 重複チェック（同じ分のデータがあればスキップ）
-    time_str = now.strftime("%H:%M")
-    if any(s.get("time") == time_str for s in daily_data):
-        print(f"[{now.isoformat()}] Data for {time_str} already exists, skipping.")
-        return
+    # 重複チェック（3分以内の既存データがあればスキップ）
+    now_minutes = now.hour * 60 + now.minute
+    for s in daily_data:
+        existing_time = s.get("time", "")
+        if ":" in existing_time:
+            eh, em = map(int, existing_time.split(":"))
+            existing_minutes = eh * 60 + em
+            if abs(now_minutes - existing_minutes) < 3:
+                print(f"[{now.isoformat()}] Data within 3min of {existing_time} exists, skipping.")
+                return
 
     daily_data.append(snapshot)
 
