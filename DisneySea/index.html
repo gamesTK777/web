@@ -137,6 +137,32 @@
 .hotel-tip .tip-title{color:var(--accent);font-weight:bold;margin-bottom:3px;font-size:.9em}
 .hotel-warning{background:rgba(255,152,0,.1);border-left-color:var(--accent2)}
 .hotel-warning .tip-title{color:var(--accent2)}
+.shuttle-schedule{width:100%;border-collapse:collapse;font-size:.82em;margin:8px 0}
+.shuttle-schedule th{background:var(--primary);color:var(--accent);padding:7px 10px;text-align:center;font-weight:bold;font-size:.85em;letter-spacing:.05em}
+.shuttle-schedule td{padding:6px 10px;border-bottom:1px solid #334;vertical-align:middle}
+.shuttle-schedule td:first-child{text-align:center;font-weight:bold;color:var(--accent);width:3.5em;border-right:1px solid #334;background:rgba(79,195,247,.05)}
+.shuttle-schedule td:last-child{text-align:left;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+.shuttle-schedule tr:hover td{background:var(--card-hover)}
+.shuttle-tbl-wrap{overflow-x:auto;margin:8px 0}
+.shuttle-note{font-size:.73em;color:var(--text-muted);margin:6px 0;line-height:1.5}
+.bus-map{margin:8px 0;font-size:.78em}
+.bus-map-title{font-size:.82em;font-weight:bold;color:var(--accent);margin-bottom:6px}
+.bus-map-step{display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:2px}
+.bus-map-step .s-icon{font-size:1.15em;min-width:1.6em;text-align:center;padding-top:1px}
+.bus-map-step .s-text{line-height:1.45}
+.bus-map-arrow{text-align:left;padding-left:20px;color:var(--accent);font-size:.85em;line-height:1;margin:1px 0}
+.bus-map-goal{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:rgba(79,195,247,.12);border:1px solid var(--accent);border-radius:6px;margin-top:4px}
+.bus-map-goal .s-icon{font-size:1.2em;min-width:1.6em;text-align:center;padding-top:1px}
+.bus-map-goal .s-text{line-height:1.45;color:var(--accent);font-weight:bold}
+.shuttle-pair{display:grid;grid-template-columns:3fr 2fr;gap:14px;align-items:start;margin:6px 0}
+.shuttle-col h4{margin-top:0}
+@media(max-width:600px){.shuttle-pair{grid-template-columns:1fr}}
+.shuttle-3col td{text-align:center!important;width:auto!important;letter-spacing:0!important;font-variant-numeric:tabular-nums}
+.shuttle-3col th{text-align:center}
+.shuttle-3col td:first-child{font-weight:bold;color:var(--accent);border-right:1px solid #334;background:rgba(79,195,247,.05)}
+.shuttle-3col td:nth-child(2){color:var(--text-muted)}
+.shuttle-3col td:nth-child(3){color:var(--accent2);font-weight:bold}
+.shuttle-summary-row td{background:rgba(79,195,247,.04)!important;font-style:italic;font-size:.85em}
 </style>
 </head>
 <body>
@@ -296,49 +322,114 @@
       <div class="tip-title">ℹ️ 基本情報</div>
       宿泊者専用・毎日運行・予約不要（先着順）・所要時間 約30分
     </div>
-    <h4>🔹 ホテル → TDR（行き）</h4>
-    <div style="font-size:.8em;line-height:1.6;margin:6px 0">
-      ① ホテル正面入口を出て<strong>左に進む</strong><br>
-      ② 出口ゲートを通過<br>
-      ③ 青い<strong>「送迎バス専用乗降場」</strong>の案内板に従う<br>
-      ④ 黄色いシャトルバスを待つ<br>
-      ※ バスは <strong>TDL → TDS</strong> の順に停車します
+
+    <div class="shuttle-note">バスはTDLを経由してTDSに向かいます。ホテル発車後 約20分でTDL着、さらに約10分でTDS着が目安です（道路状況により前後あり）。</div>
+    <div class="shuttle-pair">
+      <div class="shuttle-col">
+        <h4>🔹 ホテル発 → TDS到着 参考時刻</h4>
+        <div class="shuttle-tbl-wrap">
+        <table class="shuttle-schedule shuttle-3col">
+          <thead><tr><th>ホテル発</th><th>TDL着（参考）</th><th>TDS着（参考）</th></tr></thead>
+          <tbody>
+          <tr><td>6:40</td><td>7:00頃</td><td>7:10頃</td></tr>
+          <tr><td>7:00</td><td>7:20頃</td><td>7:30頃</td></tr>
+          <tr><td>7:20</td><td>7:40頃</td><td>7:50頃</td></tr>
+          <tr><td>7:40</td><td>8:00頃</td><td>8:10頃</td></tr>
+          <tr><td>8:00</td><td>8:20頃</td><td>8:30頃</td></tr>
+          <tr><td>8:20</td><td>8:40頃</td><td>8:50頃</td></tr>
+          <tr><td>8:40</td><td>9:00頃</td><td>9:10頃</td></tr>
+          <tr><td>9:00</td><td>9:20頃</td><td>9:30頃</td></tr>
+          <tr><td>9:30</td><td>9:50頃</td><td>10:00頃</td></tr>
+          <tr><td>10:00</td><td>10:20頃</td><td>10:30頃</td></tr>
+          <tr><td>10:30</td><td>10:50頃</td><td>11:00頃</td></tr>
+          <tr class="shuttle-summary-row"><td>11:00〜17:00<br><span style="font-size:.8em">毎時:00発</span></td><td>各時:20頃</td><td>各時:30頃</td></tr>
+          <tr><td>18:00</td><td>18:20頃</td><td>18:30頃</td></tr>
+          <tr><td>18:30</td><td>18:50頃</td><td>19:00頃</td></tr>
+          <tr><td>19:00</td><td>19:20頃</td><td>19:30頃</td></tr>
+          <tr><td>19:20</td><td>19:40頃</td><td>19:50頃</td></tr>
+          <tr><td>19:40</td><td>20:00頃</td><td>20:10頃</td></tr>
+          <tr><td>20:00</td><td>20:20頃</td><td>20:30頃</td></tr>
+          <tr><td>20:20</td><td>20:40頃</td><td>20:50頃</td></tr>
+          <tr><td>20:40</td><td>21:00頃</td><td>21:10頃</td></tr>
+          <tr><td>21:00</td><td colspan="2" style="text-align:center!important;color:var(--accent2);font-weight:normal;font-size:.85em">最終便（シー経由なし）</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="bus-map">
+          <div class="bus-map-title">📍 ホテル乗り場の行き方</div>
+          <div class="bus-map-step">
+            <span class="s-icon">🏨</span>
+            <span class="s-text">ホテル<strong>正面入口</strong>を出る</span>
+          </div>
+          <div class="bus-map-arrow">↓ 左へ進む</div>
+          <div class="bus-map-step">
+            <span class="s-icon">🚧</span>
+            <span class="s-text"><strong>出口ゲート</strong>を通過する</span>
+          </div>
+          <div class="bus-map-arrow">↓ 案内板に従う</div>
+          <div class="bus-map-step">
+            <span class="s-icon">🔵</span>
+            <span class="s-text">青い「<strong>送迎バス専用乗降場</strong>」の看板を目印に進む</span>
+          </div>
+          <div class="bus-map-arrow">↓</div>
+          <div class="bus-map-goal">
+            <span class="s-icon">🚌</span>
+            <span class="s-text">黄色いシャトルバスを待つ</span>
+          </div>
+        </div>
+      </div>
+      <div class="shuttle-col">
+        <h4>🔹 TDS発 → ホテル行き</h4>
+        <div class="shuttle-tbl-wrap">
+        <table class="shuttle-schedule">
+          <thead><tr><th>時</th><th>分</th></tr></thead>
+          <tbody>
+          <tr><td>7</td><td>15　35　55</td></tr>
+          <tr><td>8</td><td>15　35　55</td></tr>
+          <tr><td>9</td><td>15　35</td></tr>
+          <tr><td>10</td><td>05　35</td></tr>
+          <tr><td>11</td><td>05　35</td></tr>
+          <tr><td>12〜18</td><td>35</td></tr>
+          <tr><td>19</td><td>05　35　55</td></tr>
+          <tr><td>20</td><td>15　35　55</td></tr>
+          <tr><td>21</td><td>15　35　<span style="color:var(--accent2);font-size:.85em">最終</span></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="shuttle-note">※ 21時閉園日のダイヤ。閉園時間により変更あり。</div>
+        <div class="bus-map">
+          <div class="bus-map-title">📍 TDS乗り場の行き方</div>
+          <div class="bus-map-step">
+            <span class="s-icon">🌊</span>
+            <span class="s-text">TDS<strong>メインゲート</strong>（入園口）から外へ出る</span>
+          </div>
+          <div class="bus-map-arrow">↓ 正面方向へ直進</div>
+          <div class="bus-map-step">
+            <span class="s-icon">🚶</span>
+            <span class="s-text"><strong>バス・タクシー乗降場</strong>エリアへ向かう</span>
+          </div>
+          <div class="bus-map-arrow">↓ 案内板「コンフォートスイーツ」を確認</div>
+          <div class="bus-map-step">
+            <span class="s-icon">🔵</span>
+            <span class="s-text">「<strong>ホテル送迎バス</strong>」の案内板・スタッフに確認</span>
+          </div>
+          <div class="bus-map-arrow">↓</div>
+          <div class="bus-map-goal">
+            <span class="s-icon">🚌</span>
+            <span class="s-text">黄色いシャトルバスを待つ</span>
+          </div>
+          <div class="shuttle-note" style="margin-top:6px">※ 不明な場合はTDS出口付近のスタッフに「コンフォートスイーツのシャトルバス」と声をかけて確認</div>
+        </div>
+      </div>
     </div>
-    <h4>🔹 TDL → ホテル（帰り：TDLから乗車）</h4>
-    <div style="font-size:.8em;line-height:1.6;margin:6px 0">
-      ① TDLの<strong>サウスゲート</strong>を出る<br>
-      ② 右斜め前方に進む<br>
-      ③ 駐車場方面へ歩き、<strong>マーカー#14</strong>を目印に<br>
-      ④ 横断歩道を渡って右折、バス停が見えます
-    </div>
-    <h4>🔹 TDS → ホテル（帰り：TDSから乗車）</h4>
-    <div style="font-size:.8em;line-height:1.6;margin:6px 0">
-      ※ TDS出発の詳細はフロントで確認してください<br>
-      ※ 閉園時間が22:00前の場合、閉園後最大30分まで運行
-    </div>
+
     <div class="hotel-tip hotel-warning">
       <div class="tip-title">⚠️ 注意事項</div>
-      ・先着順のため、閉園直後は混雑する場合があります<br>
-      ・バスに乗れない場合は次の便を待つか、タクシーをご利用ください<br>
-      ・タクシーの場合: 約20分 / ¥2,500〜3,000
-    </div>
-  </div>
-
-  <div class="hotel-section">
-    <h3>🚃 アクセス方法</h3>
-    <div class="hotel-info-grid">
-      <div class="hotel-info-item">
-        <div class="hi-label">東京駅から</div>
-        <div class="hi-value">JR武蔵野線/京葉線 → <strong>新浦安駅</strong>（約20分）<br>→ タクシー約10分 or バス約10分</div>
-      </div>
-      <div class="hotel-info-item">
-        <div class="hi-label">新浦安駅からバス</div>
-        <div class="hi-value">南口バスターミナルD乗り場<br>3番/23番系統「総合公園」行き<br>→ <strong>「明海5丁目」</strong>下車 徒歩1分</div>
-      </div>
-      <div class="hotel-info-item">
-        <div class="hi-label">TDRから直接</div>
-        <div class="hi-value">ホテル無料シャトルバス（上記参照）<br>or タクシー 約20分 / ¥2,500〜3,000</div>
-      </div>
+      ・予約不可、先着順。混雑時は次のバスをお待ちください<br>
+      ・閉園直後は大変混雑します<br>
+      ・運行スケジュールは急遽変更になる場合があります<br>
+      ・道路状況により到着時間が前後する場合があります<br>
+      ・バスに乗れない場合はタクシーをご利用ください（約20分 / ¥2,500〜3,000）
     </div>
   </div>
 
