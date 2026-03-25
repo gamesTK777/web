@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -123,9 +123,12 @@
   .weather-day .wd-temp{font-size:.78em}
   .weather-day.visit-day{border:2px solid var(--accent2);background:#1e2a1e}
   @media(max-width:600px){.header h1{font-size:1.1em}.attraction-grid{grid-template-columns:1fr}.summary-bar{grid-template-columns:repeat(2,1fr)}}
+.home-link{position:fixed;top:10px;left:10px;z-index:200;background:var(--accent);color:#000;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:0.85em;font-weight:bold;transition:all .2s;display:flex;align-items:center;gap:5px}
+.home-link:hover{background:var(--accent2);transform:scale(1.05)}
 </style>
 </head>
 <body>
+  <a href="/web/index.html" class="home-link">&#127968; TOP</a>
 <div class="header">
   <h1>Tokyo DisneySea Dashboard</h1>
   <div class="subtitle">リアルタイム待ち時間 & パス販売状況 ＋ データ蓄積</div>
