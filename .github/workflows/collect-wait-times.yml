@@ -2,9 +2,10 @@ name: TDS Wait Time Collector
 
 on:
   schedule:
-    # TDS営業時間中に5分ごとに実行 (8:00-22:00 JST = 23:00-13:00 UTC)
-    - cron: '*/5 23 * * *'  # 23:00-23:59 UTC = 8:00-8:59 JST
-    - cron: '*/5 0-13 * * *'  # 00:00-13:59 UTC = 9:00-22:59 JST
+    # 毎時0分に1回トリガー → 各実行内で55分間ループ収集
+    # 8:00-22:00 JST = 23:00-13:00 UTC
+    - cron: '0 23 * * *'      # 23:00 UTC = 8:00 JST
+    - cron: '0 0-13 * * *'    # 0:00-13:00 UTC = 9:00-22:00 JST
   workflow_dispatch:  # 手動実行も可能
 
 concurrency:
@@ -29,25 +30,61 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Collect wait time data
-        run: python scripts/collect.py
-        working-directory: DisneySea
-
-      - name: Commit and push data
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add DisneySea/data/
 
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "📊 Update wait time data $(TZ=Asia/Tokyo date +%Y-%m-%d\ %H:%M)"
+      - name: Collect data in loop (~55 min)
+        run: |
+          # 1回のワークフロー実行で11回（5分間隔×55分）データ収集する
+          # GitHub Actions cronの遅延・スキップ問題への対策
+          ROUNDS=11
+          INTERVAL=300  # 5分 = 300秒
 
-            # リトライ付きpush（同時実行によるコンフリクト対策）
-            for i in 1 2 3; do
-              git pull --rebase origin main && git push && break
-              echo "Push failed, retrying ($i/3)..."
-              sleep 5
-            done
-          fi
+          for i in $(seq 1 $ROUNDS); do
+            echo ""
+            echo "=========================================="
+            echo "  Collection round $i/$ROUNDS ($(TZ=Asia/Tokyo date +'%Y-%m-%d %H:%M:%S JST'))"
+            echo "=========================================="
+
+            # データ収集
+            cd DisneySea
+            python scripts/collect.py
+            cd ..
+
+            # 変更があればcommit & push
+            git add DisneySea/data/
+            if ! git diff --staged --quiet; then
+              git commit -m "📊 Update wait time data $(TZ=Asia/Tokyo date +%Y-%m-%d\ %H:%M)"
+
+              # リトライ付きpush（同時実行によるコンフリクト対策）
+              PUSH_OK=0
+              for retry in 1 2 3; do
+                if git pull --rebase origin main && git push; then
+                  PUSH_OK=1
+                  echo "✅ Push successful"
+                  break
+                fi
+                echo "⚠️ Push failed, retrying ($retry/3)..."
+                sleep 5
+              done
+
+              if [ $PUSH_OK -eq 0 ]; then
+                echo "❌ Push failed after 3 retries, continuing to next round..."
+              fi
+            else
+              echo "ℹ️ No new data to commit (duplicate or API error)"
+            fi
+
+            # 最終ラウンド以外はスリープ
+            if [ $i -lt $ROUNDS ]; then
+              echo "💤 Sleeping ${INTERVAL}s until next collection..."
+              sleep $INTERVAL
+            fi
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "  All $ROUNDS rounds complete ($(TZ=Asia/Tokyo date +'%H:%M JST'))"
+          echo "=========================================="
