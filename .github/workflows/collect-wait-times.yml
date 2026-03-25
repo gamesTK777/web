@@ -1,0 +1,46 @@
+name: TDS Wait Time Collector
+
+on:
+  schedule:
+    # TDS営業時間中に10分ごとに実行 (8:00-22:00 JST = 23:00-13:00 UTC)
+    - cron: '*/10 23 * * *'    # 23:00-23:59 UTC = 8:00-8:59 JST
+    - cron: '*/10 0-13 * * *'  # 00:00-13:59 UTC = 9:00-22:59 JST
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Collect wait time data
+        run: python scripts/collect.py
+        working-directory: DisneySea
+
+      - name: Commit and push data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add DisneySea/data/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "📊 Update wait time data $(TZ=Asia/Tokyo date +%Y-%m-%d\ %H:%M)"
+            # リトライ付きpush（同時実行によるコンフリクト対策）
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "Push failed, retrying ($i/3)..."
+              sleep 5
+            done
+          fi
