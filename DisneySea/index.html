@@ -140,7 +140,7 @@
   <button onclick="fetchAll()" id="refresh-btn">更新</button>
   <div class="auto-refresh-toggle"><input type="checkbox" id="auto-refresh" checked><label for="auto-refresh">自動更新(60秒)</label></div>
   <span class="last-update" id="last-update">最終更新: ---</span>
-  <span style="font-size:.7em;color:var(--text-muted)" id="record-count">蓄積:0件</span>
+  <span style="font-size:.7em;color:var(--text-muted)" id="record-count">サーバーデータ</span>
 </div>
 <div class="tabs">
   <button class="tab-btn active" data-tab="attractions">アトラクション</button>
@@ -229,27 +229,24 @@
 <!-- 履歴・トレンド -->
 <div class="tab-content" id="tab-history">
   <div class="info-section">
-    <h3>データ蓄積・トレンド分析 (3/24〜3/29)</h3>
-    <p style="font-size:.8em;color:var(--text-muted)">ページを開いている間、60秒ごとにデータを自動蓄積。IndexedDBに保存されページを閉じても保持されます。</p>
+    <h3>データ蓄積・トレンド分析</h3>
+    <p style="font-size:.8em;color:var(--text-muted)">GitHub Actionsにより10分ごとに自動収集されたサーバーサイドデータを表示します。誰が見ても同じ蓄積履歴が確認できます。</p>
   </div>
   <div class="history-controls">
     <label style="font-size:.76em;color:var(--text-muted)">日付:</label>
-    <select id="history-date-select"><option value="all">全期間</option><option value="2026-03-24">3/24(月)</option><option value="2026-03-25">3/25(火)</option><option value="2026-03-26">3/26(水)</option><option value="2026-03-27">3/27(木)</option><option value="2026-03-28">3/28(金)</option><option value="2026-03-29">3/29(日)当日</option></select>
+    <select id="history-date-select"><option value="">読み込み中...</option></select>
     <label style="font-size:.76em;color:var(--text-muted)">アトラクション:</label>
     <select id="history-ride-select"><option value="__avg__">全体平均</option></select>
     <button onclick="renderHistory()">表示更新</button>
   </div>
   <div class="history-stats" id="history-stats"></div>
   <div id="history-chart-container"><canvas id="history-chart"></canvas></div>
-  <div class="history-log" id="history-log"><p style="color:var(--text-muted);text-align:center;padding:20px">蓄積データがまだありません。</p></div>
+  <div class="history-log" id="history-log"><p style="color:var(--text-muted);text-align:center;padding:20px">データを読み込んでいます...</p></div>
   <div class="data-mgmt">
     <h4>データ管理</h4>
     <button onclick="exportData()">JSONエクスポート</button>
     <button onclick="exportCSV()">CSVエクスポート</button>
-    <button onclick="document.getElementById('import-file').click()">JSONインポート</button>
-    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-    <button class="danger" onclick="clearData()">全データ削除</button>
-    <p style="font-size:.68em;color:var(--text-muted);margin-top:4px" id="storage-info">IndexedDB: 0件</p>
+    <p style="font-size:.68em;color:var(--text-muted);margin-top:4px" id="storage-info">サーバーサイド: 読み込み中</p>
   </div>
 </div>
 
@@ -307,10 +304,10 @@ const DISNEYREAL_URL='https://disneyreal.asumirai.info/realtime/disneysea-wait-t
 const DISNEYREAL_REST_URL='https://disneyreal.asumirai.info/realtime/disneysea-restaurant-today.html';
 const CORS_PROXY_BUILDERS=[u=>u,u=>'https://corsproxy.io/?'+encodeURIComponent(u),u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u)];
 const REFRESH_INTERVAL=60000;
-const DB_NAME='TDS_Dashboard';const DB_VERSION=1;const STORE_NAME='waitHistory';
+// DB定数は不要（サーバーサイドに移行済み）
 const VISIT_DATE=new Date('2026-03-29T00:00:00+09:00');
 
-let autoRefreshTimer=null,allRides=[],dpaStatusData={},ppStatusData={},disneyRealWaitData={},restaurantWaitData={},db=null,currentProxyIndex=0;
+let autoRefreshTimer=null,allRides=[],dpaStatusData={},ppStatusData={},disneyRealWaitData={},restaurantWaitData={},currentProxyIndex=0;
 
 const nameJP={"20,000 Leagues Under the Sea":"海底2万マイル","Anna and Elsa's Frozen Journey":"アナとエルサのフローズンジャーニー","Aquatopia":"アクアトピア","Ariel's Playground":"アリエルのプレイグラウンド","Big City Vehicles":"ビッグシティ・ヴィークル","Blowfish Balloon Race":"ブローフィッシュ・バルーンレース","Caravan Carousel":"キャラバンカルーセル","DisneySea Electric Railway (American Waterfront)":"エレクトリックレールウェイ（アメフロ）","DisneySea Electric Railway (Port Discovery)":"エレクトリックレールウェイ（ポートディスカバリー）","DisneySea Transit Steamer Line (American Waterfront)":"トランジットスチーマーライン（アメフロ）","DisneySea Transit Steamer Line (Lost River Delta)":"トランジットスチーマーライン（ロストリバーデルタ）","DisneySea Transit Steamer Line (Mediterranean Harbor)":"トランジットスチーマーライン（メディテレーニアンハーバー）","Fairy Tinker Bell's Busy Buggies":"ティンカーベルのビジーバギー","Flounder's Flying Fish Coaster":"フランダーのフライングフィッシュコースター","Fortress Explorations":"フォートレス・エクスプロレーション","Indiana Jones Adventure\u00ae: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Indiana Jones Adventure: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Jasmine's Flying Carpets":"ジャスミンのフライングカーペット","Journey to the Center of the Earth":"センター・オブ・ジ・アース","Jumpin' Jellyfish":"ジャンピン・ジェリーフィッシュ","Mermaid Lagoon Theater":"マーメイドラグーンシアター","Nemo & Friends SeaRider":"ニモ&フレンズ・シーライダー","Peter Pan's Never Land Adventure":"ピーターパンのネバーランドアドベンチャー","Raging Spirits":"レイジングスピリッツ","Rapunzel's Lantern Festival":"ラプンツェルのランタンフェスティバル","Scuttle's Scooters":"スカットルのスクーター","Sindbad's Storybook Voyage":"シンドバッド・ストーリーブック・ヴォヤッジ","Soaring: Fantastic Flight":"ソアリン：ファンタスティック・フライト","The Leonardo Challenge":"ザ・レオナルドチャレンジ","The Magic Lamp Theater":"マジックランプシアター","The Whirlpool":"ワールプール","Tower of Terror":"タワー・オブ・テラー","Toy Story Mania!":"トイ・ストーリー・マニア！","Turtle Talk":"タートル・トーク","Venetian Gondolas":"ヴェネツィアン・ゴンドラ"};
 
@@ -378,12 +375,80 @@ const shows=[
 const debugLogs=[];
 function debugLog(msg){const ts=new Date().toLocaleTimeString('ja-JP');debugLogs.push(`[${ts}] ${msg}`);if(debugLogs.length>100)debugLogs.shift();console.log('[TDS]',msg);const el=document.getElementById('debug-log');if(el){el.textContent=debugLogs.slice(-20).join('\n');el.scrollTop=el.scrollHeight}}
 
-// IndexedDB
-function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(STORE_NAME)){const s=d.createObjectStore(STORE_NAME,{keyPath:'id',autoIncrement:true});s.createIndex('timestamp','timestamp',{unique:false});s.createIndex('date','date',{unique:false})}};req.onsuccess=e=>{db=e.target.result;resolve(db)};req.onerror=e=>reject(e.target.error)})}
-function saveSnapshot(rides){if(!db)return;const now=new Date();const dateStr=now.toLocaleDateString('sv-SE');const timeStr=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});const openR=rides.filter(r=>r.is_open);const waits=openR.map(r=>r.wait_time).filter(w=>w>0);const avg=waits.length?Math.round(waits.reduce((a,b)=>a+b,0)/waits.length):0;const rec={timestamp:now.getTime(),date:dateStr,time:timeStr,avgWait:avg,maxWait:waits.length?Math.max(...waits):0,openCount:openR.length,totalCount:rides.length,parkOpen:openR.length>0&&avg>0,rides:rides.map(r=>({name:nameJP[r.name]||r.name,area:r._area||'',wait:r.wait_time,open:r.is_open}))};const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).add(rec);updateRecordCount()}
-async function getRecords(df){if(!db)return[];return new Promise(res=>{const tx=db.transaction(STORE_NAME,'readonly');const s=tx.objectStore(STORE_NAME);const recs=[];const req=df&&df!=='all'?s.index('date').openCursor(IDBKeyRange.only(df)):s.openCursor();req.onsuccess=e=>{const c=e.target.result;if(c){recs.push(c.value);c.continue()}else res(recs)};req.onerror=()=>res([])})}
-async function getAllRecords(){if(!db)return[];return new Promise(res=>{const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).getAll();req.onsuccess=()=>res(req.result||[]);req.onerror=()=>res([])})}
-async function updateRecordCount(){if(!db)return;const tx=db.transaction(STORE_NAME,'readonly');const req=tx.objectStore(STORE_NAME).count();req.onsuccess=()=>{const c=req.result;document.getElementById('record-count').textContent=`蓄積:${c}件`;document.getElementById('storage-info').textContent=`IndexedDB: ${c}件`}}
+// サーバーサイドデータ (GitHub Actions で収集)
+const DATA_BASE_URL='data/';
+let serverDateIndex=[];
+let serverDataCache={};
+
+async function loadDateIndex(){
+  try{
+    const r=await fetch(DATA_BASE_URL+'index.json',{cache:'no-store'});
+    if(!r.ok)throw new Error('index.json not found');
+    const idx=await r.json();
+    serverDateIndex=idx.dates||[];
+    debugLog(`サーバーデータ: ${serverDateIndex.length}日分`);
+    populateDateSelector();
+    document.getElementById('storage-info').textContent=`サーバーサイド: ${serverDateIndex.length}日分`;
+  }catch(e){
+    debugLog(`サーバーデータindex取得失敗: ${e.message}`);
+    document.getElementById('storage-info').textContent='サーバーデータ未配置';
+    // index.jsonがない場合は今日の日付だけ試す
+    const today=new Date().toLocaleDateString('sv-SE');
+    serverDateIndex=[today];
+    populateDateSelector();
+  }
+}
+
+function populateDateSelector(){
+  const sel=document.getElementById('history-date-select');
+  const opts=['<option value="all">全期間</option>'];
+  const days=['日','月','火','水','木','金','土'];
+  serverDateIndex.forEach(d=>{
+    const dt=new Date(d+'T00:00:00+09:00');
+    const dow=days[dt.getDay()];
+    const md=(dt.getMonth()+1)+'/'+dt.getDate();
+    opts.push(`<option value="${d}">${md}(${dow})</option>`);
+  });
+  sel.innerHTML=opts.join('');
+}
+
+async function fetchServerData(dateStr){
+  if(serverDataCache[dateStr])return serverDataCache[dateStr];
+  try{
+    const r=await fetch(DATA_BASE_URL+dateStr+'.json',{cache:'no-store'});
+    if(!r.ok)return[];
+    const data=await r.json();
+    serverDataCache[dateStr]=data;
+    return data;
+  }catch(e){
+    debugLog(`サーバーデータ取得失敗(${dateStr}): ${e.message}`);
+    return[];
+  }
+}
+
+async function getRecords(df){
+  let dates=[];
+  if(!df||df==='all')dates=[...serverDateIndex];
+  else dates=[df];
+  const allRecs=[];
+  for(const d of dates){
+    const data=await fetchServerData(d);
+    allRecs.push(...data);
+  }
+  return allRecs;
+}
+
+async function getAllRecords(){return getRecords('all')}
+
+function saveSnapshot(rides){
+  // サーバーサイドに移行済みのため、ローカル保存は不要
+  // （GitHub Actionsが収集を担当）
+}
+
+async function updateRecordCount(){
+  const total=serverDateIndex.length;
+  document.getElementById('storage-info').textContent=`サーバーサイド: ${total}日分`;
+}
 
 // FETCH: Queue-Times API
 async function fetchWithProxy(pi){const url=CORS_PROXY_BUILDERS[pi](API_BASE);const pn=pi===0?'Direct':new URL(url).hostname;debugLog(`試行#${pi+1}(${pn})`);const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),10000);try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);debugLog(`  → HTTP ${r.status}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const txt=await r.text();let json;try{json=JSON.parse(txt)}catch(e){throw new Error('JSON parse error')}if(!json.lands&&!json.rides){if(json.contents){json=JSON.parse(json.contents)}}debugLog(`  → lands:${json.lands?.length||0}, rides:${json.rides?.length||0}`);return json}catch(e){clearTimeout(t);debugLog(`  → エラー: ${e.message}`);throw e}}
@@ -762,10 +827,8 @@ function clearChart(){const cv=document.getElementById('history-chart');const ct
 
 // Data mgmt
 async function exportData(){const r=await getAllRecords();dl(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}),`tds-${new Date().toLocaleDateString('sv-SE')}.json`)}
-async function exportCSV(){const r=await getAllRecords();if(!r.length){alert('\u30C7\u30FC\u30BF\u306A\u3057');return}let c='date,time,avgWait,maxWait,openCount,totalCount\n';r.forEach(x=>{c+=`${x.date},${x.time},${x.avgWait},${x.maxWait},${x.openCount},${x.totalCount}\n`});dl(new Blob([c],{type:'text/csv'}),`tds-${new Date().toLocaleDateString('sv-SE')}.csv`)}
+async function exportCSV(){const r=await getAllRecords();if(!r.length){alert('データなし');return}let c='date,time,avgWait,maxWait,openCount,totalCount\n';r.forEach(x=>{c+=`${x.date},${x.time},${x.avgWait},${x.maxWait},${x.openCount},${x.totalCount}\n`});dl(new Blob([c],{type:'text/csv'}),`tds-${new Date().toLocaleDateString('sv-SE')}.csv`)}
 function dl(b,f){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
-function importData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=async ev=>{try{const recs=JSON.parse(ev.target.result);if(!Array.isArray(recs))throw new Error('Invalid');const tx=db.transaction(STORE_NAME,'readwrite');const s=tx.objectStore(STORE_NAME);for(const rec of recs){delete rec.id;s.add(rec)}tx.oncomplete=()=>{updateRecordCount();renderHistory();alert(`${recs.length}\u4EF6\u30A4\u30F3\u30DD\u30FC\u30C8\u5B8C\u4E86`)}}catch(err){alert('\u30A8\u30E9\u30FC:'+err.message)}};r.readAsText(f);e.target.value=''}
-function clearData(){if(!confirm('\u5168\u30C7\u30FC\u30BF\u3092\u524A\u9664\u3057\u307E\u3059\u304B\uFF1F'))return;const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).clear();tx.oncomplete=()=>{updateRecordCount();renderHistory()}}
 
 // Checklist & Countdown
 function renderChecklist(){const items=['\u30D1\u30FC\u30AF\u30C1\u30B1\u30C3\u30C8(\u30A2\u30D7\u30EA\u306B\u8868\u793A\u78BA\u8A8D)','\u30B9\u30DE\u30FC\u30C8\u30D5\u30A9\u30F3 & \u30E2\u30D0\u30A4\u30EB\u30D0\u30C3\u30C6\u30EA\u30FC','TDR\u516C\u5F0F\u30A2\u30D7\u30EA(\u6700\u65B0\u7248\u306B\u66F4\u65B0)','\u30AF\u30EC\u30B8\u30C3\u30C8\u30AB\u30FC\u30C9 / \u96FB\u5B50\u30DE\u30CD\u30FC','\u96E8\u5177(\u6298\u308A\u305F\u305F\u307F\u5098/\u30EC\u30A4\u30F3\u30B3\u30FC\u30C8)','\u52D5\u304D\u3084\u3059\u3044\u9774','\u65E5\u713C\u3051\u6B62\u3081','\u98F2\u307F\u7269(\u30DA\u30C3\u30C8\u30DC\u30C8\u30EB)','\u30EC\u30B8\u30E3\u30FC\u30B7\u30FC\u30C8(\u30B7\u30E7\u30FC\u89B3\u8CDE\u7528)','PS\u4E88\u7D04\u78BA\u8A8D','\u30E2\u30D0\u30A4\u30EBSuica/PASMO'];document.getElementById('checklist').innerHTML=items.map(i=>`<label style="display:block;cursor:pointer;padding:2px 0"><input type="checkbox" style="accent-color:var(--accent);margin-right:8px" onchange="this.parentElement.style.textDecoration=this.checked?'line-through':'none';this.parentElement.style.opacity=this.checked?'.5':'1'">${i}</label>`).join('')}
@@ -786,7 +849,7 @@ function stopAR(){if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefre
 setInterval(renderShows,60000);
 
 (async function init(){
-  try{await openDB();await updateRecordCount()}catch(e){console.warn('DB init error:',e)}
+  try{await loadDateIndex();await updateRecordCount()}catch(e){console.warn('Server data init error:',e)}
   renderRestaurants();renderShows();renderChecklist();updateCountdown();
   setInterval(updateCountdown,60000);
   fetchAll();fetchWeather();startAR();
