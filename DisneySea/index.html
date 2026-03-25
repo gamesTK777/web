@@ -125,6 +125,18 @@
   @media(max-width:600px){.header h1{font-size:1.1em}.attraction-grid{grid-template-columns:1fr}.summary-bar{grid-template-columns:repeat(2,1fr)}}
 .home-link{position:fixed;top:10px;left:10px;z-index:200;background:var(--accent);color:#000;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:0.85em;font-weight:bold;transition:all .2s;display:flex;align-items:center;gap:5px}
 .home-link:hover{background:var(--accent2);transform:scale(1.05)}
+/* ホテルタブ */
+.hotel-section{background:var(--card);border-radius:10px;padding:14px;margin-bottom:12px}
+.hotel-section h3{color:var(--accent);font-size:.92em;margin-bottom:8px;border-bottom:1px solid #334;padding-bottom:5px}
+.hotel-section h4{color:var(--accent2);font-size:.84em;margin:10px 0 5px}
+.hotel-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;margin:8px 0}
+.hotel-info-item{background:rgba(255,255,255,.03);border-radius:8px;padding:10px;border-left:3px solid var(--accent)}
+.hotel-info-item .hi-label{font-size:.72em;color:var(--text-muted);margin-bottom:3px}
+.hotel-info-item .hi-value{font-size:.82em;line-height:1.5}
+.hotel-tip{background:rgba(79,195,247,.08);border-radius:8px;padding:10px;margin:6px 0;font-size:.8em;border-left:3px solid var(--accent)}
+.hotel-tip .tip-title{color:var(--accent);font-weight:bold;margin-bottom:3px;font-size:.9em}
+.hotel-warning{background:rgba(255,152,0,.1);border-left-color:var(--accent2)}
+.hotel-warning .tip-title{color:var(--accent2)}
 </style>
 </head>
 <body>
@@ -151,6 +163,7 @@
   <button class="tab-btn" data-tab="shows">ショー・パレード</button>
   <button class="tab-btn" data-tab="history">履歴・トレンド</button>
   <button class="tab-btn" data-tab="info">便利情報</button>
+  <button class="tab-btn" data-tab="hotel">🏨 ホテル</button>
 </div>
 <div class="content">
 
@@ -250,6 +263,118 @@
     <button onclick="exportData()">JSONエクスポート</button>
     <button onclick="exportCSV()">CSVエクスポート</button>
     <p style="font-size:.68em;color:var(--text-muted);margin-top:4px" id="storage-info">サーバーサイド: 読み込み中</p>
+  </div>
+</div>
+
+<!-- ホテルタブ -->
+<div class="tab-content" id="tab-hotel">
+  <div class="hotel-section">
+    <h3>🏨 コンフォートスイーツ東京ベイ</h3>
+    <div class="hotel-info-grid">
+      <div class="hotel-info-item">
+        <div class="hi-label">住所</div>
+        <div class="hi-value">〒279-0014 千葉県浦安市明海5丁目8-15</div>
+      </div>
+      <div class="hotel-info-item">
+        <div class="hi-label">電話</div>
+        <div class="hi-value">047-380-9211</div>
+      </div>
+      <div class="hotel-info-item">
+        <div class="hi-label">チェックイン/アウト</div>
+        <div class="hi-value">IN: 15:00〜 ／ OUT: 〜11:00</div>
+      </div>
+      <div class="hotel-info-item">
+        <div class="hi-label">駐車場</div>
+        <div class="hi-value">161台（先着順・予約不可）<br>¥1,500/泊（11:00〜翌14:00）<br>高さ制限: 2.2m</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hotel-section">
+    <h3>🚌 無料シャトルバス</h3>
+    <div class="hotel-tip">
+      <div class="tip-title">ℹ️ 基本情報</div>
+      宿泊者専用・毎日運行・予約不要（先着順）・所要時間 約30分
+    </div>
+    <h4>🔹 ホテル → TDR（行き）</h4>
+    <div style="font-size:.8em;line-height:1.6;margin:6px 0">
+      ① ホテル正面入口を出て<strong>左に進む</strong><br>
+      ② 出口ゲートを通過<br>
+      ③ 青い<strong>「送迎バス専用乗降場」</strong>の案内板に従う<br>
+      ④ 黄色いシャトルバスを待つ<br>
+      ※ バスは <strong>TDL → TDS</strong> の順に停車します
+    </div>
+    <h4>🔹 TDL → ホテル（帰り：TDLから乗車）</h4>
+    <div style="font-size:.8em;line-height:1.6;margin:6px 0">
+      ① TDLの<strong>サウスゲート</strong>を出る<br>
+      ② 右斜め前方に進む<br>
+      ③ 駐車場方面へ歩き、<strong>マーカー#14</strong>を目印に<br>
+      ④ 横断歩道を渡って右折、バス停が見えます
+    </div>
+    <h4>🔹 TDS → ホテル（帰り：TDSから乗車）</h4>
+    <div style="font-size:.8em;line-height:1.6;margin:6px 0">
+      ※ TDS出発の詳細はフロントで確認してください<br>
+      ※ 閉園時間が22:00前の場合、閉園後最大30分まで運行
+    </div>
+    <div class="hotel-tip hotel-warning">
+      <div class="tip-title">⚠️ 注意事項</div>
+      ・先着順のため、閉園直後は混雑する場合があります<br>
+      ・バスに乗れない場合は次の便を待つか、タクシーをご利用ください<br>
+      ・タクシーの場合: 約20分 / ¥2,500〜3,000
+    </div>
+  </div>
+
+  <div class="hotel-section">
+    <h3>🚃 アクセス方法</h3>
+    <div class="hotel-info-grid">
+      <div class="hotel-info-item">
+        <div class="hi-label">東京駅から</div>
+        <div class="hi-value">JR武蔵野線/京葉線 → <strong>新浦安駅</strong>（約20分）<br>→ タクシー約10分 or バス約10分</div>
+      </div>
+      <div class="hotel-info-item">
+        <div class="hi-label">新浦安駅からバス</div>
+        <div class="hi-value">南口バスターミナルD乗り場<br>3番/23番系統「総合公園」行き<br>→ <strong>「明海5丁目」</strong>下車 徒歩1分</div>
+      </div>
+      <div class="hotel-info-item">
+        <div class="hi-label">TDRから直接</div>
+        <div class="hi-value">ホテル無料シャトルバス（上記参照）<br>or タクシー 約20分 / ¥2,500〜3,000</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hotel-section">
+    <h3>💡 お役立ちTips</h3>
+    <div class="hotel-tip">
+      <div class="tip-title">🎒 荷物について</div>
+      チェックイン前・チェックアウト後もフロントで荷物を預かってもらえます。パーク行きの日は身軽に出発しましょう。
+    </div>
+    <div class="hotel-tip">
+      <div class="tip-title">🍳 朝食について</div>
+      コンフォートスイーツは無料朝食付き。パークに行く前にしっかり食べておくと、パーク内での食事代を節約できます。
+    </div>
+    <div class="hotel-tip">
+      <div class="tip-title">🛒 周辺コンビニ</div>
+      ホテル周辺にコンビニがあります。パークに持ち込む飲み物やおやつを事前購入しておくのがおすすめ。
+    </div>
+    <div class="hotel-tip">
+      <div class="tip-title">🎫 パークチケット</div>
+      ディズニー公式アプリでチケットを事前購入しておきましょう。当日窓口は混雑します。<br>
+      <a href="https://reserve.tokyodisneyresort.jp/" target="_blank" style="color:var(--accent)">チケット購入 →</a>
+    </div>
+    <div class="hotel-tip">
+      <div class="tip-title">📱 充電器</div>
+      パークでのアプリ操作（DPA購入・パス取得・待ち時間確認）でバッテリー消費が激しいため、モバイルバッテリー必須です。
+    </div>
+  </div>
+
+  <div class="hotel-section">
+    <h3>🔗 関連リンク</h3>
+    <div class="link-grid">
+      <a class="link-card" href="https://www.choice-hotels.jp/suites/tokyobay/" target="_blank"><div class="link-title">コンフォートスイーツ東京ベイ 公式</div><div class="link-desc">予約確認・施設情報</div></a>
+      <a class="link-card" href="https://www.choice-hotels.jp/suites/tokyobay/access/" target="_blank"><div class="link-title">アクセス・シャトルバス案内</div><div class="link-desc">詳細な乗り場案内・地図</div></a>
+      <a class="link-card" href="https://www.google.com/maps/place/コンフォートスイーツ東京ベイ/" target="_blank"><div class="link-title">Google Maps</div><div class="link-desc">ホテルの場所を確認</div></a>
+      <a class="link-card" href="https://www.tokyodisneyresort.jp/" target="_blank"><div class="link-title">東京ディズニーリゾート公式</div><div class="link-desc">チケット・スケジュール確認</div></a>
+    </div>
   </div>
 </div>
 
