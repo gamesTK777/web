@@ -372,13 +372,15 @@ function makeLayout(mode) {
     const by=22;
     return [{ cell,bx,by,bw,bh, lx:12, lw:158, rx:CW-170, rw:158 }];
   } else {
-    // 2人プレイ
-    const cell=17, bw=COLS*cell, bh=ROWS*cell; // 170×340
-    const by=12;
-    const p1bx=88, p2bx=CW-88-bw;             // p2bx=642
+    // 2人プレイ: 横画面いっぱい最適化
+    // 左端(P1情報+ボタン) | P1ボード | センター | P2ボード | 右端(P2情報+ボタン)
+    const cell=18, bw=COLS*cell, bh=ROWS*cell; // 180×360
+    const by=40;
+    const p1bx=165, p2bx=555; // P1:165-345, P2:555-735
+    // lx/lw: 外側情報パネル(HOLD+SCORE), rx/rw: センター側(非表示)
     return [
-      { cell,bx:p1bx,by,bw,bh, lx:8,         lw:70, rx:p1bx+bw+8,  rw:65 },
-      { cell,bx:p2bx,by,bw,bh, lx:p2bx-78,lw:65, rx:p2bx+bw+8, rw:70 }
+      { cell, bx:p1bx, by, bw, bh, lx:5,   lw:155, rx:2000, rw:0 },
+      { cell, bx:p2bx, by, bw, bh, lx:740, lw:155, rx:2000, rw:0 }
     ];
   }
 }
@@ -446,33 +448,35 @@ function buildTouchZones(mode) {
     });
 
   } else {
-    // ── 2人プレイ: 各プレイヤー6ボタン 2段 ──
-    const y1=362, h=72, y2=444;
-    const bw2=122, gap=5;
+    // ── 2人プレイ: 横画面最適化 ──
+    // 画面左端(P1)と右端(P2)に大型ボタンを2列×3行配置
+    // 親指で操作しやすいよう各ボタンを大型化
+    const btnW=71, btnH=74, gap=8;
+    const rowY=[418, 502, 586]; // 3行のY座標
 
-    // P1コントロール (左側)
-    const p1x=5;
+    // P1コントロール (画面左端: x=5-155)
+    const p1c1=5, p1c2=5+btnW+gap; // 2列
     const p1btns = [
-      {key:'p0_left',  x:p1x,                y:y1, icon:'◀', label:'左', color:'#1a6fff'},
-      {key:'p0_right', x:p1x+(bw2+gap),      y:y1, icon:'▶', label:'右', color:'#1a6fff'},
-      {key:'p0_rot',   x:p1x+(bw2+gap)*2,    y:y1, icon:'↻', label:'回転', color:'#00aa44'},
-      {key:'p0_soft',  x:p1x,                y:y2, icon:'▼', label:'↓', color:'#0077bb'},
-      {key:'p0_drop',  x:p1x+(bw2+gap),      y:y2, icon:'⬇', label:'落', color:'#ff6600'},
-      {key:'p0_hold',  x:p1x+(bw2+gap)*2,    y:y2, icon:'H', label:'HOLD', color:'#9900cc'},
+      {key:'p0_left',  x:p1c1, y:rowY[0], icon:'◀', label:'左', color:'#2277ff', darkColor:'#0a3fcc'},
+      {key:'p0_right', x:p1c2, y:rowY[0], icon:'▶', label:'右', color:'#2277ff', darkColor:'#0a3fcc'},
+      {key:'p0_rot',   x:p1c1, y:rowY[1], icon:'↻', label:'回転', color:'#00bb55', darkColor:'#007722'},
+      {key:'p0_hold',  x:p1c2, y:rowY[1], icon:'◈', label:'HOLD', color:'#9900cc', darkColor:'#660099'},
+      {key:'p0_soft',  x:p1c1, y:rowY[2], icon:'▼', label:'ソフト', color:'#0088cc', darkColor:'#005588'},
+      {key:'p0_drop',  x:p1c2, y:rowY[2], icon:'⬇', label:'即落下', color:'#ff6600', darkColor:'#cc3300'},
     ];
-    p1btns.forEach(b=>touchZones.push({...b, w:bw2, h, iconSize:24, darkColor:'#111122'}));
+    p1btns.forEach(b=>touchZones.push({...b, w:btnW, h:btnH, iconSize:26}));
 
-    // P2コントロール (右側)
-    const p2x=900-(bw2*3+gap*2)-5;
+    // P2コントロール (画面右端: x=740-890)
+    const p2c1=740, p2c2=740+btnW+gap;
     const p2btns = [
-      {key:'p1_left',  x:p2x,                y:y1, icon:'◀', label:'左', color:'#ff4444'},
-      {key:'p1_right', x:p2x+(bw2+gap),      y:y1, icon:'▶', label:'右', color:'#ff4444'},
-      {key:'p1_rot',   x:p2x+(bw2+gap)*2,    y:y1, icon:'↻', label:'回転', color:'#ff8800'},
-      {key:'p1_soft',  x:p2x,                y:y2, icon:'▼', label:'↓', color:'#884400'},
-      {key:'p1_drop',  x:p2x+(bw2+gap),      y:y2, icon:'⬇', label:'落', color:'#cc3300'},
-      {key:'p1_hold',  x:p2x+(bw2+gap)*2,    y:y2, icon:'H', label:'HOLD', color:'#660066'},
+      {key:'p1_left',  x:p2c1, y:rowY[0], icon:'◀', label:'左', color:'#ff4455', darkColor:'#aa1122'},
+      {key:'p1_right', x:p2c2, y:rowY[0], icon:'▶', label:'右', color:'#ff4455', darkColor:'#aa1122'},
+      {key:'p1_rot',   x:p2c1, y:rowY[1], icon:'↻', label:'回転', color:'#ff9900', darkColor:'#cc6600'},
+      {key:'p1_hold',  x:p2c2, y:rowY[1], icon:'◈', label:'HOLD', color:'#cc44ff', darkColor:'#881acc'},
+      {key:'p1_soft',  x:p2c1, y:rowY[2], icon:'▼', label:'ソフト', color:'#44aaff', darkColor:'#1166cc'},
+      {key:'p1_drop',  x:p2c2, y:rowY[2], icon:'⬇', label:'即落下', color:'#ff4400', darkColor:'#cc2200'},
     ];
-    p2btns.forEach(b=>touchZones.push({...b, w:bw2, h, iconSize:24, darkColor:'#111122'}));
+    p2btns.forEach(b=>touchZones.push({...b, w:btnW, h:btnH, iconSize:26}));
   }
 }
 
@@ -480,13 +484,25 @@ function buildTouchZones(mode) {
 // タッチUI描画  ── 色分け + 大型ボタン ──
 // ═══════════════════════════════════════════════════
 function drawTouchUI() {
-  // セクションラベル (1Pのみ)
+  // セクションラベル
   if(gameMode===1){
     ctx.globalAlpha=0.35;
     ctx.font='10px Courier New'; ctx.textAlign='center'; ctx.fillStyle='#aaa';
     ctx.fillText('移動', 14+148+3, 472);
     ctx.fillText('アクション', 572+148+3, 472);
     ctx.globalAlpha=1;
+  } else {
+    // 2P: プレイヤーラベル + ボタン上部区切り線
+    ctx.globalAlpha=0.8;
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(5,408); ctx.lineTo(155,408); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(740,408); ctx.lineTo(890,408); ctx.stroke();
+    ctx.font='bold 13px Courier New'; ctx.textAlign='center';
+    ctx.fillStyle='#00ff88'; ctx.shadowColor='#00ff88'; ctx.shadowBlur=8;
+    ctx.fillText('◀ P1', 80, 403);
+    ctx.fillStyle='#ff4455'; ctx.shadowColor='#ff4455';
+    ctx.fillText('P2 ▶', 820, 403);
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
   }
 
   for(const z of touchZones){
@@ -780,41 +796,44 @@ function drawBoard(g, L) {
     ctx.fillRect(bx-7, by+(ROWS-gh)*cell, 5, gh*cell);
   }
 
-  // ── 左パネル (HOLD + スコア) ──
-  const midC='#aaa';
+  // ── 左パネル (HOLD + スコア) ── lw>0 の場合のみ描画
   ctx.font='11px Courier New'; ctx.textAlign='center';
+  if(lw>0){
+    const midC='#aaa';
+    const lc=lx+lw/2;
+    // HOLDボックス
+    ctx.fillStyle='#0d0d1a'; rr(lx,by,lw,82,6); ctx.fill();
+    ctx.strokeStyle='#2a2a44'; ctx.lineWidth=1; rr(lx,by,lw,82,6); ctx.stroke();
+    ctx.fillStyle='#555'; ctx.fillText('HOLD',lc,by+14);
+    if(g.hold) miniPiece(g.hold, lc, by+50, cell*.72);
 
-  // HOLDボックス
-  ctx.fillStyle='#0d0d1a'; rr(lx,by,lw,82,6); ctx.fill();
-  ctx.strokeStyle='#2a2a44'; ctx.lineWidth=1; rr(lx,by,lw,82,6); ctx.stroke();
-  ctx.fillStyle='#555'; ctx.fillText('HOLD',lx+lw/2,by+14);
-  if(g.hold) miniPiece(g.hold, lx+lw/2, by+50, cell*.72);
-
-  // スコアボックス
-  ctx.fillStyle='#0d0d1a'; rr(lx,by+90,lw,140,6); ctx.fill();
-  ctx.strokeStyle='#2a2a44'; rr(lx,by+90,lw,140,6); ctx.stroke();
-  const lc=lx+lw/2;
-  ctx.fillStyle=midC; ctx.fillText('SCORE',lc,by+104);
-  ctx.font='bold 15px Courier New'; ctx.fillStyle='#fff'; ctx.fillText(g.score,lc,by+120);
-  ctx.font='11px Courier New';
-  ctx.fillStyle=midC; ctx.fillText('LINES',lc,by+138);
-  ctx.font='bold 14px Courier New'; ctx.fillStyle='#fff'; ctx.fillText(g.lines,lc,by+153);
-  ctx.font='11px Courier New';
-  ctx.fillStyle=midC; ctx.fillText('LEVEL',lc,by+171);
-  ctx.font='bold 18px Courier New';
-  ctx.fillStyle='#ff0'; ctx.fillText(g.level,lc,by+190);
-  if(g.combo>0){
-    ctx.font='bold 11px Courier New'; ctx.fillStyle='#f80';
-    ctx.fillText('COMBO ×'+(g.combo+1),lc,by+210);
+    // スコアボックス
+    ctx.fillStyle='#0d0d1a'; rr(lx,by+90,lw,140,6); ctx.fill();
+    ctx.strokeStyle='#2a2a44'; rr(lx,by+90,lw,140,6); ctx.stroke();
+    ctx.fillStyle=midC; ctx.fillText('SCORE',lc,by+104);
+    ctx.font='bold 15px Courier New'; ctx.fillStyle='#fff'; ctx.fillText(g.score,lc,by+120);
+    ctx.font='11px Courier New';
+    ctx.fillStyle=midC; ctx.fillText('LINES',lc,by+138);
+    ctx.font='bold 14px Courier New'; ctx.fillStyle='#fff'; ctx.fillText(g.lines,lc,by+153);
+    ctx.font='11px Courier New';
+    ctx.fillStyle=midC; ctx.fillText('LEVEL',lc,by+171);
+    ctx.font='bold 18px Courier New';
+    ctx.fillStyle='#ff0'; ctx.fillText(g.level,lc,by+190);
+    if(g.combo>0){
+      ctx.font='bold 11px Courier New'; ctx.fillStyle='#f80';
+      ctx.fillText('COMBO ×'+(g.combo+1),lc,by+210);
+    }
   }
 
-  // ── 右パネル (NEXT) ──
-  ctx.fillStyle='#0d0d1a'; rr(rx,by,rw,240,6); ctx.fill();
-  ctx.strokeStyle='#2a2a44'; rr(rx,by,rw,240,6); ctx.stroke();
-  ctx.font='11px Courier New'; ctx.fillStyle='#555';
-  ctx.fillText('NEXT',rx+rw/2,by+14);
-  const nCount=Math.min(5,g.queue.length);
-  for(let i=0;i<nCount;i++) miniPiece(g.queue[i], rx+rw/2, by+44+i*38, cell*.65);
+  // ── 右パネル (NEXT) ── rw>0 の場合のみ描画
+  if(rw>0){
+    ctx.fillStyle='#0d0d1a'; rr(rx,by,rw,240,6); ctx.fill();
+    ctx.strokeStyle='#2a2a44'; rr(rx,by,rw,240,6); ctx.stroke();
+    ctx.font='11px Courier New'; ctx.fillStyle='#555';
+    ctx.fillText('NEXT',rx+rw/2,by+14);
+    const nCount=Math.min(5,g.queue.length);
+    for(let i=0;i<nCount;i++) miniPiece(g.queue[i], rx+rw/2, by+44+i*38, cell*.65);
+  }
 
   // スワイプガイド (初回表示フェード)
   if(frame<300 && gameMode===1){
@@ -997,6 +1016,61 @@ function tick() {
   Object.assign(prev, keys);
 }
 
+// ═══════════════════════════════════════════════════
+// 2人プレイ: センター + プレイヤーラベル描画
+// ═══════════════════════════════════════════════════
+function drawCenter2P() {
+  ctx.textAlign='center';
+
+  // ── プレイヤーラベル (ボード上部) ──
+  ctx.font='bold 14px Courier New';
+  ctx.fillStyle='#00ff88'; ctx.shadowColor='#00ff88'; ctx.shadowBlur=12;
+  ctx.fillText('◀  P1  ◀', 255, 28);
+  ctx.fillStyle='#ff4455'; ctx.shadowColor='#ff4455';
+  ctx.fillText('▶  P2  ▶', 645, 28);
+  ctx.shadowBlur=0;
+
+  // ── センター分割線 ──
+  ctx.strokeStyle='rgba(255,255,255,0.07)';
+  ctx.lineWidth=1; ctx.setLineDash([5,9]);
+  ctx.beginPath(); ctx.moveTo(450,38); ctx.lineTo(450,408); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── VS テキスト ──
+  ctx.fillStyle='rgba(255,255,255,0.10)';
+  ctx.font='bold 42px Courier New';
+  ctx.fillText('VS', 450, 245);
+
+  // ── NEXT キュー (P1:左側, P2:右側) ──
+  const g0=games[0], g1=games[1];
+  const nCell=11;
+
+  // P1 NEXT
+  ctx.font='9px Courier New';
+  ctx.fillStyle='rgba(0,255,136,0.5)';
+  ctx.fillText('NEXT', 385, 52);
+  for(let i=0;i<Math.min(3,g0.queue.length);i++)
+    miniPiece(g0.queue[i], 385, 74+i*46, nCell);
+
+  // P2 NEXT
+  ctx.fillStyle='rgba(255,68,85,0.5)';
+  ctx.fillText('NEXT', 515, 52);
+  for(let i=0;i<Math.min(3,g1.queue.length);i++)
+    miniPiece(g1.queue[i], 515, 74+i*46, nCell);
+
+  // ── ガーベジ予告 ──
+  if(g0.pendingGarbage>0){
+    ctx.fillStyle='#ff3300'; ctx.font='bold 11px Courier New';
+    ctx.fillText('⚠ +'+g0.pendingGarbage, 385, 240);
+  }
+  if(g1.pendingGarbage>0){
+    ctx.fillStyle='#ff3300'; ctx.font='bold 11px Courier New';
+    ctx.fillText('⚠ +'+g1.pendingGarbage, 515, 240);
+  }
+
+  ctx.textAlign='left';
+}
+
 function render() {
   ctx.save(); ctx.translate(shakeX,shakeY);
   ctx.fillStyle='#050510'; ctx.fillRect(-5,-5,CW+10,CH+10);
@@ -1009,9 +1083,23 @@ function render() {
     drawTitle();
   } else {
     for(let gi=0;gi<games.length;gi++) drawBoard(games[gi],layouts[gi]);
+    if(gameMode===2) drawCenter2P();
     drawFX();
     drawTouchUI();
     if(gameState==='gameover') drawGameOver();
+    // ── 2P縦持ち時の回転案内オーバーレイ ──
+    if(gameMode===2 && window.innerWidth < window.innerHeight){
+      ctx.fillStyle='rgba(0,0,0,0.93)'; ctx.fillRect(-5,-5,CW+10,CH+10);
+      ctx.textAlign='center';
+      ctx.fillStyle='#ffcc00'; ctx.font='bold 90px Arial';
+      ctx.fillText('↻', CW/2, CH/2-50);
+      ctx.fillStyle='#fff'; ctx.font='bold 26px Courier New';
+      ctx.fillText('スマートフォンを', CW/2, CH/2+30);
+      ctx.fillText('横向きにしてください', CW/2, CH/2+68);
+      ctx.fillStyle='#888'; ctx.font='16px Courier New';
+      ctx.fillText('Please rotate to landscape', CW/2, CH/2+105);
+      ctx.textAlign='left';
+    }
   }
   ctx.restore();
 }
