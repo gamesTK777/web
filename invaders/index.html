@@ -345,6 +345,56 @@
       .touch-row { grid-template-columns: 1fr 1fr 1fr; }
       .touch-btn { height: 52px; }
     }
+
+    /* ═══ スマートフォン横画面専用レイアウト ═══
+       キャンバス直接タッチ操作(ドラッグ+タップ)を使うため
+       HTML タッチボタンは非表示にし、画面を最大利用 */
+    @media screen and (orientation: landscape) and (max-height: 520px) {
+      html, body { overflow: hidden; height: 100%; }
+      .wrap {
+        padding: 2px 6px 2px;
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+        max-width: 100%;
+      }
+      .title { display: none; }
+      .topbar {
+        flex-shrink: 0;
+        padding: 3px 10px;
+        margin-bottom: 3px;
+        border-radius: 8px;
+        gap: 5px;
+      }
+      .pill { padding: 2px 8px; font-size: 0.76rem; }
+      .actions button { padding: 4px 10px; font-size: 0.8rem; border-radius: 999px; }
+      .stage {
+        flex: 1;
+        min-height: 0;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      canvas {
+        width: auto !important;
+        height: 100% !important;
+        max-height: 100%;
+        aspect-ratio: auto;
+        display: block;
+      }
+      /* キャンバス直接操作を使うため HTML タッチボタン非表示 */
+      .touch-wrap { display: none !important; }
+      .footnote { display: none; }
+      /* パネル(メニュー・リザルト)を画面に合わせる */
+      .panel { padding: 12px 14px; }
+      .panel h2 { font-size: 1.2rem; margin-bottom: 6px; }
+      .panel p { font-size: 0.85rem; margin: 6px auto; }
+      .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+      .mode-card { padding: 8px; border-radius: 10px; }
+      .mode-card h3 { font-size: 0.9rem; margin-bottom: 5px; }
+      .mode-card p { font-size: 0.8rem; margin-bottom: 8px; }
+      .help { padding: 6px 10px; font-size: 0.8rem; margin-top: 8px; }
+    }
   </style>
 </head>
 <body>
@@ -486,7 +536,10 @@
     const keys = {};
     const touch = {
       p1Left: false, p1Right: false, p1Fire: false,
-      p2Left: false, p2Right: false, p2Fire: false
+      p2Left: false, p2Right: false, p2Fire: false,
+      // キャンバス直接タッチ用 (ドラッグ移動量 px/frame, タップ発射カウント)
+      p1DragVx: 0, p2DragVx: 0,
+      p1FirePulse: 0, p2FirePulse: 0
     };
 
     const state = {
@@ -842,11 +895,24 @@
         if (input.left) move -= 1;
         if (input.right) move += 1;
 
+        // キーボード/HTMLボタン移動
         p.x += move * p.speed * dt;
+
+        // ── キャンバスドラッグ移動 (直接ピクセル加算, 使用後リセット) ──
+        const dragKey  = p.id === "P1" ? "p1DragVx"     : "p2DragVx";
+        const pulseKey = p.id === "P1" ? "p1FirePulse"  : "p2FirePulse";
+        if (touch[dragKey] !== 0) {
+          p.x += touch[dragKey];
+          touch[dragKey] = 0;
+        }
+
         p.x = clamp(p.x, 12, W - p.w - 12);
 
-        if (input.fire && p.cooldown <= 0 && p.respawn <= 0) {
+        // 発射: 通常 input.fire またはタップパルス
+        const hasPulse = touch[pulseKey] > 0;
+        if ((input.fire || hasPulse) && p.cooldown <= 0 && p.respawn <= 0) {
           fireBullet(p);
+          if (hasPulse) touch[pulseKey]--;
         }
       }
     }
@@ -1193,6 +1259,134 @@
       }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // キャンバス直接タッチ操作 (ドラッグ移動 + タップ発射)
+    // ══════════════════════════════════════════════════════════════════
+    const drags = {};
+
+    function getCanvasXY(t) {
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: (t.clientX - r.left) * W / r.width,
+        y: (t.clientY - r.top)  * H / r.height
+      };
+    }
+
+    // 2Pモード: 左半分=P1, 右半分=P2。1Pモード: 常にP1
+    function getTouchPlayerIdx(cx) {
+      if (state.players.length < 2) return 0;
+      return cx < W / 2 ? 0 : 1;
+    }
+
+    function isMobileDevice() {
+      return /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ||
+             ('ontouchstart' in window && Math.min(screen.width, screen.height) <= 600);
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const { x, y } = getCanvasXY(t);
+        drags[t.identifier] = {
+          startX: x, startY: y, lastX: x,
+          playerIdx: getTouchPlayerIdx(x),
+          startTime: Date.now(), moved: false
+        };
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const d = drags[t.identifier];
+        if (!d) continue;
+        const { x } = getCanvasXY(t);
+        const dx = x - d.lastX;
+        d.lastX = x;
+        if (Math.abs(x - d.startX) > 8) d.moved = true;
+        // ドラッグ量を累積 (updatePlayers で消費)
+        if (d.playerIdx === 0) touch.p1DragVx += dx;
+        else                   touch.p2DragVx += dx;
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const d = drags[t.identifier];
+        if (!d) { delete drags[t.identifier]; continue; }
+        const elapsed = Date.now() - d.startTime;
+        // 短いタップ(動きが少なく250ms以内) = 発射
+        if (!d.moved && elapsed < 260) {
+          if (d.playerIdx === 0) touch.p1FirePulse++;
+          else                   touch.p2FirePulse++;
+        }
+        // ドラッグ速度リセット
+        if (d.playerIdx === 0) touch.p1DragVx = 0;
+        else                   touch.p2DragVx = 0;
+        delete drags[t.identifier];
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchcancel', (e) => {
+      for (const t of e.changedTouches) {
+        const d = drags[t.identifier];
+        if (d) {
+          if (d.playerIdx === 0) touch.p1DragVx = 0;
+          else                   touch.p2DragVx = 0;
+          delete drags[t.identifier];
+        }
+      }
+    });
+
+    // ── キャンバス上に操作ヒントを薄く表示 ──
+    function drawTouchHints() {
+      if (!isMobileDevice()) return;
+      if (state.status === "menu") return;
+      ctx.save();
+      ctx.globalAlpha = 0.20;
+      ctx.font = "13px sans-serif";
+      ctx.textAlign = "center";
+      if (state.players.length >= 2) {
+        // 中央分割ガイドライン
+        ctx.strokeStyle = "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([8, 14]);
+        ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+        ctx.setLineDash([]);
+        // P1 / P2 ゾーンラベル
+        ctx.fillStyle = "#4ef0ff";
+        ctx.fillText("← ドラッグ移動  タップ発射", W / 4, H - 12);
+        ctx.fillStyle = "#ff5fa2";
+        ctx.fillText("ドラッグ移動  タップ発射 →", W * 3 / 4, H - 12);
+      } else {
+        ctx.fillStyle = "#4ef0ff";
+        ctx.fillText("ドラッグで移動  タップで発射", W / 2, H - 12);
+      }
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "left";
+      ctx.restore();
+    }
+
+    // ── 縦持ち時の回転促し画面 ──
+    function drawPortraitWarning() {
+      if (!isMobileDevice()) return;
+      if (window.innerWidth >= window.innerHeight) return; // 横向きはOK
+      ctx.fillStyle = "rgba(3, 6, 20, 0.96)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ffcc00";
+      ctx.font = "bold 100px sans-serif";
+      ctx.fillText("↻", W / 2, H / 2 - 20);
+      ctx.fillStyle = "#ecf6ff";
+      ctx.font = "bold 30px sans-serif";
+      ctx.fillText("スマートフォンを横向きに", W / 2, H / 2 + 44);
+      ctx.fillStyle = "#8ea6c9";
+      ctx.font = "20px sans-serif";
+      ctx.fillText("Rotate device to landscape", W / 2, H / 2 + 82);
+      ctx.textAlign = "left";
+    }
+
     function render() {
       drawBackground();
 
@@ -1201,11 +1395,15 @@
       drawBullets();
       drawParticles();
       drawCenterText();
+      drawTouchHints();
 
       if (state.flash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${state.flash * 1.8})`;
         ctx.fillRect(0, 0, W, H);
       }
+
+      // 縦持ち警告は最前面に描画
+      drawPortraitWarning();
     }
 
     function frame(ts) {
