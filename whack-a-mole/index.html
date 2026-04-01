@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>モグラ叩き - WHACK-A-MOLE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-dark: #070711;
+      --accent-1: #ff6b8a;
+      --accent-2: #4ecdc4;
+      --accent-3: #ffd93d;
+      --accent-4: #8b5cf6;
+      --accent-5: #59d8ff;
+      --text: #eef3ff;
+      --text-dim: #b2b9d6;
+      --grass: #2d7a2d;
+      --grass-dark: #1a5c1a;
+      --dirt: #6b4226;
+      --dirt-dark: #4a2e18;
+      --mole-brown: #8B4513;
+      --mole-face: #d2691e;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg-dark);
+    }
+
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    /* 背景 */
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 107, 138, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(78, 205, 196, 0.08), transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05), transparent 60%);
+    }
+
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.02) 0px,
+        rgba(255,255,255,0.02) 1px,
+        transparent 2px,
+        transparent 4px
+      );
+      opacity: 0.15;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 760px;
+      padding: 30px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    /* ヘッダー */
+    header {
+      text-align: center;
+    }
+
+    .title-wrap {
+      display: inline-block;
+      padding: 16px 28px;
+      border-radius: 16px;
+      background: rgba(20, 28, 56, 0.7);
+      border: 1px solid rgba(255, 107, 138, 0.3);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 30px rgba(255, 107, 138, 0.15);
+    }
+
+    .title-sub {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(0.45rem, 2vw, 0.65rem);
+      color: var(--accent-1);
+      letter-spacing: 0.2em;
+      margin-bottom: 6px;
+    }
+
+    .title-main {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(1rem, 4vw, 1.8rem);
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-3), var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.3;
+    }
+
+    /* ステータスバー */
+    .status-bar {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      flex: 1;
+      min-width: 110px;
+      max-width: 200px;
+      padding: 14px 10px;
+      background: rgba(15, 18, 38, 0.8);
+      border: 1px solid rgba(120, 200, 255, 0.15);
+      border-radius: 14px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+    }
+
+    .stat-label {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.45rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(1.1rem, 3vw, 1.6rem);
+      line-height: 1;
+    }
+
+    #score-display { color: var(--accent-3); }
+    #timer-display { color: var(--accent-2); }
+    #level-display { color: var(--accent-4); }
+    #miss-display  { color: var(--accent-1); }
+
+    #timer-display.urgent { color: #ff4444; animation: pulse 0.5s ease infinite alternate; }
+    @keyframes pulse { to { opacity: 0.5; } }
+
+    /* ゲームボード */
+    .board-wrapper {
+      width: 100%;
+      position: relative;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+      padding: 24px;
+      background: rgba(15, 18, 38, 0.6);
+      border: 1px solid rgba(120, 200, 255, 0.12);
+      border-radius: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    /* 各穴 */
+    .hole {
+      position: relative;
+      aspect-ratio: 1;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 土台(芝生エリア) */
+    .hole-ground {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at 40% 35%, var(--grass), var(--grass-dark));
+      box-shadow:
+        inset 0 -6px 12px rgba(0,0,0,0.4),
+        0 4px 12px rgba(0,0,0,0.5);
+      transition: filter 0.15s;
+    }
+
+    /* 穴の内側 */
+    .hole-inner {
+      position: absolute;
+      left: 50%;
+      bottom: 12%;
+      transform: translateX(-50%);
+      width: 62%;
+      height: 38%;
+      background: radial-gradient(ellipse at 50% 70%, #1a0d05, #0a0702);
+      border-radius: 50%;
+      box-shadow: inset 0 4px 16px rgba(0,0,0,0.9);
+      overflow: hidden;
+    }
+
+    /* モグラ */
+    .mole {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      bottom: 10%;
+      width: 58%;
+      height: 72%;
+      cursor: pointer;
+      transition: transform 0.12s cubic-bezier(0.2, 1.4, 0.4, 1);
+      z-index: 10;
+      filter: drop-shadow(0 -4px 8px rgba(0,0,0,0.6));
+    }
+
+    .mole.up {
+      transform: translateX(-50%) translateY(0%);
+    }
+
+    .mole.bonked {
+      transform: translateX(-50%) translateY(10%) rotate(-8deg) scale(0.88);
+      filter: drop-shadow(0 0 12px rgba(255, 220, 50, 0.9)) brightness(1.3);
+      transition: transform 0.06s ease, filter 0.06s ease;
+    }
+
+    .mole svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ヒット演出 */
+    .hit-effect {
+      position: absolute;
+      top: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(0.7rem, 2.5vw, 1rem);
+      color: var(--accent-3);
+      text-shadow: 0 0 10px rgba(255, 217, 61, 0.8);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 20;
+      white-space: nowrap;
+    }
+
+    .hit-effect.show {
+      animation: hitAnim 0.6s ease forwards;
+    }
+
+    @keyframes hitAnim {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.5); }
+      60%  { opacity: 1; transform: translateX(-50%) translateY(-20px) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-36px) scale(0.7); }
+    }
+
+    /* コントロールパネル */
+    .controls {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.65rem;
+      font-weight: 700;
+      border: 2px solid;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-1), #c0392b);
+      border-color: rgba(255, 107, 138, 0.6);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(255, 107, 138, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 28px rgba(255, 107, 138, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(15, 18, 38, 0.8);
+      border-color: rgba(89, 216, 255, 0.4);
+      color: var(--accent-5);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(89, 216, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    /* 難易度選択 */
+    .diff-select {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 18, 38, 0.7);
+      border: 1px solid rgba(120, 200, 255, 0.15);
+      border-radius: 50px;
+      padding: 6px;
+    }
+
+    .diff-btn {
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.5rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: transparent;
+      color: var(--text-dim);
+    }
+
+    .diff-btn.active {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .diff-btn.easy.active   { color: var(--accent-2); }
+    .diff-btn.normal.active { color: var(--accent-3); }
+    .diff-btn.hard.active   { color: var(--accent-1); }
+
+    /* オーバーレイ */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(4, 5, 15, 0.88);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay.show { display: flex; }
+
+    .overlay-box {
+      background: rgba(15, 18, 38, 0.95);
+      border: 1px solid rgba(120, 200, 255, 0.25);
+      border-radius: 28px;
+      padding: 40px 36px;
+      text-align: center;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 0 60px rgba(89, 216, 255, 0.15);
+      animation: popIn 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.7) translateY(30px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .overlay-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .overlay-title {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay-score {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(1.4rem, 5vw, 2.4rem);
+      color: var(--accent-3);
+      margin-bottom: 8px;
+    }
+
+    .overlay-details {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+      line-height: 1.8;
+    }
+
+    .overlay-hi {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.55rem;
+      color: var(--accent-4);
+      margin-bottom: 24px;
+      letter-spacing: 0.1em;
+    }
+
+    /* バックボタン */
+    .back-link {
+      display: inline-block;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.5rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--accent-5); }
+
+    /* コンボ表示 */
+    #combo-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+      text-shadow: 0 0 20px currentColor;
+    }
+
+    #combo-popup.show {
+      animation: comboAnim 0.8s ease forwards;
+    }
+
+    @keyframes comboAnim {
+      0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+      40%  { opacity: 1; transform: translate(-50%, -60%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%, -80%) scale(0.8); }
+    }
+
+    /* 草むらの装飾 */
+    .board-deco {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      width: 100%;
+      padding: 0 10px;
+      margin-top: -10px;
+      opacity: 0.6;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      pointer-events: none;
+    }
+
+    @media (max-width: 480px) {
+      .board { gap: 10px; padding: 16px; }
+      .stat-box { min-width: 80px; padding: 10px 8px; }
+      .btn { padding: 12px 20px; font-size: 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-overlay"></div>
+  <div class="scanlines"></div>
+
+  <!-- コンボポップアップ -->
+  <div id="combo-popup"></div>
+
+  <!-- ゲームオーバーオーバーレイ -->
+  <div class="overlay" id="overlay">
+    <div class="overlay-box">
+      <span class="overlay-icon" id="overlay-icon">🏆</span>
+      <div class="overlay-title" id="overlay-title">ゲーム終了！</div>
+      <div class="overlay-score" id="overlay-score">0</div>
+      <div class="overlay-details" id="overlay-details"></div>
+      <div class="overlay-hi" id="overlay-hi"></div>
+      <button class="btn btn-primary" onclick="startGame()" style="margin-bottom:16px;width:100%">▶ もう一度プレイ</button>
+      <br>
+      <a href="../index.html" class="back-link">← ゲーム一覧へ戻る</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="title-wrap">
+        <div class="title-sub">WHACK-A-MOLE</div>
+        <div class="title-main">モグラ叩き</div>
+      </div>
+    </header>
+
+    <!-- ステータスバー -->
+    <div class="status-bar">
+      <div class="stat-box">
+        <div class="stat-label">SCORE</div>
+        <div class="stat-value" id="score-display">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">TIME</div>
+        <div class="stat-value" id="timer-display">60</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">LEVEL</div>
+        <div class="stat-value" id="level-display">1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">MISS</div>
+        <div class="stat-value" id="miss-display">0</div>
+      </div>
+    </div>
+
+    <!-- 難易度選択 -->
+    <div class="diff-select">
+      <button class="diff-btn easy active"   onclick="setDifficulty('easy')">EASY</button>
+      <button class="diff-btn normal"        onclick="setDifficulty('normal')">NORMAL</button>
+      <button class="diff-btn hard"          onclick="setDifficulty('hard')">HARD</button>
+    </div>
+
+    <!-- ゲームボード -->
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+    </div>
+
+    <!-- 草むら装飾 -->
+    <div class="board-deco">
+      🌿 🌱 🍀 🌿 🌱 🍀 🌿
+    </div>
+
+    <!-- コントロール -->
+    <div class="controls">
+      <button class="btn btn-primary" id="start-btn" onclick="startGame()">▶ スタート</button>
+      <a href="../index.html" class="btn btn-secondary">← もどる</a>
+    </div>
+  </div>
+
+  <script>
+    // ===== ゲーム設定 =====
+    const HOLES = 9;
+    const DIFFICULTIES = {
+      easy:   { moleUpTime: [900, 1400], spawnInterval: [1200, 1800], gameDuration: 60, levelUpScore: 200 },
+      normal: { moleUpTime: [600, 1100], spawnInterval: [800,  1400], gameDuration: 60, levelUpScore: 150 },
+      hard:   { moleUpTime: [350, 750],  spawnInterval: [500,  900],  gameDuration: 60, levelUpScore: 100 },
+    };
+
+    // ===== 状態変数 =====
+    let score = 0;
+    let misses = 0;
+    let timeLeft = 60;
+    let level = 1;
+    let combo = 0;
+    let highScore = parseInt(localStorage.getItem('mole_highscore') || '0');
+    let difficulty = 'easy';
+    let gameRunning = false;
+    let timerInterval = null;
+    let spawnTimeout = null;
+    let moleTimeouts = [];  // 各モグラの自動格納タイマー
+
+    // ===== DOM =====
+    const board = document.getElementById('board');
+    const scoreDisplay = document.getElementById('score-display');
+    const timerDisplay = document.getElementById('timer-display');
+    const levelDisplay  = document.getElementById('level-display');
+    const missDisplay   = document.getElementById('miss-display');
+    const startBtn      = document.getElementById('start-btn');
+    const overlay       = document.getElementById('overlay');
+    const comboPopup    = document.getElementById('combo-popup');
+
+    // ===== 難易度 =====
+    function setDifficulty(d) {
+      if (gameRunning) return;
+      difficulty = d;
+      document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.diff-btn.${d}`).classList.add('active');
+    }
+
+    // ===== ボード作成 =====
+    function buildBoard() {
+      board.innerHTML = '';
+      for (let i = 0; i < HOLES; i++) {
+        const hole = document.createElement('div');
+        hole.className = 'hole';
+        hole.dataset.index = i;
+
+        hole.innerHTML = `
+          <div class="hole-ground"></div>
+          <div class="hole-inner"></div>
+          <div class="mole" data-index="${i}">
+            ${moleSVG()}
+          </div>
+          <div class="hit-effect">💥</div>
+        `;
+
+        hole.querySelector('.mole').addEventListener('click',  () => whack(i));
+        hole.querySelector('.mole').addEventListener('touchstart', (e) => { e.preventDefault(); whack(i); }, { passive: false });
+        // 空振り
+        hole.addEventListener('click', (e) => {
+          if (!e.target.closest('.mole') && gameRunning) miss();
+        });
+
+        board.appendChild(hole);
+      }
+    }
+
+    // ===== モグラSVG =====
+    function moleSVG() {
+      return `<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+        <!-- 体 -->
+        <ellipse cx="50" cy="95" rx="36" ry="34" fill="#6B3A1F"/>
+        <!-- 腹 -->
+        <ellipse cx="50" cy="102" rx="22" ry="20" fill="#C4905A"/>
+        <!-- 頭 -->
+        <ellipse cx="50" cy="58" rx="33" ry="30" fill="#7B4020"/>
+        <!-- 耳 左 -->
+        <ellipse cx="25" cy="36" rx="9" ry="12" fill="#7B4020"/>
+        <ellipse cx="25" cy="36" rx="5" ry="8" fill="#E07060"/>
+        <!-- 耳 右 -->
+        <ellipse cx="75" cy="36" rx="9" ry="12" fill="#7B4020"/>
+        <ellipse cx="75" cy="36" rx="5" ry="8" fill="#E07060"/>
+        <!-- 目 白目 左 -->
+        <ellipse cx="38" cy="52" rx="9" ry="10" fill="#fff"/>
+        <!-- 目 白目 右 -->
+        <ellipse cx="62" cy="52" rx="9" ry="10" fill="#fff"/>
+        <!-- 目 瞳 左 -->
+        <circle cx="40" cy="53" r="5" fill="#1a0d05"/>
+        <circle cx="41" cy="51" r="1.5" fill="#fff"/>
+        <!-- 目 瞳 右 -->
+        <circle cx="64" cy="53" r="5" fill="#1a0d05"/>
+        <circle cx="65" cy="51" r="1.5" fill="#fff"/>
+        <!-- 鼻 -->
+        <ellipse cx="50" cy="67" rx="8" ry="6" fill="#2a0d05"/>
+        <ellipse cx="50" cy="65" rx="5" ry="3.5" fill="#E05090"/>
+        <!-- ひげ 左 -->
+        <line x1="20" y1="66" x2="42" y2="68" stroke="#C4905A" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="18" y1="70" x2="42" y2="71" stroke="#C4905A" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- ひげ 右 -->
+        <line x1="80" y1="66" x2="58" y2="68" stroke="#C4905A" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="82" y1="70" x2="58" y2="71" stroke="#C4905A" stroke-width="1.5" stroke-linecap="round"/>
+        <!-- 口 -->
+        <path d="M 43 76 Q 50 82 57 76" stroke="#2a0d05" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>`;
+    }
+
+    // ===== 叩く処理 =====
+    function whack(index) {
+      if (!gameRunning) return;
+      const hole = board.children[index];
+      const mole = hole.querySelector('.mole');
+      if (!mole.classList.contains('up')) return;
+
+      // モグラ退場キャンセル
+      if (moleTimeouts[index]) {
+        clearTimeout(moleTimeouts[index]);
+        moleTimeouts[index] = null;
+      }
+
+      // スコア計算
+      combo++;
+      const cfg = DIFFICULTIES[difficulty];
+      const points = 10 * level + (combo > 2 ? (combo - 2) * 5 : 0);
+      score += points;
+
+      // ボンク演出
+      mole.classList.remove('up');
+      mole.classList.add('bonked');
+
+      const hitEff = hole.querySelector('.hit-effect');
+      hitEff.textContent = combo >= 3 ? `+${points} 🔥` : `+${points}`;
+      hitEff.classList.remove('show');
+      void hitEff.offsetWidth;
+      hitEff.classList.add('show');
+
+      // 少し待って格納
+      setTimeout(() => {
+        mole.classList.remove('bonked');
+      }, 180);
+
+      // コンボ演出
+      if (combo >= 3) showCombo(combo);
+
+      // レベルアップチェック
+      const levelScore = cfg.levelUpScore * level;
+      if (score >= levelScore && level < 10) level++;
+
+      updateHUD();
+    }
+
+    // ===== 空振り =====
+    function miss() {
+      misses++;
+      combo = 0;
+      updateHUD();
+    }
+
+    // ===== コンボ演出 =====
+    function showCombo(c) {
+      const colors = ['#ffd93d', '#ff6b8a', '#8b5cf6', '#4ecdc4', '#ff4500'];
+      comboPopup.style.color = colors[Math.min(c - 3, colors.length - 1)];
+      comboPopup.textContent = `${c} COMBO!!`;
+      comboPopup.classList.remove('show');
+      void comboPopup.offsetWidth;
+      comboPopup.classList.add('show');
+    }
+
+    // ===== モグラ出現 =====
+    function spawnMole() {
+      if (!gameRunning) return;
+
+      const cfg = DIFFICULTIES[difficulty];
+      const speedFactor = 1 - (level - 1) * 0.07;
+
+      // ランダムな空き穴を選ぶ
+      const availableHoles = [];
+      for (let i = 0; i < HOLES; i++) {
+        const m = board.children[i].querySelector('.mole');
+        if (!m.classList.contains('up') && !m.classList.contains('bonked')) {
+          availableHoles.push(i);
+        }
+      }
+      if (availableHoles.length === 0) {
+        scheduleNextSpawn();
+        return;
+      }
+
+      const idx = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+      const hole = board.children[idx];
+      const mole = hole.querySelector('.mole');
+
+      mole.classList.add('up');
+
+      // 自動格納タイマー
+      const upDuration = randBetween(
+        cfg.moleUpTime[0] * speedFactor,
+        cfg.moleUpTime[1] * speedFactor
+      );
+      moleTimeouts[idx] = setTimeout(() => {
+        if (mole.classList.contains('up')) {
+          mole.classList.remove('up');
+          combo = 0; // 逃したらコンボリセット
+          moleTimeouts[idx] = null;
+        }
+      }, upDuration);
+
+      scheduleNextSpawn();
+    }
+
+    function scheduleNextSpawn() {
+      if (!gameRunning) return;
+      const cfg = DIFFICULTIES[difficulty];
+      const speedFactor = 1 - (level - 1) * 0.07;
+      const interval = randBetween(
+        cfg.spawnInterval[0] * speedFactor,
+        cfg.spawnInterval[1] * speedFactor
+      );
+      spawnTimeout = setTimeout(spawnMole, interval);
+    }
+
+    function randBetween(a, b) {
+      return Math.floor(Math.random() * (b - a) + a);
+    }
+
+    // ===== HUD更新 =====
+    function updateHUD() {
+      scoreDisplay.textContent = score;
+      timerDisplay.textContent = timeLeft;
+      levelDisplay.textContent = level;
+      missDisplay.textContent  = misses;
+      timerDisplay.classList.toggle('urgent', timeLeft <= 10);
+    }
+
+    // ===== ゲーム開始 =====
+    function startGame() {
+      overlay.classList.remove('show');
+
+      // リセット
+      score = 0; misses = 0; level = 1; combo = 0;
+      timeLeft = DIFFICULTIES[difficulty].gameDuration;
+      moleTimeouts = new Array(HOLES).fill(null);
+      gameRunning = true;
+
+      buildBoard();
+      updateHUD();
+
+      startBtn.textContent = '⏸ プレイ中...';
+      startBtn.disabled = true;
+      document.querySelectorAll('.diff-btn').forEach(b => b.disabled = true);
+
+      // タイマー開始
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateHUD();
+        if (timeLeft <= 0) endGame();
+      }, 1000);
+
+      // 最初のモグラ出現
+      clearTimeout(spawnTimeout);
+      setTimeout(spawnMole, 500);
+    }
+
+    // ===== ゲーム終了 =====
+    function endGame() {
+      gameRunning = false;
+      clearInterval(timerInterval);
+      clearTimeout(spawnTimeout);
+      moleTimeouts.forEach(t => clearTimeout(t));
+
+      // 全モグラを格納
+      document.querySelectorAll('.mole').forEach(m => {
+        m.classList.remove('up', 'bonked');
+      });
+
+      startBtn.textContent = '▶ スタート';
+      startBtn.disabled = false;
+      document.querySelectorAll('.diff-btn').forEach(b => b.disabled = false);
+
+      // ハイスコア更新
+      const isHigh = score > highScore;
+      if (isHigh) {
+        highScore = score;
+        localStorage.setItem('mole_highscore', highScore);
+      }
+
+      // 結果表示
+      const icons = score >= 500 ? '🏆' : score >= 300 ? '🥇' : score >= 150 ? '🥈' : '🐾';
+      const messages = score >= 500 ? 'パーフェクト！！' : score >= 300 ? 'すごい！' : score >= 150 ? 'なかなかいけた！' : 'もう一回！';
+      document.getElementById('overlay-icon').textContent = icons;
+      document.getElementById('overlay-title').textContent = messages;
+      document.getElementById('overlay-score').textContent = score + ' pts';
+      document.getElementById('overlay-details').innerHTML =
+        `レベル: <strong>${level}</strong> ／ ミス: <strong>${misses}</strong>`;
+      document.getElementById('overlay-hi').textContent =
+        isHigh ? '★ NEW HIGH SCORE! ★' : `BEST: ${highScore} pts`;
+
+      setTimeout(() => overlay.classList.add('show'), 400);
+    }
+
+    // ===== 初期化 =====
+    buildBoard();
+    updateHUD();
+  </script>
+</body>
+</html>
