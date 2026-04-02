@@ -437,6 +437,84 @@
 
     .back-link:hover { color: var(--accent-5); }
 
+    /* 名前入力 */
+    .name-input-wrap {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .name-input {
+      flex: 1;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(89, 216, 255, 0.4);
+      background: rgba(5, 8, 20, 0.7);
+      color: var(--text);
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .name-input:focus { border-color: var(--accent-5); }
+    .name-input::placeholder { color: var(--text-dim); font-size: 0.85rem; }
+
+    /* ランキング画面 */
+    .ranking-screen { display: none; }
+    .ranking-screen.show { display: block; }
+    .result-screen.hide { display: none; }
+
+    .ranking-title {
+      font-family: 'Press Start 2P', cursive;
+      font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+      margin-bottom: 20px;
+      color: var(--accent-3);
+      letter-spacing: 0.05em;
+    }
+
+    .ranking-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 0.82rem;
+    }
+
+    .ranking-table th {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.4rem;
+      color: var(--text-dim);
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .ranking-table td {
+      padding: 8px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      text-align: center;
+      color: var(--text);
+    }
+
+    .ranking-table tr:nth-child(1) td { color: #ffd700; font-weight: bold; }
+    .ranking-table tr:nth-child(2) td { color: #c0c0c0; }
+    .ranking-table tr:nth-child(3) td { color: #cd7f32; }
+
+    .rank-num {
+      font-family: 'Press Start 2P', cursive;
+      font-size: 0.6rem;
+      width: 28px;
+    }
+
+    .rank-name { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rank-score { font-family: 'Press Start 2P', cursive; font-size: 0.65rem; color: var(--accent-3); }
+    .rank-diff  { font-size: 0.7rem; color: var(--text-dim); }
+    .rank-date  { font-size: 0.7rem; color: var(--text-dim); }
+
+    .my-rank-row td { background: rgba(255, 217, 61, 0.08); }
+
     /* コンボ表示 */
     #combo-popup {
       position: fixed;
@@ -491,14 +569,41 @@
   <!-- ゲームオーバーオーバーレイ -->
   <div class="overlay" id="overlay">
     <div class="overlay-box">
-      <span class="overlay-icon" id="overlay-icon">🏆</span>
-      <div class="overlay-title" id="overlay-title">ゲーム終了！</div>
-      <div class="overlay-score" id="overlay-score">0</div>
-      <div class="overlay-details" id="overlay-details"></div>
-      <div class="overlay-hi" id="overlay-hi"></div>
-      <button class="btn btn-primary" onclick="startGame()" style="margin-bottom:16px;width:100%">▶ もう一度プレイ</button>
-      <br>
-      <a href="../index.html" class="back-link">← ゲーム一覧へ戻る</a>
+
+      <!-- 結果画面 -->
+      <div class="result-screen" id="result-screen">
+        <span class="overlay-icon" id="overlay-icon">🏆</span>
+        <div class="overlay-title" id="overlay-title">ゲーム終了！</div>
+        <div class="overlay-score" id="overlay-score">0</div>
+        <div class="overlay-details" id="overlay-details"></div>
+        <div class="overlay-hi" id="overlay-hi"></div>
+        <!-- 名前入力 -->
+        <div class="name-input-wrap">
+          <input class="name-input" id="name-input" type="text" maxlength="12" placeholder="名前を入力（12文字まで）">
+          <button class="btn btn-primary" onclick="submitScore()" style="white-space:nowrap;padding:12px 16px">💾 保存</button>
+        </div>
+        <button class="btn btn-primary" onclick="startGame()" style="margin-bottom:12px;width:100%">▶ もう一度プレイ</button>
+        <button class="btn btn-secondary" onclick="showRanking()" style="margin-bottom:16px;width:100%;border-width:1px">🏅 ランキングを見る</button>
+        <a href="../index.html" class="back-link">← ゲーム一覧へ戻る</a>
+      </div>
+
+      <!-- ランキング画面 -->
+      <div class="ranking-screen" id="ranking-screen">
+        <div class="ranking-title">🏅 TOP 10 RANKING</div>
+        <div id="ranking-diff-tabs" style="display:flex;gap:6px;justify-content:center;margin-bottom:14px;flex-wrap:wrap"></div>
+        <table class="ranking-table" id="ranking-table">
+          <thead>
+            <tr>
+              <th>RANK</th><th>NAME</th><th>SCORE</th><th>DIFF</th><th>DATE</th>
+            </tr>
+          </thead>
+          <tbody id="ranking-body"></tbody>
+        </table>
+        <button class="btn btn-primary" onclick="startGame()" style="margin-bottom:12px;width:100%">▶ もう一度プレイ</button>
+        <button class="btn btn-secondary" onclick="backToResult()" style="margin-bottom:16px;width:100%;border-width:1px">← 結果へ戻る</button>
+        <a href="../index.html" class="back-link">← ゲーム一覧へ戻る</a>
+      </div>
+
     </div>
   </div>
 
@@ -550,6 +655,7 @@
     <!-- コントロール -->
     <div class="controls">
       <button class="btn btn-primary" id="start-btn" onclick="startGame()">▶ スタート</button>
+      <button class="btn btn-secondary" onclick="showRankingDirect()">🏅 ランキング</button>
       <a href="../index.html" class="btn btn-secondary">← もどる</a>
     </div>
   </div>
@@ -574,7 +680,8 @@
     let gameRunning = false;
     let timerInterval = null;
     let spawnTimeout = null;
-    let moleTimeouts = [];  // 各モグラの自動格納タイマー
+    let moleTimeouts = [];
+    let lastScore = 0; // 保存用に最後のスコアを保持
 
     // ===== DOM =====
     const board = document.getElementById('board');
@@ -585,6 +692,122 @@
     const startBtn      = document.getElementById('start-btn');
     const overlay       = document.getElementById('overlay');
     const comboPopup    = document.getElementById('combo-popup');
+
+    // ===== ランキングデータ管理 =====
+    function loadRankings() {
+      try { return JSON.parse(localStorage.getItem('mole_rankings') || '[]'); }
+      catch { return []; }
+    }
+
+    function saveRanking(name, sc, lv, diff) {
+      const rankings = loadRankings();
+      rankings.push({
+        name: name.trim() || 'ANONYMOUS',
+        score: sc,
+        level: lv,
+        difficulty: diff,
+        date: new Date().toLocaleDateString('ja-JP', { month:'2-digit', day:'2-digit' })
+      });
+      rankings.sort((a, b) => b.score - a.score);
+      const top = rankings.slice(0, 50); // 全難易度合わせて50件保存
+      localStorage.setItem('mole_rankings', JSON.stringify(top));
+      return top;
+    }
+
+    function submitScore() {
+      const nameInput = document.getElementById('name-input');
+      const name = nameInput.value.trim() || 'ANONYMOUS';
+      saveRanking(name, lastScore, level, difficulty);
+      nameInput.disabled = true;
+      document.querySelector('.name-input-wrap .btn').disabled = true;
+      document.querySelector('.name-input-wrap .btn').textContent = '✓ 保存済';
+      showRanking();
+    }
+
+    // ===== ランキング表示 =====
+    let rankingDiff = 'all'; // 表示中の難易度フィルタ
+
+    function showRanking(fromResult = true) {
+      document.getElementById('result-screen').classList.add('hide');
+      document.getElementById('ranking-screen').classList.add('show');
+      renderRankingTabs();
+      renderRankingTable();
+    }
+
+    function backToResult() {
+      document.getElementById('ranking-screen').classList.remove('show');
+      document.getElementById('result-screen').classList.remove('hide');
+    }
+
+    function showRankingDirect() {
+      document.getElementById('result-screen').classList.remove('hide');
+      document.getElementById('result-screen').style.display = 'none';
+      document.getElementById('ranking-screen').classList.add('show');
+      renderRankingTabs();
+      renderRankingTable();
+      overlay.classList.add('show');
+      // 「結果へ戻る」ボタンをゲーム画面に戻るように変える
+      document.querySelector('#ranking-screen .btn-secondary').textContent = '← 閉じる';
+      document.querySelector('#ranking-screen .btn-secondary').onclick = () => {
+        overlay.classList.remove('show');
+        document.getElementById('result-screen').style.display = '';
+        document.getElementById('ranking-screen').classList.remove('show');
+        document.querySelector('#ranking-screen .btn-secondary').textContent = '← 結果へ戻る';
+        document.querySelector('#ranking-screen .btn-secondary').onclick = backToResult;
+      };
+    }
+
+    function renderRankingTabs() {
+      const tabs = document.getElementById('ranking-diff-tabs');
+      const diffs = [
+        { key: 'all', label: '全て' },
+        { key: 'easy', label: 'EASY' },
+        { key: 'normal', label: 'NORMAL' },
+        { key: 'hard', label: 'HARD' },
+      ];
+      tabs.innerHTML = diffs.map(d => `
+        <button onclick="setRankingDiff('${d.key}')"
+          style="padding:6px 12px;border-radius:50px;font-family:'Press Start 2P',cursive;font-size:0.4rem;
+          border:1px solid rgba(255,255,255,0.2);cursor:pointer;transition:all 0.2s;
+          background:${rankingDiff===d.key?'rgba(255,255,255,0.15)':'transparent'};
+          color:${rankingDiff===d.key?'#eef3ff':'#b2b9d6'}">${d.label}</button>
+      `).join('');
+    }
+
+    function setRankingDiff(d) {
+      rankingDiff = d;
+      renderRankingTabs();
+      renderRankingTable();
+    }
+
+    function renderRankingTable() {
+      const all = loadRankings();
+      const filtered = rankingDiff === 'all' ? all : all.filter(r => r.difficulty === rankingDiff);
+      const top10 = filtered.slice(0, 10);
+      const myRankScore = lastScore;
+
+      const diffLabel = { easy: '🟢', normal: '🟡', hard: '🔴' };
+      const medals = ['🥇', '🥈', '🥉'];
+
+      const tbody = document.getElementById('ranking-body');
+      if (top10.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-dim);padding:20px;font-size:0.8rem">まだ記録がありません</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = top10.map((r, i) => `
+        <tr class="${r.score === myRankScore && r.difficulty === difficulty ? 'my-rank-row' : ''}">
+          <td class="rank-num">${medals[i] || (i + 1)}</td>
+          <td class="rank-name">${escapeHtml(r.name)}</td>
+          <td class="rank-score">${r.score}</td>
+          <td class="rank-diff">${diffLabel[r.difficulty] || r.difficulty}</td>
+          <td class="rank-date">${r.date}</td>
+        </tr>
+      `).join('');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
 
     // ===== 難易度 =====
     function setDifficulty(d) {
@@ -793,6 +1016,7 @@
     // ===== ゲーム開始 =====
     function startGame() {
       overlay.classList.remove('show');
+      rankingDiff = 'all';
 
       // リセット
       score = 0; misses = 0; level = 1; combo = 0;
@@ -820,6 +1044,23 @@
       setTimeout(spawnMole, 500);
     }
 
+    // ===== ゲーム開始時のオーバーレイリセット =====
+    function resetOverlay() {
+      document.getElementById('result-screen').classList.remove('hide');
+      document.getElementById('result-screen').style.display = '';
+      document.getElementById('ranking-screen').classList.remove('show');
+      // 名前入力欄リセット
+      const nameInput = document.getElementById('name-input');
+      nameInput.value = '';
+      nameInput.disabled = false;
+      const saveBtn = document.querySelector('.name-input-wrap .btn');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '💾 保存';
+      // ランキングボタンを元に戻す
+      document.querySelector('#ranking-screen .btn-secondary').textContent = '← 結果へ戻る';
+      document.querySelector('#ranking-screen .btn-secondary').onclick = backToResult;
+    }
+
     // ===== ゲーム終了 =====
     function endGame() {
       gameRunning = false;
@@ -836,6 +1077,8 @@
       startBtn.disabled = false;
       document.querySelectorAll('.diff-btn').forEach(b => b.disabled = false);
 
+      lastScore = score;
+
       // ハイスコア更新
       const isHigh = score > highScore;
       if (isHigh) {
@@ -844,9 +1087,9 @@
       }
 
       // 結果表示
-      const icons = score >= 500 ? '🏆' : score >= 300 ? '🥇' : score >= 150 ? '🥈' : '🐾';
+      const icons    = score >= 500 ? '🏆' : score >= 300 ? '🥇' : score >= 150 ? '🥈' : '🐾';
       const messages = score >= 500 ? 'パーフェクト！！' : score >= 300 ? 'すごい！' : score >= 150 ? 'なかなかいけた！' : 'もう一回！';
-      document.getElementById('overlay-icon').textContent = icons;
+      document.getElementById('overlay-icon').textContent  = icons;
       document.getElementById('overlay-title').textContent = messages;
       document.getElementById('overlay-score').textContent = score + ' pts';
       document.getElementById('overlay-details').innerHTML =
@@ -854,6 +1097,7 @@
       document.getElementById('overlay-hi').textContent =
         isHigh ? '★ NEW HIGH SCORE! ★' : `BEST: ${highScore} pts`;
 
+      resetOverlay();
       setTimeout(() => overlay.classList.add('show'), 400);
     }
 
