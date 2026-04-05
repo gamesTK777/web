@@ -170,7 +170,6 @@
 <div class="header">
   <h1>Tokyo DisneySea Dashboard</h1>
   <div class="subtitle">リアルタイム待ち時間 & パス販売状況 ＋ データ蓄積</div>
-  <div class="visit-date">訪問予定日: 2026年3月29日(日)</div>
   <div class="countdown" id="countdown"></div>
 </div>
 <div class="status-bar" id="status-bar">
@@ -192,7 +191,6 @@
   <button class="tab-btn" data-tab="hotel">🏨 ホテル</button>
 </div>
 <div class="content">
-
 <!-- アトラクションタブ -->
 <div class="tab-content active" id="tab-attractions">
   <div class="summary-bar">
@@ -220,7 +218,6 @@
   </div>
   <div id="attraction-container" class="attraction-grid"><div class="loading"><div class="spinner"></div><br>データ取得中...</div></div>
 </div>
-
 <!-- レストランタブ -->
 <div class="tab-content" id="tab-restaurants">
   <div class="info-section">
@@ -247,7 +244,6 @@
     </div>
   </div>
 </div>
-
 <!-- ショー・パレードタブ -->
 <div class="tab-content" id="tab-shows">
   <div class="info-section">
@@ -267,7 +263,6 @@
     </div>
   </div>
 </div>
-
 <!-- 履歴・トレンド -->
 <div class="tab-content" id="tab-history">
   <div class="info-section">
@@ -291,7 +286,6 @@
     <p style="font-size:.68em;color:var(--text-muted);margin-top:4px" id="storage-info">サーバーサイド: 読み込み中</p>
   </div>
 </div>
-
 <!-- ホテルタブ -->
 <div class="tab-content" id="tab-hotel">
   <div class="hotel-section">
@@ -315,14 +309,12 @@
       </div>
     </div>
   </div>
-
   <div class="hotel-section">
     <h3>🚌 無料シャトルバス</h3>
     <div class="hotel-tip">
       <div class="tip-title">ℹ️ 基本情報</div>
       宿泊者専用・毎日運行・予約不要（先着順）・所要時間 約30分
     </div>
-
     <div class="shuttle-note">バスはTDLを経由してTDSに向かいます。ホテル発車後 約20分でTDL着、さらに約10分でTDS着が目安です（道路状況により前後あり）。</div>
     <div class="shuttle-pair">
       <div class="shuttle-col">
@@ -457,7 +449,6 @@
         <div class="shuttle-note">※ 不明な場合はTDS出口スタッフに「コンフォートスイーツのシャトルバス」と確認</div>
       </div>
     </div>
-
     <div class="hotel-tip hotel-warning">
       <div class="tip-title">⚠️ 注意事項</div>
       ・予約不可、先着順。混雑時は次のバスをお待ちください<br>
@@ -467,7 +458,6 @@
       ・バスに乗れない場合はタクシーをご利用ください（約20分 / ¥2,500〜3,000）
     </div>
   </div>
-
   <div class="hotel-section">
     <h3>💡 お役立ちTips</h3>
     <div class="hotel-tip">
@@ -492,7 +482,6 @@
       パークでのアプリ操作（DPA購入・パス取得・待ち時間確認）でバッテリー消費が激しいため、モバイルバッテリー必須です。
     </div>
   </div>
-
   <div class="hotel-section">
     <h3>🔗 関連リンク</h3>
     <div class="link-grid">
@@ -503,14 +492,12 @@
     </div>
   </div>
 </div>
-
 <!-- 便利情報タブ -->
 <div class="tab-content" id="tab-info">
   <div class="weather-widget" id="weather-widget">
     <h3 style="color:var(--accent);font-size:.92em;margin-bottom:8px;border-bottom:1px solid #334;padding-bottom:5px">天気予報（浦安市 / Open-Meteo）</h3>
     <div id="weather-content"><div class="loading"><div class="spinner"></div><br>天気データ取得中...</div></div>
   </div>
-
   <div class="info-section"><h3>2026/3/29 訪問日情報</h3>
     <div class="info-grid">
       <div class="info-item"><div class="label">開園・閉園時間</div><div class="value" id="park-hours-info">取得中...</div></div>
@@ -519,7 +506,6 @@
       <div class="info-item"><div class="label">訪問日の曜日</div><div class="value">日曜日（春休み期間中 — 混雑が予想されます）</div></div>
     </div>
   </div>
-
   <div class="info-section"><h3>パスシステム解説</h3>
     <div class="info-grid">
       <div class="info-item"><div class="label">DPA (有料)</div><div class="value" style="font-size:.76em">体験時間を選んで購入。1,500〜2,000円/回(ショー2,500円)。購入後すぐ次を購入可(同施設は利用後)。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/disneypremieraccess.html" target="_blank">公式ガイド →</a></div></div>
@@ -527,7 +513,6 @@
       <div class="info-item"><div class="label">スタンバイパス (無料)</div><div class="value" style="font-size:.76em">指定時間に列に並べる権利。混雑時に発行。<br><a href="https://www.tokyodisneyresort.jp/tdr/guide/app_service/standbypass.html" target="_blank">公式ガイド →</a></div></div>
     </div>
   </div>
-
   <div class="info-section"><h3>便利リンク集</h3>
     <div class="link-grid">
       <a class="link-card" href="https://www.tokyodisneyresort.jp/tds/attraction.html" target="_blank"><div class="link-title">公式 アトラクション一覧</div><div class="link-desc">詳細情報・休止情報</div></a>
@@ -540,17 +525,14 @@
       <a class="link-card" href="https://reserve.tokyodisneyresort.jp/" target="_blank"><div class="link-title">レストラン予約(PS)</div><div class="link-desc">プライオリティ・シーティング予約</div></a>
     </div>
   </div>
-
   <div class="info-section"><h3>持ち物チェックリスト</h3><div style="font-size:.8em;line-height:1.8" id="checklist"></div></div>
 </div>
 </div>
-
 <div class="info-section" style="margin:10px 14px">
   <h3 style="cursor:pointer;color:var(--accent)" onclick="document.getElementById('debug-log').style.display=document.getElementById('debug-log').style.display==='none'?'block':'none'">デバッグログ (クリックで開閉)</h3>
   <pre id="debug-log" style="display:none;background:#0a0a0a;color:#0f0;padding:8px;border-radius:6px;font-size:.7em;max-height:250px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></pre>
 </div>
 <div class="powered-by">待ち時間データ: <a href="https://queue-times.com/" target="_blank">Queue-Times.com</a> ／ DPA・パス状況: <a href="https://disneyreal.asumirai.info/" target="_blank">ディズニーリアル</a> ／ 天気: <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a></div>
-
 <script>
 const PARK_ID=275;
 const API_BASE='https://queue-times.com/parks/'+PARK_ID+'/queue_times.json';
@@ -560,17 +542,13 @@ const CORS_PROXY_BUILDERS=[u=>u,u=>'https://corsproxy.io/?'+encodeURIComponent(u
 const REFRESH_INTERVAL=60000;
 // DB定数は不要（サーバーサイドに移行済み）
 const VISIT_DATE=new Date('2026-03-29T00:00:00+09:00');
-
 let autoRefreshTimer=null,allRides=[],dpaStatusData={},ppStatusData={},disneyRealWaitData={},restaurantWaitData={},currentProxyIndex=0;
-
 const nameJP={"20,000 Leagues Under the Sea":"海底2万マイル","Anna and Elsa's Frozen Journey":"アナとエルサのフローズンジャーニー","Aquatopia":"アクアトピア","Ariel's Playground":"アリエルのプレイグラウンド","Big City Vehicles":"ビッグシティ・ヴィークル","Blowfish Balloon Race":"ブローフィッシュ・バルーンレース","Caravan Carousel":"キャラバンカルーセル","DisneySea Electric Railway (American Waterfront)":"エレクトリックレールウェイ（アメフロ）","DisneySea Electric Railway (Port Discovery)":"エレクトリックレールウェイ（ポートディスカバリー）","DisneySea Transit Steamer Line (American Waterfront)":"トランジットスチーマーライン（アメフロ）","DisneySea Transit Steamer Line (Lost River Delta)":"トランジットスチーマーライン（ロストリバーデルタ）","DisneySea Transit Steamer Line (Mediterranean Harbor)":"トランジットスチーマーライン（メディテレーニアンハーバー）","Fairy Tinker Bell's Busy Buggies":"ティンカーベルのビジーバギー","Flounder's Flying Fish Coaster":"フランダーのフライングフィッシュコースター","Fortress Explorations":"フォートレス・エクスプロレーション","Indiana Jones Adventure\u00ae: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Indiana Jones Adventure: Temple of the Crystal Skull":"インディ・ジョーンズ・アドベンチャー","Jasmine's Flying Carpets":"ジャスミンのフライングカーペット","Journey to the Center of the Earth":"センター・オブ・ジ・アース","Jumpin' Jellyfish":"ジャンピン・ジェリーフィッシュ","Mermaid Lagoon Theater":"マーメイドラグーンシアター","Nemo & Friends SeaRider":"ニモ&フレンズ・シーライダー","Peter Pan's Never Land Adventure":"ピーターパンのネバーランドアドベンチャー","Raging Spirits":"レイジングスピリッツ","Rapunzel's Lantern Festival":"ラプンツェルのランタンフェスティバル","Scuttle's Scooters":"スカットルのスクーター","Sindbad's Storybook Voyage":"シンドバッド・ストーリーブック・ヴォヤッジ","Soaring: Fantastic Flight":"ソアリン：ファンタスティック・フライト","The Leonardo Challenge":"ザ・レオナルドチャレンジ","The Magic Lamp Theater":"マジックランプシアター","The Whirlpool":"ワールプール","Tower of Terror":"タワー・オブ・テラー","Toy Story Mania!":"トイ・ストーリー・マニア！","Turtle Talk":"タートル・トーク","Venetian Gondolas":"ヴェネツィアン・ゴンドラ"};
-
 const dpaKeywords=['soaring','toy story','tower of terror','center of the earth','journey to the center','peter pan','rapunzel','frozen journey','anna and elsa','believe'];
 const ppKeywords=['indiana jones','raging spirits','20,000 leagues','magic lamp','nemo','searider','turtle talk'];
 function isDPA(n){const l=n.toLowerCase();return dpaKeywords.some(k=>l.includes(k))}
 function isPP(n){const l=n.toLowerCase();return ppKeywords.some(k=>l.includes(k))}
 function getDPAPrice(n){const l=n.toLowerCase();if(l.includes('believe'))return 2500;if(isDPA(n))return 2000;return null}
-
 function guessArea(name){
   const n=name.toLowerCase();
   if(n.includes('frozen')||n.includes('anna')||n.includes('elsa'))return 'ファンタジースプリングス';
@@ -590,7 +568,6 @@ function guessArea(name){
   if(n.includes('nemo')||n.includes('aquatopia'))return 'ポートディスカバリー';
   return 'ディズニーシー';
 }
-
 const restaurants=[
   {name:'マゼランズ',area:'メディテレーニアンハーバー',type:'テーブルサービス',ps:true,cuisine:'コース料理',price:'¥¥¥¥',tip:'予約必須の人気店。記念日におすすめ'},
   {name:'リストランテ・ディ・カナレット',area:'メディテレーニアンハーバー',type:'テーブルサービス',ps:true,cuisine:'イタリアン',price:'¥¥¥',tip:'運河沿いテラス席が人気'},
@@ -614,7 +591,6 @@ const restaurants=[
   {name:'ルックアウト・クックアウト',area:'ファンタジースプリングス',type:'カウンター',ps:false,cuisine:'軽食',price:'¥',tip:'ピーターパンエリアのフード'},
   {name:'スナグリーダックリング',area:'ファンタジースプリングス',type:'カウンター',ps:false,cuisine:'軽食',price:'¥',tip:'ラプンツェルエリアのフード'},
 ];
-
 const shows=[
   {name:'ビリーヴ！～シー・オブ・ドリームス～',area:'メディテレーニアンハーバー',type:'ナイトショー',duration:30,dpa:true,dpaPrice:2500,lottery:false,times:['19:30'],note:'ハーバーの夜間ショー。DPA ¥2,500で鑑賞エリア確保可。'},
   {name:'ジャンボリミッキー！レッツ・ダンス！',area:'ドックサイドステージ',type:'ステージショー',duration:25,dpa:false,lottery:false,times:['10:40','12:00','14:25','16:45'],note:'参加型ダンスショー。開始30分前には並びましょう。'},
@@ -624,16 +600,13 @@ const shows=[
   {name:'ダッフィー＆フレンズのワンダフル・フレンドシップ',area:'メディテレーニアンハーバー',type:'ハーバーグリーティング',duration:15,dpa:false,lottery:false,times:['11:00','15:00'],note:'ダッフィーたちがボートで登場。'},
   {name:'ディズニーシー・トランジットスチーマーライン（グリーティング）',area:'ハーバー周辺',type:'グリーティング船',duration:10,dpa:false,lottery:false,times:['不定期'],note:'キャラクターがスチーマーに乗って登場。アプリでチェック。'},
 ];
-
 // DEBUG
 const debugLogs=[];
 function debugLog(msg){const ts=new Date().toLocaleTimeString('ja-JP');debugLogs.push(`[${ts}] ${msg}`);if(debugLogs.length>100)debugLogs.shift();console.log('[TDS]',msg);const el=document.getElementById('debug-log');if(el){el.textContent=debugLogs.slice(-20).join('\n');el.scrollTop=el.scrollHeight}}
-
 // サーバーサイドデータ (GitHub Actions で収集)
 const DATA_BASE_URL='data/';
 let serverDateIndex=[];
 let serverDataCache={};
-
 async function loadDateIndex(){
   try{
     const r=await fetch(DATA_BASE_URL+'index.json',{cache:'no-store'});
@@ -652,7 +625,6 @@ async function loadDateIndex(){
     populateDateSelector();
   }
 }
-
 function populateDateSelector(){
   const sel=document.getElementById('history-date-select');
   const opts=['<option value="all">全期間</option>'];
@@ -665,7 +637,6 @@ function populateDateSelector(){
   });
   sel.innerHTML=opts.join('');
 }
-
 async function fetchServerData(dateStr){
   if(serverDataCache[dateStr])return serverDataCache[dateStr];
   try{
@@ -679,7 +650,6 @@ async function fetchServerData(dateStr){
     return[];
   }
 }
-
 async function getRecords(df){
   let dates=[];
   if(!df||df==='all')dates=[...serverDateIndex];
@@ -691,22 +661,17 @@ async function getRecords(df){
   }
   return allRecs;
 }
-
 async function getAllRecords(){return getRecords('all')}
-
 function saveSnapshot(rides){
   // サーバーサイドに移行済みのため、ローカル保存は不要
   // （GitHub Actionsが収集を担当）
 }
-
 async function updateRecordCount(){
   const total=serverDateIndex.length;
   document.getElementById('storage-info').textContent=`サーバーサイド: ${total}日分`;
 }
-
 // FETCH: Queue-Times API
 async function fetchWithProxy(pi){const url=CORS_PROXY_BUILDERS[pi](API_BASE);const pn=pi===0?'Direct':new URL(url).hostname;debugLog(`試行#${pi+1}(${pn})`);const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),10000);try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(t);debugLog(`  → HTTP ${r.status}`);if(!r.ok)throw new Error(`HTTP ${r.status}`);const txt=await r.text();let json;try{json=JSON.parse(txt)}catch(e){throw new Error('JSON parse error')}if(!json.lands&&!json.rides){if(json.contents){json=JSON.parse(json.contents)}}debugLog(`  → lands:${json.lands?.length||0}, rides:${json.rides?.length||0}`);return json}catch(e){clearTimeout(t);debugLog(`  → エラー: ${e.message}`);throw e}}
-
 // FETCH: ディズニーリアル (DPA/PP + アトラクション待ち時間)
 // codetabsを最優先（corsproxy/alloriginsは不安定）
 const ATTR_PROXY_BUILDERS=[
@@ -768,7 +733,6 @@ async function fetchDPAStatus(){
   }
   debugLog('=== DPA取得失敗 ===');
 }
-
 // FETCH: レストラン待ち時間
 // レストランページはcorsproxy(403)/allorigins(タイムアウト)ではなくcodetabsのみ動作するため専用順序で試行
 const REST_PROXY_BUILDERS=[
@@ -824,7 +788,6 @@ async function fetchRestaurantWait(){
   debugLog('=== レストラン待ち時間取得失敗 ===');
   renderRestaurants();
 }
-
 // FETCH: Open-Meteo Weather
 async function fetchWeather(){
   debugLog('=== 天気取得開始 ===');
@@ -843,7 +806,6 @@ async function fetchWeather(){
     document.getElementById('sunrise-info').textContent='天気データ取得失敗';
   }
 }
-
 function weatherIcon(code){
   if(code<=1)return '\u2600\uFE0F';if(code<=3)return '\u26C5';if(code<=48)return '\uD83C\uDF2B\uFE0F';
   if(code<=55)return '\uD83C\uDF26\uFE0F';if(code<=57)return '\uD83C\uDF27\uFE0F';if(code<=65)return '\uD83C\uDF27\uFE0F';
@@ -858,7 +820,6 @@ function weatherText(code){
   if(code<=82)return 'にわか雨';if(code<=86)return 'にわか雪';if(code<=99)return '雷雨';
   return '不明';
 }
-
 function renderWeather(data){
   const now=new Date();const currentHour=now.getHours();const todayStr=now.toLocaleDateString('sv-SE');const visitStr='2026-03-29';
   let html='<div style="font-size:.78em;color:var(--text-muted);margin-bottom:4px">今日の時間帯別予報</div><div class="weather-hourly">';
@@ -876,7 +837,6 @@ function renderWeather(data){
   }
   html+='</div>';
   document.getElementById('weather-content').innerHTML=html;
-
   const visitIdx=dDays.indexOf(visitStr);
   if(visitIdx>=0){
     const sr=data.daily.sunrise[visitIdx];const ss=data.daily.sunset[visitIdx];
@@ -890,7 +850,6 @@ function renderWeather(data){
   }
   document.getElementById('park-hours-info').innerHTML='8:30\u301C21:00\uFF08\u4E88\u60F3\uFF09<br><small style="color:var(--text-muted)"><a href="https://www.tokyodisneyresort.jp/tds/monthly/calendar.html" target="_blank" style="color:var(--accent)">\u516C\u5F0F\u30AB\u30EC\u30F3\u30C0\u30FC\u3067\u78BA\u8A8D \u2192</a></small>';
 }
-
 // MAIN FETCH
 async function fetchAll(){
   const btn=document.getElementById('refresh-btn');btn.textContent='\u66F4\u65B0\u4E2D...';btn.disabled=true;
@@ -903,7 +862,6 @@ async function fetchAll(){
   fetchDPAStatus().then(()=>{crossRefWaitData();renderAttractions();renderShows()});
   fetchRestaurantWait();
 }
-
 // Queue-Times is_open=false をディズニーリアルのデータで補正
 function crossRefWaitData(){
   if(!Object.keys(disneyRealWaitData).length)return;
@@ -946,9 +904,7 @@ function crossRefWaitData(){
     updateSummary();
   }
 }
-
 function setStatus(type,text){const d=document.getElementById('status-dot');const t2=document.getElementById('status-text');d.className='status-dot '+type;t2.textContent=text;t2.style.color=type==='ok'?'var(--green)':type==='warn'?'var(--yellow)':type==='err'?'var(--red)':'var(--text-muted)'}
-
 function processData(data){
   allRides=[];
   if(Array.isArray(data.lands)&&data.lands.length>0){data.lands.forEach(land=>{if(Array.isArray(land.rides))land.rides.forEach(ride=>{ride._area=land.name;ride._dpa=isDPA(ride.name);ride._pp=isPP(ride.name);allRides.push(ride)})})}
@@ -961,7 +917,6 @@ function processData(data){
   else setStatus('warn','API\u63A5\u7D9A\u4E2D \u2014 \u5F85\u3061\u6642\u9593\u30C7\u30FC\u30BF\u306A\u3057');
   updateSummary();renderAttractions();saveSnapshot(allRides);populateRideSelector();
 }
-
 // UI: Summary
 function updateSummary(){
   const openR=allRides.filter(r=>r.is_open);const waits=openR.map(r=>r.wait_time).filter(w=>w>0);
@@ -976,12 +931,10 @@ function updateSummary(){
   const pct=Math.min(100,(avg/80)*100);const f=document.getElementById('crowd-fill');f.style.width=pct+'%';f.style.background=avg>60?'var(--red)':avg>40?'var(--orange)':avg>25?'var(--yellow)':'var(--green)';
 }
 function crowdCls(w){return w>60?'vhigh':w>40?'high':w>20?'med':'low'}
-
 // UI: Attractions
 function getJPName(en){return nameJP[en]||en}
 function getDPAStatusForRide(enName){const jp=getJPName(enName);for(const[k,v] of Object.entries(dpaStatusData)){if(jp.includes(k)||k.includes(jp.replace(/[\u30FB\uFF1A]/g,'')))return v;const k2=k.replace(/[\s\u3000\u30FB]/g,'');const j2=jp.replace(/[\s\u3000\u30FB\uFF1A]/g,'');if(j2.includes(k2)||k2.includes(j2))return v}return null}
 function getPPStatusForRide(enName){const jp=getJPName(enName);for(const[k,v] of Object.entries(ppStatusData)){const k2=k.replace(/[\s\u3000\u30FB]/g,'');const j2=jp.replace(/[\s\u3000\u30FB\uFF1A]/g,'');if(j2.includes(k2)||k2.includes(j2))return v}return null}
-
 function renderAttractions(){
   let rides=[...allRides];
   const filter=document.getElementById('filter-select').value;
@@ -1008,7 +961,6 @@ function renderAttractions(){
     const src=r._correctedByDR?'ディズニーリアル':'Queue-Times';
     return `<div class="attraction-card ${wc}"><div class="name">${jp}</div><div class="name-en">${r.name!==jp?r.name:''}</div><div class="wait-badge" style="color:${wCol}">${r.is_open?r.wait_time:'--'}<span class="unit">${r.is_open?'分':''}</span></div><div class="tags">${tags.join('')}</div><div class="meta">${r.last_updated?'更新:'+new Date(r.last_updated).toLocaleTimeString('ja-JP'):''} (${src})</div></div>`}).join('');
 }
-
 // UI: Restaurants
 function normRest(s){return s.replace(/[\s\u3000\u30FB\.\-・（）()「」『』]/g,'');}
 function getRestaurantWait(name){
@@ -1045,7 +997,6 @@ function renderRestaurants(){
     const hoursTag=lw&&lw.hours?`<span class="tag" style="background:#333;color:var(--accent)">${lw.hours}</span>`:'';
     return `<div class="restaurant-card${lw&&(lw.closed||lw.ended)?' closed':''}">${waitDisplay?`<div class="wait-badge" style="color:${waitColor}">${waitDisplay}</div>`:''}<div class="name">${r.name}</div><div class="tags"><span class="tag tag-area">${r.area}</span>${r.ps?'<span class="tag tag-dpa">PS予約可</span>':''}<span class="tag" style="background:#455a64;color:#cfd8dc">${r.type}</span><span class="tag" style="background:#333;color:#aaa">${r.price}</span>${statusTag}${hoursTag}</div><div class="type">${r.cuisine}</div><div class="wait-info">💡 ${r.tip}</div></div>`}).join('');
 }
-
 // DPA status lookup for shows (fuzzy match on show name)
 function getDPAStatusForShow(showName){
   const s2=showName.replace(/[\s\u3000\u30FB\uFF5E\uFF01]/g,'');
@@ -1055,7 +1006,6 @@ function getDPAStatusForShow(showName){
   }
   return null;
 }
-
 // UI: Shows
 function renderShows(){
   const now=new Date();const cm=now.getHours()*60+now.getMinutes();
@@ -1078,22 +1028,18 @@ function renderShows(){
     tags.push(`<span class="tag tag-area">${s.area}</span>`);
     return `<div class="show-card"><div class="name">${s.name}</div><div class="tags">${tags.join('')}</div><div class="show-times">${timeBadges}</div><div class="show-info">\u23F1 ${s.duration}\u5206 \uFF0F ${s.note}</div></div>`}).join('');
 }
-
 // HISTORY
 function populateRideSelector(){const s=document.getElementById('history-ride-select');const cur=s.value;const names=new Set();allRides.forEach(r=>names.add(getJPName(r.name)));const opts=['<option value="__avg__">\u5168\u4F53\u5E73\u5747</option>'];[...names].sort().forEach(n=>opts.push(`<option value="${n}">${n}</option>`));s.innerHTML=opts.join('');s.value=cur||'__avg__'}
 async function renderHistory(){const df=document.getElementById('history-date-select').value;const rf=document.getElementById('history-ride-select').value;const recs=await getRecords(df);const stEl=document.getElementById('history-stats');const logEl=document.getElementById('history-log');if(!recs.length){stEl.innerHTML='';logEl.innerHTML='<p style="color:var(--text-muted);text-align:center;padding:20px">\u9078\u629E\u671F\u9593\u306B\u30C7\u30FC\u30BF\u306A\u3057</p>';clearChart();return}const por=recs.filter(r=>r.parkOpen);const aoa=por.length?Math.round(por.reduce((a,r)=>a+r.avgWait,0)/por.length):0;const mom=por.length?Math.max(...por.map(r=>r.maxWait)):0;const ud=[...new Set(recs.map(r=>r.date))];stEl.innerHTML=`<div class="history-stat-card"><div class="hs-label">\u8A18\u9332\u6570</div><div class="hs-value">${recs.length}</div></div><div class="history-stat-card"><div class="hs-label">\u8A18\u9332\u65E5\u6570</div><div class="hs-value">${ud.length}\u65E5</div></div><div class="history-stat-card"><div class="hs-label">\u5E73\u5747\u5F85\u3061(\u55B6\u696D\u4E2D)</div><div class="hs-value" style="color:${aoa>40?'var(--orange)':'var(--green)'}">${aoa}\u5206</div></div><div class="history-stat-card"><div class="hs-label">\u6700\u9577\u5F85\u3061(\u5168\u671F\u9593)</div><div class="hs-value" style="color:var(--red)">${mom}\u5206</div></div>`;drawChart(por,rf);const recent=recs.slice(-50).reverse();let th='<table><tr><th>\u65E5\u4ED8</th><th>\u6642\u523B</th><th>\u5E73\u5747</th><th>\u6700\u9577</th><th>\u904B\u55B6</th></tr>';recent.forEach(r=>{th+=`<tr><td>${r.date}</td><td>${r.time}</td><td style="color:${r.avgWait>40?'var(--orange)':'var(--green)'}">${r.avgWait}\u5206</td><td style="color:${r.maxWait>60?'var(--red)':'var(--yellow)'}">${r.maxWait}\u5206</td><td>${r.openCount}/${r.totalCount}</td></tr>`});th+='</table>';logEl.innerHTML=th}
 function drawChart(recs,rf){const cv=document.getElementById('history-chart');const ctx=cv.getContext('2d');const rect=cv.parentElement.getBoundingClientRect();cv.width=Math.max(rect.width-24,500);cv.height=280;ctx.clearRect(0,0,cv.width,cv.height);if(!recs.length){clearChart();return}let pts;if(rf==='__avg__')pts=recs.map(r=>({t:r.time,d:r.date,v:r.avgWait}));else pts=recs.map(r=>{const rd=r.rides.find(x=>x.name===rf);return{t:r.time,d:r.date,v:rd&&rd.open?rd.wait:null}}).filter(p=>p.v!==null);if(!pts.length){clearChart();return}const mx=Math.max(...pts.map(p=>p.v),10);const pT=28,pB=36,pL=46,pR=16;const cW=cv.width-pL-pR,cH=cv.height-pT-pB;ctx.strokeStyle='#223';ctx.lineWidth=1;for(let i=0;i<=4;i++){const y=pT+(cH/4)*i;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(pL+cW,y);ctx.stroke();ctx.fillStyle='#667';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(Math.round(mx-(mx/4)*i)+'\u5206',pL-5,y+4)}ctx.beginPath();ctx.strokeStyle='#4fc3f7';ctx.lineWidth=2;pts.forEach((p,i)=>{const x=pL+(i/Math.max(pts.length-1,1))*cW;const y=pT+cH-(p.v/mx)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();ctx.lineTo(pL+cW,pT+cH);ctx.lineTo(pL,pT+cH);ctx.closePath();ctx.fillStyle='rgba(79,195,247,.1)';ctx.fill();ctx.fillStyle='#667';ctx.font='9px sans-serif';ctx.textAlign='center';const step=Math.max(1,Math.floor(pts.length/10));for(let i=0;i<pts.length;i+=step){const x=pL+(i/Math.max(pts.length-1,1))*cW;ctx.fillText(pts[i].d.slice(5)+' '+pts[i].t,x,cv.height-6)}ctx.fillStyle='#4fc3f7';ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.fillText(rf==='__avg__'?'\u5168\u4F53\u5E73\u5747\u5F85\u3061\u6642\u9593\u63A8\u79FB':rf+' \u5F85\u3061\u6642\u9593\u63A8\u79FB',pL,16)}
 function clearChart(){const cv=document.getElementById('history-chart');const ctx=cv.getContext('2d');cv.width=cv.parentElement.getBoundingClientRect().width-24;cv.height=280;ctx.clearRect(0,0,cv.width,cv.height);ctx.fillStyle='#556';ctx.font='13px sans-serif';ctx.textAlign='center';ctx.fillText('\u30C7\u30FC\u30BF\u306A\u3057',cv.width/2,140)}
-
 // Data mgmt
 async function exportData(){const r=await getAllRecords();dl(new Blob([JSON.stringify(r,null,2)],{type:'application/json'}),`tds-${new Date().toLocaleDateString('sv-SE')}.json`)}
 async function exportCSV(){const r=await getAllRecords();if(!r.length){alert('データなし');return}let c='date,time,avgWait,maxWait,openCount,totalCount\n';r.forEach(x=>{c+=`${x.date},${x.time},${x.avgWait},${x.maxWait},${x.openCount},${x.totalCount}\n`});dl(new Blob([c],{type:'text/csv'}),`tds-${new Date().toLocaleDateString('sv-SE')}.csv`)}
 function dl(b,f){const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
-
 // Checklist & Countdown
 function renderChecklist(){const items=['\u30D1\u30FC\u30AF\u30C1\u30B1\u30C3\u30C8(\u30A2\u30D7\u30EA\u306B\u8868\u793A\u78BA\u8A8D)','\u30B9\u30DE\u30FC\u30C8\u30D5\u30A9\u30F3 & \u30E2\u30D0\u30A4\u30EB\u30D0\u30C3\u30C6\u30EA\u30FC','TDR\u516C\u5F0F\u30A2\u30D7\u30EA(\u6700\u65B0\u7248\u306B\u66F4\u65B0)','\u30AF\u30EC\u30B8\u30C3\u30C8\u30AB\u30FC\u30C9 / \u96FB\u5B50\u30DE\u30CD\u30FC','\u96E8\u5177(\u6298\u308A\u305F\u305F\u307F\u5098/\u30EC\u30A4\u30F3\u30B3\u30FC\u30C8)','\u52D5\u304D\u3084\u3059\u3044\u9774','\u65E5\u713C\u3051\u6B62\u3081','\u98F2\u307F\u7269(\u30DA\u30C3\u30C8\u30DC\u30C8\u30EB)','\u30EC\u30B8\u30E3\u30FC\u30B7\u30FC\u30C8(\u30B7\u30E7\u30FC\u89B3\u8CDE\u7528)','PS\u4E88\u7D04\u78BA\u8A8D','\u30E2\u30D0\u30A4\u30EBSuica/PASMO'];document.getElementById('checklist').innerHTML=items.map(i=>`<label style="display:block;cursor:pointer;padding:2px 0"><input type="checkbox" style="accent-color:var(--accent);margin-right:8px" onchange="this.parentElement.style.textDecoration=this.checked?'line-through':'none';this.parentElement.style.opacity=this.checked?'.5':'1'">${i}</label>`).join('')}
-function updateCountdown(){const d=VISIT_DATE-new Date();if(d<=0){document.getElementById('countdown').textContent='\u672C\u65E5\u304C\u8A2A\u554F\u65E5\u3067\u3059\uFF01\u697D\u3057\u3093\u3067\u304D\u3066\u304F\u3060\u3055\u3044\uFF01';return}document.getElementById('countdown').textContent=`\u8A2A\u554F\u307E\u3067\u3042\u3068 ${Math.floor(d/864e5)}\u65E5 ${Math.floor((d%864e5)/36e5)}\u6642\u9593`}
-
+function updateCountdown(){const d=VISIT_DATE-new Date();if(d<=0){document.getElementById('countdown').textContent='';return}document.getElementById('countdown').textContent=`\u8A2A\u554F\u307E\u3067\u3042\u3068 ${Math.floor(d/864e5)}\u65E5 ${Math.floor((d%864e5)/36e5)}\u6642\u9593`}
 // TABS & INIT
 document.querySelectorAll('.tab-btn').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('tab-'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='history')renderHistory()})});
 document.getElementById('sort-select').addEventListener('change',renderAttractions);
@@ -1107,7 +1053,6 @@ document.getElementById('auto-refresh').addEventListener('change',function(){thi
 function startAR(){stopAR();autoRefreshTimer=setInterval(fetchAll,REFRESH_INTERVAL)}
 function stopAR(){if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null}}
 setInterval(renderShows,60000);
-
 (async function init(){
   try{await loadDateIndex();await updateRecordCount()}catch(e){console.warn('Server data init error:',e)}
   renderRestaurants();renderShows();renderChecklist();updateCountdown();
