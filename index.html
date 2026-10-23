@@ -225,6 +225,15 @@
       transition: transform 0.3s ease;
     }
 
+    /* 神経衰弱の画像アイコンのみ適用 */
+    .game-icon--image { overflow: hidden; }
+    .game-icon--image img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
     .game-card:hover .game-icon { transform: scale(1.1) rotate(-3deg); }
 
     .game-title {
@@ -344,7 +353,7 @@
       </a>
 
       <a href="memory/index.html" class="game-card">
-        <div class="game-icon">🧠</div>
+        <div class="game-icon game-icon--image"><img src="memory_game_icon.webp" alt="神経衰弱のコーギーカードアイコン" width="80" height="80" loading="lazy"></div>
         <div class="game-title">神経衰弱</div>
         <p class="game-desc">カードのペアを見つけよう。記憶力を駆使して、最少手数を目指せ。</p>
         <div class="play-btn">PLAY →</div>
