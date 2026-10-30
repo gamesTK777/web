@@ -27,3 +27,13 @@
 .ranking-notice{font-size:11px!important;line-height:1.7!important;color:#a1afc1!important}#ranking-save-status{font-size:13px;color:#b7ff63}
 .ranking-table-wrap{margin-top:20px}.ranking-table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.ranking-table th{font-size:10px;color:#90a2b8;letter-spacing:1px;text-align:left;padding:10px 5px}.ranking-table td{padding:11px 5px;border-bottom:1px solid #253042;font-size:13px}.ranking-table td:nth-child(2){max-width:220px;overflow-wrap:anywhere}.ranking-table th:nth-child(n+3),.ranking-table td:nth-child(n+3){text-align:right;white-space:nowrap}.ranking-table td:first-child{color:#687d98;width:36px}.ranking-table tr:nth-child(-n+3) td:first-child{color:#b7ff63}.ranking-table .your-record{background:#b7ff6310}.ranking-bottom{display:flex;gap:15px;align-items:center;justify-content:space-between}#ranking-status{font-size:12px}.ranking-bottom button{width:auto;white-space:nowrap}
 @media(max-width:440px){#ranking-dialog{padding:20px}.ranking-entry{flex-direction:column}.ranking-entry .primary-button{width:100%}.ranking-table td{font-size:12px}.ranking-table td:nth-child(2){max-width:140px}}
+
+/* Clear celebrations and independent music/effect controls. */
+#music[aria-pressed="true"],#sound[aria-pressed="true"]{color:#caff87;border-color:#51683c}
+.board-frame.line-clear-fx{animation:line-glow .65s ease-out}.board-frame.quad-clear-fx{animation:quad-glow 1.4s ease-out}
+@keyframes line-glow{10%{border-color:#d4fbff;box-shadow:0 0 28px #54e5f455,inset 0 0 18px #54e5f422}100%{border-color:#4c6870}}
+@keyframes quad-glow{8%{border-color:#fff;box-shadow:0 0 70px #b7ff6377,0 0 25px #54e5f477,inset 0 0 45px #b7ff6333}45%{border-color:#d5ff82;box-shadow:0 0 42px #54e5f444}100%{border-color:#4c6870}}
+.board-toast.quad-toast{font-size:clamp(30px,4vw,46px);letter-spacing:-1px;color:#e2ffb4!important;text-shadow:0 2px 7px #102500,0 0 18px #b7ff63,0 0 40px #54e5f4}
+.board-toast.quad-toast.visible{animation:quad-title 1.6s cubic-bezier(.18,.8,.2,1) both}
+@keyframes quad-title{0%{transform:scale(.65) translateY(8px);opacity:0}15%{transform:scale(1.12);opacity:1}30%,80%{transform:scale(1);opacity:1}100%{transform:scale(1.02);opacity:1}}
+@media(max-width:560px){.brand .muted{display:none}.topbar{padding-left:12px;padding-right:12px}.top-actions{gap:5px}.icon-button{min-width:30px;font-size:11px}.icon-button span{font-size:8px;padding:0 2px}#music{padding:0 5px}.board-toast.quad-toast{font-size:29px}}
