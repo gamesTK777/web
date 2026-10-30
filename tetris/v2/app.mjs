@@ -1,5 +1,6 @@
 import {GameAudio} from './audio.mjs';
 import {ClearEffects} from './clear-effects.mjs';
+import {KeyboardInput,GestureInput,bindGestures,KEY_ACTIONS} from './input.mjs';
 import {beginRankingRun, showRanking} from './ranking.mjs';
 import {Game, SHAPES, COLORS, SKILLS, MAX_ENERGY} from './engine.mjs';
 
@@ -12,7 +13,8 @@ let game=null, mode='arcade', particles=[], beams=[], trails=[], shake=0, flash=
 const soundtrack=new GameAudio(), clearEffects=new ClearEffects();
 let last=performance.now(), hudTime=0, toastTime=0;
 let reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const repeat=new Map(), pointers=new Map();
+const keyboard=new KeyboardInput(), gestures=new GestureInput(name=>action(name));
+let gestureBinding=null;
 let records={arcade:0,sprint:null};
 try {
   const saved=JSON.parse(localStorage.getItem('tk777-neonshift-records')||'{}');
@@ -68,6 +70,7 @@ function burst(cells, multiplier=1) {
   if(particles.length>450)particles.splice(0,particles.length-450);
 }
 function event(e) {
+  if(['lock','hold','skill'].includes(e.type))resetInput();
   if(e.type==='cascadeFall')fallingCells=e.cells.map(c=>({...c,life:.1}));
   if(e.type==='cascadeClear') {
     fallingCells=fallingCells.filter(c=>!e.rows.includes(c.y));clearCelebration(e);
@@ -104,7 +107,7 @@ function bindIntro() {
   });
   $('start').onclick=start;
 }
-function resetInput(){repeat.clear();pointers.clear();}
+function resetInput(){keyboard.reset();gestureBinding?.reset();}
 function start() {
   document.body.classList.add('session-active');
   initAudio();clearEffects.reset();resetInput();particles=[];beams=[];trails=[];fallingCells=[];shake=0;flash=0;
@@ -137,7 +140,7 @@ function finish() {
   showRanking(mode,{score:game.score,lines:game.lines,duration:Math.max(1000,Math.round(game.elapsed)),won,session:rankingSession});
 }
 function action(name) {
-  if(!game||game.state!=='playing'||dialog.open||rankingDialog.open)return;
+  if(!game||game.state!=='playing'||game.cascade||dialog.open||rankingDialog.open)return;
   if(name==='left')game.move(-1);
   if(name==='right')game.move(1);
   if(name==='down')game.softDrop();
@@ -148,30 +151,26 @@ function action(name) {
   if(name in SKILLS&&!game.useSkill(name))tone([100],.06,'triangle');
   updateHud();
 }
-const keyMap={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowDown:'down',KeyS:'down',ArrowUp:'rotate',KeyX:'rotate',KeyZ:'rotateLeft',Space:'drop',KeyC:'hold',ShiftLeft:'hold',ShiftRight:'hold',Digit1:'pulse',Digit2:'avalanche',Digit3:'prism',Numpad1:'pulse',Numpad2:'avalanche',Numpad3:'prism'};
-function press(id, name) {
-  action(name);
-  if(['left','right','down'].includes(name))repeat.set(id,{name,next:performance.now()+(name==='down'?45:160)});
-}
 document.addEventListener('keydown',e=>{
-  if(dialog.open||rankingDialog.open||e.ctrlKey||e.metaKey||e.altKey||e.target.matches('input,select,textarea'))return;
+  if(dialog.open||rankingDialog.open||e.ctrlKey||e.metaKey||e.altKey||e.target.matches('input,select,textarea')||e.target.isContentEditable){resetInput();return;}
   if(['Space','Enter'].includes(e.code)&&e.target.closest('button,a'))return;
   if(e.code==='Enter'&&!game){e.preventDefault();start();return;}
   if(['KeyP','Escape'].includes(e.code)) {
     if(!game||!['playing','paused'].includes(game.state))return;
     e.preventDefault();if(e.repeat)return;game.state==='paused'?resume():pause();return;
   }
-  const name=keyMap[e.code];if(!name||game?.state!=='playing')return;
-  e.preventDefault();if(!e.repeat)press(e.code,name);
+  if(!KEY_ACTIONS[e.code]||game?.state!=='playing'||game.cascade)return;
+  e.preventDefault();gestureBinding?.reset();const name=keyboard.press(e.code,e.repeat);if(name)action(name);
 });
-document.addEventListener('keyup',e=>repeat.delete(e.code));
+window.addEventListener('keyup',e=>keyboard.release(e.code),true);
+gestureBinding=bindGestures([canvas,$('gesture-pad')].filter(Boolean),{
+  input:gestures,enabled:()=>game?.state==='playing'&&!game.cascade&&!dialog.open&&!rankingDialog.open,
+  unit:()=>canvas.getBoundingClientRect().width/10,onBegin:()=>keyboard.reset()
+});
 document.querySelectorAll('[data-action]').forEach(button=>{
-  button.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();if(game?.state!=='playing')return;button.setPointerCapture(e.pointerId);pointers.set(e.pointerId,button);press('pointer'+e.pointerId,button.dataset.action);});
-  const release=e=>{repeat.delete('pointer'+e.pointerId);pointers.delete(e.pointerId);};
-  button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
-  button.addEventListener('click',e=>{if(e.detail===0)action(button.dataset.action);});
+  button.addEventListener('click',()=>{resetInput();action(button.dataset.action);});
 });
-document.querySelectorAll('[data-skill]').forEach(button=>button.onclick=()=>{action(button.dataset.skill);if(game?.state==='playing')canvas.focus({preventScroll:true});});
+document.querySelectorAll('[data-skill]').forEach(button=>button.onclick=()=>{resetInput();action(button.dataset.skill);if(game?.state==='playing')canvas.focus({preventScroll:true});});
 $('pause').onclick=()=>game?.state==='paused'?resume():pause();
 window.addEventListener('blur',()=>{resetInput();pause();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){resetInput();pause();}});
@@ -181,7 +180,12 @@ $('help').onclick=openHelp;$('settings').onclick=openHelp;
 $('close-help').onclick=() => dialog.close();$('close-help-bottom').onclick=()=>dialog.close();
 $('reduced-motion').onchange=e=>{reduced=e.target.checked;document.body.classList.toggle('reduced-motion',reduced);if(reduced){clearEffects.reset();particles=[];shake=0;flash=0;}try{localStorage.setItem('tk777-neonshift-motion',reduced?'reduced':'full');}catch{}};
 $('sound').onclick=()=>{soundtrack.sfxEnabled=!soundtrack.sfxEnabled;if(game?.state==='playing')initAudio();syncAudioButtons();saveAudioSettings();};
-window.addEventListener('pagehide',()=>soundtrack.setPlaying(false));
+window.addEventListener('pagehide',()=>{resetInput();pause();soundtrack.setPlaying(false);});
+if($('button-controls')){
+  try{$('button-controls').checked=localStorage.getItem('neonshift-buttons')==='show';}catch{}
+  const sync=()=>{document.body.classList.toggle('show-button-controls',$('button-controls').checked);resetInput();};
+  sync();$('button-controls').onchange=()=>{sync();try{localStorage.setItem('neonshift-buttons',$('button-controls').checked?'show':'hide');}catch{}};
+}
 
 function updateHud() {
   const g=game;
@@ -261,7 +265,6 @@ function render(dt) {
 function frame(now) {
   const elapsed=Math.max(0,now-last),dt=Math.min(50,elapsed);last=now;
   if(game?.state==='playing') {
-    for(const r of repeat.values())if(now>=r.next){action(r.name);r.next=now+(r.name==='down'?35:45);}
     // Sprint records measure real play time even when rendering temporarily stalls.
     game.elapsed+=elapsed-dt;game.update(dt);
   }
