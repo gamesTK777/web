@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#0a101b">
   <meta name="description" content="NEON SHIFT — 3つのスキルで限界を超える、TK777の新しいブロックパズル。PCでもスマホでも。">
   <title>NEON SHIFT / TETRIS — TK777 ARCADE</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="v2/style.css">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
   <header class="topbar">
     <a class="brand" href="../index.html"><span class="brand-icon">▦</span> TK777 <span class="muted">/ ARCADE</span></a>
-    <div class="top-actions"><span class="online"><i></i> LOCAL PLAY</span><button id="sound" class="icon-button" aria-label="効果音をオンにする" aria-pressed="false">♪ <span>OFF</span></button><button id="help" class="icon-button" aria-label="遊び方を開く">?</button></div>
+    <div class="top-actions"><button id="ranking-open" class="icon-button">TOP 10</button><button id="sound" class="icon-button" aria-label="効果音をオンにする" aria-pressed="false">♪ <span>OFF</span></button><button id="help" class="icon-button" aria-label="遊び方を開く">?</button></div>
   </header>
 
   <main class="shell">
@@ -42,7 +42,7 @@
               <button id="start" class="primary-button">PLAY NOW <span>→</span></button><p class="start-hint">タップして開始 / Enter</p>
             </div>
           </div>
-          <div id="freeze-indicator" class="freeze-indicator" hidden>❄ TIME SLOW <span></span></div>
+          <div id="cascade-indicator" class="cascade-indicator" hidden>⇊ AVALANCHE <span></span></div>
         </div>
         <div class="board-bottom"><span id="combo">COMBO <b>—</b></span><span>10 × 20 <i>•</i> <span id="speed">1.0× SPEED</span></span></div>
         <div class="touch-controls" aria-label="タッチ操作">
@@ -53,10 +53,10 @@
 
       <aside class="right-panel">
         <section class="panel next-panel"><div class="panel-label">NEXT <span>5 PIECES</span></div><canvas id="next" width="180" height="282" aria-label="次の5つのブロック"></canvas></section>
-        <section class="panel energy-panel"><div class="panel-label">SKILL ENERGY <span>ϟ</span></div><div class="energy-number"><strong id="energy">35</strong><span>/ 100</span><span id="energy-state">CHARGING</span></div><div class="energy-track" role="progressbar" aria-label="スキルエネルギー" aria-valuemin="0" aria-valuemax="100" aria-valuenow="35"><span id="energy-bar"></span></div><p>ライン消去 +18〜90 / 設置 +2</p></section>
+        <section class="panel energy-panel"><div class="panel-label">SKILL ENERGY <span>ϟ</span></div><div class="energy-number"><strong id="energy">35</strong><span>/ 200</span><span id="energy-state">CHARGING</span></div><div class="energy-track" role="progressbar" aria-label="スキルエネルギー" aria-valuemin="0" aria-valuemax="200" aria-valuenow="35"><span id="energy-bar"></span></div><p>ライン消去 +18〜90 / 設置 +2</p></section>
         <div class="skill-list" aria-label="必殺技">
           <button class="skill pulse" data-skill="pulse" disabled><span class="skill-icon">≋</span><span class="skill-text"><strong>PULSE BREAK</strong><small>下から3段を消去</small></span><span class="skill-cost"><kbd>1</kbd><b>60 ϟ</b></span></button>
-          <button class="skill freeze" data-skill="freeze" disabled><span class="skill-icon">❄</span><span class="skill-text"><strong>TIME SLOW</strong><small>8秒間、落下速度を1/4に</small></span><span class="skill-cost"><kbd>2</kbd><b>45 ϟ</b></span></button>
+          <button class="skill avalanche" data-skill="avalanche" disabled><span class="skill-icon">⇊</span><span class="skill-text"><strong>AVALANCHE</strong><small>隙間へ崩落、連鎖で大量消去</small></span><span class="skill-cost"><kbd>2</kbd><b>200 ϟ</b></span></button>
           <button class="skill prism" data-skill="prism" disabled><span class="skill-icon">▰</span><span class="skill-text"><strong>PRISM SHIFT</strong><small>今のブロックを I に変換</small></span><span class="skill-cost"><kbd>3</kbd><b>35 ϟ</b></span></button>
         </div>
         <p id="skill-hint" class="skill-hint">数字キー / タップで発動</p>
@@ -66,7 +66,14 @@
     <footer class="footer"><div><span>CONTROLS</span><span><kbd>←</kbd><kbd>→</kbd> 移動</span><span><kbd>↑</kbd> 回転</span><span><kbd>SPACE</kbd> 落下</span><span><kbd>C</kbd> ホールド</span><span><kbd>1</kbd>–<kbd>3</kbd> スキル</span></div><button id="settings">操作・設定 ↗</button></footer>
   </main>
 
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-top"><span class="eyebrow">HOW TO SHIFT</span><button id="close-help" aria-label="閉じる">×</button></div><h2 id="help-title">ひとつ先のプレイへ。</h2><p>横一列をブロックで埋めると消去。上まで積み上がるとゲーム終了です。ARCADEでは10ラインごとにレベルと落下速度が上がります。</p><div class="help-grid"><span>左右移動</span><b>← → / A D</b><span>右回転 / 左回転</span><b>↑・X / Z</b><span>ソフト / ハードドロップ</span><b>↓・S / Space</b><span>ホールド（1設置につき1回）</span><b>C / Shift</b><span>スキル / 一時停止</span><b>1 2 3 / P・Esc</b></div><p>スマホでは盤面下のボタンを使用。移動とソフトドロップは長押しできます。着地点の輪郭が落下位置の目印です。</p><h3>3つの切り札</h3><p>エネルギーは設置とライン消去で獲得。PULSEは一番下のブロックがある段から上へ3段を消去（スコア・ライン数には加算されません）。TIME SLOW中も手動の落下速度は変わりません。PRISMは現在位置付近を優先し、置けなければ上部に I を出します。</p><p>40 LINESはスキルなし・一定速度で40ラインまでのタイムを競います。記録はこのブラウザーに保存されます。旧版の2人対戦はページ上部のリンクから遊べます。</p><label class="setting-row"><span>画面揺れ・粒子演出を控える</span><input type="checkbox" id="reduced-motion"></label><button id="close-help-bottom" class="primary-button">わかった、遊んでみる →</button></dialog>
-  <script type="module" src="app.mjs"></script>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-top"><span class="eyebrow">HOW TO SHIFT</span><button id="close-help" aria-label="閉じる">×</button></div><h2 id="help-title">ひとつ先のプレイへ。</h2><p>横一列をブロックで埋めると消去。上まで積み上がるとゲーム終了です。ARCADEでは10ラインごとにレベルと落下速度が上がります。</p><div class="help-grid"><span>左右移動</span><b>← → / A D</b><span>右回転 / 左回転</span><b>↑・X / Z</b><span>ソフト / ハードドロップ</span><b>↓・S / Space</b><span>ホールド（1設置につき1回）</span><b>C / Shift</b><span>スキル / 一時停止</span><b>1 2 3 / P・Esc</b></div><p>スマホでは盤面下のボタンを使用。移動とソフトドロップは長押しできます。着地点の輪郭が落下位置の目印です。</p><h3>3つの切り札</h3><p>エネルギーは設置とライン消去で獲得。PULSEは一番下のブロックがある段から上へ3段を消去（スコア・ライン数には加算されません）。AVALANCHEは200ポイントで発動。積んだブロックが1マスずつ隙間へ崩れ落ち、そろった列を消して連鎖します。連鎖中は操作を一時停止し、連鎖数に応じた得点が入ります。PRISMは現在位置付近を優先し、置けなければ上部に I を出します。</p><p>40 LINESはスキルなし・一定速度で40ラインまでのタイムを競います。自己ベストはこのブラウザーに保存されます。ゲーム終了後に任意のニックネームで共有ランキングに登録できます。旧版の2人対戦はページ上部のリンクから遊べます。</p><label class="setting-row"><span>画面揺れ・粒子演出を控える</span><input type="checkbox" id="reduced-motion"></label><button id="close-help-bottom" class="primary-button">わかった、遊んでみる →</button></dialog>
+  <dialog id="ranking-dialog" aria-labelledby="ranking-title">
+    <div class="dialog-top"><span class="eyebrow">GLOBAL LEADERBOARD</span><button id="ranking-close" aria-label="ランキングを閉じる">×</button></div>
+    <h2 id="ranking-title">ARCADE / TOP 10</h2><p id="ranking-result"></p>
+    <form id="ranking-form" hidden><label for="nickname">ニックネーム <span>任意 / 16文字まで</span></label><div class="ranking-entry"><input id="nickname" name="nickname" maxlength="16" placeholder="未入力なら「ゲスト」" autocomplete="nickname"><button id="ranking-submit" class="primary-button" type="submit">この記録を登録</button></div><p class="ranking-notice">登録すると、名前と記録が公開され、GitHubにも定期保存されます。</p><p id="ranking-save-status" role="status"></p></form>
+    <div class="ranking-table-wrap"><table class="ranking-table"><thead><tr><th>#</th><th>PLAYER</th><th id="ranking-value-label">SCORE</th><th>LINES</th></tr></thead><tbody id="ranking-rows"></tbody></table></div>
+    <div class="ranking-bottom"><p id="ranking-status" role="status"></p><button id="ranking-refresh" class="secondary-button">更新 ↻</button></div><p class="ranking-notice">AVALANCHE SEASON · ARCADEは得点順、40 LINESはクリアタイム順。<br>同記録は副記録、登録順で決定。通信できないときもゲームは遊べます。</p>
+  </dialog>
+  <script type="module" src="v2/app.mjs"></script>
 </body>
 </html>
