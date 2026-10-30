@@ -1,6 +1,6 @@
 import {GameAudio} from './audio.mjs';
 import {ClearEffects} from './clear-effects.mjs';
-import {KeyboardInput,GestureInput,bindGestures,KEY_ACTIONS} from './input.mjs';
+import {KeyboardInput,GestureInput,bindGestures,KEY_ACTIONS} from './input.mjs?v=touch-2';
 import {beginRankingRun, showRanking} from './ranking.mjs';
 import {Game, SHAPES, COLORS, SKILLS, MAX_ENERGY} from './engine.mjs';
 
