@@ -1,0 +1,72 @@
+name: Archive NEON SHIFT scores
+
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neonshift-score-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Append new public scores
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          target = Path('tetris/data/scores.json')
+          saved = json.loads(target.read_text(encoding='utf-8')) if target.exists() else {'schema': 1, 'cursor': 0, 'entries': []}
+          cursor = saved['cursor']
+          added = []
+          known = {entry['id'] for entry in saved['entries']}
+          for _ in range(100):
+              request = Request(f'https://tk777-neonshift-scores.takesuke.chatgpt.site/api/archive?after={cursor}', headers={'User-Agent': 'TK777-Score-Archive/1.0', 'Accept': 'application/json'})
+              with urlopen(request, timeout=30) as response:
+                  page = json.load(response)
+              for entry in page['entries']:
+                  if not isinstance(entry['seq'], int) or entry['seq'] <= cursor:
+                      raise ValueError('Archive sequence must increase')
+                  cursor = entry['seq']
+                  if entry['id'] not in known:
+                      added.append(entry)
+                      known.add(entry['id'])
+              if page['next'] != cursor:
+                  raise ValueError('Archive cursor mismatch')
+              if not page['hasMore']:
+                  break
+          else:
+              raise RuntimeError('Archive limit reached; retry with a larger batch budget')
+          if added or not target.exists():
+              saved['entries'].extend(added)
+              saved['cursor'] = cursor
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(json.dumps(saved, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(f'Archived {len(added)} new scores; {len(saved["entries"])} total.')
+          PY
+      - name: Commit the archive
+        shell: bash
+        run: |
+          git add tetris/data/scores.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Archive new NEON SHIFT scores'
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
