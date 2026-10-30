@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "cursor": 1,
+  "cursor": 2,
   "entries": [
     {
       "seq": 1,
@@ -11,6 +11,17 @@
       "lines": 0,
       "duration": 57096,
       "created_at": 1793337667077,
+      "season": "avalanche-v2"
+    },
+    {
+      "seq": 2,
+      "id": "779679d6-325c-43ad-b9ba-b3f90dbc4981",
+      "nickname": "TKタケタケ",
+      "mode": "arcade",
+      "score": 296117,
+      "lines": 130,
+      "duration": 846887,
+      "created_at": 1793381495585,
       "season": "avalanche-v2"
     }
   ]
