@@ -62,36 +62,72 @@ export class GestureInput {
   }
 }
 
-export function bindGestures(surfaces,{input,enabled,unit,onBegin=()=>{},doc=document,win=window}){
-  let capture=null;
+export function bindGestures(surfaces,{input,enabled,unit,onBegin=()=>{},doc=document,win=window,
+  touchEvents=typeof win.TouchEvent==='function'||'ontouchstart' in win}){
+  let capture=null,touchId=null,touchBlocked=false,lastTouchTime=-Infinity,viewportWidth=win.innerWidth;
   const point=e=>({id:e.pointerId,x:e.clientX,y:e.clientY,time:e.timeStamp});
+  const touchPoint=(t,e)=>({id:t.identifier,x:t.clientX,y:t.clientY,time:e.timeStamp});
+  const ignorePointer=e=>(touchEvents&&e.pointerType==='touch')||(e.pointerType==='mouse'&&(e.sourceCapabilities?.firesTouchEvents||e.timeStamp-lastTouchTime<800));
   function releaseCapture(){
     if(capture){const [surface,id]=capture;capture=null;try{if(surface.hasPointerCapture(id))surface.releasePointerCapture(id);}catch{}}
   }
-  function reset(){input.reset();releaseCapture();}
+  function reset(){input.reset();touchId=null;touchBlocked=false;releaseCapture();}
   for(const surface of surfaces){
+    // Safari touch streams do not depend on pointer capture/boundary events.
+    // Explicit passive:false prevents Safari scrolling from consuming the swipe.
+    surface.addEventListener('touchstart',e=>{
+      if(!touchEvents||!enabled())return;
+      if(e.cancelable)e.preventDefault();lastTouchTime=e.timeStamp;
+      if(e.touches.length!==1||touchBlocked){reset();touchBlocked=true;return;}
+      reset();onBegin();const t=e.changedTouches[0];touchId=t.identifier;
+      input.begin({...touchPoint(t,e),unit:unit()});
+    },{passive:false});
     surface.addEventListener('pointerdown',e=>{
-      if(e.button!==0||!enabled())return;
+      if(ignorePointer(e)||e.button!==0||!enabled())return;
       e.preventDefault();onBegin();
       if(!input.begin({...point(e),unit:unit(),primary:e.isPrimary}))return;
       capture=[surface,e.pointerId];try{surface.setPointerCapture(e.pointerId);}catch{}
       surface.focus({preventScroll:true});
     });
-    surface.addEventListener('pointermove',e=>{
-      if(!enabled()||(e.pointerType==='mouse'&&e.buttons===0)){reset();return;}
-      if(input.active?.id===e.pointerId){e.preventDefault();input.move(point(e));}
-    });
-    surface.addEventListener('lostpointercapture',e=>{input.cancel(e.pointerId);if(capture?.[1]===e.pointerId)capture=null;});
+    surface.addEventListener('lostpointercapture',e=>{if(ignorePointer(e))return;input.cancel(e.pointerId);if(capture?.[1]===e.pointerId)capture=null;});
     surface.addEventListener('contextmenu',e=>{e.preventDefault();reset();});
   }
+  doc.addEventListener('touchstart',e=>{
+    if(touchEvents&&e.touches.length>1&&touchId!==null){reset();touchBlocked=true;}
+  },{capture:true,passive:true});
+  doc.addEventListener('touchmove',e=>{
+    if(!touchEvents||touchId===null)return;
+    lastTouchTime=e.timeStamp;
+    if(!enabled()||e.touches.length!==1){reset();return;}
+    const t=Array.from(e.changedTouches).find(t=>t.identifier===touchId);if(!t)return;
+    if(e.cancelable)e.preventDefault();input.move(touchPoint(t,e));
+  },{capture:true,passive:false});
+  doc.addEventListener('touchend',e=>{
+    if(!touchEvents)return;lastTouchTime=e.timeStamp;
+    const t=Array.from(e.changedTouches).find(t=>t.identifier===touchId);
+    if(t){if(e.cancelable)e.preventDefault();touchId=null;if(enabled())input.end(touchPoint(t,e));else input.cancel(t.identifier);}
+    if(!e.touches.length)touchBlocked=false;
+  },{capture:true,passive:false});
+  doc.addEventListener('touchcancel',e=>{
+    if(!touchEvents)return;lastTouchTime=e.timeStamp;
+    if(Array.from(e.changedTouches).some(t=>t.identifier===touchId)){reset();touchBlocked=e.touches.length>0;}
+    if(!e.touches.length)touchBlocked=false;
+  },{capture:true,passive:true});
+  doc.addEventListener('pointermove',e=>{
+    if(ignorePointer(e)||input.active?.id!==e.pointerId)return;
+    if(!enabled()||(e.pointerType==='mouse'&&e.buttons===0)){reset();return;}
+    if(e.cancelable)e.preventDefault();input.move(point(e));
+  },true);
   // Capture releases even outside the board, over disabled controls or in a dialog.
   doc.addEventListener('pointerup',e=>{
+    if(ignorePointer(e))return;
     if(enabled())input.end(point(e));else input.cancel(e.pointerId);
     if(capture?.[1]===e.pointerId)releaseCapture();
   },true);
-  doc.addEventListener('pointercancel',e=>{input.cancel(e.pointerId);if(capture?.[1]===e.pointerId)releaseCapture();},true);
-  doc.addEventListener('pointerdown',e=>{if(!e.isPrimary)reset();},true);
-  win.addEventListener('resize',reset);
-  win.addEventListener('pointerout',e=>{if(!e.relatedTarget)reset();});
+  doc.addEventListener('pointercancel',e=>{if(ignorePointer(e))return;input.cancel(e.pointerId);if(capture?.[1]===e.pointerId)releaseCapture();},true);
+  doc.addEventListener('pointerdown',e=>{if(!ignorePointer(e)&&!e.isPrimary)reset();},true);
+  // Safari's collapsing address bar changes height while the finger is moving.
+  win.addEventListener('resize',()=>{if(win.innerWidth!==viewportWidth){viewportWidth=win.innerWidth;reset();}});
+  win.addEventListener('pointerout',e=>{if(!ignorePointer(e)&&e.pointerType==='mouse'&&!e.relatedTarget&&!capture)reset();});
   return {reset};
 }
