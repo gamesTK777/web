@@ -1,3 +1,5 @@
+import {GameAudio} from './audio.mjs';
+import {ClearEffects} from './clear-effects.mjs';
 import {beginRankingRun, showRanking} from './ranking.mjs';
 import {Game, SHAPES, COLORS, SKILLS, MAX_ENERGY} from './engine.mjs';
 
@@ -7,7 +9,8 @@ const overlay=$('overlay'), content=$('overlay-content'), intro=content.innerHTM
 const dialog=$('help-dialog'), rankingDialog=$('ranking-dialog');
 let rankingSession=null;
 let game=null, mode='arcade', particles=[], beams=[], trails=[], shake=0, flash=0, fallingCells=[];
-let last=performance.now(), hudTime=0, toastTime=0, soundEnabled=false, audio=null;
+const soundtrack=new GameAudio(), clearEffects=new ClearEffects();
+let last=performance.now(), hudTime=0, toastTime=0;
 let reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const repeat=new Map(), pointers=new Map();
 let records={arcade:0,sprint:null};
@@ -31,18 +34,27 @@ function saveRecord() {
   try{localStorage.setItem('tk777-neonshift-records',JSON.stringify(records));}catch{}
   return isNew;
 }
-function initAudio() {
-  if(!soundEnabled)return;
-  try {audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume().catch(()=>{});}catch{soundEnabled=false;}
+function initAudio(){soundtrack.unlock();}
+function tone(notes,duration,kind){soundtrack.tone(notes,duration,kind);}
+function syncAudioButtons(){
+  $('sound').setAttribute('aria-pressed',soundtrack.sfxEnabled);$('sound').setAttribute('aria-label',`効果音を${soundtrack.sfxEnabled?'オフ':'オン'}にする`);$('sound').innerHTML=`SE <span>${soundtrack.sfxEnabled?'ON':'OFF'}</span>`;
+  $('music').setAttribute('aria-pressed',soundtrack.musicEnabled);$('music').setAttribute('aria-label',`BGMを${soundtrack.musicEnabled?'オフ':'オン'}にする`);$('music').innerHTML=`♫ <span>BGM ${soundtrack.musicEnabled?'ON':'OFF'}</span>`;
+  $('music').title='NEON / AFTERHOURS · 126 BPM · プレイ中のみ再生';
 }
-function tone(notes=[440], duration=.09, kind='sine') {
-  if(!soundEnabled||!audio)return;
-  try{notes.forEach((hz,i)=>{const osc=audio.createOscillator(),gain=audio.createGain(),t=audio.currentTime+i*.055;
-    osc.type=kind;osc.frequency.setValueAtTime(hz,t);gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.055,t+.01);gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
-    osc.connect(gain);gain.connect(audio.destination);osc.start(t);osc.stop(t+duration+.02);
-  });}catch{}
+function saveAudioSettings(){try{localStorage.setItem('neonshift-audio',JSON.stringify({music:soundtrack.musicEnabled,sfx:soundtrack.sfxEnabled,volume:soundtrack.volume}));}catch{}}
+const musicButton=document.createElement('button');musicButton.id='music';musicButton.className='icon-button';$('sound').before(musicButton);
+const musicSetting=document.createElement('label');musicSetting.className='setting-row';musicSetting.innerHTML='<span>ハウスBGMの音量 <small style="display:block;color:#91a5bb;margin-top:5px">NEON / AFTERHOURS · 126 BPM</small></span><input id="music-volume" type="range" min="0" max="100" step="1" aria-label="BGM音量" style="width:120px;height:24px">';$('close-help-bottom').before(musicSetting);
+const musicNote=document.createElement('p');musicNote.textContent='BGMはプレイ中のみ再生。一時停止・別タブへの移動・ゲーム終了で止まります。画面上部のBGMとSEで、それぞれオン／オフを切り替えられます。';musicSetting.before(musicNote);
+try{const saved=JSON.parse(localStorage.getItem('neonshift-audio')||'{}');soundtrack.musicEnabled=saved.music!==false;soundtrack.sfxEnabled=saved.sfx!==false;if(Number.isFinite(saved.volume))soundtrack.setVolume(saved.volume);}catch{}
+$('music-volume').value=Math.round(soundtrack.volume*100);$('music-volume').oninput=e=>{soundtrack.setVolume(Number(e.target.value)/100);saveAudioSettings();};
+$('music').onclick=()=>{soundtrack.setMusic(!soundtrack.musicEnabled);if(game?.state==='playing')initAudio();syncAudioButtons();saveAudioSettings();};
+syncAudioButtons();
+function clearCelebration(e){
+  clearEffects.trigger(e.rows,e.cells,COLORS,reduced);soundtrack.clear(e.n,e.chain||0);
+  if(!reduced){shake=e.n>=4?13:3+e.n*1.5;const board=$('board-frame');board.classList.remove('line-clear-fx','quad-clear-fx');void board.offsetWidth;board.classList.add(e.n>=4?'quad-clear-fx':'line-clear-fx');}
 }
 function toast(title, sub='', color='#b7ff63') {
+  $('toast').classList.toggle('quad-toast',title==='QUAD BREAK!');
   $('toast').replaceChildren(document.createTextNode(title));
   if(sub){const small=document.createElement('small');small.textContent=sub;$('toast').append(small);}
   $('toast').style.color=color;$('toast').classList.add('visible');toastTime=1500;
@@ -58,10 +70,9 @@ function burst(cells, multiplier=1) {
 function event(e) {
   if(e.type==='cascadeFall')fallingCells=e.cells.map(c=>({...c,life:.1}));
   if(e.type==='cascadeClear') {
-    fallingCells=fallingCells.filter(c=>!e.rows.includes(c.y));burst(e.cells,2);
-    beams.push(...e.rows.map(y=>({y:y*30,life:.4,color:'#54e5f4'})));
+    fallingCells=fallingCells.filter(c=>!e.rows.includes(c.y));clearCelebration(e);
     toast(`${e.chain} CHAIN!`,`${e.n} LINE / +${e.points.toLocaleString()}`,'#54e5f4');
-    shake=reduced?0:Math.min(12,3+e.chain*2);tone([330,440,550+e.chain*70],.16,'triangle');
+    if(!reduced)shake=Math.min(13,3+e.chain*2);
   }
   if(e.type==='cascadeEnd') {
     fallingCells=[];toast(e.chain?`${e.chain} CHAIN COMPLETE`:'AVALANCHE COMPLETE',e.chain?`${e.lines} LINES / +${e.points.toLocaleString()}`:'隙間を埋めて、次の一手へ','#54e5f4');
@@ -71,10 +82,9 @@ function event(e) {
   if(e.type==='rotate')tone([400],.035,'sine');
   if(e.type==='hold')tone([280,420],.06);
   if(e.type==='clear') {
-    burst(e.cells,e.n===4?3:2);beams.push(...e.rows.map(y=>({y:y*30,life:.45,color:e.n===4?'#b7ff63':'#54e5f4'})));
-    shake=reduced?0:e.n*3;flash=reduced?0:.1;
+    clearCelebration(e);
     toast(['','SINGLE','DOUBLE','TRIPLE','QUAD BREAK!'][e.n],`${e.b2b?'BACK TO BACK / ':''}+${e.points.toLocaleString()}${e.combo>0?' / '+e.combo+' COMBO':''}`);
-    tone(e.n===4?[330,440,660,880]:[330,440,660],.18,'triangle');
+    if(e.n===4)toastTime=1900;
   }
   if(e.type==='level')toast(`LEVEL ${e.level}`,'落下速度アップ');
   if(e.type==='skill') {
@@ -85,7 +95,7 @@ function event(e) {
     tone(e.name==='avalanche'?[880,660,440]:[220,440,880],.22,'triangle');
   }
   // Defer the end screen until lock/spawn has completed all state changes.
-  if(e.type==='end')queueMicrotask(finish);
+  if(e.type==='end'){soundtrack.setPlaying(false);queueMicrotask(finish);}
 }
 function bindIntro() {
   content.querySelectorAll('[data-mode]').forEach(button=>{
@@ -97,30 +107,31 @@ function bindIntro() {
 function resetInput(){repeat.clear();pointers.clear();}
 function start() {
   document.body.classList.add('session-active');
-  initAudio();resetInput();particles=[];beams=[];trails=[];fallingCells=[];shake=0;flash=0;
+  initAudio();clearEffects.reset();resetInput();particles=[];beams=[];trails=[];fallingCells=[];shake=0;flash=0;
   toastTime=0;$('toast').classList.remove('visible');
-  game=new Game({mode,onEvent:event});rankingSession=beginRankingRun(mode);overlay.hidden=true;$('pause').disabled=false;
+  game=new Game({mode,onEvent:event});soundtrack.setPlaying(true,true);rankingSession=beginRankingRun(mode);overlay.hidden=true;$('pause').disabled=false;
   last=performance.now();updateHud();canvas.focus({preventScroll:true});tone([220,330,440],.13);
   if(matchMedia('(max-width: 560px)').matches)window.scrollTo({top:0,behavior:'instant'});
 }
 function home() {
+  soundtrack.setPlaying(false);clearEffects.reset();
   document.body.classList.remove('session-active');
   resetInput();game=null;particles=[];beams=[];trails=[];overlay.hidden=false;
   content.innerHTML=intro;bindIntro();$('pause').disabled=true;updateHud();$('start').focus({preventScroll:true});
 }
 function pause() {
   if(!game||game.state!=='playing')return;
-  game.state='paused';resetInput();overlay.hidden=false;
+  soundtrack.setPlaying(false);game.state='paused';resetInput();overlay.hidden=false;
   content.innerHTML='<span class="intro-symbol">Ⅱ</span><p class="eyebrow">TAKE A BREATH</p><h2>ひと休み。</h2><p class="overlay-copy">次の一手を、ゆっくり考えよう。</p><button id="resume" class="primary-button">RESUME <span>→</span></button><button id="return-home" class="secondary-button">このプレイを終了してモード選択へ</button>';
   $('resume').onclick=resume;$('return-home').onclick=home;updateHud();$('resume').focus({preventScroll:true});
 }
 function resume() {
   if(game?.state!=='paused'||dialog.open||rankingDialog.open)return;
-  game.state='playing';overlay.hidden=true;last=performance.now();resetInput();updateHud();canvas.focus({preventScroll:true});
+  initAudio();game.state='playing';soundtrack.setPlaying(true);overlay.hidden=true;last=performance.now();resetInput();updateHud();canvas.focus({preventScroll:true});
 }
 function finish() {
   if(!game||!['over','won'].includes(game.state))return;
-  resetInput();const record=saveRecord(),won=game.state==='won';overlay.hidden=false;$('pause').disabled=true;
+  soundtrack.setPlaying(false);resetInput();const record=saveRecord(),won=game.state==='won';overlay.hidden=false;$('pause').disabled=true;
   content.innerHTML=`<span class="intro-symbol">${won?'✦':'◇'}</span><p class="eyebrow">${record?'NEW PERSONAL BEST':won?'MISSION COMPLETE':'KEEP SHIFTING'}</p><h2>${won?'40ライン、突破。':'もう一度、その先へ。'}</h2><div class="result-score">${won?time(game.elapsed,true):game.score.toLocaleString()}</div><p class="result-detail">${won?'CLEAR TIME':'SCORE'}<br>${game.lines} LINES / LEVEL ${game.level} / ${time(game.elapsed)}</p><button id="retry" class="primary-button">PLAY AGAIN <span>↻</span></button><button id="return-home" class="secondary-button">モード選択へ</button>`;
   $('retry').onclick=start;$('return-home').onclick=home;updateHud();$('retry').focus({preventScroll:true});tone(won?[440,660,880,1100]:[330,220,110],.22);
   showRanking(mode,{score:game.score,lines:game.lines,duration:Math.max(1000,Math.round(game.elapsed)),won,session:rankingSession});
@@ -168,8 +179,9 @@ function openHelp(){pause();dialog.showModal();}
 $('ranking-open').onclick=()=>{pause();showRanking(mode);};
 $('help').onclick=openHelp;$('settings').onclick=openHelp;
 $('close-help').onclick=() => dialog.close();$('close-help-bottom').onclick=()=>dialog.close();
-$('reduced-motion').onchange=e=>{reduced=e.target.checked;document.body.classList.toggle('reduced-motion',reduced);if(reduced){particles=[];shake=0;flash=0;}try{localStorage.setItem('tk777-neonshift-motion',reduced?'reduced':'full');}catch{}};
-$('sound').onclick=()=>{soundEnabled=!soundEnabled;initAudio();$('sound').setAttribute('aria-pressed',soundEnabled);$('sound').setAttribute('aria-label',`効果音を${soundEnabled?'オフ':'オン'}にする`);$('sound').querySelector('span').textContent=soundEnabled?'ON':'OFF';tone([440,660]);};
+$('reduced-motion').onchange=e=>{reduced=e.target.checked;document.body.classList.toggle('reduced-motion',reduced);if(reduced){clearEffects.reset();particles=[];shake=0;flash=0;}try{localStorage.setItem('tk777-neonshift-motion',reduced?'reduced':'full');}catch{}};
+$('sound').onclick=()=>{soundtrack.sfxEnabled=!soundtrack.sfxEnabled;if(game?.state==='playing')initAudio();syncAudioButtons();saveAudioSettings();};
+window.addEventListener('pagehide',()=>soundtrack.setPlaying(false));
 
 function updateHud() {
   const g=game;
@@ -243,6 +255,7 @@ function render(dt) {
   trails=trails.filter(t=>(t.life-=dt)>0);for(const t of trails){if(reduced)continue;const gradient=ctx.createLinearGradient(0,t.y,0,Math.max(t.y+1,t.end+30));gradient.addColorStop(0,'#54e5f400');gradient.addColorStop(1,t.color+'99');ctx.globalAlpha=t.life/.24;ctx.fillStyle=gradient;ctx.fillRect(t.x+3,t.y,24,t.end-t.y+30);}ctx.globalAlpha=1;
   beams=beams.filter(b=>(b.life-=dt)>0);for(const b of beams){ctx.globalAlpha=b.life*.65;ctx.fillStyle=b.color;ctx.fillRect(0,b.y,300,30);}ctx.globalAlpha=1;
   particles=particles.filter(p=>(p.life-=dt)>0);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=220*dt;ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;
+  clearEffects.draw(ctx,dt);
   if(flash>0){ctx.fillStyle=`rgba(183,255,99,${flash})`;ctx.fillRect(0,0,300,600);flash=Math.max(0,flash-dt*.6);}ctx.restore();
 }
 function frame(now) {
