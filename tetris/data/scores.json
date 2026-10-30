@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "cursor": 1,
+  "entries": [
+    {
+      "seq": 1,
+      "id": "a7463b68-ffb0-420a-97cc-5596f1cd1dec",
+      "nickname": "動作確認",
+      "mode": "arcade",
+      "score": 184,
+      "lines": 0,
+      "duration": 57096,
+      "created_at": 1793337667077,
+      "season": "avalanche-v2"
+    }
+  ]
+}
