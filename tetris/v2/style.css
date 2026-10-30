@@ -37,3 +37,16 @@
 .board-toast.quad-toast.visible{animation:quad-title 1.6s cubic-bezier(.18,.8,.2,1) both}
 @keyframes quad-title{0%{transform:scale(.65) translateY(8px);opacity:0}15%{transform:scale(1.12);opacity:1}30%,80%{transform:scale(1);opacity:1}100%{transform:scale(1.02);opacity:1}}
 @media(max-width:560px){.brand .muted{display:none}.topbar{padding-left:12px;padding-right:12px}.top-actions{gap:5px}.icon-button{min-width:30px;font-size:11px}.icon-button span{font-size:8px;padding:0 2px}#music{padding:0 5px}.board-toast.quad-toast{font-size:29px}}
+
+/* Direct gestures have no timed movement or held-direction state. */
+#board,.gesture-pad{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.gesture-pad{margin-top:2px;padding:12px;border:1px solid #3d6268;border-radius:10px;background:linear-gradient(120deg,#142c32,#111e2a);cursor:grab}
+.gesture-pad:active{cursor:grabbing;border-color:var(--mint);background:#1c3436}
+.gesture-pad:focus-visible{outline:2px solid var(--mint);outline-offset:3px}
+.gesture-heading{display:flex;justify-content:space-between;gap:6px;align-items:center;margin-bottom:10px}
+.gesture-heading>span{color:var(--mint);font-size:9px;font-weight:700;letter-spacing:1.5px}.gesture-heading small{font-size:8px;color:#9cbbc2}
+.gesture-guide{display:grid;grid-template-columns:1fr 1fr;gap:7px 5px;font-size:9px;color:#bfced9}
+.gesture-guide span{display:flex;align-items:center;gap:5px;white-space:nowrap}.gesture-guide b{font-size:17px;color:#71e6ea;line-height:1;width:17px;text-align:center}
+.touch-controls{display:none!important}.show-button-controls .touch-controls{display:grid!important;margin-top:10px}
+@media(max-width:560px){.gesture-pad{padding:10px 8px}.gesture-heading>span{font-size:8px;letter-spacing:1px}.gesture-heading small{font-size:7px}.gesture-guide{font-size:8px;gap:8px 3px}.gesture-guide b{font-size:15px;width:14px}.session-active .board-frame{max-width:calc((100svh - 245px)/2)}}
+@media(max-width:340px){.gesture-heading small{display:none}.gesture-guide{font-size:7px;gap:8px 2px}.gesture-guide span{gap:2px}}
