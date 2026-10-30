@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0a101b">
   <meta name="description" content="NEON SHIFT — 3つのスキルで限界を超える、TK777の新しいブロックパズル。PCでもスマホでも。">
   <title>NEON SHIFT / TETRIS — TK777 ARCADE</title>
-  <link rel="stylesheet" href="v2/style.css?v=house-1">
+  <link rel="stylesheet" href="v2/style.css?v=gestures-1">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
@@ -32,7 +32,7 @@
       <section class="play-column" aria-label="ゲーム画面">
         <div class="board-top"><span><i></i> <span id="status">READY TO SHIFT</span></span><button id="pause" aria-label="一時停止" disabled>Ⅱ <span>PAUSE</span></button></div>
         <div class="board-frame" id="board-frame">
-          <canvas id="board" width="600" height="1200" tabindex="0" aria-label="10列20行のゲーム盤面。矢印で移動、上で回転、スペースで落下。詳しい操作は遊び方を開いてください。"></canvas>
+          <canvas id="board" width="600" height="1200" tabindex="0" aria-label="ゲーム盤面。タップで回転、左右スワイプで移動、下フリックで落下、上フリックでホールド。キーボード操作にも対応。"></canvas>
           <div class="board-grain" aria-hidden="true"></div>
           <div id="toast" class="board-toast" aria-live="polite"></div>
           <div id="overlay" class="overlay">
@@ -45,7 +45,11 @@
           <div id="cascade-indicator" class="cascade-indicator" hidden>⇊ AVALANCHE <span></span></div>
         </div>
         <div class="board-bottom"><span id="combo">COMBO <b>—</b></span><span>10 × 20 <i>•</i> <span id="speed">1.0× SPEED</span></span></div>
-        <div class="touch-controls" aria-label="タッチ操作">
+        <div id="gesture-pad" class="gesture-pad" tabindex="0" role="group" aria-label="ジェスチャー操作エリア。盤面と同じ操作ができます。">
+          <div class="gesture-heading"><span>TOUCH &amp; SHIFT</span><small>盤面でも、ここでも</small></div>
+          <div class="gesture-guide"><span><b>↻</b>タップで回転</span><span><b>↔</b>スワイプで移動</span><span><b>↓</b>下フリックで落下</span><span><b>↑</b>上フリックでHOLD</span></div>
+        </div>
+        <div class="touch-controls" aria-label="補助の操作ボタン">
           <button data-action="hold" aria-label="ホールド">⇄<small>HOLD</small></button><button data-action="rotateLeft" aria-label="左回転">↶<small>ROTATE</small></button><button data-action="rotate" aria-label="右回転">↷<small>ROTATE</small></button><button data-action="drop" class="drop-control" aria-label="一気に落下">⇓<small>DROP</small></button>
           <button data-action="left" class="wide" aria-label="左へ移動">←</button><button data-action="down" aria-label="速く落下">↓</button><button data-action="right" aria-label="右へ移動">→</button>
         </div>
@@ -66,7 +70,7 @@
     <footer class="footer"><div><span>CONTROLS</span><span><kbd>←</kbd><kbd>→</kbd> 移動</span><span><kbd>↑</kbd> 回転</span><span><kbd>SPACE</kbd> 落下</span><span><kbd>C</kbd> ホールド</span><span><kbd>1</kbd>–<kbd>3</kbd> スキル</span></div><button id="settings">操作・設定 ↗</button></footer>
   </main>
 
-  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-top"><span class="eyebrow">HOW TO SHIFT</span><button id="close-help" aria-label="閉じる">×</button></div><h2 id="help-title">ひとつ先のプレイへ。</h2><p>横一列をブロックで埋めると消去。上まで積み上がるとゲーム終了です。ARCADEでは10ラインごとにレベルと落下速度が上がります。</p><div class="help-grid"><span>左右移動</span><b>← → / A D</b><span>右回転 / 左回転</span><b>↑・X / Z</b><span>ソフト / ハードドロップ</span><b>↓・S / Space</b><span>ホールド（1設置につき1回）</span><b>C / Shift</b><span>スキル / 一時停止</span><b>1 2 3 / P・Esc</b></div><p>スマホでは盤面下のボタンを使用。移動とソフトドロップは長押しできます。着地点の輪郭が落下位置の目印です。</p><h3>3つの切り札</h3><p>エネルギーは設置とライン消去で獲得。PULSEは一番下のブロックがある段から上へ3段を消去（スコア・ライン数には加算されません）。AVALANCHEは200ポイントで発動。積んだブロックが1マスずつ隙間へ崩れ落ち、そろった列を消して連鎖します。連鎖中は操作を一時停止し、連鎖数に応じた得点が入ります。PRISMは現在位置付近を優先し、置けなければ上部に I を出します。</p><p>40 LINESはスキルなし・一定速度で40ラインまでのタイムを競います。自己ベストはこのブラウザーに保存されます。ゲーム終了後に任意のニックネームで共有ランキングに登録できます。旧版の2人対戦はページ上部のリンクから遊べます。</p><label class="setting-row"><span>画面揺れ・粒子演出を控える</span><input type="checkbox" id="reduced-motion"></label><button id="close-help-bottom" class="primary-button">わかった、遊んでみる →</button></dialog>
+  <dialog id="help-dialog" aria-labelledby="help-title"><div class="dialog-top"><span class="eyebrow">HOW TO SHIFT</span><button id="close-help" aria-label="閉じる">×</button></div><h2 id="help-title">ひとつ先のプレイへ。</h2><p>横一列をブロックで埋めると消去。上まで積み上がるとゲーム終了です。ARCADEでは10ラインごとにレベルと落下速度が上がります。</p><div class="help-grid"><span>左右移動</span><b>← → / A D</b><span>右回転 / 左回転</span><b>↑・X / Z</b><span>ソフト / ハードドロップ</span><b>↓・S / Space</b><span>ホールド（1設置につき1回）</span><b>C / Shift</b><span>スキル / 一時停止</span><b>1 2 3 / P・Esc</b></div><p>スマホでは盤面またはその下の操作エリアを使います。タップで右回転、左右スワイプで移動。指を止めると横移動も止まります。素早い下フリックで一気に落下、ゆっくり下にドラッグするとソフトドロップ、上フリックでホールド。着地点の輪郭が落下位置の目印です。補助ボタンは下の設定で表示できます（1回押すごとに1操作）。PCでは矢印キーの長押しで移動できます。</p><h3>3つの切り札</h3><p>エネルギーは設置とライン消去で獲得。PULSEは一番下のブロックがある段から上へ3段を消去（スコア・ライン数には加算されません）。AVALANCHEは200ポイントで発動。積んだブロックが1マスずつ隙間へ崩れ落ち、そろった列を消して連鎖します。連鎖中は操作を一時停止し、連鎖数に応じた得点が入ります。PRISMは現在位置付近を優先し、置けなければ上部に I を出します。</p><p>40 LINESはスキルなし・一定速度で40ラインまでのタイムを競います。自己ベストはこのブラウザーに保存されます。ゲーム終了後に任意のニックネームで共有ランキングに登録できます。旧版の2人対戦はページ上部のリンクから遊べます。</p><label class="setting-row"><span>補助の操作ボタンを表示</span><input type="checkbox" id="button-controls"></label><label class="setting-row"><span>画面揺れ・粒子演出を控える</span><input type="checkbox" id="reduced-motion"></label><button id="close-help-bottom" class="primary-button">わかった、遊んでみる →</button></dialog>
   <dialog id="ranking-dialog" aria-labelledby="ranking-title">
     <div class="dialog-top"><span class="eyebrow">GLOBAL LEADERBOARD</span><button id="ranking-close" aria-label="ランキングを閉じる">×</button></div>
     <h2 id="ranking-title">ARCADE / TOP 10</h2><p id="ranking-result"></p>
@@ -74,6 +78,6 @@
     <div class="ranking-table-wrap"><table class="ranking-table"><thead><tr><th>#</th><th>PLAYER</th><th id="ranking-value-label">SCORE</th><th>LINES</th></tr></thead><tbody id="ranking-rows"></tbody></table></div>
     <div class="ranking-bottom"><p id="ranking-status" role="status"></p><button id="ranking-refresh" class="secondary-button">更新 ↻</button></div><p class="ranking-notice">AVALANCHE SEASON · ARCADEは得点順、40 LINESはクリアタイム順。<br>同記録は副記録、登録順で決定。通信できないときもゲームは遊べます。</p>
   </dialog>
-  <script type="module" src="v2/app.mjs?v=house-1"></script>
+  <script type="module" src="v2/app.mjs?v=gestures-1"></script>
 </body>
 </html>
