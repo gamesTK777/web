@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102a33">
+  <title>HAZAMA | はさみ将棋 | TK777 ARCADE</title>
+  <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="state-setup">
+  <header class="topbar">
+    <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
+    <span class="brand"><span class="brand-mark" aria-hidden="true">◇</span> TK777 <small>/ ARCADE</small></span>
+    <div class="top-actions">
+      <button id="rulesTop" type="button" aria-label="ルールを見る">？ <span>ルール</span></button>
+      <button id="soundBtn" type="button" aria-label="効果音をオンにする" aria-pressed="false">♪ <span>OFF</span></button>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="intro" aria-label="ゲームの紹介">
+      <div>
+        <p class="eyebrow">STRATEGY IN A SINGLE MOVE / 04</p>
+        <h1>HAZ<span>A</span>MA<span class="period">.</span></h1>
+        <p class="tagline">一手で、流れを挟み取れ。</p>
+      </div>
+      <div class="setup" id="setup">
+        <div class="mode-picker" role="group" aria-label="対局モード">
+          <button class="mode active" type="button" data-mode="cpu" aria-pressed="true"><strong>VS CPU</strong><small>ひとりで対局</small></button>
+          <button class="mode" type="button" data-mode="local" aria-pressed="false"><strong>2 PLAYERS</strong><small>この端末で対局</small></button>
+        </div>
+        <button class="start-btn" id="startBtn" type="button">対局を始める <span aria-hidden="true">↗</span></button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="game-column" aria-label="はさみ将棋の対局">
+        <div class="scoreboard" aria-label="対局情報">
+          <div class="player-card black active" id="blackCard">
+            <span class="player-icon" aria-hidden="true">歩</span>
+            <div><small>先手 / あなた</small><strong id="blackName">あなた</strong></div>
+            <span class="taken"><small>取った駒</small><b id="blackTaken">0</b></span>
+          </div>
+          <div class="turn-marker" aria-hidden="true"><span>VS</span></div>
+          <div class="player-card white" id="whiteCard">
+            <span class="player-icon" aria-hidden="true">と</span>
+            <div><small>後手 / CPU</small><strong id="whiteName">CPU</strong></div>
+            <span class="taken"><small>取った駒</small><b id="whiteTaken">0</b></span>
+          </div>
+        </div>
+
+        <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="status" role="status" aria-live="polite">モードを選んで対局を始めましょう</span><span class="move-count" id="moveCount">TURN 00</span></div>
+
+        <div class="board-shell">
+          <div class="board-top-labels" aria-hidden="true"><span>９</span><span>８</span><span>７</span><span>６</span><span>５</span><span>４</span><span>３</span><span>２</span><span>１</span></div>
+          <div class="board-wrap">
+            <div id="board" class="board" role="grid" aria-label="はさみ将棋の9×9盤。矢印で移動しEnterまたはSpaceで選択と着手"></div>
+            <div class="board-side-labels" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>七</span><span>八</span><span>九</span></div>
+          </div>
+          <div class="board-bottom"><span>SELECT · MOVE · CAPTURE</span><span id="boardMode">VS CPU</span></div>
+        </div>
+
+        <div class="actions">
+          <button id="undoBtn" type="button" disabled><span aria-hidden="true">↶</span> 1手戻す</button>
+          <button id="hintBtn" type="button" disabled><span aria-hidden="true">✦</span> ヒント</button>
+          <button id="newBtn" type="button" disabled><span aria-hidden="true">↻</span> 最初から</button>
+          <button id="modeBtn" type="button" disabled><span aria-hidden="true">◈</span> モード変更</button>
+        </div>
+        <p class="mobile-guide">駒をタップ → 光るマスをタップして移動。キーボードは矢印で選び、Enter / Spaceで決定。</p>
+      </section>
+
+      <aside class="sidebar" aria-label="対局ガイド">
+        <section class="panel headline-panel">
+          <p class="panel-kicker">THE ART OF THE PINCH</p>
+          <h2>挟んで取る。<br><em>一手で逆転。</em></h2>
+          <p>縦か横に動かして、相手の駒を自分の駒で挟もう。端の駒も逃げ道をふさげば取れます。</p>
+          <button id="rulesBtn" type="button">ルールを読む <span aria-hidden="true">↗</span></button>
+        </section>
+        <section class="panel progress-panel">
+          <div class="panel-head"><span>WIN CONDITION</span><span>05 / 03</span></div>
+          <div class="capture-row"><span>先手が取った駒</span><div class="capture-track"><i id="blackTrack"></i></div><strong id="blackProgress">0 / 5</strong></div>
+          <div class="capture-row"><span>後手が取った駒</span><div class="capture-track white-track"><i id="whiteTrack"></i></div><strong id="whiteProgress">0 / 5</strong></div>
+          <p id="leadNote">先に5枚取るか、3枚差をつけて次の相手の手でも差を守れば勝ち。</p>
+        </section>
+        <section class="panel history-panel">
+          <div class="panel-head"><span>MOVE LOG</span><span>直近の着手</span></div>
+          <ol id="moveLog"><li class="empty-log">まだ着手はありません</li></ol>
+        </section>
+        <section class="panel controls-panel">
+          <div class="panel-head"><span>CONTROLS</span><span>操作方法</span></div>
+          <div><strong>マウス</strong><span>駒をクリック → 移動先をクリック</span></div>
+          <div><strong>キーボード</strong><span>矢印で移動 · Enter / Spaceで決定 · Escで解除</span></div>
+          <div><strong>iPhone</strong><span>駒をタップ → 移動先をタップ</span></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <dialog id="rulesDialog" class="modal" aria-labelledby="rulesTitle">
+    <div class="modal-head"><span>HOW TO PLAY</span><button id="closeRules" type="button" aria-label="ルールを閉じる">×</button></div>
+    <h2 id="rulesTitle">はさみ将棋のルール</h2>
+    <ol>
+      <li>先手「歩」と後手「と」が9枚ずつ。先手から交互に動かします。</li>
+      <li>駒は縦・横の空いたマスを何マスでも移動できます。駒を飛び越えたり、斜めには進めません。</li>
+      <li>相手の駒の列を自分の駒2枚で縦・横に挟むと、その列を取れます。盤端の駒は逃げ道をすべて封じても取れます。</li>
+      <li>先に5枚取ると勝ち。取った枚数で3枚差をつけた場合は、相手が次の1手で差を縮められなければ勝ちです。</li>
+    </ol>
+    <p>取った駒は再使用しません。移動できる手がなくなった場合は、本ゲーム独自の処理として引き分けにします。</p>
+    <a href="https://www.shogi.or.jp/knowledge/hasami_shogi/" target="_blank" rel="noopener noreferrer">日本将棋連盟のルールを見る ↗</a>
+  </dialog>
+
+  <dialog id="resultDialog" class="modal result-modal" aria-labelledby="resultTitle">
+    <div class="modal-head"><span>MATCH RESULT</span><button id="closeResult" type="button" aria-label="結果を閉じる">×</button></div>
+    <div class="result-emblem" aria-hidden="true">◇</div>
+    <h2 id="resultTitle">対局終了</h2>
+    <p id="resultCopy"></p>
+    <div class="result-actions"><button id="againBtn" type="button">もう一局 <span aria-hidden="true">↗</span></button><button id="resultModeBtn" type="button">モード選択</button></div>
+  </dialog>
+
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

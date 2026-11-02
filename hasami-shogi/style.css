@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root{--bg:#0d2028;--panel:#142d34;--panel2:#19393f;--edge:#47736e;--mint:#83e5c1;--mint2:#baf7dc;--amber:#ffd18c;--coral:#ff947f;--cream:#f5f0df;--muted:#9bb9b3;--board:#2b5349;--cell:#315c4e}
+*{box-sizing:border-box}
+html{scroll-behavior:auto}
+body{margin:0;min-height:100dvh;color:var(--cream);font-family:'DM Sans','Hiragino Kaku Gothic ProN',Meiryo,sans-serif;background:radial-gradient(circle at 14% 8%,#285449 0,transparent 30%),radial-gradient(circle at 88% 13%,#473b42 0,transparent 28%),linear-gradient(145deg,#10262d,#091a22 70%);overflow-x:hidden}
+button,a{-webkit-tap-highlight-color:transparent}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.46}
+button:focus-visible,a:focus-visible,.cell:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+[hidden]{display:none!important}
+
+.topbar{height:66px;padding:0 26px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #99d5bb22;background:#102831a8;backdrop-filter:blur(14px)}
+.topbar .tk-portal-return{position:static;min-height:42px;padding:8px 14px;border-radius:11px;border-color:#669985;background:#14343a;box-shadow:none;font-size:12px}
+.topbar .tk-portal-return:hover{background:#21524b}
+.brand{display:flex;align-items:center;gap:7px;font:700 13px 'Space Grotesk',sans-serif;letter-spacing:.04em;white-space:nowrap}
+.brand small{font-size:10px;color:var(--muted);font-weight:600}
+.brand-mark{display:grid;place-items:center;width:29px;height:29px;border:1px solid #93edc0;border-radius:9px;color:var(--mint);font-size:20px}
+.top-actions{display:flex;gap:7px;margin-left:auto}
+.top-actions button{min-height:40px;padding:8px 12px;border:1px solid #5c8c7f;border-radius:10px;background:#193840;color:#d7f8e7;font-weight:800;font-size:12px}
+.top-actions button:hover{background:#28544c}
+
+.page{max-width:1280px;margin:auto;padding:20px 26px 42px}
+.intro{display:flex;align-items:end;justify-content:space-between;gap:22px;margin-bottom:19px}
+.eyebrow,.panel-kicker{margin:0 0 7px;color:var(--mint);font:800 10px 'Space Grotesk',sans-serif;letter-spacing:.2em}
+h1{margin:0;color:#f4f1e1;font:700 clamp(42px,5.2vw,70px)/.97 'Space Grotesk',sans-serif;letter-spacing:-.078em}
+h1 span{color:var(--mint)}h1 .period{color:var(--coral)}
+.tagline{margin:10px 0 0;color:#b8d4cc;font-size:14px}
+.setup{display:flex;align-items:center;gap:9px}
+.mode-picker{display:flex;gap:4px;padding:4px;border:1px solid #4a776a;border-radius:13px;background:#0b252a}
+.mode{min-width:130px;padding:9px 12px;border:0;border-radius:9px;background:transparent;color:#a8c8bc;text-align:left}
+.mode strong{display:block;font:700 13px 'Space Grotesk',sans-serif}.mode small{display:block;font-size:10px;margin-top:2px}
+.mode.active{background:linear-gradient(130deg,#9cf1cb,#65c9b3);color:#10342e;box-shadow:0 3px 12px #80e8bc33}
+.start-btn{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:59px;padding:12px 18px;border:1px solid #d3ffd8;border-radius:12px;background:linear-gradient(125deg,#a9f4cc,#72d6bb);color:#143d33;font-size:14px;font-weight:800;box-shadow:0 5px 0 #3f8d79}
+.start-btn:hover{filter:brightness(1.07);transform:translateY(-1px)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+.game-column{min-width:0;display:flex;flex-direction:column;align-items:center}
+.scoreboard,.status-line,.actions,.mobile-guide{width:min(100%,570px)}
+.scoreboard{display:grid;grid-template-columns:1fr 34px 1fr;gap:6px;align-items:center;margin-bottom:8px}
+.player-card{display:flex;align-items:center;gap:8px;min-width:0;min-height:66px;padding:8px 10px;border:1px solid #547c70;border-radius:13px;background:#122e34;opacity:.7;transition:opacity .2s,border-color .2s,box-shadow .2s}
+.player-card.active{opacity:1;border-color:#84e7c2;box-shadow:0 0 0 1px #84e7c244,inset 0 0 18px #84e7c211}
+.player-card.white.active{border-color:#ffcc95;box-shadow:0 0 0 1px #ffcc9544,inset 0 0 18px #ffcc9511}
+.player-icon{display:grid;place-items:center;flex:0 0 37px;width:37px;height:42px;background:#26554b;clip-path:polygon(50% 0,100% 18%,93% 100%,7% 100%,0 18%);color:#ecffef;font-weight:800}
+.white .player-icon{background:#f0cd9f;color:#4b3528;transform:rotate(180deg)}
+.player-card div{min-width:0}.player-card small{display:block;font-size:9px;color:#9fbbb0;white-space:nowrap}.player-card strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.taken{margin-left:auto;text-align:right}.taken b{color:var(--mint);font:700 20px 'Space Grotesk',sans-serif}.white .taken b{color:var(--amber)}
+.turn-marker{text-align:center;color:#8dad9f;font:800 10px 'Space Grotesk',sans-serif;letter-spacing:.1em}
+.status-line{display:flex;align-items:center;gap:7px;min-height:27px;margin-bottom:6px;color:#bce7d0;font-size:11px;font-weight:700}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 11px var(--mint)}
+.move-count{margin-left:auto;color:#829f96;font:700 9px 'Space Grotesk',sans-serif;letter-spacing:.1em}
+.board-shell{width:min(100%,520px);padding:9px;border:1px solid #82ae8f;border-radius:17px;background:linear-gradient(150deg,#294f45,#183c39);box-shadow:0 9px 0 #0a2529,0 22px 42px #020c145e}
+.board-top-labels{display:grid;grid-template-columns:repeat(9,1fr);width:calc(100% - 18px);margin:0 0 5px;color:#bdd4bd;font:700 10px 'Space Grotesk',sans-serif;text-align:center}
+.board-wrap{display:flex;align-items:stretch;gap:3px}
+.board{width:calc(100% - 18px);aspect-ratio:1;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);border:2px solid #a8bd94;background:var(--board);touch-action:manipulation}
+.board-side-labels{display:grid;grid-template-rows:repeat(9,1fr);width:15px;color:#bdd4bd;font-size:9px;font-weight:700;text-align:center;align-items:center}
+.cell{position:relative;min-width:0;min-height:0;padding:0;display:grid;place-items:center;border:1px solid #a1c4a155;background:var(--cell);color:inherit;touch-action:manipulation;user-select:none}
+.cell:nth-child(even){background:#2e574b}
+.cell:hover:not(:disabled){background:#3d6e58}
+.cell.last-from,.cell.last-to{background:#416951}
+.cell.selected{background:#527860;box-shadow:inset 0 0 0 3px #ffcb84;z-index:2}
+.cell.hint-from{box-shadow:inset 0 0 0 3px #72e7d0;z-index:2}
+.cell.hint-to{background:#437b71}
+.cell.legal::after{content:'';position:absolute;width:21%;height:21%;border-radius:50%;background:#a3f1c8;box-shadow:0 0 11px #90edbf;pointer-events:none}
+.cell.capture-target::after{width:60%;height:60%;border:3px solid var(--coral);background:transparent;box-shadow:0 0 10px #ff927a;pointer-events:none}
+.piece{position:relative;display:grid;place-items:center;width:77%;height:84%;font:800 clamp(13px,2.3vw,25px) 'Hiragino Kaku Gothic ProN',Meiryo,sans-serif;clip-path:polygon(50% 0,100% 18%,93% 100%,7% 100%,0 18%);box-shadow:0 3px 3px #021b18;pointer-events:none}
+.piece.black{background:linear-gradient(140deg,#17473e,#0c2a31);color:#e8fff0;border:1px solid #6fc7a1}
+.piece.white{background:linear-gradient(145deg,#ffe0b4,#d7ad81);color:#4d3427;transform:rotate(180deg)}
+.piece.white span{transform:rotate(180deg)}
+.piece::after{content:'';position:absolute;inset:6% 9%;border:1px solid #ffffff3b;clip-path:polygon(50% 0,100% 18%,93% 100%,7% 100%,0 18%)}
+.cell.capture-flash{animation:capture .42s ease-out}
+@keyframes capture{0%{background:#ff9d81}100%{background:var(--cell)}}
+.board-bottom{display:flex;justify-content:space-between;padding:7px 2px 1px;color:#acd0b4;font:700 9px 'Space Grotesk',sans-serif;letter-spacing:.11em}
+.board-bottom span:last-child{color:var(--amber)}
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:17px}
+.actions button{min-height:46px;padding:7px;border:1px solid #5d8b7b;border-radius:10px;background:#193a3c;color:#ddf4e4;font-size:11px;font-weight:800}
+.actions button:not(:disabled):hover{background:#27534a}.actions button span{font-size:16px;margin-right:3px}
+.mobile-guide{margin:9px 0 0;color:#84a99c;font-size:10px;line-height:1.45}
+
+.sidebar{display:grid;gap:13px}
+.panel{padding:18px;border:1px solid #52776c;border-radius:15px;background:#142e33e8;box-shadow:0 10px 24px #061a2255}
+.headline-panel{background:radial-gradient(circle at 100% 0,#3b6551 0,transparent 47%),linear-gradient(145deg,#1b403a,#122a35)}
+.headline-panel h2{margin:4px 0 11px;font:700 28px/1.25 'Space Grotesk','Hiragino Kaku Gothic ProN',sans-serif;letter-spacing:-.05em}.headline-panel h2 em{font-style:normal;color:var(--mint)}
+.headline-panel p:not(.panel-kicker){margin:0 0 14px;color:#b6d3c6;font-size:12px;line-height:1.65}
+.headline-panel button{width:100%;min-height:42px;padding:9px 12px;display:flex;justify-content:space-between;border:1px solid #8cdbb4;border-radius:9px;background:#2a5c4d;color:#e9ffed;font-size:12px;font-weight:800}
+.panel-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:14px;color:#a1d6b4;font:800 10px 'Space Grotesk',sans-serif;letter-spacing:.1em}.panel-head span:last-child{color:#8ba99b}
+.capture-row{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin-bottom:13px;color:#d5e7d7;font-size:11px}.capture-row strong{font:700 12px 'Space Grotesk',sans-serif}
+.capture-track{grid-column:1/-1;grid-row:2;width:100%;height:7px;border-radius:20px;background:#355a4f;overflow:hidden}.capture-track i{display:block;width:0;height:100%;background:linear-gradient(90deg,#53c899,#b9f6c4);transition:width .3s}.white-track i{background:linear-gradient(90deg,#d99f76,#ffdb9b)}
+.progress-panel p{margin:15px 0 0;color:#91b3a4;font-size:11px;line-height:1.5}
+.history-panel ol{list-style:none;display:grid;gap:6px;margin:0;padding:0;max-height:140px;overflow:auto}
+.history-panel li{display:flex;justify-content:space-between;padding:7px 9px;border-radius:8px;background:#1d3b3c;color:#d9ecdc;font-size:11px}.history-panel li span{color:var(--mint)}.history-panel li.white span{color:var(--amber)}.history-panel .empty-log{color:#829e92}
+.controls-panel>div:not(.panel-head){display:grid;grid-template-columns:75px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #a5c6ac24;font-size:10px}.controls-panel strong{color:var(--mint)}.controls-panel span{color:#bed5c8}
+
+.modal{width:min(92vw,480px);max-height:min(82dvh,760px);padding:22px;border:1px solid #79b49a;border-radius:17px;background:#16343a;color:var(--cream);box-shadow:0 25px 80px #010c11b0;overflow:auto}
+.modal::backdrop{background:#06171cca;backdrop-filter:blur(5px)}.modal-head{display:flex;justify-content:space-between;align-items:center;color:var(--mint);font:800 11px 'Space Grotesk',sans-serif;letter-spacing:.12em}.modal-head button{width:36px;height:36px;border:1px solid #639583;border-radius:9px;background:#214940;color:#eaffeb;font-size:24px}
+.modal h2{margin:7px 0 16px;font:700 28px 'Space Grotesk','Hiragino Kaku Gothic ProN',sans-serif}.modal ol{margin:0 0 15px;padding-left:20px}.modal li{padding:0 0 10px;color:#d0e4d6;font-size:13px;line-height:1.6}.modal p{color:#a8c5b6;font-size:12px;line-height:1.6}.modal a{color:var(--mint);font-size:12px}
+.result-modal{text-align:center}.result-modal .modal-head{text-align:left}.result-emblem{display:grid;place-items:center;width:72px;height:72px;margin:10px auto;border:2px solid var(--mint);border-radius:20px;color:var(--mint);font-size:42px}.result-modal h2{color:var(--mint)}.result-actions{display:flex;gap:8px}.result-actions button{flex:1;min-height:44px;border:1px solid #8adfb6;border-radius:9px;background:#79e1b1;color:#123b32;font-weight:800}.result-actions button:last-child{background:#254a43;color:#e9f8e8}
+
+.state-playing .intro,.state-thinking .intro,.state-over .intro{display:none}
+.state-playing .page,.state-thinking .page,.state-over .page{padding-top:10px}
+.state-playing .board-shell,.state-thinking .board-shell,.state-over .board-shell{width:min(100%,520px,calc(100dvh - 300px))}
+.state-setup .board{opacity:.7}.state-setup .cell{cursor:default}
+
+@media(max-width:940px){.intro{align-items:stretch;flex-wrap:wrap}.setup{width:100%}.layout{grid-template-columns:1fr}.sidebar{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:15px}.headline-panel,.controls-panel{grid-column:1/-1}.game-column{width:100%}.page{padding-inline:15px}}
+@media(max-width:620px){.topbar{height:54px;padding:0 8px;gap:7px}.topbar .tk-portal-return{min-height:39px;padding:8px 9px;font-size:10px}.brand{font-size:10px;gap:4px}.brand-mark{width:25px;height:25px;font-size:16px}.brand small,.top-actions button span{display:none}.top-actions{gap:4px}.top-actions button{min-height:39px;padding:7px 9px;font-size:12px}.page{padding:12px 8px 28px}.intro{gap:9px;margin-bottom:10px}.eyebrow{font-size:8px;letter-spacing:.09em}h1{font-size:clamp(37px,11vw,50px)}.tagline{font-size:11px;margin-top:4px}.setup{gap:6px;align-items:stretch}.mode-picker{flex:1;min-width:0;padding:3px}.mode{flex:1;min-width:0;padding:7px}.mode strong{font-size:10px}.mode small{font-size:8px}.start-btn{min-width:104px;min-height:49px;padding:7px;font-size:10px}.start-btn span{font-size:17px}.scoreboard{grid-template-columns:1fr 21px 1fr;gap:3px;margin-bottom:5px}.player-card{min-height:51px;padding:5px;gap:4px;border-radius:9px}.player-icon{flex-basis:25px;width:25px;height:29px;font-size:12px}.player-card small{font-size:7px}.player-card strong{font-size:11px}.taken b{font-size:15px}.turn-marker{font-size:8px}.status-line{font-size:9px;min-height:22px;margin-bottom:4px}.move-count{font-size:7px}.board-shell{padding:6px;border-radius:12px;width:100%}.board-top-labels{font-size:8px;margin-bottom:3px}.board-side-labels{font-size:8px}.board-bottom{font-size:7px;padding-top:4px}.piece{font-size:clamp(12px,4vw,20px)}.actions{grid-template-columns:repeat(4,1fr);gap:4px;margin-top:14px}.actions button{min-height:44px;padding:4px 2px;font-size:9px}.actions button span{font-size:13px;margin-right:1px}.mobile-guide{font-size:9px}.sidebar{grid-template-columns:1fr}.headline-panel,.controls-panel{grid-column:auto}.panel{padding:14px}.state-playing .page,.state-thinking .page,.state-over .page{padding-top:8px}.state-playing .board-shell,.state-thinking .board-shell,.state-over .board-shell{width:100%}}
+@media(max-width:360px){.brand{display:none}.start-btn{min-width:93px}.mode{padding:6px 4px}.mode strong{font-size:9px}.actions button{font-size:8px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
