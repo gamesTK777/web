@@ -90,11 +90,13 @@ canvas{display:block;width:100%;height:auto;touch-action:none}
   .touch-pad{height:100px}
 }
 </style>
+<link rel="stylesheet" href="../shared/portal-return.css">
 </head>
 <body>
 
 <!-- TITLE -->
 <div id="title-screen">
+  <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
   <div class="t-logo">⚽🏆</div>
   <div class="t-name">テーブルサッカー</div>
   <div class="t-sub">Foosball Game</div>
@@ -120,6 +122,7 @@ canvas{display:block;width:100%;height:auto;touch-action:none}
     <div class="hud-center">
       <div class="hud-timer" id="timer">0:00</div>
       <div class="hud-info" id="goal-info">先に5点取った方の勝ち！</div>
+      <a class="tk-portal-return tk-portal-return--inline tk-portal-return--compact" href="../index.html">← ゲーム一覧へ</a>
     </div>
     <div class="hud-score">
       <div><div class="s-label p2c">🔵 BLUE</div><div class="s-num p2c" id="s2">0</div></div>
@@ -163,6 +166,7 @@ canvas{display:block;width:100%;height:auto;touch-action:none}
     <div class="go-btns">
       <button class="go-btn go-btn-play" onclick="restartGame()">🔄 もう一度</button>
       <button class="go-btn go-btn-back" onclick="goTitle()">🏠 タイトル</button>
+      <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
     </div>
   </div>
 </div>

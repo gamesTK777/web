@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>🌸 はなばたけマインスイーパー 🌸</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="../shared/portal-return.css">
 </head>
 <body>
 <header class="wrap">
+  <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
   <div class="brand-row">
     <div class="brand-mark" aria-hidden="true">✿</div>
     <div class="brand-copy">
@@ -83,6 +85,7 @@
     <div class="win-actions">
       <button class="ov-btn" onclick="openMinesweeperWinRanking()">🏆 記録・TOP10</button>
       <button class="ov-btn" onclick="newGame(); closeOv('win-ov')">🌸 もう一度</button>
+      <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
     </div>
   </div>
 </div>
@@ -98,6 +101,7 @@
       <div class="ov-stat"><div class="sv" id="ls-open">0</div><div class="sk">開いたマス</div></div>
     </div>
     <button class="ov-btn" onclick="newGame(); closeOv('lose-ov')">💪 もう一度</button>
+    <div><a class="tk-portal-return tk-portal-return--inline tk-portal-return--overlay" href="../index.html">← ゲーム一覧へ</a></div>
   </div>
 </div>
 

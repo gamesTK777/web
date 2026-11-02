@@ -1,0 +1,71 @@
+.tk-portal-return {
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 400;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid #96d6d7;
+  border-radius: 999px;
+  background: #10232d;
+  color: #f7ffff !important;
+  font: 700 13px/1.25 system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+  letter-spacing: .01em;
+  text-align: center;
+  text-decoration: none !important;
+  white-space: nowrap;
+  box-shadow: 0 5px 18px #0007;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.tk-portal-return:hover {
+  background: #215361;
+  border-color: #d4ffff;
+  color: #fff !important;
+}
+.tk-portal-return:focus-visible {
+  outline: 3px solid #ffe884;
+  outline-offset: 3px;
+}
+.tk-portal-return--inline {
+  position: relative;
+  top: auto;
+  left: auto;
+  z-index: auto;
+}
+.tk-portal-return--screen-corner {
+  position: absolute;
+}
+.tk-portal-return--compact {
+  padding-inline: 10px;
+  font-size: 12px;
+}
+.tk-portal-return--overlay { margin-top: 12px; }
+@media (max-width: 600px) {
+  .portal-solitaire header { padding-top: 64px; }
+  .portal-whack .container { padding-top: 62px; }
+}
+#game-screen > .tk-portal-return {
+  align-self: flex-start;
+  margin-bottom: 10px;
+}
+#gameover .go-btns {
+  flex-wrap: wrap;
+}
+#gameover .go-btns > .tk-portal-return {
+  width: 100%;
+}
+@media (max-width: 380px) {
+  .topbar .brand { font-size: 11px; letter-spacing: 0; }
+  .topbar .brand-icon { display: none; }
+  .topbar .tk-portal-return { padding-inline: 8px; font-size: 11px; }
+}
+@media (max-width: 350px) {
+  .topbar .brand { display: none; }
+  .scr-hdr .tk-portal-return--compact { padding-inline: 5px; font-size: 10px; }
+  .scr-hdr .scr-title { font-size: 14px; letter-spacing: 2px; }
+}

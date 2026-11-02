@@ -114,8 +114,10 @@ h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spa
 @media(max-width:640px){:root{--card-w:68px;--card-h:95px;--gap:6px;} .player-panel{min-width:110px;padding:8px 10px;} .ov-card{padding:28px 18px;} }
 @media(max-width:400px){:root{--card-w:56px;--card-h:78px;--gap:4px;} .player-panel{min-width:90px;} }
 </style>
+<link rel="stylesheet" href="../shared/portal-return.css">
 </head>
 <body>
+<a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 <div id="sparkles"></div>
 <header>
   <span class="hdr-icon">🎀</span>
@@ -168,6 +170,7 @@ h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spa
       </div>
     </div>
     <button class="ov-btn" onclick="newGame();document.getElementById('overlay').classList.remove('show')">💖 もう一度あそぶ</button>
+    <div><a class="tk-portal-return tk-portal-return--inline tk-portal-return--overlay" href="../index.html">← ゲーム一覧へ</a></div>
   </div>
 </div>
 <script>

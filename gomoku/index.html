@@ -155,11 +155,13 @@
     @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
     .fade-up{animation:fadeUp .35s ease both;}
   </style>
+  <link rel="stylesheet" href="../shared/portal-return.css">
 </head>
 <body>
 
 <!-- ====== HOME ====== -->
 <div id="sHome" class="screen active">
+  <a class="tk-portal-return tk-portal-return--screen-corner" href="../index.html">← ゲーム一覧へ</a>
   <button class="sound-fab" id="sfabHome" onclick="toggleSound()">🔊</button>
   <div class="logo-wrap fade-up">
     <span class="logo-main">五目並べ</span>
@@ -175,7 +177,7 @@
   <div class="scr-hdr">
     <button class="back-btn" onclick="show('sHome')">← もどる</button>
     <span class="scr-title">ルール説明</span>
-    <span class="scr-title-r"></span>
+    <a class="tk-portal-return tk-portal-return--inline tk-portal-return--compact" href="../index.html">← ゲーム一覧へ</a>
   </div>
   <div class="rules-body">
     <div class="rule-card">
@@ -210,7 +212,7 @@
   <div class="scr-hdr">
     <button class="back-btn" onclick="show('sHome')">← もどる</button>
     <span class="scr-title">モード選択</span>
-    <span class="scr-title-r"></span>
+    <a class="tk-portal-return tk-portal-return--inline tk-portal-return--compact" href="../index.html">← ゲーム一覧へ</a>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;">
     <p class="sel-title">どちらで遊びますか？</p>
@@ -224,7 +226,7 @@
   <div class="scr-hdr">
     <button class="back-btn" onclick="show('sMode')">← もどる</button>
     <span class="scr-title">難易度選択</span>
-    <span class="scr-title-r"></span>
+    <a class="tk-portal-return tk-portal-return--inline tk-portal-return--compact" href="../index.html">← ゲーム一覧へ</a>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px;">
     <p class="sel-title">コンピュータの強さを選んでください</p>
@@ -238,6 +240,7 @@
 <div id="sGame" class="screen">
   <div class="game-hdr">
     <button class="home-btn" onclick="confirmHome()">⌂</button>
+    <a class="tk-portal-return tk-portal-return--inline tk-portal-return--compact" href="../index.html">← ゲーム一覧へ</a>
     <div class="turn-wrap">
       <span class="turn-stone ts-b" id="tstone"></span>
       <span class="turn-lbl" id="tlbl">黒の番です</span>
@@ -259,6 +262,7 @@
 
 <!-- ====== RESULT ====== -->
 <div id="sResult" class="screen">
+  <a class="tk-portal-return tk-portal-return--screen-corner" href="../index.html">← ゲーム一覧へ</a>
   <div id="rIcon" class="res-icon">🏆</div>
   <div id="rTitle" class="res-title">黒の勝ち</div>
   <div id="rSub" class="res-sub">お疲れ様でした</div>
