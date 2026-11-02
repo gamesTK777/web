@@ -195,6 +195,35 @@
       transition: transform 0.3s ease;
     }
 
+    .game-icon--shogi {
+      gap: 2px;
+      background: radial-gradient(circle at center, rgba(255, 205, 118, 0.13), transparent 75%), rgba(255,255,255,0.03);
+    }
+    .shogi-piece {
+      display: flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 48px;
+      clip-path: polygon(50% 0, 96% 22%, 89% 100%, 11% 100%, 4% 22%);
+      background: linear-gradient(145deg, #ffe5ad, #c99254);
+      color: #392412;
+      font-family: 'Noto Serif JP', 'Yu Mincho', serif;
+      font-size: 27px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .game-icon--hasami .shogi-piece {
+      width: 22px;
+      height: 30px;
+      font-size: 16px;
+    }
+    .game-icon--hasami .shogi-piece--opponent {
+      transform: rotate(180deg);
+      background: linear-gradient(145deg, #f6b5c1, #ba687d);
+    }
+
     /* 神経衰弱の画像アイコンのみ適用 */
     .game-icon--image { overflow: hidden; }
     .game-icon--image img {
@@ -367,14 +396,14 @@
       </a>
 
       <a href="shougi/index.html" class="game-card">
-        <div class="game-icon">🏯</div>
+        <div class="game-icon game-icon--shogi" aria-hidden="true"><span class="shogi-piece">王</span></div>
         <div class="game-title">SHOUGI</div>
         <p class="game-desc">古の知略がデジタルで蘇る。究極の頭脳戦、将棋の世界で相手の王を追い詰めろ。</p>
         <div class="play-btn">PLAY →</div>
       </a>
 
       <a href="hasami-shogi/index.html" class="game-card">
-        <div class="game-icon">☗</div>
+        <div class="game-icon game-icon--shogi game-icon--hasami" aria-hidden="true"><span class="shogi-piece">歩</span><span class="shogi-piece shogi-piece--opponent">歩</span><span class="shogi-piece">歩</span></div>
         <div class="game-title">はさみ将棋</div>
         <p class="game-desc">駒を縦横に動かして相手を挟み取る。先を読む一手が勝負を決める、9×9の盤上戦略ゲーム。</p>
         <div class="play-btn">PLAY →</div>
