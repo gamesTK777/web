@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐾 どうぶつソリティア 🐾</title>
+<title>ソリティア | TK777</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
 
@@ -15,21 +15,6 @@
     min-height: 100vh;
     overflow-x: hidden;
     user-select: none;
-  }
-
-  /* Floating background animals */
-  .bg-animal {
-    position: fixed;
-    font-size: 2.5rem;
-    opacity: 0.08;
-    pointer-events: none;
-    animation: floatBg 20s infinite linear;
-    z-index: 0;
-  }
-
-  @keyframes floatBg {
-    0% { transform: translateY(110vh) rotate(0deg); }
-    100% { transform: translateY(-20vh) rotate(360deg); }
   }
 
   header {
@@ -108,6 +93,17 @@
     margin: 0 auto;
   }
 
+  .play-help {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.78);
+    color: #35445c;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.55;
+  }
+
   .top-row {
     display: flex;
     gap: 10px;
@@ -121,11 +117,29 @@
     gap: 10px;
   }
 
+  .pile {
+    width: clamp(46px, 10vw, 102px);
+    flex: none;
+  }
+
+  .pile-heading, .pile-caption {
+    text-align: center;
+    color: #35445c;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .pile-heading { min-height: 20px; font-size: 0.82rem; margin-bottom: 5px; }
+  .pile-caption { margin-top: 5px; font-size: 0.71rem; }
+
+  .foundation-area { margin-left: auto; }
+
   .foundations {
     display: flex;
     gap: 10px;
-    margin-left: auto;
   }
+
+  .foundations .slot { width: clamp(46px, 10vw, 102px); flex: none; }
 
   .tableau {
     display: flex;
@@ -215,14 +229,11 @@
   }
 
   .card.face-down::after {
-    content: '🐾';
+    content: '';
     position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    opacity: 0.3;
+    inset: 16%;
+    border: 2px solid rgba(255,255,255,0.45);
+    border-radius: 8px;
   }
 
   .card-corner {
@@ -251,65 +262,39 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.2em;
+    font-size: 2.6em;
   }
 
-  /* Color themes for suits — RED group (0,1) vs DARK group (2,3) for color-blind accessibility */
-  .suit-0 .card-rank, .suit-0 .card-suit-small,
-  .suit-1 .card-rank, .suit-1 .card-suit-small { color: #c62828; } /* RED group: 🐱🐶 */
-  .suit-2 .card-rank, .suit-2 .card-suit-small,
-  .suit-3 .card-rank, .suit-3 .card-suit-small { color: #1a1a2e; } /* DARK group: 🐰🐻 */
-
-  /* Card background tint by group */
-  .suit-0, .suit-1 {
-    background: linear-gradient(160deg, #fff8f8 0%, #fff 100%);
-  }
-  .suit-2, .suit-3 {
-    background: linear-gradient(160deg, #f5f7ff 0%, #fff 100%);
-  }
-
-  /* Left-edge color stripe for instant group recognition */
-  .suit-0::before, .suit-1::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 5px;
-    border-radius: 14px 0 0 14px;
-    background: #c62828;
-  }
-  .suit-2::before, .suit-3::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 5px;
-    border-radius: 14px 0 0 14px;
-    background: #1a1a2e;
-  }
-
-  /* Group badge in top-right corner */
-  .suit-0 .card-corner.top::after,
-  .suit-1 .card-corner.top::after {
-    content: '🔴';
-    font-size: 0.5em;
-    line-height: 1;
-  }
-  .suit-2 .card-corner.top::after,
-  .suit-3 .card-corner.top::after {
-    content: '⚫';
-    font-size: 0.5em;
-    line-height: 1;
-  }
+  .suit-1, .suit-2 { color: #c6283e; }
+  .suit-0, .suit-3 { color: #172235; }
 
   /* Stock pile click */
   .slot.stock-slot {
     cursor: pointer;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 3px;
+    border: 2px solid #4b5bc0;
+    background: linear-gradient(135deg, #5164c8, #7b4cae);
+    color: #fff;
+    font: inherit;
+    box-shadow: 0 5px 14px rgba(51,52,112,0.26);
   }
-  .slot.stock-slot:hover {
-    background: rgba(255,255,255,0.3);
-    border-color: rgba(255,255,255,0.8);
+  .slot.stock-slot:not(:disabled):hover {
+    filter: brightness(1.12);
   }
+  .stock-slot:focus-visible { outline: 3px solid #243279; outline-offset: 3px; }
+  .stock-slot:disabled { cursor: default; opacity: 0.55; filter: none; }
+  .stock-slot.recycle { background: #e8f9f5; color: #176555; border-color: #4aa68e; }
+  .stock-slot.empty { background: rgba(255,255,255,0.4); color: #43536b; border-style: dashed; border-color: #8795ab; }
+  .stock-symbol { font-size: clamp(1.15rem, 3vw, 2rem); line-height: 1; }
+  .stock-action { font-size: clamp(0.58rem, 1.4vw, 0.76rem); line-height: 1.2; font-weight: 900; text-align: center; }
+  .foundation-slot[data-foundation="1"] .hint,
+  .foundation-slot[data-foundation="2"] .hint { color: #c6283e; opacity: 0.78; }
+  .foundation-slot[data-foundation="0"] .hint,
+  .foundation-slot[data-foundation="3"] .hint { color: #172235; opacity: 0.75; }
 
-  /* Foundation slot emojis */
+  /* Empty foundation suit marks */
   .slot .hint { font-size: 1.8rem; opacity: 0.4; }
 
   /* Win overlay */
@@ -376,32 +361,24 @@
     header h1 { font-size: 1.4rem; }
     #game { padding: 0 8px 20px; }
     .top-row, .tableau { gap: 5px; }
+    .stock-waste, .foundations { gap: 5px; }
+    .stock-waste .pile:first-child { width: 64px; }
+    .stock-waste .pile:nth-child(2) { width: 50px; }
+    .pile-heading { min-height: 2.4em; font-size: 0.7rem; }
+    .pile-caption { font-size: 0.62rem; }
     .card { border-radius: 8px; padding: 3px 4px; }
-    .card-center { font-size: 1.5em; }
+    .card-center { font-size: 1.9em; }
     .card-rank { font-size: 0.75em; }
+    .card-corner.bottom { display: none; }
+    .stock-action { font-size: 0.7rem; }
     .slot { border-radius: 8px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Background floating animals -->
-<script>
-  const animals = ['🐱','🐶','🐰','🐻','🐼','🐨','🦊','🐸','🐯','🦁','🐧','🦋'];
-  for(let i=0;i<15;i++){
-    const el = document.createElement('div');
-    el.className = 'bg-animal';
-    el.textContent = animals[Math.floor(Math.random()*animals.length)];
-    el.style.left = Math.random()*100+'vw';
-    el.style.animationDelay = -Math.random()*20+'s';
-    el.style.animationDuration = (15+Math.random()*15)+'s';
-    el.style.fontSize = (2+Math.random()*2)+'rem';
-    document.body.appendChild(el);
-  }
-</script>
-
 <header>
-  <h1>🐾 どうぶつソリティア 🐾</h1>
+  <h1>♠ ♥ ソリティア ♦ ♣</h1>
   <div class="score-bar">
     <div class="score-badge">⭐ スコア: <span id="score">0</span></div>
     <div class="score-badge">⏱️ タイム: <span id="timer">0:00</span></div>
@@ -416,19 +393,32 @@
 </header>
 
 <div id="game">
+  <p class="play-help">左の山札をタップして1枚めくる。右の組札には同じマークをAから順に重ねよう。置けるカードはダブルクリック（スマホは2回タップ）で自動移動します。</p>
   <!-- Top row: stock, waste, spacer, foundations -->
   <div class="top-row">
     <div class="stock-waste">
-      <div class="slot stock-slot" id="stock" onclick="drawCard()">
-        <span class="hint">🔄</span>
+      <div class="pile">
+        <div class="pile-heading">山札</div>
+        <button class="slot stock-slot" id="stock" type="button" onclick="drawCard()" aria-label="山札からカードを1枚めくる">
+          <span class="stock-symbol" aria-hidden="true">▤</span>
+          <span class="stock-action">1枚めくる</span>
+        </button>
+        <div class="pile-caption" id="stock-caption">残り24枚</div>
       </div>
-      <div class="slot" id="waste"></div>
+      <div class="pile">
+        <div class="pile-heading">めくった札</div>
+        <div class="slot" id="waste"></div>
+        <div class="pile-caption">ここから動かす</div>
+      </div>
     </div>
-    <div class="foundations">
-      <div class="slot foundation-slot" id="f0" data-foundation="0"><span class="hint">🐱</span></div>
-      <div class="slot foundation-slot" id="f1" data-foundation="1"><span class="hint">🐶</span></div>
-      <div class="slot foundation-slot" id="f2" data-foundation="2"><span class="hint">🐰</span></div>
-      <div class="slot foundation-slot" id="f3" data-foundation="3"><span class="hint">🐻</span></div>
+    <div class="foundation-area">
+      <div class="pile-heading">組札：Aから順に重ねる</div>
+      <div class="foundations">
+        <div class="slot foundation-slot" id="f0" data-foundation="0"><span class="hint">♠</span></div>
+        <div class="slot foundation-slot" id="f1" data-foundation="1"><span class="hint">♥</span></div>
+        <div class="slot foundation-slot" id="f2" data-foundation="2"><span class="hint">♦</span></div>
+        <div class="slot foundation-slot" id="f3" data-foundation="3"><span class="hint">♣</span></div>
+      </div>
     </div>
   </div>
 
@@ -439,7 +429,7 @@
 <!-- Win screen -->
 <div id="win-screen">
   <div class="win-card">
-    <div style="font-size:4rem; margin-bottom:10px">🎉🐾🎉</div>
+    <div style="font-size:4rem; margin-bottom:10px">🎉🃏🎉</div>
     <h2>クリア！おめでとう！</h2>
     <p>スコア: <strong id="win-score">0</strong>点 ／ タイム: <strong id="win-time">0:00</strong> ／ 移動: <strong id="win-moves">0</strong>回</p>
     <div class="btn-row">
@@ -455,21 +445,13 @@
 //  GAME DATA
 // ==============================
 const SUITS = [
-  { emoji: '🐱', name: 'cat',    color: 0 }, // warm
-  { emoji: '🐶', name: 'dog',    color: 1 }, // warm
-  { emoji: '🐰', name: 'rabbit', color: 0 }, // cool
-  { emoji: '🐻', name: 'bear',   color: 1 }, // cool
+  { symbol: '♠', color: 'black' },
+  { symbol: '♥', color: 'red' },
+  { symbol: '♦', color: 'red' },
+  { symbol: '♣', color: 'black' },
 ];
 
-// Color groups: 0=pink/orange (suits 0,1), 1=blue/green (suits 2,3)
-// Alternating in tableau = opposite color groups
 const RANK_LABELS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-const CARD_EMOJIS = {
-  0:  { 0:'😺', 1:'😸', 2:'😹', 3:'😻', 4:'😼', 5:'🙀', 6:'😽', 7:'🐱', 8:'🐈', 9:'🐾', 10:'🎀', 11:'🌸', 12:'👑' },
-  1:  { 0:'🐶', 1:'🐕', 2:'🦴', 3:'🐩', 4:'🐾', 5:'🎾', 6:'🦮', 7:'🐕‍🦺', 8:'🐶', 9:'💛', 10:'🌟', 11:'🌼', 12:'👑' },
-  2:  { 0:'🐰', 1:'🐇', 2:'🌿', 3:'🥕', 4:'🐾', 5:'🌙', 6:'⭐', 7:'💙', 8:'🫐', 9:'🔵', 10:'❄️', 11:'🌸', 12:'👑' },
-  3:  { 0:'🐻', 1:'🐼', 2:'🐨', 3:'🍯', 4:'🌿', 5:'🐾', 6:'🌲', 7:'💚', 8:'🍀', 9:'🌱', 10:'🌿', 11:'🍃', 12:'👑' },
-};
 
 let deck = [], stock = [], waste = [], foundations = [[],[],[],[]], tableau = [];
 let score = 0, moves = 0, timerInterval, seconds = 0;
@@ -525,6 +507,11 @@ function newGame() {
   clearInterval(timerInterval);
   clearInterval(autoCompleteTimer);
   autoCompleteTimer = null;
+  mousePending = null;
+  touchPending = null;
+  lastTapInfo = null;
+  dragState = null;
+  if(dragEl) { dragEl.remove(); dragEl = null; }
   gameSerial++;
   winRecorded = false;
   lastWinRankingResult = null;
@@ -589,17 +576,16 @@ function cardElement(card, opts = {}) {
   el.classList.add(`suit-${card.suit}`);
   const suit = SUITS[card.suit];
   const rankLabel = RANK_LABELS[card.rank];
-  const emoji = CARD_EMOJIS[card.suit][card.rank];
 
   el.innerHTML = `
     <div class="card-corner top">
       <div class="card-rank">${rankLabel}</div>
-      <div class="card-suit-small">${suit.emoji}</div>
+      <div class="card-suit-small">${suit.symbol}</div>
     </div>
-    <div class="card-center">${emoji}</div>
+    <div class="card-center">${suit.symbol}</div>
     <div class="card-corner bottom">
       <div class="card-rank">${rankLabel}</div>
-      <div class="card-suit-small">${suit.emoji}</div>
+      <div class="card-suit-small">${suit.symbol}</div>
     </div>
   `;
 
@@ -608,23 +594,27 @@ function cardElement(card, opts = {}) {
 
 function renderStock() {
   const el = document.getElementById('stock');
-  el.innerHTML = '';
+  const symbol = el.querySelector('.stock-symbol');
+  const action = el.querySelector('.stock-action');
+  const caption = document.getElementById('stock-caption');
+  el.classList.toggle('recycle', stock.length === 0 && waste.length > 0);
+  el.classList.toggle('empty', stock.length === 0 && waste.length === 0);
+  el.disabled = stock.length === 0 && waste.length === 0;
   if(stock.length > 0) {
-    const card = { suit: 0, rank: 0, faceUp: false };
-    const ce = cardElement(card);
-    ce.style.position = 'relative';
-    ce.style.width = '100%';
-    ce.style.aspectRatio = '2.5/3.5';
-    if(stock.length > 1) {
-      const shadow = document.createElement('div');
-      shadow.style.cssText = 'position:absolute;inset:0;border-radius:14px;background:linear-gradient(135deg,#667eea,#764ba2);opacity:0.5;transform:translate(3px,3px);';
-      el.appendChild(shadow);
-    }
-    el.appendChild(ce);
-    el.style.cursor = 'pointer';
+    symbol.textContent = '▤';
+    action.textContent = '1枚めくる';
+    caption.textContent = `残り${stock.length}枚`;
+    el.setAttribute('aria-label', `山札からカードを1枚めくる。残り${stock.length}枚`);
+  } else if(waste.length > 0) {
+    symbol.textContent = '↻';
+    action.textContent = '札を戻す';
+    caption.textContent = 'めくった札を戻す';
+    el.setAttribute('aria-label', 'めくった札を山札に戻す');
   } else {
-    el.innerHTML = '<span class="hint" style="opacity:0.5">🔄</span>';
-    el.style.cursor = 'pointer';
+    symbol.textContent = '—';
+    action.textContent = 'カードなし';
+    caption.textContent = 'すべて使用済み';
+    el.setAttribute('aria-label', '山札にカードがありません');
   }
 }
 
@@ -662,7 +652,7 @@ function renderFoundations() {
       ce.style.aspectRatio = '2.5/3.5';
       el.appendChild(ce);
     } else {
-      el.innerHTML = `<span class="hint">${SUITS[i].emoji}</span>`;
+      el.innerHTML = `<span class="hint">${SUITS[i].symbol}</span>`;
     }
   }
 }
@@ -690,7 +680,8 @@ function renderTableau() {
     slotEl.className = 'slot';
     slotEl.style.position = 'relative';
     slotEl.style.zIndex = 0;
-    slotEl.innerHTML = cards.length === 0 ? '<span class="hint">🐾</span>' : '';
+    slotEl.innerHTML = cards.length === 0 ? '<span class="hint">K</span>' : '';
+    if(cards.length === 0) slotEl.title = '空の列にはKを置けます';
     col.appendChild(slotEl);
 
     // Drop target on slot
@@ -736,9 +727,11 @@ function renderTableau() {
 //  DRAG & DROP (mouse + touch unified)
 // ==============================
 let dragEl = null, dragOffset = {x:0, y:0};
+let mousePending = null;
 let touchPending = null; // { source, args, startX, startY, cardEl }
 let lastTapInfo = null;  // { key, time } for double-tap detection
 const DRAG_THRESHOLD = 10;
+const DOUBLE_TAP_MS = 500;
 
 function getClientXY(e) {
   if(e.touches && e.touches.length > 0)
@@ -757,10 +750,11 @@ function startPointerDown(e, source, ...args) {
     touchPending = { source, args, startX: x, startY: y, cardEl: e.currentTarget };
     return;
   }
-  beginDrag(e.currentTarget, source, args, x, y);
+  mousePending = { source, args, startX: x, startY: y, cardEl: e.currentTarget };
 }
 
 function beginDrag(cardEl, source, args, clientX, clientY) {
+  lastTapInfo = null;
   let cards = [];
   let originData = { source, args };
   if(source === 'waste') {
@@ -798,10 +792,25 @@ function moveDragEl(cx, cy) {
 }
 
 function onMouseMove(e) {
+  if(mousePending && !dragState) {
+    const dx = e.clientX - mousePending.startX;
+    const dy = e.clientY - mousePending.startY;
+    if(Math.hypot(dx, dy) >= DRAG_THRESHOLD) {
+      const pending = mousePending;
+      mousePending = null;
+      beginDrag(pending.cardEl, pending.source, pending.args, pending.startX, pending.startY);
+    }
+  }
   if(dragEl) moveDragEl(e.clientX, e.clientY);
 }
 
 function onMouseUp(e) {
+  if(mousePending) {
+    const pending = mousePending;
+    mousePending = null;
+    if(pending.cardEl.contains(e.target)) handleCardTap(pending.source, pending.args);
+    return;
+  }
   if(!dragEl && !dragState) return;
   if(dragEl) { document.body.removeChild(dragEl); dragEl = null; }
   if(!dragState) return;
@@ -834,15 +843,7 @@ function onTouchEnd(e) {
       flipCard(tp.args[0]);
       return;
     }
-    // Double-tap → send to foundation
-    const now = Date.now();
-    const key = tp.source + JSON.stringify(tp.args);
-    if(lastTapInfo && lastTapInfo.key === key && now - lastTapInfo.time < 350) {
-      lastTapInfo = null;
-      doubleTapToFoundation(tp.source, tp.args);
-      return;
-    }
-    lastTapInfo = { key, time: now };
+    handleCardTap(tp.source, tp.args);
     return;
   }
   if(dragEl) { document.body.removeChild(dragEl); dragEl = null; }
@@ -867,6 +868,20 @@ function finalizeDrop(cx, cy) {
   render();
 }
 
+function handleCardTap(source, args) {
+  const card = source === 'waste' ? waste[waste.length - 1]
+    : source === 'tableau' ? tableau[args[0]]?.[args[1]] : null;
+  if(!card?.faceUp) return;
+  const key = `${source}:${args.join(':')}:${card.suit}:${card.rank}`;
+  const now = Date.now();
+  if(lastTapInfo?.key === key && now - lastTapInfo.time < DOUBLE_TAP_MS) {
+    lastTapInfo = null;
+    doubleTapToFoundation(source, args);
+  } else {
+    lastTapInfo = { key, time: now };
+  }
+}
+
 function doubleTapToFoundation(source, args) {
   if(source === 'waste') {
     if(waste.length === 0) return;
@@ -874,9 +889,9 @@ function doubleTapToFoundation(source, args) {
     const fi = tryMoveToFoundation(card);
     if(fi >= 0) { saveHistory(); waste.pop(); foundations[fi].push(card); addScore(15); moves++; render(); checkWin(); }
   } else if(source === 'tableau') {
-    const [ci] = args;
+    const [ci, cardIdx] = args;
     const colCards = tableau[ci];
-    if(!colCards.length) return;
+    if(!colCards.length || cardIdx !== colCards.length - 1) return;
     const card = colCards[colCards.length-1];
     if(!card.faceUp) return;
     const fi = tryMoveToFoundation(card);
@@ -894,6 +909,8 @@ document.addEventListener('touchend', onTouchEnd);
 //  GAME LOGIC
 // ==============================
 function drawCard() {
+  if(stock.length === 0 && waste.length === 0) return;
+  lastTapInfo = null;
   saveHistory();
   if(stock.length === 0) {
     // Flip waste back
@@ -957,10 +974,8 @@ function dropOnTableau(ci) {
   if(col.length === 0) {
     valid = (bottomCard.rank === 12); // K on empty
   } else if(topCard.faceUp) {
-    // Alternating color groups: SUITS[0,1]=warm, SUITS[2,3]=cool
-    const topGroup = topCard.suit < 2 ? 0 : 1;
-    const botGroup = bottomCard.suit < 2 ? 0 : 1;
-    valid = (topGroup !== botGroup) && (bottomCard.rank === topCard.rank - 1);
+    valid = SUITS[topCard.suit].color !== SUITS[bottomCard.suit].color
+      && bottomCard.rank === topCard.rank - 1;
   }
 
   if(!valid) { dragState = null; render(); return; }
@@ -1109,6 +1124,7 @@ function saveHistory() {
 
 function undoMove() {
   if(history.length === 0) return;
+  lastTapInfo = null;
   const state = history.pop();
   stock = state.stock;
   waste = state.waste;
@@ -1134,51 +1150,6 @@ function updateScore() {
 function updateMoves() {
   document.getElementById('moves').textContent = moves;
 }
-
-// ==============================
-//  DOUBLE-CLICK TO FOUNDATION
-// ==============================
-document.addEventListener('dblclick', e => {
-  const cardEl = e.target.closest('.card');
-  if(!cardEl || cardEl.classList.contains('face-down')) return;
-
-  // Find which pile/col this card is the top of
-  // Waste
-  if(document.getElementById('waste').contains(cardEl) && waste.length > 0) {
-    const card = waste[waste.length-1];
-    const fi = tryMoveToFoundation(card);
-    if(fi >= 0) {
-      saveHistory();
-      waste.pop();
-      foundations[fi].push(card);
-      addScore(15); moves++;
-      render();
-      checkWin();
-    }
-    return;
-  }
-
-  // Tableau
-  for(let ci = 0; ci < 7; ci++) {
-    const col = document.querySelector(`.tableau-col[data-col="${ci}"]`);
-    if(col && col.contains(cardEl)) {
-      const colCards = tableau[ci];
-      if(colCards.length === 0) return;
-      const card = colCards[colCards.length-1];
-      if(!card.faceUp) return;
-      const fi = tryMoveToFoundation(card);
-      if(fi >= 0) {
-        saveHistory();
-        colCards.pop();
-        foundations[fi].push(card);
-        addScore(15); moves++;
-        render();
-        checkWin();
-      }
-      return;
-    }
-  }
-});
 
 // ==============================
 //  START
