@@ -147,7 +147,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 <!-- Title -->
 <div id="ts">
   <div class="tl">🐾 どうぶつタワー</div>
-  <div class="tsb">ふわっと落として、ゆらゆら積もう。</div>
+  <div class="tsb">狙って落として、どんどん積もう。</div>
   <div class="ta">🐘🦒🐻🐊🐧</div>
   <div id="best-label" class="tsb">自己ベスト 0 点</div>
   <div class="howto"><span>❶ 指・マウスで落とす場所を決める</span><span>❷ 下の ↺ ↻ で向きを変える</span><span>❸ 指を離す／クリックで落とす。全部積めたらクリア！</span></div>
@@ -165,7 +165,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 </div>
 
 <script>
-const {Engine,Bodies,Body,Composite,Events,Vector}=Matter;
+const {Engine,Bodies,Body,Composite,Events,Vector,Sleeping}=Matter;
 const container=document.getElementById('gc');
 const canvas=document.getElementById('cv');
 const ctx=canvas.getContext('2d');
@@ -186,8 +186,8 @@ function updateSize(){
 updateSize(); window.addEventListener('resize',updateSize);
 
 const engine=Engine.create({
-  gravity:{x:0,y:0.9},enableSleeping:true,
-  positionIterations:8,velocityIterations:8,constraintIterations:3
+  gravity:{x:0,y:1},enableSleeping:true,
+  positionIterations:10,velocityIterations:10,constraintIterations:3
 });
 const world=engine.world;
 
@@ -252,19 +252,21 @@ let numPlayers=1, currentPlayer=0; // 0-indexed
 let alivePlayers=[]; // which players are still in
 let animalQueue=[], currentAnimal=null, nextAnimal=null;
 let placedAnimals=[], dropX, settleTimer=0,dropFrames=0,lastDroppedBody=null,dropHasContact=false;
+let contactFrames=0,contactAt=0,lastSupportFrame=-1;
 let maxHeight=0, stackedCount=0, rescueLeft=2,cameraY=0;
 let tableBody=null;
 let wallL,wallR,floorBody;
 let currentRotation=0;
 let particles=[];
 
-const TABLE_W=420, TABLE_H=18, TABLE_LEGS_H=80;
+const TABLE_W=420, TABLE_H=30, TABLE_LEGS_H=80;
 
-// Flat, forgiving contact surfaces; ears, tails and feet stay visual details.
+// [width, height, artwork offset X, artwork offset Y]. Keep the painted feet
+// inside the collider so an animal at rest never appears buried in the table.
 const COLLIDERS={
-  elephant:[64,49],giraffe:[42,57],bear:[45,55],croc:[80,24],
-  penguin:[39,47],rabbit:[40,51],fox:[59,46],lion:[45,55],
-  panda:[45,55],frog:[53,29],turtle:[61,42],owl:[43,45]
+  elephant:[68,63,-8,1.5],giraffe:[42,81,2,-1.5],bear:[48,71,0,-3.5],croc:[88,29,-4,4.5],
+  penguin:[44,56,0,-1],rabbit:[40,76,0,-9],fox:[69,49,1.5,1.5],lion:[48,76,0,-4],
+  panda:[48,71,0,-2.5],frog:[58,43,0,-1.5],turtle:[65,52,-2.5,0],owl:[48,58,0,-3]
 };
 function safeDropX(rawX,def){
   const half=COLLIDERS[def.id][0]*S*.28;
@@ -274,7 +276,7 @@ function towerTop(){
   const tableTop=tableBody?tableBody.position.y-TABLE_H*S/2:H*.72;
   return Math.min(tableTop,...placedAnimals.map(b=>b.bounds.min.y));
 }
-function spawnY(){return Math.min(H*.32,towerTop()-92*S);}
+function spawnY(){return towerTop()-125*S;}
 function showFeedback(message){
   const el=document.getElementById('feedback');el.textContent=message;
   el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
@@ -288,14 +290,15 @@ function getAnimalCount(np){ return [12,14,16,20][np-1]||12; }
 //  CREATE COMPOUND ANIMAL BODY
 // ═════════════════════════════
 function createAnimalBody(def, x, y, angle){
-  const [width,height]=COLLIDERS[def.id];
-  const body=Bodies.rectangle(x,y,width*S,height*S,{
-    chamfer:{radius:Math.min(5,height*.12)*S},
-    friction:.65,frictionStatic:1.7,frictionAir:.035,restitution:0,
-    density:(.0009+def.mass*.00008)/Math.max(.5,S),
-    sleepThreshold:45,label:'animal'
+  const [width,height,ox,oy]=COLLIDERS[def.id];
+  const ca=Math.cos(angle),sa=Math.sin(angle);
+  const body=Bodies.rectangle(x+(ox*ca-oy*sa)*S,y+(ox*sa+oy*ca)*S,width*S,height*S,{
+    chamfer:{radius:2*S},
+    friction:.8,frictionStatic:1.1,frictionAir:.012,restitution:0,
+    density:(.001+def.mass*.00014)/Math.max(.5,S),
+    sleepThreshold:25,label:'animal'
   });
-  body.comOx=0;body.comOy=0;body.animalDef=def;
+  body.comOx=ox*S;body.comOy=oy*S;body.animalDef=def;
   Body.setAngle(body,angle);
   return body;
 }
@@ -340,16 +343,17 @@ function startGame(np){
   document.getElementById('feedback').classList.remove('show');
   clearTimeout(feedbackTimer);feedbackTimer=null;
   layoutFrozen=false;Composite.clear(world,false);Engine.clear(engine);updateSize();layoutFrozen=true;
-  engine.gravity.y=.9*S;
+  engine.gravity.y=1*S;
 
   gameState='playing'; score=0; stackedCount=0; maxHeight=0;rescueLeft=2;cameraY=0;
   placedAnimals=[];dropFrames=0;settleTimer=0;lastDroppedBody=null;dropHasContact=false;
+  contactFrames=0;contactAt=0;lastSupportFrame=-1;
   currentRotation=0;particles=[];
 
   const tY=H*0.72, tX=W/2;
   const tw=TABLE_W*S, th=TABLE_H*S;
 
-  tableBody=Bodies.rectangle(tX,tY,tw,th,{isStatic:true,friction:.85,frictionStatic:2,restitution:0,label:'table'});
+  tableBody=Bodies.rectangle(tX,tY,tw,th,{isStatic:true,friction:.9,frictionStatic:1.1,restitution:0,label:'table'});
   floorBody=Bodies.rectangle(W/2,H+50,W*3,100,{isStatic:true,label:'floor'});
   wallL=Bodies.rectangle(-30,H/2,60,H*2,{isStatic:true,label:'wall'});
   wallR=Bodies.rectangle(W+30,H/2,60,H*2,{isStatic:true,label:'wall'});
@@ -360,8 +364,17 @@ function startGame(np){
   Events.on(engine,'collisionStart',ev=>{
     for(const pair of ev.pairs){
       const a=pair.bodyA,b=pair.bodyB;
-      if((a===lastDroppedBody&&(b.label==='animal'||b.label==='table'))||
-         (b===lastDroppedBody&&(a.label==='animal'||a.label==='table')))dropHasContact=true;
+       if((a===lastDroppedBody&&(b.label==='animal'||b.label==='table'))||
+          (b===lastDroppedBody&&(a.label==='animal'||a.label==='table'))){
+         lastSupportFrame=dropFrames+1;
+         if(!dropHasContact){
+           dropHasContact=true;contactAt=Date.now();
+           // Land with a thud instead of feeding the solver another bounce.
+           lastDroppedBody.frictionAir=.07;
+           Body.setVelocity(lastDroppedBody,{x:lastDroppedBody.velocity.x*.25,y:Math.min(0,lastDroppedBody.velocity.y)*.2});
+           Body.setAngularVelocity(lastDroppedBody,lastDroppedBody.angularVelocity*.25);
+         }
+       }
       if(a.label==='animal'||b.label==='animal'){
         const imp=Vector.magnitude(Vector.sub(a.velocity,b.velocity));
         if(imp>2.5){
@@ -369,6 +382,16 @@ function startGame(np){
           const cy=pair.collision.supports[0]?.y||(a.position.y+b.position.y)/2;
           addBurst(cx,cy,Math.min(7,Math.floor(imp)));
         }
+      }
+    }
+  });
+  Events.off(engine,'collisionActive');
+  Events.on(engine,'collisionActive',ev=>{
+    for(const pair of ev.pairs){
+      const a=pair.bodyA,b=pair.bodyB;
+      if((a===lastDroppedBody&&(b.label==='animal'||b.label==='table'))||
+         (b===lastDroppedBody&&(a.label==='animal'||a.label==='table'))){
+        lastSupportFrame=dropFrames+1;break;
       }
     }
   });
@@ -428,7 +451,7 @@ function dropAnimal(){
   stackedCount++;
   score+=10*stackedCount;
 
-  gameState='dropping';settleTimer=0;dropFrames=0;
+  gameState='dropping';settleTimer=0;dropFrames=0;contactFrames=0;contactAt=0;lastSupportFrame=-1;
   currentRotation=0; updateRotLabel();
 
   if(animalQueue.length>0){currentAnimal=animalQueue.shift();nextAnimal=animalQueue.length>0?animalQueue[0]:null;}
@@ -532,14 +555,20 @@ function gameLogic(){
     }
     eliminateCurrentPlayer();return;
   }
-  const settled=placedAnimals.every(b=>b.isSleeping||
-    (Vector.magnitude(b.velocity)<.65*S&&Math.abs(b.angularVelocity)<.025));
+  if(dropHasContact)contactFrames++;
+  const supported=lastDroppedBody&&(lastDroppedBody.isSleeping||dropFrames-lastSupportFrame<=2);
+  // A quiet new animal is not enough: an older animal may still be rolling away.
+  const settled=supported&&placedAnimals.every(b=>b.isSleeping||
+    (Vector.magnitude(b.velocity)<.9*S&&Math.abs(b.angularVelocity)<.04));
   settleTimer=settled?settleTimer+1:0;
-  if(dropHasContact&&dropFrames>20&&(settleTimer>=18||dropFrames>=200)){
-    if(dropFrames>=200){
-      for(const b of placedAnimals){
-        if(Vector.magnitude(b.velocity)<1.5*S){Body.setVelocity(b,{x:0,y:0});Body.setAngularVelocity(b,0);}
-      }
+  const timeLimit=contactAt&&Date.now()-contactAt>=1800;
+  const softSettled=placedAnimals.every(b=>b.isSleeping||
+    (Vector.magnitude(b.velocity)<1.2*S&&Math.abs(b.velocity.y)<.7*S&&Math.abs(b.angularVelocity)<.06));
+  if(dropHasContact&&supported&&contactFrames>=8&&
+     (settleTimer>=7||((contactFrames>=75||timeLimit)&&softSettled))){
+    // End tiny resting vibrations. Sleeping bodies still wake on the next hit.
+    for(const b of placedAnimals){
+      if(b.isSleeping||(Vector.magnitude(b.velocity)<1.2*S&&Math.abs(b.angularVelocity)<.06))Sleeping.set(b,true);
     }
     for(const b of placedAnimals){const h=tableTop-b.position.y;if(h>maxHeight)maxHeight=h;}
     if(lastDroppedBody&&placedAnimals.includes(lastDroppedBody)){
