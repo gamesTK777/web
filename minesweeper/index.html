@@ -4,474 +4,69 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>🌸 はなばたけマインスイーパー 🌸</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg-top: #1a0a2e;
-  --bg-mid: #0d1a3a;
-  --bg-bot: #0a1228;
-  --accent: #e879f9;
-  --accent2: #38bdf8;
-  --gold: #fbbf24;
-  --cell-size: 38px;
-  --cell-radius: 8px;
-  --font: 'Nunito', sans-serif;
-}
-
-html { height: 100%; }
-body {
-  font-family: var(--font);
-  min-height: 100vh;
-  background: linear-gradient(160deg, var(--bg-top) 0%, var(--bg-mid) 50%, var(--bg-bot) 100%);
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  overflow-x: hidden;
-  user-select: none;
-  padding-bottom: 40px;
-}
-
-/* ── Particle canvas ── */
-#canvas-bg {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-}
-
-/* ── Layout ── */
-.wrap { position: relative; z-index: 5; width: 100%; max-width: 900px; padding: 0 12px; }
-
-/* ── Header ── */
-header {
-  text-align: center;
-  padding: 20px 12px 14px;
-  position: relative; z-index: 5;
-}
-.logo {
-  font-size: 2.2rem; font-weight: 900; letter-spacing: 2px;
-  background: linear-gradient(135deg, #f0abfc, #818cf8, #38bdf8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 20px rgba(232, 121, 249, 0.4));
-  margin-bottom: 2px;
-}
-.logo-sub {
-  font-size: 0.7rem; letter-spacing: 4px;
-  color: rgba(232, 121, 249, 0.55); margin-bottom: 14px;
-}
-
-/* ── Difficulty ── */
-.diff-row {
-  display: flex; justify-content: center; gap: 7px; flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-.diff-btn {
-  padding: 6px 16px;
-  border: 1.5px solid rgba(232, 121, 249, 0.3);
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(232, 121, 249, 0.65);
-  font-family: var(--font); font-size: 0.82rem; font-weight: 800;
-  cursor: pointer; transition: all 0.18s;
-}
-.diff-btn:hover { background: rgba(232, 121, 249, 0.12); border-color: rgba(232, 121, 249, 0.6); }
-.diff-btn.active {
-  background: linear-gradient(135deg, rgba(232, 121, 249, 0.3), rgba(56, 189, 248, 0.3));
-  border-color: rgba(232, 121, 249, 0.8);
-  color: #fff;
-  box-shadow: 0 0 16px rgba(232, 121, 249, 0.3);
-}
-
-/* ── Custom panel ── */
-#custom-panel {
-  display: none; justify-content: center; gap: 12px; align-items: center;
-  flex-wrap: wrap; margin-bottom: 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(232,121,249,0.2);
-  border-radius: 14px; padding: 10px 16px;
-}
-#custom-panel label {
-  font-size: 0.82rem; font-weight: 700; color: rgba(232,121,249,0.8);
-  display: flex; align-items: center; gap: 6px;
-}
-#custom-panel input[type=number] {
-  width: 54px; background: rgba(255,255,255,0.08);
-  border: 1.5px solid rgba(232,121,249,0.35);
-  border-radius: 8px; color: #fff; font-family: var(--font);
-  font-size: 0.85rem; font-weight: 700;
-  padding: 4px 8px; text-align: center; outline: none;
-}
-#custom-panel input[type=number]:focus { border-color: rgba(232,121,249,0.8); }
-.btn-apply {
-  padding: 6px 18px; border: none; border-radius: 20px;
-  background: linear-gradient(135deg, #e879f9, #818cf8);
-  color: #fff; font-family: var(--font); font-size: 0.82rem; font-weight: 800;
-  cursor: pointer; transition: all 0.18s;
-}
-.btn-apply:hover { filter: brightness(1.15); transform: translateY(-1px); }
-
-/* ── HUD ── */
-.hud {
-  display: flex; justify-content: center; align-items: center;
-  gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
-}
-.hud-badge {
-  background: rgba(255,255,255,0.06);
-  border: 1.5px solid rgba(255,255,255,0.1);
-  border-radius: 40px; padding: 7px 20px;
-  display: flex; align-items: center; gap: 7px;
-  min-width: 100px; justify-content: center;
-}
-.hud-badge .label { font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 700; }
-.hud-badge .value { font-size: 1.1rem; font-weight: 900; color: #fff; min-width: 36px; text-align: center; }
-.hud-badge.mine-badge .value { color: #f87171; }
-.hud-badge.time-badge .value { color: #34d399; }
-.hud-badge.score-badge .value { color: #fbbf24; }
-
-/* Face / Reset button */
-#face-btn {
-  width: 52px; height: 52px; border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-  border: 2px solid rgba(255,255,255,0.15);
-  font-size: 1.7rem; cursor: pointer;
-  transition: all 0.15s; display: flex;
-  align-items: center; justify-content: center;
-  box-shadow: 0 0 0 0 rgba(232,121,249,0);
-}
-#face-btn:hover {
-  background: rgba(232,121,249,0.15);
-  border-color: rgba(232,121,249,0.5);
-  box-shadow: 0 0 20px rgba(232,121,249,0.3);
-  transform: scale(1.08);
-}
-#face-btn:active { transform: scale(0.96); }
-
-/* ── Board wrapper ── */
-#board-wrap {
-  position: relative; z-index: 5;
-  display: flex; justify-content: center;
-  padding: 0 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-#board {
-  display: inline-grid;
-  gap: 3px;
-  padding: 14px;
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(12px);
-  border: 1.5px solid rgba(255,255,255,0.08);
-  border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,121,249,0.05);
-}
-
-/* ── Cells ── */
-.cell {
-  width: var(--cell-size); height: var(--cell-size);
-  border-radius: var(--cell-radius);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1rem; font-weight: 900;
-  cursor: pointer; position: relative;
-  transition: transform 0.1s, box-shadow 0.1s;
-  -webkit-tap-highlight-color: transparent;
-  outline: none;
-  touch-action: manipulation;
-  -webkit-touch-callout: none;
-}
-
-/* Hidden cell */
-.cell.hidden {
-  background: linear-gradient(145deg, #2d1b4e, #1e1238);
-  box-shadow: 0 3px 0 #140c28, inset 0 1px 0 rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-.cell.hidden:hover {
-  transform: translateY(-2px);
-  background: linear-gradient(145deg, #3d2560, #2a1a48);
-  box-shadow: 0 5px 0 #140c28, 0 0 12px rgba(232,121,249,0.2);
-}
-.cell.hidden:active { transform: translateY(1px); box-shadow: 0 1px 0 #140c28; }
-
-/* Flagged */
-.cell.flagged {
-  background: linear-gradient(145deg, #4a1a3a, #2d0f24);
-  box-shadow: 0 3px 0 #200a18, inset 0 1px 0 rgba(255,255,255,0.08);
-  border: 1px solid rgba(248,113,113,0.3);
-}
-.cell.flagged::after {
-  content: '🚩';
-  font-size: 1.1rem;
-  animation: flagPop 0.2s ease-out;
-}
-@keyframes flagPop {
-  0% { transform: scale(0.5) rotate(-10deg); }
-  60% { transform: scale(1.15) rotate(5deg); }
-  100% { transform: scale(1) rotate(0deg); }
-}
-
-/* Question mark */
-.cell.question {
-  background: linear-gradient(145deg, #2a2a50, #1a1a35);
-  box-shadow: 0 3px 0 #100f20, inset 0 1px 0 rgba(255,255,255,0.08);
-  border: 1px solid rgba(129,140,248,0.3);
-}
-.cell.question::after { content: '❓'; font-size: 1rem; }
-
-/* Revealed */
-.cell.revealed {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.05);
-  cursor: default;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
-}
-.cell.revealed:hover { transform: none; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
-
-/* Revealed empty – flower decoration */
-.cell.revealed.empty::after {
-  content: var(--flower, '·');
-  font-size: 0.75rem;
-  opacity: 0.2;
-}
-
-/* Number colors */
-.n1 { color: #60a5fa; text-shadow: 0 0 8px rgba(96,165,250,0.6); }
-.n2 { color: #4ade80; text-shadow: 0 0 8px rgba(74,222,128,0.6); }
-.n3 { color: #f87171; text-shadow: 0 0 8px rgba(248,113,113,0.6); }
-.n4 { color: #c084fc; text-shadow: 0 0 8px rgba(192,132,252,0.6); }
-.n5 { color: #fb923c; text-shadow: 0 0 8px rgba(251,146,60,0.6); }
-.n6 { color: #2dd4bf; text-shadow: 0 0 8px rgba(45,212,191,0.6); }
-.n7 { color: #f472b6; text-shadow: 0 0 8px rgba(244,114,182,0.6); }
-.n8 { color: #94a3b8; text-shadow: 0 0 8px rgba(148,163,184,0.4); }
-
-/* Number reveal animation */
-@keyframes numReveal {
-  0% { transform: scale(0.4); opacity: 0; }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
-.cell.revealed .num { animation: numReveal 0.2s ease-out; display: inline-block; }
-
-/* Chord highlight */
-.cell.chord-hint {
-  box-shadow: 0 0 0 2px rgba(251,191,36,0.6), inset 0 0 8px rgba(251,191,36,0.1) !important;
-}
-
-/* Mine hit */
-.cell.mine-hit {
-  background: radial-gradient(circle, #ff6060, #cc2020) !important;
-  border-color: rgba(255,100,100,0.6) !important;
-  animation: mineExplode 0.4s ease-out;
-}
-@keyframes mineExplode {
-  0% { transform: scale(1); }
-  25% { transform: scale(1.3) rotate(-5deg); }
-  50% { transform: scale(0.9) rotate(5deg); }
-  100% { transform: scale(1); }
-}
-.cell.mine-wrong { background: rgba(120,20,20,0.6) !important; border-color: rgba(255,80,80,0.4) !important; }
-.cell.mine-shown { background: rgba(40,20,60,0.6) !important; }
-
-/* ── Overlays ── */
-.overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(5,2,20,0.75);
-  z-index: 9999; align-items: center; justify-content: center;
-  backdrop-filter: blur(6px);
-}
-.overlay.show { display: flex; }
-
-.ov-card {
-  background: linear-gradient(160deg, #110830, #1a0e40);
-  border: 1.5px solid rgba(232,121,249,0.4);
-  border-radius: 28px; padding: 44px 55px;
-  text-align: center; max-width: 90vw;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(232,121,249,0.08);
-  animation: cardIn 0.5s cubic-bezier(0.3,0.8,0.4,1.3);
-}
-@keyframes cardIn {
-  0% { transform: scale(0.4) translateY(30px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-.ov-icon { font-size: 4.5rem; margin-bottom: 8px; }
-.ov-title {
-  font-size: 1.9rem; font-weight: 900; margin-bottom: 6px;
-  background: linear-gradient(135deg, #f0abfc, #818cf8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-}
-.ov-sub { font-size: 0.92rem; color: rgba(255,255,255,0.5); margin-bottom: 8px; }
-.ov-stats {
-  display: flex; gap: 14px; justify-content: center;
-  margin: 14px 0 22px;
-}
-.ov-stat {
-  background: rgba(255,255,255,0.06); border-radius: 14px;
-  padding: 10px 18px; border: 1px solid rgba(255,255,255,0.08);
-}
-.ov-stat .sv { font-size: 1.4rem; font-weight: 900; color: #e879f9; }
-.ov-stat .sk { font-size: 0.7rem; color: rgba(255,255,255,0.45); margin-top: 2px; }
-.ov-btn {
-  padding: 11px 34px; border: 1.5px solid rgba(232,121,249,0.5);
-  border-radius: 30px; background: rgba(232,121,249,0.1);
-  color: #e879f9; font-family: var(--font); font-size: 1rem; font-weight: 800;
-  cursor: pointer; transition: all 0.18s; letter-spacing: 0.8px;
-}
-.ov-btn:hover { background: rgba(232,121,249,0.22); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,121,249,0.2); }
-.win-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
-
-/* Stars rating */
-.stars { font-size: 1.6rem; letter-spacing: 4px; margin-bottom: 4px; }
-
-/* Confetti */
-.conf { position: fixed; pointer-events: none; z-index: 10000; animation: cfall var(--cd,3s) ease-in forwards; }
-@keyframes cfall { 0%{transform:translateY(-30px) rotate(0);opacity:1;} 100%{transform:translateY(110vh) rotate(720deg);opacity:0;} }
-
-/* ── Best time ── */
-.best-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3);
-  border-radius: 20px; padding: 3px 12px; font-size: 0.75rem;
-  font-weight: 700; color: rgba(251,191,36,0.8); margin-top: 8px;
-}
-
-/* ── Flag mode toggle ── */
-#flag-toggle {
-  display: none; /* shown on touch devices */
-  margin: 8px auto 10px;
-  padding: 10px 24px;
-  border: 2px solid rgba(248,113,113,0.4);
-  border-radius: 30px;
-  background: rgba(248,113,113,0.08);
-  color: rgba(248,113,113,0.8);
-  font-family: var(--font); font-size: 0.9rem; font-weight: 800;
-  cursor: pointer; transition: all 0.18s;
-  text-align: center;
-}
-#flag-toggle.active {
-  background: linear-gradient(135deg, rgba(248,113,113,0.35), rgba(232,121,249,0.25));
-  border-color: rgba(248,113,113,0.8);
-  color: #fff;
-  box-shadow: 0 0 16px rgba(248,113,113,0.3);
-}
-@media (pointer: coarse) {
-  #flag-toggle { display: inline-block; }
-}
-
-/* ── Responsive ── */
-@media (max-width: 520px) {
-  .cell { font-size: 0.9rem; }
-  .ov-card { padding: 30px 22px; }
-  .logo { font-size: 1.6rem; }
-}
-@media (max-width: 380px) {
-  .cell { font-size: 0.8rem; }
-}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<!-- Particle background -->
-<canvas id="canvas-bg"></canvas>
-
-<script>
-// ── Particle Background ──
-(function() {
-  const c = document.getElementById('canvas-bg');
-  const ctx = c.getContext('2d');
-  let W, H, particles = [];
-  function resize() {
-    W = c.width = window.innerWidth;
-    H = c.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  const COLORS = ['#e879f9','#818cf8','#38bdf8','#4ade80','#fbbf24'];
-  for (let i = 0; i < 60; i++) {
-    particles.push({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: -Math.random() * 0.5 - 0.1,
-      r: Math.random() * 1.5 + 0.5,
-      a: Math.random(),
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      char: Math.random() > 0.6 ? ['🌸','✦','❄','🌺','⭐'][Math.floor(Math.random()*5)] : null,
-    });
-  }
-
-  function tick() {
-    ctx.clearRect(0, 0, W, H);
-    particles.forEach(p => {
-      p.x += p.vx; p.y += p.vy;
-      p.a += 0.005;
-      if (p.y < -30) { p.y = H + 20; p.x = Math.random() * W; }
-      const op = (Math.sin(p.a) * 0.5 + 0.5) * 0.35;
-      if (p.char) {
-        ctx.globalAlpha = op;
-        ctx.font = `${12 + p.r * 4}px Arial`;
-        ctx.fillText(p.char, p.x, p.y);
-      } else {
-        ctx.globalAlpha = op;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    });
-    requestAnimationFrame(tick);
-  }
-  tick();
-})();
-</script>
-
 <header class="wrap">
-  <div class="logo">🌸 はなばたけマインスイーパー 🌸</div>
-  <div class="logo-sub">HANABATAKE MINESWEEPER</div>
-
-  <!-- Difficulty -->
-  <div class="diff-row">
-    <button class="diff-btn active" onclick="setDiff('easy')">🌱 かんたん</button>
-    <button class="diff-btn" onclick="setDiff('medium')">🌿 ふつう</button>
-    <button class="diff-btn" onclick="setDiff('hard')">🌵 むずかしい</button>
-    <button class="diff-btn" onclick="setDiff('custom')">⚙️ カスタム</button>
-    <button class="btn-apply" onclick="showMinesweeperRanking()">🏆 TOP10</button>
-  </div>
-
-  <!-- Custom panel -->
-  <div id="custom-panel">
-    <label>横 <input type="number" id="cw" value="12" min="5" max="30"></label>
-    <label>縦 <input type="number" id="ch" value="12" min="5" max="24"></label>
-    <label>地雷 <input type="number" id="cm" value="20" min="1" max="500"></label>
-    <button class="btn-apply" onclick="applyCustom()">決定</button>
-  </div>
-
-  <!-- HUD -->
-  <div class="hud">
-    <div class="hud-badge mine-badge">
-      <span class="label">💣 残り</span>
-      <span class="value" id="hud-mines">10</span>
+  <div class="brand-row">
+    <div class="brand-mark" aria-hidden="true">✿</div>
+    <div class="brand-copy">
+      <div class="logo-sub">TK777 ARCADE / BLOOMFIELD</div>
+      <h1 class="logo">はなばたけ<br class="mobile-break"><span>マインスイーパー</span></h1>
+      <p>地雷をよけて、花を咲かせよう。</p>
     </div>
-    <button id="face-btn" onclick="newGame()" title="リセット">😊</button>
-    <div class="hud-badge time-badge">
-      <span class="label">⏱ タイム</span>
-      <span class="value" id="hud-time">0:00</span>
-    </div>
-  </div>
-  <div style="text-align:center">
-    <div class="best-badge" id="best-disp" style="display:none">🏅 ベスト: <span id="best-time">-</span></div>
+    <button class="top-ranking" type="button" onclick="showMinesweeperRanking()">🏆 TOP 10</button>
   </div>
 </header>
 
-<!-- Flag toggle for mobile -->
-<div style="text-align:center">
-  <button id="flag-toggle" onclick="toggleFlagMode()">🚩 旗モード：OFF</button>
+<main class="game-layout wrap">
+<div class="game-controls">
+
+  <section class="control-panel" aria-label="難易度選択">
+    <div class="section-label"><span>難易度を選ぶ</span><span>最初の1手は安全</span></div>
+    <div class="diff-row">
+      <button class="diff-btn active" type="button" data-diff="easy" onclick="setDiff('easy')">🌱 かんたん</button>
+      <button class="diff-btn" type="button" data-diff="medium" onclick="setDiff('medium')">🌿 ふつう</button>
+      <button class="diff-btn" type="button" data-diff="hard" onclick="setDiff('hard')">🌵 むずかしい</button>
+      <button class="diff-btn" type="button" data-diff="custom" onclick="setDiff('custom')">⚙ カスタム</button>
+    </div>
+    <div id="custom-panel">
+      <label>横 <input type="number" id="cw" value="12" min="5" max="30"></label>
+      <label>縦 <input type="number" id="ch" value="12" min="5" max="24"></label>
+      <label>地雷 <input type="number" id="cm" value="20" min="1" max="500"></label>
+      <button class="btn-apply" type="button" onclick="applyCustom()">この盤面で遊ぶ</button>
+    </div>
+  </section>
+
+  <div class="hud">
+    <div class="hud-badge mine-badge">
+      <span class="label">💣 残りの地雷</span>
+      <span class="value" id="hud-mines">10</span>
+    </div>
+    <button id="face-btn" type="button" onclick="newGame()" title="新しいゲームを始める"><span class="face-icon" id="face-icon">😊</span><span class="face-text">新しいゲーム</span></button>
+    <div class="hud-badge time-badge">
+      <span class="label">⏱ クリアタイム</span>
+      <span class="value" id="hud-time">0:00</span>
+    </div>
+  </div>
+  <div class="best-badge" id="best-disp" style="display:none">🏅 ノーヒント自己ベスト: <span id="best-time">-</span></div>
+
+<section class="feature-panel" aria-label="プレイ補助">
+  <div class="progress-head"><span>安全なマスの開放</span><div class="chain-badge">✨ 最大連鎖 <strong id="chain-count">0</strong></div><strong id="progress-count">0 / 71</strong></div>
+  <div class="progress-track" aria-hidden="true"><div id="progress-fill"></div></div>
+  <div class="action-row">
+    <button id="flag-toggle" type="button" aria-pressed="false" onclick="toggleFlagMode()">🚩 旗モード OFF</button>
+    <button id="hint-btn" type="button" onclick="useHint()" disabled>💡 安全ヒント <strong id="hint-count">2</strong></button>
+  </div>
+  <p class="howto">タップで開く · 長押し／右クリックで旗 · 数字タップで周囲を開く</p>
+  <p id="game-toast" role="status" aria-live="polite"></p>
+</section>
 </div>
 
-<!-- Board -->
-<div id="board-wrap" class="wrap">
+<div id="board-wrap">
   <div id="board"></div>
 </div>
+</main>
 
 <!-- Win overlay -->
 <div class="overlay" id="win-ov">
@@ -479,7 +74,7 @@ header {
     <div class="ov-icon">🎉</div>
     <div class="stars" id="win-stars">⭐⭐⭐</div>
     <div class="ov-title">クリア！おめでとう！</div>
-    <div class="ov-sub">🌸 はなばたけを守りきった！ 🌸</div>
+    <div class="ov-sub" id="win-mode">花畑を守りきった！</div>
     <div class="ov-stats">
       <div class="ov-stat"><div class="sv" id="ws-time">0:00</div><div class="sk">タイム</div></div>
       <div class="ov-stat"><div class="sv" id="ws-moves">0</div><div class="sk">クリック数</div></div>
@@ -532,10 +127,13 @@ let seconds = 0;
 let timerID = null;
 let bestTimes = { easy: Infinity, medium: Infinity, hard: Infinity };
 let rankingSessionPromise = Promise.resolve(null);
+let assistedSessionPromise = Promise.resolve(null);
 let activeRankingMode = 'minesweeper:easy', activeDiff = 'easy';
 let roundStartedAt = 0, roundSerial = 0, winRecorded = false;
 let lastWinRankingResult = null;
 let revealedCount = 0;
+let hintUses = 2, hintCell = null, hintTimer = null;
+let bestChain = 0, chainTimer = null, toastTimer = null;
 let chordCells = [];
 let chordTimer = null;
 let flagMode = false;
@@ -550,21 +148,25 @@ function startMinesweeperSession(mode) {
 function minesweeperMode() {
   return curDiff === 'custom' ? `minesweeper:custom:${cfg.w}x${cfg.h}:${cfg.m}` : `minesweeper:${curDiff}`;
 }
+function assistedMode(mode) { return mode.replace(/^minesweeper:/, 'minesweeper:assisted:'); }
 function minesweeperModeOptions() {
-  const options = [
-    {value:'minesweeper:easy',label:'かんたん'},
-    {value:'minesweeper:medium',label:'ふつう'},
-    {value:'minesweeper:hard',label:'むずかしい'}
-  ];
+  const options = [];
+  for (const [key, label] of [['easy','かんたん'],['medium','ふつう'],['hard','むずかしい']]) {
+    const mode = `minesweeper:${key}`;
+    options.push({value:mode,label:`${label}・通常`}, {value:assistedMode(mode),label:`${label}・ヒント使用`});
+  }
   if (curDiff === 'custom' || activeRankingMode.startsWith('minesweeper:custom:')) {
-    options.push({value:`minesweeper:custom:${cfg.w}x${cfg.h}:${cfg.m}`,
-      label:`カスタム ${cfg.w}×${cfg.h}・地雷${cfg.m}個`});
+    const mode = `minesweeper:custom:${cfg.w}x${cfg.h}:${cfg.m}`;
+    const label = `カスタム ${cfg.w}×${cfg.h}・地雷${cfg.m}個`;
+    options.push({value:mode,label:`${label}・通常`},
+      {value:assistedMode(mode),label:`${label}・ヒント使用`});
   }
   return options;
 }
 function showMinesweeperRanking() {
-  if (window.TKLeaderboard) TKLeaderboard.show({mode:minesweeperMode(),label:'マインスイーパー',
-    modeOptions:minesweeperModeOptions(),note:'クリア時間が短い順。カスタムは同じ盤面設定で比較します。'});
+  if (window.TKLeaderboard) TKLeaderboard.show({mode:state === 'idle' ? minesweeperMode() : activeRankingMode,
+    label:'マインスイーパー',modeOptions:minesweeperModeOptions(),
+    note:'クリア時間が短い順。ヒント使用と通常、難易度・カスタム盤面は別ランキングです。'});
   else alert('ランキングを読み込めませんでした。');
 }
 function openMinesweeperWinRanking() {
@@ -575,12 +177,12 @@ function openMinesweeperWinRanking() {
 //   DIFFICULTY
 // ============================================================
 function setDiff(d) {
-  curDiff = d;
-  document.querySelectorAll('.diff-btn').forEach((b, i) => {
-    b.classList.toggle('active', ['easy','medium','hard','custom'][i] === d);
+  document.querySelectorAll('.diff-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.diff === d);
   });
   document.getElementById('custom-panel').style.display = d === 'custom' ? 'flex' : 'none';
   if (d !== 'custom') {
+    curDiff = d;
     cfg = { ...PRESETS[d] };
     newGame();
     updateBest();
@@ -591,8 +193,10 @@ function applyCustom() {
   const w = clamp(parseInt(document.getElementById('cw').value)||9, 5, 30);
   const h = clamp(parseInt(document.getElementById('ch').value)||9, 5, 24);
   const m = clamp(parseInt(document.getElementById('cm').value)||10, 1, w*h - 9);
+  curDiff = 'custom';
   cfg = { w, h, m };
   newGame();
+  updateBest();
 }
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -602,9 +206,13 @@ function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 // ============================================================
 function toggleFlagMode() {
   flagMode = !flagMode;
+  renderFlagMode();
+}
+function renderFlagMode() {
   const btn = document.getElementById('flag-toggle');
-  btn.textContent = flagMode ? '🚩 旗モード：ON' : '🚩 旗モード：OFF';
+  btn.textContent = flagMode ? '🚩 旗を置く ON' : '🚩 旗を置く OFF';
   btn.classList.toggle('active', flagMode);
+  btn.setAttribute('aria-pressed', String(flagMode));
 }
 
 // ============================================================
@@ -637,20 +245,32 @@ window.addEventListener('resize', () => adjustCellSize());
 // ============================================================
 function newGame() {
   clearInterval(timerID);
+  clearHintHighlight();
+  clearTimeout(chainTimer);
+  clearTimeout(toastTimer);
+  document.getElementById('board').classList.remove('chain-active');
+  document.getElementById('game-toast').textContent = '';
+  document.getElementById('game-toast').classList.remove('show');
   roundSerial++;
   winRecorded = false;
   lastWinRankingResult = null;
   roundStartedAt = 0;
   rankingSessionPromise = Promise.resolve(null);
+  assistedSessionPromise = Promise.resolve(null);
   activeRankingMode = minesweeperMode();
   activeDiff = curDiff;
   state = 'idle'; firstClick = true; clicks = 0; flagged = 0;
   seconds = 0; revealedCount = 0;
+  hintUses = 2; bestChain = 0;
+  flagMode = false;
+  renderFlagMode();
+  document.getElementById('chain-count').textContent = '0';
   clearChordHints();
 
   setFace('😊');
   document.getElementById('hud-time').textContent = '0:00';
   document.getElementById('hud-mines').textContent = cfg.m;
+  updateHintButton();
 
   // Build empty board
   board = Array.from({length: cfg.h}, () =>
@@ -660,6 +280,7 @@ function newGame() {
   );
 
   renderBoard();
+  updateProgress();
 }
 
 // ============================================================
@@ -686,11 +307,78 @@ function placeMines(safeR, safeC) {
   activeDiff = curDiff;
   roundStartedAt = rankingNow();
   rankingSessionPromise = startMinesweeperSession(activeRankingMode);
+  assistedSessionPromise = startMinesweeperSession(assistedMode(activeRankingMode));
+  updateHintButton();
   timerID = setInterval(() => {
     seconds++;
     const m = Math.floor(seconds/60), s = seconds%60;
     document.getElementById('hud-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
   }, 1000);
+}
+
+function updateHintButton() {
+  document.getElementById('hint-count').textContent = hintUses;
+  document.getElementById('hint-btn').disabled = state !== 'playing' || hintUses === 0;
+}
+
+function updateProgress() {
+  const total = cfg.w * cfg.h - cfg.m;
+  document.getElementById('progress-count').textContent = `${revealedCount} / ${total}`;
+  document.getElementById('progress-fill').style.width = `${Math.min(100, revealedCount / total * 100)}%`;
+}
+
+function showToast(message) {
+  const el = document.getElementById('game-toast');
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); el.textContent = ''; }, 3500);
+}
+
+function clearHintHighlight() {
+  clearTimeout(hintTimer);
+  if (hintCell) document.getElementById(`c-${hintCell.r}-${hintCell.c}`)?.classList.remove('hint-suggested');
+  hintCell = null;
+}
+
+function useHint() {
+  if (state !== 'playing' || hintUses === 0) return;
+  const safe = [], frontier = [];
+  for (let r = 0; r < cfg.h; r++) for (let c = 0; c < cfg.w; c++) {
+    const cell = board[r][c];
+    if (cell.mine || cell.revealed || cell.flagged || cell.question) continue;
+    safe.push([r, c]);
+    if (neighbors(r, c).some(([nr, nc]) => board[nr][nc].revealed)) frontier.push([r, c]);
+  }
+  const choices = frontier.length ? frontier : safe;
+  if (!choices.length) { showToast('旗や「？」を外すとヒントを使えます。'); return; }
+  clearHintHighlight();
+  const [r, c] = choices[Math.floor(Math.random() * choices.length)];
+  hintUses--;
+  activeRankingMode = assistedMode(minesweeperMode());
+  rankingSessionPromise = assistedSessionPromise;
+  hintCell = { r, c };
+  const target = document.getElementById(`c-${r}-${c}`);
+  target?.classList.add('hint-suggested');
+  target?.scrollIntoView({ block:'nearest', inline:'nearest' });
+  hintTimer = setTimeout(clearHintHighlight, 6000);
+  updateHintButton();
+  showToast('光るマスは安全です。ヒント使用の記録は別ランキングに保存されます。');
+}
+
+function recordSafeChain(before) {
+  const gained = revealedCount - before;
+  updateProgress();
+  if (gained < 3) return;
+  bestChain = Math.max(bestChain, gained);
+  document.getElementById('chain-count').textContent = bestChain;
+  const el = document.getElementById('board');
+  el.classList.remove('chain-active');
+  void el.offsetWidth;
+  el.classList.add('chain-active');
+  clearTimeout(chainTimer);
+  chainTimer = setTimeout(() => el.classList.remove('chain-active'), 700);
+  showToast(gained >= 12 ? `✿ BLOOM CHAIN! ${gained}マス開放` : `✨ ${gained}マス連鎖！`);
 }
 
 // ============================================================
@@ -725,7 +413,13 @@ function makeCell(r, c) {
   const cell = document.createElement('div');
   cell.className = 'cell';
   cell.id = `c-${r}-${c}`;
+  cell.tabIndex = r === 0 && c === 0 ? 0 : -1;
+  cell.setAttribute('role', 'button');
   const bd = board[r][c];
+  const description = bd.revealed ? (bd.mine ? '地雷' : bd.count ? `周囲の地雷${bd.count}個` : '開いた安全マス')
+    : bd.flagged ? '旗を置いたマス' : bd.question ? '未確定のマス' : '開いていないマス';
+  cell.setAttribute('aria-label', `${r + 1}行${c + 1}列、${description}`);
+  if (hintCell?.r === r && hintCell?.c === c && !bd.revealed) cell.classList.add('hint-suggested');
 
   if (bd.revealed) {
     cell.classList.add('revealed');
@@ -796,12 +490,34 @@ function makeCell(r, c) {
     if (tp) { clearTimeout(tp); tp = null; }
   }, {passive: true});
 
+  cell.addEventListener('touchcancel', e => {
+    if (Array.from(e.changedTouches).some(t => t.identifier === activeTouchId)) activeTouchId = null;
+    if (tp) { clearTimeout(tp); tp = null; }
+    touchHandled = false;
+  });
+
   // Desktop click
   cell.addEventListener('click', e => {
     if (flagMode) {
       onRightClick(r, c);
     } else {
       onLeftClick(r, c);
+    }
+  });
+
+  cell.addEventListener('keydown', e => {
+    const directions = { ArrowUp:[-1,0], ArrowDown:[1,0], ArrowLeft:[0,-1], ArrowRight:[0,1] };
+    if (directions[e.key]) {
+      e.preventDefault();
+      const [dr, dc] = directions[e.key];
+      const next = document.getElementById(`c-${clamp(r + dr, 0, cfg.h - 1)}-${clamp(c + dc, 0, cfg.w - 1)}`);
+      if (next) { cell.tabIndex = -1; next.tabIndex = 0; next.focus(); }
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      flagMode ? onRightClick(r, c) : onLeftClick(r, c);
+    } else if (e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      onRightClick(r, c);
     }
   });
 
@@ -812,7 +528,10 @@ function updateCell(r, c) {
   const old = document.getElementById(`c-${r}-${c}`);
   if (!old) return;
   const next = makeCell(r, c);
+  const hadFocus = document.activeElement === old;
+  next.tabIndex = old.tabIndex;
   old.replaceWith(next);
+  if (hadFocus) next.focus();
 }
 
 // ============================================================
@@ -840,7 +559,9 @@ function onLeftClick(r, c) {
   if (bd.mine) {
     explodeMine(r, c);
   } else {
+    const before = revealedCount;
     reveal(r, c);
+    recordSafeChain(before);
     checkWin();
   }
 }
@@ -883,18 +604,20 @@ function chord(r, c) {
   }
 
   // Execute chord
+  const before = revealedCount;
   let hitMine = false;
-  nbrs.forEach(([nr, nc]) => {
+  for (const [nr, nc] of nbrs) {
     if (!board[nr][nc].revealed && !board[nr][nc].flagged) {
       if (board[nr][nc].mine) {
         hitMine = true;
         explodeMine(nr, nc);
+        break;
       } else {
         reveal(nr, nc);
       }
     }
-  });
-  if (!hitMine) checkWin();
+  }
+  if (!hitMine) { recordSafeChain(before); checkWin(); }
 }
 
 function clearChordHints() {
@@ -931,6 +654,9 @@ function checkWin() {
     winRecorded = true;
     clearInterval(timerID);
     state = 'won';
+    clearHintHighlight();
+    updateHintButton();
+    updateProgress();
     const elapsedMs = Math.max(100, Math.round(rankingNow() - roundStartedAt));
     setFace('🥳');
     // Auto-flag remaining mines
@@ -942,7 +668,7 @@ function checkWin() {
     document.getElementById('hud-mines').textContent = '0';
 
     // Update best time
-    if (['easy','medium','hard'].includes(activeDiff)) {
+    if (hintUses === 2 && ['easy','medium','hard'].includes(activeDiff)) {
       if (elapsedMs < bestTimes[activeDiff]) {
         bestTimes[activeDiff] = elapsedMs;
         updateBest();
@@ -956,10 +682,14 @@ function checkWin() {
     document.getElementById('ws-time').textContent = `${(elapsedMs / 1000).toFixed(2)}秒`;
     document.getElementById('ws-moves').textContent = clicks;
     document.getElementById('ws-mines').textContent = cfg.m;
+    document.getElementById('win-mode').textContent = hintUses < 2
+      ? '💡 ヒント使用・補助ありランキングに記録します'
+      : '✿ ノーヒント・通常ランキングに記録します';
     document.getElementById('win-ov').classList.add('show');
     launchConfetti();
     const result = {mode:activeRankingMode,label:'マインスイーパー',score:0,duration:elapsedMs,
-      session:rankingSessionPromise,modeOptions:minesweeperModeOptions(),note:`${cfg.w}×${cfg.h}・地雷${cfg.m}個`};
+      session:rankingSessionPromise,modeOptions:minesweeperModeOptions(),
+      note:`${cfg.w}×${cfg.h}・地雷${cfg.m}個 / ${hintUses < 2 ? 'ヒント使用' : 'ノーヒント'}`};
     lastWinRankingResult = result;
     openMinesweeperWinRanking();
   }
@@ -968,6 +698,9 @@ function checkWin() {
 function explodeMine(hitR, hitC) {
   clearInterval(timerID);
   state = 'lost';
+  clearHintHighlight();
+  updateHintButton();
+  updateProgress();
   setFace('😵');
 
   // Show all mines
@@ -996,7 +729,9 @@ function explodeMine(hitR, hitC) {
   // Explosion particles
   explodeParticles(hitR, hitC);
 
+  const serial = roundSerial;
   setTimeout(() => {
+    if (serial !== roundSerial || state !== 'lost') return;
     document.getElementById('ls-time').textContent = document.getElementById('hud-time').textContent;
     document.getElementById('ls-open').textContent = revealedCount;
     document.getElementById('lose-ov').classList.add('show');
@@ -1038,7 +773,7 @@ function explodeParticles(r, c) {
 // ============================================================
 //   UI HELPERS
 // ============================================================
-function setFace(f) { document.getElementById('face-btn').textContent = f; }
+function setFace(f) { document.getElementById('face-icon').textContent = f; }
 
 function closeOv(id) { document.getElementById(id).classList.remove('show'); }
 
@@ -1082,7 +817,9 @@ function launchConfetti() {
 //   KEYBOARD
 // ============================================================
 document.addEventListener('keydown', e => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName) || window.TKLeaderboard?.isOpen?.()) return;
   if (e.key === 'r' || e.key === 'R') newGame();
+  if (e.key === 'h' || e.key === 'H') useHint();
   if (e.key === 'Escape') {
     document.getElementById('win-ov').classList.remove('show');
     document.getElementById('lose-ov').classList.remove('show');
