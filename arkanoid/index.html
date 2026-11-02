@@ -7,18 +7,25 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#000; display:flex; align-items:center; justify-content:center;
-       min-height:100vh; overflow:hidden; user-select:none; touch-action:none; }
-canvas { display:block; image-rendering:pixelated; }
+       min-height:100vh; overflow:hidden; user-select:none; }
+canvas { display:block; image-rendering:pixelated; touch-action:none; }
+#rankButton { position:fixed; z-index:5; top:12px; right:12px; padding:10px 15px;
+  border:1px solid #0ff; border-radius:999px; background:#081722; color:#dff;
+  font:bold 14px 'Courier New',monospace; cursor:pointer; box-shadow:0 0 14px #0ff6; }
+#rankButton[hidden] { display:none; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="rankButton" type="button">🏆 TOP 10</button>
+<script src="../shared/leaderboard.js"></script>
 <script>
 // ════════════════════════════════════════════════
 //  SETUP
 // ════════════════════════════════════════════════
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
+const rankButton = document.getElementById('rankButton');
 const CW = 800, CH = 600;
 canvas.width = CW; canvas.height = CH;
 function resize(){
@@ -486,6 +493,36 @@ function rr(ctx,x,y,w,h,r){
 //  GAME STATE
 // ════════════════════════════════════════════════
 let gameState='title', gameMode=1, level=0, lives=3, score=0;
+const leaderboardModes=[
+  {value:'arkanoid:solo',label:'1人プレイ'},
+  {value:'arkanoid:coop',label:'2人協力'}
+];
+let leaderboardSession=null,leaderboardStartedAt=0,leaderboardResultShown=false;
+let leaderboardResult=null;
+const leaderboardMode=()=>gameMode===2?'arkanoid:coop':'arkanoid:solo';
+const leaderboardIsOpen=()=>window.TKLeaderboard?.isOpen?.()||false;
+function showLeaderboard(){
+  rankButton.blur();
+  if(gameState==='gameover'&&leaderboardResult){
+    window.TKLeaderboard?.open(leaderboardResult);
+    return;
+  }
+  window.TKLeaderboard?.show({
+    mode:gameState==='title'?(titleSel===1?'arkanoid:coop':'arkanoid:solo'):leaderboardMode(),
+    label:'アルカノイド+',modeOptions:leaderboardModes,
+    note:'1人プレイと2人協力を別々に集計します。'
+  });
+}
+function finishGame(){
+  if(gameState!=='playing'||leaderboardResultShown)return;
+  gameState='gameover';leaderboardResultShown=true;rankButton.hidden=false;
+  leaderboardResult={
+    mode:leaderboardMode(),label:'アルカノイド+',score,
+    duration:Math.max(0,Date.now()-leaderboardStartedAt),session:leaderboardSession,
+    modeOptions:leaderboardModes,note:'1人プレイと2人協力を別々に集計します。'
+  };
+  window.TKLeaderboard?.open(leaderboardResult);
+}
 let blocks=[], balls=[], paddles=[], items=[], laserBullets=[];
 let combo=0, levelClearTimer=0;
 let titleSel=0, frame=0;
@@ -493,7 +530,10 @@ let powerBallTimer=0, slowTimer=0, fastTimer=0;
 
 // Input
 const keys={};
-document.addEventListener('keydown',e=>{ keys[e.code]=true; e.preventDefault(); },{passive:false});
+document.addEventListener('keydown',e=>{
+  if(leaderboardIsOpen()||/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target?.tagName)||e.target?.isContentEditable)return;
+  keys[e.code]=true;e.preventDefault();
+},{passive:false});
 document.addEventListener('keyup',e=>{ keys[e.code]=false; });
 
 // Mouse
@@ -509,6 +549,7 @@ canvas.addEventListener('mouseup',()=>mouseDown=false);
 let touches=[];
 canvas.addEventListener('touchstart',e=>{
   e.preventDefault();
+  if(leaderboardIsOpen())return;
   if(gameState==='title') handleTitleTouch(e);
   else if(gameState==='gameover'||gameState==='clear') restartOrTitle();
   touches=Array.from(e.touches).map(t=>{ const r=canvas.getBoundingClientRect(), s=CW/r.width;
@@ -540,6 +581,8 @@ function handleTitleTouch(e){
 // ════════════════════════════════════════════════
 function startGame(mode){
   gameMode=mode; gameState='playing';
+  leaderboardStartedAt=Date.now();leaderboardResultShown=false;leaderboardResult=null;rankButton.hidden=true;
+  leaderboardSession=window.TKLeaderboard?.start(leaderboardMode())||null;
   level=0; lives=3; score=0; combo=0;
   particles=[]; popups=[]; ripples=[]; laserBullets=[]; items=[];
   powerBallTimer=0; slowTimer=0; fastTimer=0;
@@ -919,7 +962,7 @@ function update(){
   // All balls lost
   if(balls.length===0){
     lives--;
-    if(lives<=0){ gameState='gameover'; return; }
+    if(lives<=0){ finishGame(); return; }
     for(const p of paddles){ p.stickyBall=null; }
     resetBall();
     addShake(8);
@@ -1125,7 +1168,7 @@ function drawGameOver(){
   ctx.textAlign='left';
 }
 
-function restartOrTitle(){ gameState='title'; }
+function restartOrTitle(){ gameState='title';leaderboardResult=null;rankButton.hidden=false; }
 
 // ════════════════════════════════════════════════
 //  GAME LOOP
@@ -1142,6 +1185,7 @@ function loop(ts){
 
 function tick(){
   frame++;
+  if(leaderboardIsOpen()){updateFX();Object.assign(prevKeys,keys);return;}
   if(gameState==='title'){
     updateFX();
     const prev={...prevKeys};
@@ -1185,9 +1229,11 @@ function render(){
 
 // Keyboard title nav
 document.addEventListener('keydown',e=>{
+  if(leaderboardIsOpen()||/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target?.tagName)||e.target?.isContentEditable)return;
   if(gameState==='gameover'||gameState==='clear') if(e.code==='Space'||e.code==='Enter') restartOrTitle();
 });
 
+rankButton.addEventListener('click',showLeaderboard);
 requestAnimationFrame(loop);
 </script>
 </body>

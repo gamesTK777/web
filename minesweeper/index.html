@@ -317,6 +317,7 @@ header {
   cursor: pointer; transition: all 0.18s; letter-spacing: 0.8px;
 }
 .ov-btn:hover { background: rgba(232,121,249,0.22); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,121,249,0.2); }
+.win-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
 
 /* Stars rating */
 .stars { font-size: 1.6rem; letter-spacing: 4px; margin-bottom: 4px; }
@@ -434,6 +435,7 @@ header {
     <button class="diff-btn" onclick="setDiff('medium')">🌿 ふつう</button>
     <button class="diff-btn" onclick="setDiff('hard')">🌵 むずかしい</button>
     <button class="diff-btn" onclick="setDiff('custom')">⚙️ カスタム</button>
+    <button class="btn-apply" onclick="showMinesweeperRanking()">🏆 TOP10</button>
   </div>
 
   <!-- Custom panel -->
@@ -483,7 +485,10 @@ header {
       <div class="ov-stat"><div class="sv" id="ws-moves">0</div><div class="sk">クリック数</div></div>
       <div class="ov-stat"><div class="sv" id="ws-mines">0</div><div class="sk">地雷数</div></div>
     </div>
-    <button class="ov-btn" onclick="newGame(); closeOv('win-ov')">🌸 もう一度</button>
+    <div class="win-actions">
+      <button class="ov-btn" onclick="openMinesweeperWinRanking()">🏆 記録・TOP10</button>
+      <button class="ov-btn" onclick="newGame(); closeOv('win-ov')">🌸 もう一度</button>
+    </div>
   </div>
 </div>
 
@@ -501,6 +506,7 @@ header {
   </div>
 </div>
 
+<script src="../shared/leaderboard.js"></script>
 <script>
 // ============================================================
 //   CONFIG
@@ -525,11 +531,45 @@ let flagged = 0;
 let seconds = 0;
 let timerID = null;
 let bestTimes = { easy: Infinity, medium: Infinity, hard: Infinity };
+let rankingSessionPromise = Promise.resolve(null);
+let activeRankingMode = 'minesweeper:easy', activeDiff = 'easy';
+let roundStartedAt = 0, roundSerial = 0, winRecorded = false;
+let lastWinRankingResult = null;
 let revealedCount = 0;
 let chordCells = [];
 let chordTimer = null;
 let flagMode = false;
 let activeTouchId = null; // track single touch to prevent multi-cell issues
+
+function rankingNow() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
+function startMinesweeperSession(mode) {
+  if (!window.TKLeaderboard) return Promise.resolve(null);
+  try { return Promise.resolve(TKLeaderboard.start(mode)).catch(() => null); }
+  catch { return Promise.resolve(null); }
+}
+function minesweeperMode() {
+  return curDiff === 'custom' ? `minesweeper:custom:${cfg.w}x${cfg.h}:${cfg.m}` : `minesweeper:${curDiff}`;
+}
+function minesweeperModeOptions() {
+  const options = [
+    {value:'minesweeper:easy',label:'かんたん'},
+    {value:'minesweeper:medium',label:'ふつう'},
+    {value:'minesweeper:hard',label:'むずかしい'}
+  ];
+  if (curDiff === 'custom' || activeRankingMode.startsWith('minesweeper:custom:')) {
+    options.push({value:`minesweeper:custom:${cfg.w}x${cfg.h}:${cfg.m}`,
+      label:`カスタム ${cfg.w}×${cfg.h}・地雷${cfg.m}個`});
+  }
+  return options;
+}
+function showMinesweeperRanking() {
+  if (window.TKLeaderboard) TKLeaderboard.show({mode:minesweeperMode(),label:'マインスイーパー',
+    modeOptions:minesweeperModeOptions(),note:'クリア時間が短い順。カスタムは同じ盤面設定で比較します。'});
+  else alert('ランキングを読み込めませんでした。');
+}
+function openMinesweeperWinRanking() {
+  if (lastWinRankingResult && window.TKLeaderboard) TKLeaderboard.open(lastWinRankingResult);
+}
 
 // ============================================================
 //   DIFFICULTY
@@ -597,6 +637,13 @@ window.addEventListener('resize', () => adjustCellSize());
 // ============================================================
 function newGame() {
   clearInterval(timerID);
+  roundSerial++;
+  winRecorded = false;
+  lastWinRankingResult = null;
+  roundStartedAt = 0;
+  rankingSessionPromise = Promise.resolve(null);
+  activeRankingMode = minesweeperMode();
+  activeDiff = curDiff;
   state = 'idle'; firstClick = true; clicks = 0; flagged = 0;
   seconds = 0; revealedCount = 0;
   clearChordHints();
@@ -635,6 +682,10 @@ function placeMines(safeR, safeC) {
       board[r][c].count = neighbors(r, c).filter(([nr,nc]) => board[nr][nc].mine).length;
     }
   state = 'playing';
+  activeRankingMode = minesweeperMode();
+  activeDiff = curDiff;
+  roundStartedAt = rankingNow();
+  rankingSessionPromise = startMinesweeperSession(activeRankingMode);
   timerID = setInterval(() => {
     seconds++;
     const m = Math.floor(seconds/60), s = seconds%60;
@@ -873,11 +924,14 @@ function reveal(r, c) {
 //   WIN / LOSE
 // ============================================================
 function checkWin() {
+  if (state !== 'playing' || winRecorded) return;
   const total = cfg.w * cfg.h;
   const mines = cfg.m;
   if (revealedCount === total - mines) {
+    winRecorded = true;
     clearInterval(timerID);
     state = 'won';
+    const elapsedMs = Math.max(100, Math.round(rankingNow() - roundStartedAt));
     setFace('🥳');
     // Auto-flag remaining mines
     for (let r = 0; r < cfg.h; r++)
@@ -888,9 +942,9 @@ function checkWin() {
     document.getElementById('hud-mines').textContent = '0';
 
     // Update best time
-    if (['easy','medium','hard'].includes(curDiff)) {
-      if (seconds < bestTimes[curDiff]) {
-        bestTimes[curDiff] = seconds;
+    if (['easy','medium','hard'].includes(activeDiff)) {
+      if (elapsedMs < bestTimes[activeDiff]) {
+        bestTimes[activeDiff] = elapsedMs;
         updateBest();
       }
     }
@@ -899,12 +953,15 @@ function checkWin() {
     const ratio = clicks / (cfg.w * cfg.h - cfg.m);
     const stars = ratio <= 1.2 ? '⭐⭐⭐' : ratio <= 2 ? '⭐⭐' : '⭐';
     document.getElementById('win-stars').textContent = stars;
-    const t = document.getElementById('hud-time').textContent;
-    document.getElementById('ws-time').textContent = t;
+    document.getElementById('ws-time').textContent = `${(elapsedMs / 1000).toFixed(2)}秒`;
     document.getElementById('ws-moves').textContent = clicks;
     document.getElementById('ws-mines').textContent = cfg.m;
     document.getElementById('win-ov').classList.add('show');
     launchConfetti();
+    const result = {mode:activeRankingMode,label:'マインスイーパー',score:0,duration:elapsedMs,
+      session:rankingSessionPromise,modeOptions:minesweeperModeOptions(),note:`${cfg.w}×${cfg.h}・地雷${cfg.m}個`};
+    lastWinRankingResult = result;
+    openMinesweeperWinRanking();
   }
 }
 
@@ -990,8 +1047,7 @@ function updateBest() {
   const el = document.getElementById('best-disp');
   if (!['easy','medium','hard'].includes(curDiff) || b === Infinity) { el.style.display='none'; return; }
   el.style.display = 'inline-flex';
-  const m = Math.floor(b/60), s = b%60;
-  document.getElementById('best-time').textContent = `${m}:${s.toString().padStart(2,'0')} (${curDiff==='easy'?'かんたん':curDiff==='medium'?'ふつう':'むずかしい'})`;
+  document.getElementById('best-time').textContent = `${(b/1000).toFixed(2)}秒 (${curDiff==='easy'?'かんたん':curDiff==='medium'?'ふつう':'むずかしい'})`;
 }
 
 // ============================================================

@@ -71,6 +71,7 @@
     justify-content: center;
     gap: 10px;
     margin-top: 10px;
+    flex-wrap: wrap;
   }
 
   .btn {
@@ -410,6 +411,7 @@
     <button class="btn btn-primary" onclick="newGame()">🎮 新しいゲーム</button>
     <button class="btn btn-secondary" onclick="undoMove()">↩️ もどす</button>
     <button class="btn btn-secondary" onclick="autoComplete()">✨ オートクリア</button>
+    <button class="btn btn-secondary" onclick="showSolitaireRanking()">🏆 TOP10</button>
   </div>
 </header>
 
@@ -440,10 +442,14 @@
     <div style="font-size:4rem; margin-bottom:10px">🎉🐾🎉</div>
     <h2>クリア！おめでとう！</h2>
     <p>スコア: <strong id="win-score">0</strong>点 ／ タイム: <strong id="win-time">0:00</strong> ／ 移動: <strong id="win-moves">0</strong>回</p>
-    <button class="btn btn-primary" onclick="newGame()">🎮 もう一度あそぶ</button>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="openSolitaireWinRanking()">🏆 記録・TOP10</button>
+      <button class="btn btn-primary" onclick="newGame()">🎮 もう一度あそぶ</button>
+    </div>
   </div>
 </div>
 
+<script src="../shared/leaderboard.js"></script>
 <script>
 // ==============================
 //  GAME DATA
@@ -468,6 +474,31 @@ const CARD_EMOJIS = {
 let deck = [], stock = [], waste = [], foundations = [[],[],[],[]], tableau = [];
 let score = 0, moves = 0, timerInterval, seconds = 0;
 let dragState = null, history = [];
+let rankingSessionPromise = Promise.resolve(null);
+let assistedSessionPromise = Promise.resolve(null);
+let rankingMode = 'solitaire:standard';
+let gameSerial = 0, winRecorded = false;
+let autoCompleteTimer = null;
+let gameStartedAt = 0, winDurationMs = 0;
+let lastWinRankingResult = null;
+const SOLITAIRE_RANKING_MODES = [
+  {value:'solitaire:standard', label:'通常プレイ'},
+  {value:'solitaire:assisted', label:'オートクリア利用'}
+];
+function startSolitaireSession(mode) {
+  if (!window.TKLeaderboard) return Promise.resolve(null);
+  try { return Promise.resolve(TKLeaderboard.start(mode)).catch(() => null); }
+  catch { return Promise.resolve(null); }
+}
+function solitaireNow() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
+function showSolitaireRanking() {
+  if (window.TKLeaderboard) TKLeaderboard.show({mode:rankingMode,label:'ソリティア',
+    modeOptions:SOLITAIRE_RANKING_MODES,note:'スコアが高い順に表示します。'});
+  else alert('ランキングを読み込めませんでした。');
+}
+function openSolitaireWinRanking() {
+  if (lastWinRankingResult && window.TKLeaderboard) TKLeaderboard.open(lastWinRankingResult);
+}
 
 // ==============================
 //  INIT
@@ -492,6 +523,16 @@ function shuffle(arr) {
 
 function newGame() {
   clearInterval(timerInterval);
+  clearInterval(autoCompleteTimer);
+  autoCompleteTimer = null;
+  gameSerial++;
+  winRecorded = false;
+  lastWinRankingResult = null;
+  rankingMode = 'solitaire:standard';
+  rankingSessionPromise = startSolitaireSession(rankingMode);
+  assistedSessionPromise = startSolitaireSession('solitaire:assisted');
+  gameStartedAt = solitaireNow();
+  winDurationMs = 0;
   score = 0; moves = 0; seconds = 0;
   updateScore(); updateMoves();
   document.getElementById('timer').textContent = '0:00';
@@ -516,7 +557,7 @@ function newGame() {
   document.getElementById('win-screen').classList.remove('show');
 
   timerInterval = setInterval(() => {
-    seconds++;
+    seconds = Math.floor((solitaireNow() - gameStartedAt) / 1000);
     const m = Math.floor(seconds/60);
     const s = seconds%60;
     document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
@@ -863,7 +904,7 @@ function drawCard() {
     const card = stock.pop();
     card.faceUp = true;
     waste.push(card);
-    addScore(5);
+    if (!card.drawnOnce) { card.drawnOnce = true; addScore(5); }
   }
   moves++;
   render();
@@ -927,7 +968,7 @@ function dropOnTableau(ci) {
   saveHistory();
   removeFromOrigin(origin);
   cards.forEach(c => col.push(c));
-  addScore(5);
+  // Reversible moves between columns do not award repeatable points.
   moves++;
   dragState = null;
   render();
@@ -947,9 +988,14 @@ function removeFromOrigin(origin) {
 //  AUTO-COMPLETE
 // ==============================
 function autoComplete() {
+  if (autoCompleteTimer || winRecorded) return;
+  if (!winRecorded && rankingMode !== 'solitaire:assisted') {
+    rankingMode = 'solitaire:assisted';
+    rankingSessionPromise = assistedSessionPromise;
+  }
   let moved = true;
   let steps = 0;
-  const interval = setInterval(() => {
+  autoCompleteTimer = setInterval(() => {
     moved = false;
     // Try waste
     if(waste.length > 0) {
@@ -962,7 +1008,7 @@ function autoComplete() {
         addScore(15); moves++;
         render();
         moved = true;
-        if(checkWin()) { clearInterval(interval); return; }
+        if(checkWin()) { clearInterval(autoCompleteTimer); autoCompleteTimer = null; return; }
         return;
       }
     }
@@ -980,11 +1026,11 @@ function autoComplete() {
         addScore(15); moves++;
         render();
         moved = true;
-        if(checkWin()) { clearInterval(interval); return; }
+        if(checkWin()) { clearInterval(autoCompleteTimer); autoCompleteTimer = null; return; }
         return;
       }
     }
-    if(!moved || steps++ > 200) clearInterval(interval);
+    if(!moved || steps++ > 200) { clearInterval(autoCompleteTimer); autoCompleteTimer = null; }
   }, 80);
 }
 
@@ -1001,10 +1047,17 @@ function tryMoveToFoundation(card) {
 // ==============================
 function checkWin() {
   const total = foundations.reduce((s, p) => s + p.length, 0);
-  if(total === 52) {
+  if(total === 52 && !winRecorded) {
+    winRecorded = true;
+    clearInterval(autoCompleteTimer);
+    autoCompleteTimer = null;
     clearInterval(timerInterval);
+    winDurationMs = Math.max(1, Math.round(solitaireNow() - gameStartedAt));
+    seconds = Math.floor(winDurationMs / 1000);
+    document.getElementById('timer').textContent = `${Math.floor(seconds/60)}:${(seconds%60).toString().padStart(2,'0')}`;
     addScore(500 - Math.floor(seconds/2));
-    setTimeout(showWin, 300);
+    const serial = gameSerial;
+    setTimeout(() => { if (serial === gameSerial) showWin(); }, 300);
     return true;
   }
   return false;
@@ -1016,6 +1069,10 @@ function showWin() {
   document.getElementById('win-moves').textContent = moves;
   document.getElementById('win-screen').classList.add('show');
   launchConfetti();
+  const result = {mode:rankingMode,label:'ソリティア',score,duration:winDurationMs,
+    session:rankingSessionPromise,modeOptions:SOLITAIRE_RANKING_MODES,note:`${moves}回移動`};
+  lastWinRankingResult = result;
+  openSolitaireWinRanking();
 }
 
 function launchConfetti() {

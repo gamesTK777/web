@@ -417,6 +417,7 @@
         <button class="btn-main" id="btnStart">スタート</button>
         <button class="btn-sub" id="btnRestart">リトライ</button>
         <button class="btn-menu" id="btnMenu">メニュー</button>
+        <button class="btn-sub" id="btnRanking">🏆 TOP 10</button>
       </div>
     </div>
 
@@ -471,6 +472,7 @@
           </div>
           <div style="margin-top:16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
             <button class="btn-main" id="resultRetry">もう一度遊ぶ</button>
+            <button class="btn-sub" id="resultRanking">🏆 ランキング</button>
             <button class="btn-menu" id="resultMenu">メニューへ戻る</button>
           </div>
         </div>
@@ -500,6 +502,7 @@
     <div class="footnote">保存してブラウザで開くだけで動作します。</div>
   </div>
 
+  <script src="../shared/leaderboard.js"></script>
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -527,7 +530,9 @@
     const btnStart = document.getElementById("btnStart");
     const btnRestart = document.getElementById("btnRestart");
     const btnMenu = document.getElementById("btnMenu");
+    const btnRanking = document.getElementById("btnRanking");
     const resultRetry = document.getElementById("resultRetry");
+    const resultRanking = document.getElementById("resultRanking");
     const resultMenu = document.getElementById("resultMenu");
 
     const W = canvas.width;
@@ -561,6 +566,22 @@
       flash: 0,
       waveClearedAt: 0
     };
+
+    const leaderboardModes = [
+      { value: "invaders:single", label: "1人用" },
+      { value: "invaders:coop", label: "2人協力" },
+      { value: "invaders:versus", label: "2人対戦" }
+    ];
+    let leaderboardSessions = [];
+    let leaderboardStartedAt = 0;
+    let leaderboardResult = null;
+    const leaderboardMode = () => `invaders:${state.mode}`;
+    function showLeaderboard() {
+      window.TKLeaderboard?.show({
+        mode: leaderboardMode(), label: "インベーダー", modeOptions: leaderboardModes,
+        note: "各モードのスコアで競います。"
+      });
+    }
 
     function clamp(v, min, max) {
       return Math.max(min, Math.min(max, v));
@@ -692,6 +713,11 @@
       state.waveClearedAt = 0;
 
       setupPlayers();
+      leaderboardStartedAt = Date.now();
+      leaderboardResult = null;
+      leaderboardSessions = window.TKLeaderboard
+        ? Array.from({ length: mode === "versus" ? 2 : 1 }, () => window.TKLeaderboard.start(leaderboardMode()))
+        : [];
       createWave();
       syncUI();
       showMenu(false);
@@ -726,7 +752,9 @@
     }
 
     function endGame() {
+      if (state.status !== "playing") return;
       state.status = "result";
+      const duration = Math.max(0, Date.now() - leaderboardStartedAt);
 
       if (state.mode === "versus") {
         const p1 = state.players[0];
@@ -756,6 +784,24 @@
       }
 
       syncUI();
+      if (window.TKLeaderboard) {
+        const result = {
+          mode: leaderboardMode(), label: "インベーダー", duration,
+          modeOptions: leaderboardModes, note: "各モードのスコアで競います。"
+        };
+        if (state.mode === "versus") {
+          result.runs = state.players.map((player, index) => ({
+            label: player.id, score: player.score, duration, session: leaderboardSessions[index]
+          }));
+        } else {
+          result.score = state.mode === "coop"
+            ? state.players.reduce((total, player) => total + player.score, 0)
+            : state.players[0].score;
+          result.session = leaderboardSessions[0];
+        }
+        leaderboardResult = result;
+        window.TKLeaderboard.open(leaderboardResult);
+      }
     }
 
     function syncTouchPanels() {
@@ -786,6 +832,8 @@
         state.status === "menu" ? "待機中" :
         state.status === "playing" ? "プレイ中" :
         "終了";
+
+      btnRanking.style.display = state.status === "playing" ? "none" : "";
 
       syncTouchPanels();
     }
@@ -1444,6 +1492,12 @@
       showMenu(true);
     });
 
+    btnRanking.addEventListener("click", showLeaderboard);
+    resultRanking.addEventListener("click", () => {
+      if (leaderboardResult) window.TKLeaderboard?.open(leaderboardResult);
+      else showLeaderboard();
+    });
+
     resultRetry.addEventListener("click", () => resetGame(state.mode));
     resultMenu.addEventListener("click", () => {
       showResult(false);
@@ -1451,6 +1505,7 @@
     });
 
     window.addEventListener("keydown", (e) => {
+      if (window.TKLeaderboard?.isOpen?.() || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target?.tagName)) return;
       const blocked = ["ArrowLeft", "ArrowRight", "Space", "Slash", "KeyA", "KeyD", "KeyF"];
       if (blocked.includes(e.code)) e.preventDefault();
       keys[e.code] = true;
