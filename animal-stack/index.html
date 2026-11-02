@@ -2,23 +2,27 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>🐾 どうぶつタワー - Animal Stacking Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>どうぶつタワー | ふわっと積もう</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Nunito',sans-serif;background:#87CEEB;min-height:100vh;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;user-select:none;touch-action:none;}
-#gc{position:relative;width:100%;max-width:600px;height:100vh;}
-canvas{display:block;width:100%;height:100%;}
+body{font-family:'Nunito',sans-serif;background:#d9f3e4;min-height:100vh;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;user-select:none;}
+#gc{position:relative;width:100%;max-width:640px;height:100vh;height:100dvh;min-height:420px;overflow:hidden;box-shadow:0 0 80px #3b8d9a30;}
+canvas{display:block;width:100%;height:100%;touch-action:none;}
 #hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
-  padding:8px 10px;z-index:10;pointer-events:none;}
+  padding:calc(8px + env(safe-area-inset-top)) 10px 8px;z-index:10;pointer-events:none;}
 .hb{background:rgba(255,255,255,0.88);border-radius:14px;padding:4px 12px;
   box-shadow:0 2px 8px rgba(0,0,0,0.1);pointer-events:auto;}
 .hl{font-size:.55rem;color:#888;font-weight:700;letter-spacing:1px;}
 .hv{font-size:1.1rem;font-weight:900;color:#4A6741;}
 .hv.sc{color:#E67E22;}
+#feedback{position:absolute;top:112px;left:50%;transform:translate(-50%,8px);z-index:12;padding:8px 18px;border-radius:999px;background:#fffef2e8;color:#df8b24;font-size:.88rem;font-weight:900;box-shadow:0 8px 22px #4a67412b;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;}
+#feedback.show{opacity:1;transform:translate(-50%,0);}
+#guide{position:absolute;bottom:calc(82px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:10;width:max-content;max-width:94%;padding:7px 12px;border-radius:12px;background:#ffffffd9;color:#52766f;font-size:.73rem;font-weight:900;text-align:center;box-shadow:0 5px 15px #357d8028;pointer-events:none;}
+#guide[hidden],#feedback[hidden]{display:none!important;}
 /* Turn indicator */
 #turn-box{position:absolute;top:52px;left:50%;transform:translateX(-50%);z-index:10;
   background:rgba(255,255,255,0.92);border-radius:16px;padding:6px 18px;text-align:center;
@@ -31,10 +35,10 @@ canvas{display:block;width:100%;height:100%;}
 #nl{font-size:.5rem;color:#888;font-weight:700;}
 #na{font-size:1.6rem;line-height:1;}
 /* Rotation controls */
-#rot-controls{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:10;
+#rot-controls{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:10;
   display:none;gap:16px;align-items:center;}
 #rot-controls.show{display:flex;}
-.rot-btn{width:52px;height:52px;border:none;border-radius:50%;
+.rot-btn{width:56px;height:56px;border:none;border-radius:50%;
   background:rgba(255,255,255,0.9);color:#555;font-size:1.4rem;font-weight:900;cursor:pointer;
   box-shadow:0 3px 10px rgba(0,0,0,0.15);transition:all .1s;display:flex;align-items:center;justify-content:center;}
 .rot-btn:active{transform:scale(.9);background:#e0e0e0;}
@@ -73,6 +77,20 @@ canvas{display:block;width:100%;height:100%;}
 .mode-btn:hover{border-color:#66BB6A;color:#43A047;transform:translateY(-2px);box-shadow:0 5px 15px rgba(76,175,80,0.2);}
 .mode-btn .mi{font-size:1.5rem;display:block;margin-bottom:2px;}
 .th{font-size:.7rem;color:#888;max-width:300px;text-align:center;line-height:1.5;}
+#ts{background:radial-gradient(circle at 12% 15%,#fff2c8 0,transparent 30%),radial-gradient(circle at 87% 18%,#bde9ff 0,transparent 32%),linear-gradient(155deg,#f6fff3,#dff6ec 55%,#d5efff);}
+.tl{font-size:clamp(2.2rem,8vw,3.2rem);letter-spacing:.02em;color:#35776b;text-shadow:0 4px 0 #ffffffbd;}
+.ta{font-size:clamp(2rem,9vw,3.2rem);letter-spacing:3px;}
+.mode-btn{border-color:#b7ddcb;background:#fffffff0;box-shadow:0 8px 18px #338d7340;}
+.mode-btn:focus-visible,.rot-btn:focus-visible,.ob:focus-visible{outline:3px solid #2d917f;outline-offset:3px;}
+.howto{display:grid;gap:5px;margin:0 0 14px;width:min(350px,100%);font-size:.75rem;color:#50776d;font-weight:900;text-align:left;}
+.howto span{padding:7px 10px;border-radius:10px;background:#ffffffb8;}
+.mode-grid{max-width:350px;}
+.rot-label{min-width:46px;text-align:center;color:#45635d;}
+.ob-secondary{margin:9px 0 0;background:#e8f4ed;color:#4b7568;box-shadow:none;}
+#pause-btn{font:900 .8rem Nunito,sans-serif;border:0;border-radius:12px;padding:8px 10px;background:#ffffffec;color:#47766b;box-shadow:0 2px 8px #2d846326;pointer-events:auto;cursor:pointer;}
+#pause-btn:focus-visible{outline:3px solid #2d917f;outline-offset:3px;}
+.hb{min-width:66px;text-align:center;}
+@media(max-height:680px){#guide{bottom:calc(74px + env(safe-area-inset-bottom));font-size:.65rem}.tl{font-size:2.1rem}.ta{font-size:2rem;margin-bottom:8px}.mode-btn{padding:8px}.howto{margin-bottom:8px;gap:3px}}
 </style>
 </head>
 <body>
@@ -82,13 +100,17 @@ canvas{display:block;width:100%;height:100%;}
   <div class="hb"><div class="hl">スコア</div><div class="hv sc" id="hs">0</div></div>
   <div class="hb"><div class="hl">のこり</div><div class="hv" id="hr">0</div></div>
   <div class="hb"><div class="hl">積んだ数</div><div class="hv" id="hst">0</div></div>
+  <div class="hb" id="rescue-box"><div class="hl">おたすけ</div><div class="hv" id="hrescue">♥ 2</div></div>
+  <button id="pause-btn" onclick="pauseGame()" aria-label="一時停止">Ⅱ</button>
 </div>
+<div id="feedback" role="status" aria-live="polite"></div>
+<div id="guide" hidden>スライドで場所を決めて、離すと落下。↺ ↻ で回転</div>
 <div id="turn-box"><div id="turn-text">P1 のターン</div></div>
 <div id="nbox"><div id="nl">NEXT</div><div id="na">🐻</div></div>
 <div id="rot-controls">
-  <button class="rot-btn" onclick="rotateLeft()">↺</button>
+  <button class="rot-btn" onclick="rotateLeft()" aria-label="左に回転">↺</button>
   <div class="rot-label" id="rot-deg">0°</div>
-  <button class="rot-btn" onclick="rotateRight()">↻</button>
+  <button class="rot-btn" onclick="rotateRight()" aria-label="右に回転">↻</button>
 </div>
 <!-- Game Over (1P) -->
 <div class="overlay" id="gov">
@@ -99,7 +121,8 @@ canvas{display:block;width:100%;height:100%;}
       <div class="os"><div class="sv" id="gs">0</div><div class="sk">スコア</div></div>
       <div class="os"><div class="sv" id="gn">0</div><div class="sk">積んだ数</div></div>
     </div>
-    <button class="ob" onclick="showTitle()">🐾 タイトルへ</button>
+    <button class="ob" onclick="startGame(numPlayers)">もう一度あそぶ</button>
+    <button class="ob ob-secondary" onclick="showTitle()">タイトルへ</button>
   </div>
 </div>
 <!-- Win -->
@@ -110,14 +133,24 @@ canvas{display:block;width:100%;height:100%;}
     <div class="oss">
       <div class="os"><div class="sv" id="ws">0</div><div class="sk">スコア</div></div>
     </div>
-    <button class="ob" onclick="showTitle()">🐾 タイトルへ</button>
+    <button class="ob" onclick="startGame(numPlayers)">もう一度あそぶ</button>
+    <button class="ob ob-secondary" onclick="showTitle()">タイトルへ</button>
+  </div>
+</div>
+<div class="overlay" id="pov">
+  <div class="oc"><div class="oi">☁️</div><div class="ot">ひとやすみ</div>
+    <div class="osub">次のどうぶつを、ゆっくり考えよう。</div>
+    <button class="ob" onclick="resumeGame()">つづける</button>
+    <button class="ob ob-secondary" onclick="showTitle()">タイトルへ</button>
   </div>
 </div>
 <!-- Title -->
 <div id="ts">
   <div class="tl">🐾 どうぶつタワー</div>
-  <div class="tsb">ANIMAL STACKING GAME</div>
+  <div class="tsb">ふわっと落として、ゆらゆら積もう。</div>
   <div class="ta">🐘🦒🐻🐊🐧</div>
+  <div id="best-label" class="tsb">自己ベスト 0 点</div>
+  <div class="howto"><span>❶ 指・マウスで落とす場所を決める</span><span>❷ 下の ↺ ↻ で向きを変える</span><span>❸ 指を離す／クリックで落とす。全部積めたらクリア！</span></div>
   <div class="mode-grid">
     <button class="mode-btn" onclick="startGame(1)"><span class="mi">🙋</span>1人プレイ</button>
     <button class="mode-btn" onclick="startGame(2)"><span class="mi">🙋🙋</span>2人プレイ</button>
@@ -125,9 +158,8 @@ canvas{display:block;width:100%;height:100%;}
     <button class="mode-btn" onclick="startGame(4)"><span class="mi">🙋🙋🙋🙋</span>4人プレイ</button>
   </div>
   <div class="th">
-    どうぶつブロックを積み上げよう！<br>
-    ← → で回転、タップ/クリックで落とす<br>
-    テーブルから落としたプレイヤーの負け！
+    PCは ← → / A D で移動、Q E で回転、Space で落下。<br>
+    2〜4人では落とした人が脱落。最後まで残った人の勝ち！
   </div>
 </div>
 </div>
@@ -138,11 +170,25 @@ const container=document.getElementById('gc');
 const canvas=document.getElementById('cv');
 const ctx=canvas.getContext('2d');
 
-let W,H,S;
-function updateSize(){W=container.clientWidth;H=container.clientHeight;canvas.width=W;canvas.height=H;S=W/600;}
+let W,H,S,layoutFrozen=false;
+function updateSize(){
+  if(layoutFrozen){
+    const scale=Math.min(container.clientWidth/W,container.clientHeight/H);
+    canvas.style.width=Math.floor(W*scale)+'px';
+    canvas.style.height=Math.floor(H*scale)+'px';
+    canvas.style.margin='0 auto';
+    return;
+  }
+  W=container.clientWidth;H=container.clientHeight;
+  canvas.width=W;canvas.height=H;S=W/600;
+  canvas.style.width='100%';canvas.style.height='100%';
+}
 updateSize(); window.addEventListener('resize',updateSize);
 
-const engine=Engine.create({gravity:{x:0,y:1.8}});
+const engine=Engine.create({
+  gravity:{x:0,y:0.9},enableSleeping:true,
+  positionIterations:8,velocityIterations:8,constraintIterations:3
+});
 const world=engine.world;
 
 // ═════════════════════════════
@@ -201,17 +247,40 @@ const ANIMALS=[
 //  GAME STATE
 // ═════════════════════════════
 let gameState='title', score=0, bestScore=0;
+try{bestScore=Number(localStorage.getItem('tk777-animal-best'))||0;}catch{}
 let numPlayers=1, currentPlayer=0; // 0-indexed
 let alivePlayers=[]; // which players are still in
 let animalQueue=[], currentAnimal=null, nextAnimal=null;
-let placedAnimals=[], dropX, settleTimer=0;
-let maxHeight=0, stackedCount=0, dropDelay=0;
-let tableBody=null, tableLegL=null, tableLegR=null;
+let placedAnimals=[], dropX, settleTimer=0,dropFrames=0,lastDroppedBody=null,dropHasContact=false;
+let maxHeight=0, stackedCount=0, rescueLeft=2,cameraY=0;
+let tableBody=null;
 let wallL,wallR,floorBody;
 let currentRotation=0;
 let particles=[];
 
-const TABLE_W=352, TABLE_H=18, TABLE_LEGS_H=80; // 1.6x wider table
+const TABLE_W=420, TABLE_H=18, TABLE_LEGS_H=80;
+
+// Flat, forgiving contact surfaces; ears, tails and feet stay visual details.
+const COLLIDERS={
+  elephant:[64,49],giraffe:[42,57],bear:[45,55],croc:[80,24],
+  penguin:[39,47],rabbit:[40,51],fox:[59,46],lion:[45,55],
+  panda:[45,55],frog:[53,29],turtle:[61,42],owl:[43,45]
+};
+function safeDropX(rawX,def){
+  const half=COLLIDERS[def.id][0]*S*.28;
+  return Math.max(W/2-TABLE_W*S/2+half,Math.min(W/2+TABLE_W*S/2-half,rawX));
+}
+function towerTop(){
+  const tableTop=tableBody?tableBody.position.y-TABLE_H*S/2:H*.72;
+  return Math.min(tableTop,...placedAnimals.map(b=>b.bounds.min.y));
+}
+function spawnY(){return Math.min(H*.32,towerTop()-92*S);}
+function showFeedback(message){
+  const el=document.getElementById('feedback');el.textContent=message;
+  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+  clearTimeout(feedbackTimer);feedbackTimer=setTimeout(()=>el.classList.remove('show'),1500);
+}
+let feedbackTimer=null;
 
 function getAnimalCount(np){ return [12,14,16,20][np-1]||12; }
 
@@ -219,17 +288,15 @@ function getAnimalCount(np){ return [12,14,16,20][np-1]||12; }
 //  CREATE COMPOUND ANIMAL BODY
 // ═════════════════════════════
 function createAnimalBody(def, x, y, angle){
-  const parts=[];
-  for(const p of def.parts){
-    let part;
-    if(p.t==='c') part=Bodies.circle(p.ox*S, p.oy*S, p.r*S,{friction:0.7,frictionStatic:0.9,restitution:0.05});
-    else part=Bodies.rectangle(p.ox*S, p.oy*S, p.w*S, p.h*S,{friction:0.7,frictionStatic:0.9,restitution:0.05,chamfer:{radius:2*S}});
-    parts.push(part);
-  }
-  const body=Body.create({parts,friction:0.7,frictionStatic:0.9,restitution:0.05,density:def.mass*0.0008,label:'animal'});
-  body.comOx=body.position.x; body.comOy=body.position.y;
-  body.animalDef=def;
-  Body.setPosition(body,{x,y}); Body.setAngle(body,angle);
+  const [width,height]=COLLIDERS[def.id];
+  const body=Bodies.rectangle(x,y,width*S,height*S,{
+    chamfer:{radius:Math.min(5,height*.12)*S},
+    friction:.65,frictionStatic:1.7,frictionAir:.035,restitution:0,
+    density:(.0009+def.mass*.00008)/Math.max(.5,S),
+    sleepThreshold:45,label:'animal'
+  });
+  body.comOx=0;body.comOy=0;body.animalDef=def;
+  Body.setAngle(body,angle);
   return body;
 }
 
@@ -241,8 +308,23 @@ function showTitle(){
   document.getElementById('gov').classList.remove('show');
   document.getElementById('wov').classList.remove('show');
   document.getElementById('rot-controls').classList.remove('show');
-  gameState='title';
+  document.getElementById('pov').classList.remove('show');
+  document.getElementById('guide').hidden=true;
+  document.getElementById('best-label').textContent=`自己ベスト ${bestScore.toLocaleString()} 点`;
+  gameState='title';layoutFrozen=false;updateSize();
 }
+
+let previousState='playing';
+function pauseGame(){
+  if(gameState!=='playing'&&gameState!=='dropping')return;
+  previousState=gameState;gameState='paused';
+  document.getElementById('pov').classList.add('show');
+}
+function resumeGame(){
+  if(gameState!=='paused')return;
+  gameState=previousState;document.getElementById('pov').classList.remove('show');
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
 
 function startGame(np){
   numPlayers=np; currentPlayer=0;
@@ -252,27 +334,34 @@ function startGame(np){
   document.getElementById('ts').style.display='none';
   document.getElementById('gov').classList.remove('show');
   document.getElementById('wov').classList.remove('show');
+  document.getElementById('pov').classList.remove('show');
   document.getElementById('rot-controls').classList.add('show');
-  Composite.clear(world,false); updateSize();
+  document.getElementById('guide').hidden=false;
+  document.getElementById('feedback').classList.remove('show');
+  clearTimeout(feedbackTimer);feedbackTimer=null;
+  layoutFrozen=false;Composite.clear(world,false);Engine.clear(engine);updateSize();layoutFrozen=true;
+  engine.gravity.y=.9*S;
 
-  gameState='playing'; score=0; stackedCount=0; maxHeight=0;
-  placedAnimals=[]; dropDelay=0; currentRotation=0; particles=[];
+  gameState='playing'; score=0; stackedCount=0; maxHeight=0;rescueLeft=2;cameraY=0;
+  placedAnimals=[];dropFrames=0;settleTimer=0;lastDroppedBody=null;dropHasContact=false;
+  currentRotation=0;particles=[];
 
   const tY=H*0.72, tX=W/2;
-  const tw=TABLE_W*S, th=TABLE_H*S, legW=16*S, legH=TABLE_LEGS_H*S;
+  const tw=TABLE_W*S, th=TABLE_H*S;
 
-  tableBody=Bodies.rectangle(tX,tY,tw,th,{isStatic:true,friction:0.95,restitution:0.02,label:'table'});
-  tableLegL=Bodies.rectangle(tX-tw/2+legW/2+5*S,tY+th/2+legH/2,legW,legH,{isStatic:true,friction:0.8,label:'tableLeg'});
-  tableLegR=Bodies.rectangle(tX+tw/2-legW/2-5*S,tY+th/2+legH/2,legW,legH,{isStatic:true,friction:0.8,label:'tableLeg'});
+  tableBody=Bodies.rectangle(tX,tY,tw,th,{isStatic:true,friction:.85,frictionStatic:2,restitution:0,label:'table'});
   floorBody=Bodies.rectangle(W/2,H+50,W*3,100,{isStatic:true,label:'floor'});
   wallL=Bodies.rectangle(-30,H/2,60,H*2,{isStatic:true,label:'wall'});
   wallR=Bodies.rectangle(W+30,H/2,60,H*2,{isStatic:true,label:'wall'});
-  Composite.add(world,[tableBody,tableLegL,tableLegR,floorBody,wallL,wallR]);
+  // The legs are decorative; colliding with them let fallen animals bounce back.
+  Composite.add(world,[tableBody,floorBody,wallL,wallR]);
 
   Events.off(engine,'collisionStart');
   Events.on(engine,'collisionStart',ev=>{
     for(const pair of ev.pairs){
       const a=pair.bodyA,b=pair.bodyB;
+      if((a===lastDroppedBody&&(b.label==='animal'||b.label==='table'))||
+         (b===lastDroppedBody&&(a.label==='animal'||a.label==='table')))dropHasContact=true;
       if(a.label==='animal'||b.label==='animal'){
         const imp=Vector.magnitude(Vector.sub(a.velocity,b.velocity));
         if(imp>2.5){
@@ -286,14 +375,13 @@ function startGame(np){
 
   // Build queue - repeat animals to fill count
   const total=getAnimalCount(np);
-  const pool=shuffleArray([...ANIMALS]);
-  animalQueue=[];
-  for(let i=0;i<total;i++) animalQueue.push(pool[i%pool.length]);
-  animalQueue=shuffleArray(animalQueue);
+  const starters=['turtle','bear','croc'].map(id=>ANIMALS.find(a=>a.id===id));
+  const others=shuffleArray(ANIMALS.filter(a=>!starters.includes(a)));
+  animalQueue=[...starters,...others,...shuffleArray([...ANIMALS])].slice(0,total);
 
   currentAnimal=animalQueue.shift();
   nextAnimal=animalQueue.length>0?animalQueue[0]:null;
-  dropX=W/2;
+  dropX=W/2;updateRotLabel();
   updateHUD();
 }
 
@@ -302,7 +390,7 @@ function shuffleArray(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.r
 // ═════════════════════════════
 //  INPUT
 // ═════════════════════════════
-let pointerX=300, isDragging=false;
+let isDragging=false;
 const ROT_STEP=Math.PI/8;
 
 function rotateLeft(){if(gameState==='playing')currentRotation-=ROT_STEP;updateRotLabel();}
@@ -311,31 +399,36 @@ function updateRotLabel(){document.getElementById('rot-deg').textContent=Math.ro
 
 document.addEventListener('keydown',e=>{
   if(gameState==='playing'){
-    if(e.code==='ArrowLeft'||e.code==='KeyA')rotateLeft();
-    if(e.code==='ArrowRight'||e.code==='KeyD')rotateRight();
-    if(e.code==='Space')dropAnimal();
+    if(e.code==='ArrowLeft'||e.code==='KeyA')dropX-=20*S;
+    if(e.code==='ArrowRight'||e.code==='KeyD')dropX+=20*S;
+    if(e.code==='KeyQ')rotateLeft();
+    if(e.code==='KeyE')rotateRight();
+    if(e.code==='Space'&&!e.repeat)dropAnimal();
+    if(['ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
   }
+  if(e.code==='Escape'){gameState==='paused'?resumeGame():pauseGame();}
 });
-canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();pointerX=(e.clientX-r.left)*(W/r.width);if(gameState==='playing')dropX=pointerX;});
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();if(gameState==='playing')dropX=(e.clientX-r.left)*(W/r.width);});
 canvas.addEventListener('click',()=>{if(gameState==='playing'&&currentAnimal)dropAnimal();});
-canvas.addEventListener('touchstart',e=>{e.preventDefault();isDragging=true;const r=canvas.getBoundingClientRect(),t=e.changedTouches[0];pointerX=(t.clientX-r.left)*(W/r.width);if(gameState==='playing')dropX=pointerX;},{passive:false});
-canvas.addEventListener('touchmove',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),t=e.changedTouches[0];pointerX=(t.clientX-r.left)*(W/r.width);if(gameState==='playing')dropX=pointerX;},{passive:false});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();isDragging=gameState==='playing';const r=canvas.getBoundingClientRect(),t=e.changedTouches[0];if(isDragging)dropX=(t.clientX-r.left)*(W/r.width);},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),t=e.changedTouches[0];if(isDragging&&gameState==='playing')dropX=(t.clientX-r.left)*(W/r.width);},{passive:false});
 canvas.addEventListener('touchend',e=>{e.preventDefault();if(isDragging&&gameState==='playing'&&currentAnimal)dropAnimal();isDragging=false;},{passive:false});
+canvas.addEventListener('touchcancel',()=>{isDragging=false;});
 
 // ═════════════════════════════
 //  DROP ANIMAL
 // ═════════════════════════════
 function dropAnimal(){
-  if(!currentAnimal)return;
-  const x=Math.max(50*S,Math.min(W-50*S,dropX)), y=80*S;
+  if(gameState!=='playing'||!currentAnimal)return;
+  const x=safeDropX(dropX,currentAnimal), y=spawnY();
   const body=createAnimalBody(currentAnimal,x,y,currentRotation);
   body.droppedBy=currentPlayer; // track who dropped this
   Composite.add(world,body);
-  placedAnimals.push(body);
+  placedAnimals.push(body);lastDroppedBody=body;dropHasContact=false;
   stackedCount++;
   score+=10*stackedCount;
 
-  gameState='dropping'; settleTimer=0; dropDelay=50;
+  gameState='dropping';settleTimer=0;dropFrames=0;
   currentRotation=0; updateRotLabel();
 
   if(animalQueue.length>0){currentAnimal=animalQueue.shift();nextAnimal=animalQueue.length>0?animalQueue[0]:null;}
@@ -420,25 +513,42 @@ function eliminateCurrentPlayer(){
 // ═════════════════════════════
 function gameLogic(){
   if(gameState!=='dropping')return;
-  if(dropDelay>0){dropDelay--;return;}
-
-  let allSettled=true;
-  for(const b of placedAnimals){
-    if(Vector.magnitude(b.velocity)>0.25||Math.abs(b.angularVelocity)>0.015){allSettled=false;break;}
-  }
-  if(allSettled)settleTimer++; else settleTimer=0;
-
+  dropFrames++;
   const tableTop=tableBody.position.y-TABLE_H*S/2;
-  const fallLine=tableTop+TABLE_LEGS_H*S+40*S;
-  for(const b of placedAnimals){
-    if(b.position.y>fallLine||b.position.x<-80||b.position.x>W+80){
-      eliminateCurrentPlayer();
-      return;
+  const fallLine=tableTop+TABLE_LEGS_H*S+35*S;
+  const fallen=placedAnimals.filter(b=>b.position.y>fallLine||b.position.x<-80*S||b.position.x>W+80*S);
+  if(fallen.length){
+    for(const b of fallen)Composite.remove(world,b);
+    placedAnimals=placedAnimals.filter(b=>!fallen.includes(b));
+    stackedCount=Math.max(0,stackedCount-fallen.length);
+    if(numPlayers===1&&rescueLeft>0){
+      rescueLeft--;
+      // Return fallen animals to the queue so completing the tower still matters.
+      animalQueue.push(...fallen.map(b=>b.animalDef));
+      if(!currentAnimal){currentAnimal=animalQueue.shift();}
+      nextAnimal=animalQueue[0]||null;
+      gameState='playing';showFeedback(`おたすけ！ あと ${rescueLeft} 回`);
+      updateHUD();return;
     }
+    eliminateCurrentPlayer();return;
   }
-
-  if(settleTimer>45){
+  const settled=placedAnimals.every(b=>b.isSleeping||
+    (Vector.magnitude(b.velocity)<.65*S&&Math.abs(b.angularVelocity)<.025));
+  settleTimer=settled?settleTimer+1:0;
+  if(dropHasContact&&dropFrames>20&&(settleTimer>=18||dropFrames>=200)){
+    if(dropFrames>=200){
+      for(const b of placedAnimals){
+        if(Vector.magnitude(b.velocity)<1.5*S){Body.setVelocity(b,{x:0,y:0});Body.setAngularVelocity(b,0);}
+      }
+    }
     for(const b of placedAnimals){const h=tableTop-b.position.y;if(h>maxHeight)maxHeight=h;}
+    if(lastDroppedBody&&placedAnimals.includes(lastDroppedBody)){
+      const tilt=Math.abs(Math.atan2(Math.sin(lastDroppedBody.angle),Math.cos(lastDroppedBody.angle)));
+      if(Math.min(tilt,Math.abs(Math.PI-tilt))<.12&&Math.abs(lastDroppedBody.position.x-W/2)<TABLE_W*S*.16){
+        score+=25;showFeedback('ぴったり！ +25');
+      }else if(stackedCount>0&&stackedCount%4===0){showFeedback(`${stackedCount}匹のタワー！`);}
+    }
+    if(numPlayers===1&&score>bestScore){bestScore=score;try{localStorage.setItem('tk777-animal-best',String(bestScore));}catch{}}
     if(!currentAnimal&&animalQueue.length===0){
       // All animals placed!
       if(numPlayers===1){
@@ -471,7 +581,11 @@ function updateHUD(){
   document.getElementById('hs').textContent=score;
   document.getElementById('hr').textContent=(currentAnimal?1:0)+animalQueue.length;
   document.getElementById('hst').textContent=stackedCount;
+  document.getElementById('rescue-box').style.display=numPlayers===1?'block':'none';
+  document.getElementById('hrescue').textContent=`♥ ${rescueLeft}`;
   document.getElementById('na').textContent=nextAnimal?nextAnimal.emoji:'—';
+  document.getElementById('guide').textContent=gameState==='dropping'?'どうぶつが落ち着くまで少し待ってね':
+    'スライドで場所を決めて、離すと落下。↺ ↻ で回転';
   // Turn indicator
   const tb=document.getElementById('turn-box');
   const tt=document.getElementById('turn-text');
@@ -607,12 +721,22 @@ function drawPlacedAnimal(body){
 }
 function drawPreviewAnimal(){
   if(!currentAnimal||gameState!=='playing')return;
-  const x=Math.max(50*S,Math.min(W-50*S,dropX));
-  const y=80*S+Math.sin(Date.now()*.004)*4*S;
-  drawAnimalShape(currentAnimal,x,y,currentRotation,0.6,currentPlayer);
-  ctx.save();ctx.setLineDash([5,5]);ctx.strokeStyle='rgba(200,80,80,0.2)';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(x,y+30*S);ctx.lineTo(x,tableBody?tableBody.position.y-TABLE_H*S/2:H*.72);
-  ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  const x=safeDropX(dropX,currentAnimal);
+  const y=spawnY()+Math.sin(Date.now()*.004)*3*S;
+  let landing=tableBody.position.y-TABLE_H*S/2;
+  const width=COLLIDERS[currentAnimal.id][0]*S;
+  for(const body of placedAnimals){
+    if(Math.abs(body.position.x-x)<(body.bounds.max.x-body.bounds.min.x+width)*.42){
+      landing=Math.min(landing,body.bounds.min.y);
+    }
+  }
+  ctx.save();ctx.setLineDash([5*S,5*S]);ctx.strokeStyle='rgba(43,124,91,.38)';ctx.lineWidth=1.8*S;
+  ctx.beginPath();ctx.moveTo(x,y+30*S);ctx.lineTo(x,landing-2*S);
+  ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.32)';ctx.strokeStyle='rgba(38,116,91,.67)';
+  ctx.beginPath();ctx.ellipse(x,landing-2*S,width*.48,5*S,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.restore();
+  drawAnimalShape(currentAnimal,x,y,currentRotation,.72,currentPlayer);
 }
 function rrect(ctx,x,y,w,h,r){
   r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
@@ -648,23 +772,35 @@ function drawPlayersStatus(){
 }
 
 // ── MAIN LOOP ──
-let lastT=0;
+let lastT=0,accumulator=0;
 function loop(ts){
   requestAnimationFrame(loop);
-  const dt=Math.min(ts-lastT,33);lastT=ts;
-  if(gameState!=='title'){Engine.update(engine,dt);gameLogic();updateParticles();}
+  const dt=lastT?Math.min(ts-lastT,50):0;lastT=ts;
+  if(gameState==='playing'||gameState==='dropping'){
+    accumulator+=dt;
+    let steps=0;
+    while(accumulator>=1000/60&&steps<3){
+      if(gameState!=='playing'&&gameState!=='dropping')break;
+      for(const b of placedAnimals){
+        const limit=8*S;
+        if(b.velocity.y>limit)Body.setVelocity(b,{x:b.velocity.x,y:limit});
+      }
+      Engine.update(engine,1000/60);gameLogic();accumulator-=1000/60;steps++;
+    }
+    if(steps===3)accumulator=0;
+    updateParticles();
+  }else accumulator=0;
   ctx.clearRect(0,0,W,H);drawBG();
   if(gameState!=='title'){
+    const targetCamera=Math.min(0,towerTop()-220*S);
+    cameraY+=(targetCamera-cameraY)*.08;
+    ctx.save();ctx.translate(0,-cameraY);
     drawTable();
     for(const b of placedAnimals)drawPlacedAnimal(b);
     drawPreviewAnimal();
     drawParticles();
+    ctx.restore();
     drawPlayersStatus();
-    if(gameState==='dropping'&&dropDelay<=0){
-      ctx.save();ctx.globalAlpha=.5+Math.sin(Date.now()*.006)*.3;
-      ctx.font=`bold ${13*S}px Nunito,sans-serif`;ctx.textAlign='center';ctx.fillStyle='#E67E22';
-      ctx.fillText('⏳ 安定するまで待ってね...',W/2,46*S);ctx.restore();
-    }
     if(gameState==='eliminated'){
       ctx.save();ctx.globalAlpha=.7+Math.sin(Date.now()*.008)*.3;
       ctx.font=`bold ${16*S}px Nunito,sans-serif`;ctx.textAlign='center';
@@ -673,7 +809,7 @@ function loop(ts){
     }
   }
 }
-requestAnimationFrame(loop);
+showTitle();requestAnimationFrame(loop);
 </script>
 </body>
 </html>
