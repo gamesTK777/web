@@ -102,36 +102,6 @@
       100% { transform: translateY(-10vh) scale(1); opacity: 0; }
     }
 
-    /* 右上特設ボタン */
-    .special-btn {
-      position: absolute;
-      top: 24px;
-      right: 24px;
-      z-index: 10;
-      padding: 12px 20px;
-      background: rgba(20, 28, 56, 0.7);
-      border: 1px solid var(--accent-5);
-      border-radius: 12px;
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.85rem;
-      letter-spacing: 0.05em;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 0 15px rgba(89, 216, 255, 0.2);
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .special-btn:hover {
-      background: var(--accent-5);
-      color: var(--bg-dark);
-      box-shadow: 0 0 25px rgba(89, 216, 255, 0.5);
-      transform: translateY(-2px);
-    }
-
     .container {
       position: relative;
       z-index: 4;
@@ -290,7 +260,6 @@
     @media (max-width: 600px) {
       .container { padding: 80px 15px 60px; }
       .games { grid-template-columns: 1fr; }
-      .special-btn { top: 12px; right: 12px; font-size: 0.7rem; padding: 8px 14px; }
     }
   </style>
 </head>
@@ -299,10 +268,6 @@
   <div class="bg-overlay"></div>
   <div class="bg-grid"></div>
   <div class="scanlines"></div>
-
-  <a href="DisneySea/index.html" class="special-btn">
-    <span>🚢</span> Disney Seaインフォ
-  </a>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
