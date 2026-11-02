@@ -66,6 +66,9 @@ h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spa
 .card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg);}
 .card-face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;}
 .card-back{background:linear-gradient(135deg,#ffe6f3,#d8efff 48%,#e8ffe9);border:2px solid rgba(255,255,255,.9);box-shadow:0 10px 22px rgba(255,126,182,.18), inset 0 0 0 3px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;}
+/* Hide the reverse face after the halfway point of the flip. In Safari, 3D
+   backface clipping alone can leave the ribbon painted over the front art. */
+.card.flipped .card-back,.card.matched .card-back{visibility:hidden;transition:visibility 0s linear .25s;}
 .card-back::before{content:'';position:absolute;inset:8px;border-radius:12px;border:2px dashed rgba(255,126,182,.28);}
 .back-center{position:relative;z-index:1;width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.72);box-shadow:0 6px 16px rgba(255,126,182,.15);font-size:1.7rem;}
 .back-corners span{position:absolute;font-size:1rem;opacity:.8}
@@ -235,7 +238,7 @@ const PRAISE=['✨ すごーい！','🎀 やったね！','💖 おみごと！
 let diff='easy',cards=[],flipped=[],matched=0,moves=0;
 let seconds=0,timer=null,canFlip=true,gameStarted=false;
 let currentPlayer=0,scores=[0,0],praiseTimer=null;
-let turnTimeout=null,winTimeout=null;
+let turnTimeout=null,winTimeout=null,pendingTurn=null,gameId=0;
 window.addEventListener('resize',fitCards);
 function setDiff(d){
   diff=d;
@@ -248,11 +251,12 @@ function applyCardArt(el,c){
   el.style.backgroundPosition=`${posPct(c.col)} ${posPct(c.row)}`;
 }
 function newGame(){
+  gameId++;
   clearInterval(timer);
   clearTimeout(turnTimeout);
   clearTimeout(winTimeout);
   clearTimeout(praiseTimer);
-  turnTimeout=winTimeout=praiseTimer=null;
+  turnTimeout=winTimeout=praiseTimer=pendingTurn=null;
   fitCards();
   matched=0;moves=0;seconds=0;flipped=[];canFlip=true;gameStarted=false;currentPlayer=0;scores=[0,0];
   updatePlayerUI();
@@ -289,6 +293,8 @@ function createCardEl(c,idx){
   return el;
 }
 function flipCard(idx){
+  // A backgrounded mobile browser may delay timers until the next interaction.
+  if(pendingTurn&&Date.now()>=pendingTurn.deadline)checkMatch(pendingTurn);
   if(!canFlip) return;
   const c=cards[idx];
   if(c.matched||c.flipped||flipped.length>=2) return;
@@ -298,32 +304,43 @@ function flipCard(idx){
   node.classList.add('flipped');
   node.setAttribute('aria-label',`${c.name}、おもて`);
   flipped.push(idx);
-  if(flipped.length===2){moves++;document.getElementById('s-moves').textContent=moves;canFlip=false;turnTimeout=setTimeout(checkMatch,700);}
+  if(flipped.length===2){
+    moves++;document.getElementById('s-moves').textContent=moves;canFlip=false;
+    const turn={a:flipped[0],b:flipped[1],gameId,deadline:Date.now()+1000};
+    pendingTurn=turn;turnTimeout=setTimeout(()=>checkMatch(turn),1000);
+  }
 }
-function checkMatch(){
-  const [a,b]=flipped;const ca=cards[a],cb=cards[b];
-  if(ca.id===cb.id){
-    ca.matched=cb.matched=true;matched++;
-    document.getElementById('s-pairs').textContent=matched;
-    document.getElementById(`card-${a}`).classList.add('matched');
-    document.getElementById(`card-${b}`).classList.add('matched');
-    document.getElementById(`card-${a}`).setAttribute('aria-label',`${ca.name}、ペア成立`);
-    document.getElementById(`card-${b}`).setAttribute('aria-label',`${cb.name}、ペア成立`);
-    scores[currentPlayer]++;updatePlayerUI();burstFX(a);burstFX(b);flipped=[];canFlip=true;showPraise(ca);
-    if(matched===DIFFS[diff].pairs){canFlip=false;winTimeout=setTimeout(winGame,550);}
-  } else {
-    document.getElementById(`card-${a}`).classList.add('wrong');document.getElementById(`card-${b}`).classList.add('wrong');
-    turnTimeout=setTimeout(()=>{
+function checkMatch(turn){
+  if(pendingTurn!==turn||turn.gameId!==gameId)return;
+  pendingTurn=null;clearTimeout(turnTimeout);turnTimeout=null;
+  const {a,b}=turn,ca=cards[a],cb=cards[b];
+  try {
+    if(ca.id===cb.id){
+      ca.matched=cb.matched=true;matched++;
+      document.getElementById('s-pairs').textContent=matched;
+      document.getElementById(`card-${a}`).classList.add('matched');
+      document.getElementById(`card-${b}`).classList.add('matched');
+      document.getElementById(`card-${a}`).setAttribute('aria-label',`${ca.name}、ペア成立`);
+      document.getElementById(`card-${b}`).setAttribute('aria-label',`${cb.name}、ペア成立`);
+      scores[currentPlayer]++;updatePlayerUI();burstFX(a);burstFX(b);showPraise(ca);
+      if(matched===DIFFS[diff].pairs)winTimeout=setTimeout(winGame,550);
+    } else {
       [a,b].forEach(i=>{
         cards[i].flipped=false;
         const node=document.getElementById(`card-${i}`);
         node.classList.remove('flipped','wrong');
         node.setAttribute('aria-label',`カード ${i+1}`);
       });
-      flipped=[];canFlip=true;currentPlayer=1-currentPlayer;updatePlayerUI();
-    },620);
+      currentPlayer=1-currentPlayer;updatePlayerUI();
+    }
+  } finally {
+    flipped=[];
+    canFlip=matched<DIFFS[diff].pairs;
   }
 }
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&pendingTurn&&Date.now()>=pendingTurn.deadline)checkMatch(pendingTurn);
+});
 function updatePlayerUI(){
   document.getElementById('p1-score').textContent=scores[0];document.getElementById('p2-score').textContent=scores[1];
   document.getElementById('p1-panel').classList.toggle('active',currentPlayer===0);
