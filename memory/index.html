@@ -38,6 +38,7 @@ header{position:relative;z-index:10;width:100%;text-align:center;padding:18px 14
 .hdr-icon{font-size:2.55rem;display:block;margin-bottom:4px;animation:glow 2.6s ease-in-out infinite;}
 @keyframes glow{0%,100%{filter:drop-shadow(0 0 8px rgba(255,126,182,.35));}50%{filter:drop-shadow(0 0 18px rgba(127,199,255,.5)) drop-shadow(0 0 32px rgba(255,216,107,.3));}}
 h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spacing:1.5px;background:linear-gradient(135deg,#ff76b3,#7bc5ff 55%,#78d9b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 6px rgba(255,255,255,.45));}
+.short-title{display:none;}
 .subtitle{font-size:.74rem;letter-spacing:2px;color:#b17d99;margin-top:2px;font-weight:700;}
 .diff-tabs{display:flex;justify-content:center;gap:7px;margin:12px 0 14px;flex-wrap:wrap;}
 .diff-tab{padding:7px 15px;border:2px solid rgba(255,126,182,.22);border-radius:999px;font-family:'Zen Maru Gothic',sans-serif;font-size:.82rem;font-weight:900;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.75);color:#af7996;box-shadow:0 6px 16px rgba(255,126,182,.08);}
@@ -111,8 +112,51 @@ h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spa
 .ov-btn:hover{transform:translateY(-2px);}
 .conf{position:fixed;pointer-events:none;z-index:10000;animation:cfall var(--cd,3s) ease-in forwards;}
 @keyframes cfall{0%{transform:translateY(-30px) rotate(0);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
-@media(max-width:640px){:root{--card-w:68px;--card-h:95px;--gap:6px;} .player-panel{min-width:110px;padding:8px 10px;} .ov-card{padding:28px 18px;} }
-@media(max-width:400px){:root{--card-w:56px;--card-h:78px;--gap:4px;} .player-panel{min-width:90px;} }
+@media(max-width:640px), (max-width:1000px) and (max-height:500px){
+  html,body{min-height:0;}
+  body{min-height:100svh;padding-bottom:4px;}
+  body>.tk-portal-return{position:absolute;top:6px;left:6px;min-height:30px;padding:4px 8px;font-size:10px;}
+  header{padding:7px 6px 2px;}
+  .hdr-icon,.subtitle,.p-score-label,.player-panel.active::after{display:none;}
+  h1{font-size:clamp(.78rem,3.4vw,1rem);line-height:30px;letter-spacing:0;white-space:nowrap;padding-left:94px;}
+  .diff-tabs{flex-wrap:nowrap;gap:4px;margin:4px 0 5px;}
+  .diff-tab{padding:4px 5px;border-width:1px;font-size:clamp(.60rem,2.3vw,.72rem);line-height:1.2;white-space:nowrap;}
+  .players-row{flex-wrap:nowrap;gap:4px;margin-bottom:4px;}
+  .player-panel{flex:1;min-width:0;padding:4px 5px;border-width:1px;border-radius:12px;}
+  .p-name{margin-bottom:0;font-size:.72rem;gap:2px;}
+  .p-name input{width:clamp(56px,18vw,80px);font-size:.72rem;}
+  .p-score-row{font-size:1rem;}
+  .vs-badge{width:16px;font-size:.72rem;}
+  .status-bar{flex-wrap:nowrap;gap:4px;margin-bottom:0;}
+  .stat{min-width:0;padding:3px 6px;border-width:1px;border-radius:12px;font-size:clamp(.61rem,2.5vw,.72rem);}
+  #reset-btn{margin:5px auto 0;padding:4px 16px;font-size:.72rem;line-height:1.25;}
+  #board-wrap{margin:3px auto 0;padding:0 6px;}
+  .ov-card{padding:28px 18px;}
+}
+@media(max-width:330px){
+  header{padding-top:36px;}
+  h1{position:absolute;top:6px;left:90px;right:115px;padding:0;font-size:.7rem;line-height:30px;pointer-events:none;}
+  .full-title{display:none;}
+  .short-title{display:inline;}
+  .diff-tabs{margin:0 0 3px;}
+  .diff-count{display:none;}
+  .player-panel{padding:2px 3px;}
+  .p-name{font-size:.65rem;}
+  .p-name input{font-size:.65rem;}
+  .p-score-row{font-size:.85rem;}
+  .status-bar{gap:2px;}
+  .stat{padding:2px 4px;}
+  #reset-btn{position:absolute;top:6px;right:6px;min-height:30px;margin:0;padding:4px 8px;font-size:.65rem;}
+}
+@media(min-width:641px) and (max-width:1000px) and (max-height:500px){
+  header{padding-top:36px;}
+  h1{position:absolute;top:6px;left:110px;right:120px;padding:0;font-size:.85rem;line-height:30px;}
+  .diff-tabs{margin:0 0 3px;}
+  .player-panel{padding:2px 5px;}
+  .p-name{font-size:.7rem;}
+  .p-score-row{font-size:.9rem;}
+  #reset-btn{position:absolute;top:6px;right:6px;min-height:30px;margin:0;padding:4px 10px;font-size:.68rem;}
+}
 </style>
 <link rel="stylesheet" href="../shared/portal-return.css">
 </head>
@@ -121,12 +165,12 @@ h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spa
 <div id="sparkles"></div>
 <header>
   <span class="hdr-icon">🎀</span>
-  <h1>KAWAII MEMORY MATCH</h1>
+  <h1 aria-label="神経衰弱 KAWAII MEMORY MATCH"><span class="full-title">KAWAII MEMORY MATCH</span><span class="short-title" aria-hidden="true">神経衰弱</span></h1>
   <div class="subtitle">〜 サンリオテイストの神経衰弱 対戦版 〜</div>
   <div class="diff-tabs">
-    <button class="diff-tab active" onclick="setDiff('easy')">🍓 やさしい (6ペア)</button>
-    <button class="diff-tab" onclick="setDiff('medium')">🌈 ふつう (10ペア)</button>
-    <button class="diff-tab" onclick="setDiff('hard')">👑 むずかしい (18ペア)</button>
+    <button class="diff-tab active" aria-label="やさしい、6ペア" onclick="setDiff('easy')">🍓 やさしい<span class="diff-count"> (6ペア)</span></button>
+    <button class="diff-tab" aria-label="ふつう、10ペア" onclick="setDiff('medium')">🌈 ふつう<span class="diff-count"> (10ペア)</span></button>
+    <button class="diff-tab" aria-label="むずかしい、18ペア" onclick="setDiff('hard')">👑 むずかしい<span class="diff-count"> (18ペア)</span></button>
   </div>
   <div class="players-row">
     <div class="player-panel active" id="p1-panel">
@@ -219,6 +263,8 @@ const CARD_POOL=[
   {id:'deer',sheet:SHEET_2,row:2,col:2,name:'しか'},
 ];
 const DIFFS={easy:{pairs:6,cols:4},medium:{pairs:10,cols:5},hard:{pairs:18,cols:6}};
+function isLandscapePhone(){return window.innerWidth>640&&window.innerWidth<=1000&&window.innerHeight<=500;}
+function boardColumns(){return isLandscapePhone()?{easy:6,medium:10,hard:12}[diff]:DIFFS[diff].cols;}
 // Shuffle without sort(() => Math.random()-.5), which can produce biased decks.
 function shuffle(array){
   for(let i=array.length-1;i>0;i--){
@@ -228,21 +274,36 @@ function shuffle(array){
   return array;
 }
 function fitCards(){
-  const cols=DIFFS[diff].cols;
-  const gap=window.innerWidth<=420?4:window.innerWidth<=640?6:8;
-  const maxBoardWidth=Math.min(window.innerWidth-28,940);
-  const width=Math.min(94,Math.max(34,Math.floor((maxBoardWidth-gap*(cols-1))/cols)));
+  const cols=boardColumns();
+  const rows=Math.ceil(DIFFS[diff].pairs*2/cols);
+  const compact=window.innerWidth<=640||isLandscapePhone();
+  const gap=window.innerWidth<=420||isLandscapePhone()?4:window.innerWidth<=640?6:8;
+  const viewport=window.visualViewport;
+  const visibleWidth=viewport&&viewport.width?viewport.width:window.innerWidth;
+  const maxBoardWidth=Math.min(visibleWidth-(compact?12:28),940);
+  let width=Math.min(94,Math.max(34,Math.floor((maxBoardWidth-gap*(cols-1))/cols)));
+  if(compact){
+    const boardTop=document.getElementById('board-wrap').getBoundingClientRect().top+window.scrollY;
+    const visibleHeight=viewport&&viewport.height?viewport.height:window.innerHeight;
+    const heightLimit=Math.floor((visibleHeight-boardTop-8-gap*(rows-1))*94/(rows*132));
+    width=Math.max(34,Math.min(width,heightLimit));
+  }
   const root=document.documentElement.style;
   root.setProperty('--card-w',width+'px');
   root.setProperty('--card-h',Math.round(width*132/94)+'px');
   root.setProperty('--gap',gap+'px');
+  document.getElementById('board').style.gridTemplateColumns=`repeat(${cols},var(--card-w))`;
 }
 const PRAISE=['✨ すごーい！','🎀 やったね！','💖 おみごと！','🌟 さいこう！','👑 えらい！','💫 その調子！','🍓 ナイスペア！','🫶 かんぺき！','🌈 さすが！','🩷 かわいくクリア！'];
 let diff='easy',cards=[],flipped=[],matched=0,moves=0;
 let seconds=0,timer=null,canFlip=true,gameStarted=false;
 let currentPlayer=0,scores=[0,0],praiseTimer=null;
 let turnTimeout=null,winTimeout=null,pendingTurn=null,gameId=0;
+let lastHandledTouchAt=-Infinity;
 window.addEventListener('resize',fitCards);
+window.addEventListener('pageshow',fitCards);
+if(window.visualViewport)window.visualViewport.addEventListener('resize',fitCards);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitCards);
 function setDiff(d){
   diff=d;
   document.querySelectorAll('.diff-tab').forEach((b,i)=>b.classList.toggle('active',['easy','medium','hard'][i]===d));
@@ -255,6 +316,7 @@ function applyCardArt(el,c){
 }
 function newGame(){
   gameId++;
+  lastHandledTouchAt=-Infinity;
   clearInterval(timer);
   clearTimeout(turnTimeout);
   clearTimeout(winTimeout);
@@ -268,7 +330,7 @@ function newGame(){
   document.getElementById('s-pairs').textContent='0';
   document.getElementById('overlay').classList.remove('show');
   document.getElementById('praise-popup').classList.remove('show');
-  const {pairs,cols}=DIFFS[diff];
+  const {pairs}=DIFFS[diff],cols=boardColumns();
   document.getElementById('s-total').textContent=pairs;
   const pool=shuffle([...CARD_POOL]).slice(0,pairs);
   const deck=shuffle([...pool,...pool]);
@@ -280,6 +342,7 @@ function newGame(){
 }
 function createCardEl(c,idx){
   const el=document.createElement('button');el.className='card';el.id=`card-${idx}`;
+  const cardGameId=gameId;
   el.type='button';el.setAttribute('aria-label',`カード ${idx+1}`);
   const inner=document.createElement('span');inner.className='card-inner';
   const back=document.createElement('span');back.className='card-face card-back';
@@ -289,7 +352,31 @@ function createCardEl(c,idx){
   const shine=document.createElement('span');shine.className='front-shine';
   front.appendChild(art);front.appendChild(shine);
   inner.appendChild(back);inner.appendChild(front);el.appendChild(inner);
-  el.addEventListener('click',()=>flipCard(idx));
+  let touchStart=null;
+  el.addEventListener('touchstart',event=>{
+    if(event.touches.length!==1){touchStart=null;return;}
+    const touch=event.touches[0];
+    touchStart={id:touch.identifier,x:touch.clientX,y:touch.clientY,at:Date.now(),moved:false};
+  },{passive:true});
+  el.addEventListener('touchmove',event=>{
+    if(!touchStart)return;
+    const touch=Array.from(event.changedTouches).find(t=>t.identifier===touchStart.id);
+    if(touch&&Math.hypot(touch.clientX-touchStart.x,touch.clientY-touchStart.y)>12)touchStart.moved=true;
+  },{passive:true});
+  el.addEventListener('touchcancel',()=>{touchStart=null;},{passive:true});
+  el.addEventListener('touchend',event=>{
+    const start=touchStart;touchStart=null;
+    if(!start||cardGameId!==gameId||event.touches.length!==0)return;
+    const touch=Array.from(event.changedTouches).find(t=>t.identifier===start.id);
+    if(!touch||start.moved||Math.hypot(touch.clientX-start.x,touch.clientY-start.y)>12||Date.now()-start.at>650)return;
+    if(event.cancelable)event.preventDefault();
+    lastHandledTouchAt=Date.now();
+    flipCard(idx);
+  },{passive:false});
+  el.addEventListener('click',event=>{
+    if(cardGameId!==gameId||(event.detail>0&&Date.now()-lastHandledTouchAt<750))return;
+    flipCard(idx);
+  });
   return el;
 }
 function flipCard(idx){
