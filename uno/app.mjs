@@ -14,6 +14,7 @@ let busy = false, pollTimer = null, cpuTimer = null, pollRunning = false, genera
 let unoArmed = false, pendingWild = null, handIds = '', toastTimer = null, selectedMode = 'solo';
 let lastConnectionError = '', setupBusy = false, soloPlayers = 4, currentScreen = 'home';
 let handGesture = null, suppressHandClick = false;
+let apiPauseUntil = 0;
 const resumeButton = document.createElement('button');
 resumeButton.type = 'button'; resumeButton.className = 'secondary-button resume-button'; resumeButton.hidden = true;
 resumeButton.textContent = '前のルームへ再接続';
@@ -36,15 +37,25 @@ function clearOnline() { session = null; room = null; remove(SESSION_KEY); resum
 function goHome() { generation++; stopTimers(); closeWild(); if ($('leaveDialog').open) $('leaveDialog').close(); mode = 'home'; room = null; localGame = null; busy = false; unoArmed = false; resetHand(); showScreen('home'); connectionRestored(); setSetupBusy(false, ''); }
 
 async function api(path, payload, auth = session) {
+  if (Date.now() < apiPauseUntil) {
+    const seconds = Math.max(1, Math.ceil((apiPauseUntil - Date.now()) / 1000));
+    const error = new Error(`アクセスが集中しています。${seconds}秒後に再接続してください。`);
+    error.status = 429; error.retryAfter = seconds; throw error;
+  }
   const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const headers = {};
     if (auth && auth.token) headers.Authorization = 'Bearer ' + auth.token;
     if (payload !== undefined) headers['Content-Type'] = 'application/json';
     const response = await fetch(API + path, { method: payload === undefined ? 'GET' : 'POST', headers, body: payload === undefined ? undefined : JSON.stringify(payload), signal: controller.signal, credentials: 'omit', cache: 'no-store' });
+    if (response.status === 429) {
+      const raw = response.headers.get('Retry-After'), seconds = raw && /^\d+(?:\.\d+)?$/.test(raw) ? Number(raw) : NaN;
+      const wait = Number.isFinite(seconds) && seconds > 0 ? Math.min(600, Math.max(1, seconds)) : 5;
+      apiPauseUntil = Math.max(apiPauseUntil, Date.now() + wait * 1000);
+    }
     let body;
     try { body = await response.json(); } catch { throw new Error('サーバーから正しい応答が届きませんでした。'); }
-    if (!response.ok) { const error = new Error(body.error || '接続できませんでした。'); error.status = response.status; error.body = body; throw error; }
+    if (!response.ok) { const error = new Error(body.error || '接続できませんでした。'); error.status = response.status; error.body = body; if (response.status === 429) error.retryAfter = Math.max(1, Math.ceil((apiPauseUntil - Date.now()) / 1000)); throw error; }
     return body;
   } catch (error) { if (error.name === 'AbortError') throw new Error('接続に時間がかかっています。通信状況を確認して再接続してください。'); throw error; }
   finally { clearTimeout(timeout); }
@@ -58,7 +69,7 @@ function connectionError(error) {
   if (mode === 'online' && room && room.status === 'lobby') $('lobbyStatus').textContent = '再接続中… ' + lastConnectionError;
   renderControls();
 }
-function connectionRestored() { lastConnectionError = ''; $('connectionBanner').hidden = true; $('retryLobby').hidden = true; }
+function connectionRestored() { if (mode === 'online' && Date.now() < apiPauseUntil) return; lastConnectionError = ''; $('connectionBanner').hidden = true; $('retryLobby').hidden = true; }
 function acceptView(view, expectedGeneration = generation) {
   if (!view || expectedGeneration !== generation || mode !== 'online' || !session || view.roomId !== session.roomId) return;
   if (room && view.version < room.version) return;
@@ -71,7 +82,7 @@ function schedulePoll(delay) {
   clearTimeout(pollTimer);
   if (mode !== 'online' || !session) return;
   const interval = room && room.status === 'lobby' ? 2500 : 1000;
-  pollTimer = setTimeout(poll, delay === undefined ? (document.hidden ? 3500 : interval) : delay);
+  pollTimer = setTimeout(poll, Math.max(delay === undefined ? (document.hidden ? 3500 : interval) : delay, apiPauseUntil - Date.now()));
 }
 async function syncRoom() {
   if (!session || mode !== 'online' || pollRunning) return;
@@ -160,7 +171,8 @@ async function perform(action) {
   } catch (error) {
     if (currentGeneration !== generation) return;
     if (error.body && error.body.view) acceptView(error.body.view, currentGeneration);
-    if (error.status === 409) toast('テーブルが更新されました。最新の状態で操作してください。');
+    if (error.status === 429) connectionError(error);
+    else if (error.status === 409) toast('テーブルが更新されました。最新の状態で操作してください。');
     else if (error.status && error.status < 500) toast(error.message);
     else { connectionError(error); await syncRoom(); }
   } finally { if (currentGeneration === generation) { busy = false; renderControls(); schedulePoll(); } }
@@ -229,9 +241,9 @@ function handStep() { const first = $('hand').firstElementChild; return first ? 
 function updateHandNav() { const hand = $('hand'), max = Math.max(0, hand.scrollWidth - hand.clientWidth); $('previousHand').disabled = hand.scrollLeft < 2; $('nextHand').disabled = hand.scrollLeft >= max - 2; }
 function moveHand(direction) { const hand = $('hand'), step = handStep(), amount = Math.max(step, Math.floor(hand.clientWidth * .7 / step) * step); hand.scrollLeft = Math.max(0, Math.min(hand.scrollWidth - hand.clientWidth, hand.scrollLeft + direction * amount)); updateHandNav(); }
 function renderControls() {
-  if (room && room.status === 'lobby') $('startOnline').disabled = busy || onlinePlayers().length < 2 || Boolean(lastConnectionError);
+  if (room && room.status === 'lobby') $('startOnline').disabled = busy || onlinePlayers().length < 2 || Boolean(lastConnectionError) || Date.now() < apiPauseUntil;
   const game = viewGame(); if (!game) return;
-  const ownTurn = isOurTurn(game), canAct = ownTurn && !busy && !lastConnectionError;
+  const ownTurn = isOurTurn(game), canAct = ownTurn && !busy && !lastConnectionError && (mode !== 'online' || Date.now() >= apiPauseUntil);
   for (const card of $('hand').children) { const legal = game.legalCardIds.includes(card.dataset.cardId); card.disabled = !canAct || !legal; card.classList.toggle('playable', ownTurn && legal); }
   $('drawButton').disabled = !canAct || !game.canDraw; $('drawPile').disabled = !canAct || !game.canDraw;
   $('passButton').hidden = !game.canPass || !ownTurn; $('passButton').disabled = !canAct || !game.canPass;
@@ -280,7 +292,7 @@ async function leave() {
     if ([401, 404, 410].includes(error.status)) { clearOnline(); goHome(); setSetupBusy(false, 'ルームへの参加は終了しています。'); }
     else {
       if (error.body && error.body.view) acceptView(error.body.view, currentGeneration);
-      if (!error.status || error.status >= 500) connectionError(error);
+      if (!error.status || error.status >= 500 || error.status === 429) connectionError(error);
       $('leaveExplanation').textContent = '退出を通知できませんでした。参加情報は保持しています。通信を確認してもう一度退出するか、対戦に戻ってください。';
       toast(error.message || '退出の通知を送れませんでした。');
     }
