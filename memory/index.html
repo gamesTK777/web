@@ -1,495 +1,83 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎀 KAWAII MEMORY MATCH 🎀</title>
-<meta name="description" content="かわいいキャラクターカードであそぶ、2人対戦の神経衰弱ゲーム。">
-<link rel="preload" href="sanrio_sheet_1.webp" as="image" type="image/webp">
-<link rel="preload" href="sanrio_sheet_2.webp" as="image" type="image/webp">
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --card-w:94px;--card-h:132px;--gap:8px;
-  --bg1:#fff7fb;--bg2:#edf8ff;--bg3:#f4fff1;
-  --panel:rgba(255,255,255,.72);
-  --panel-2:rgba(255,255,255,.88);
-  --pink:#ff7eb6;--pink-2:#ffb5d2;--mint:#83dfc6;--sky:#7fc7ff;
-  --lav:#b79cff;--yellow:#ffd86b;--text:#704b61;--text-dim:#9e7d91;
-  --shadow:0 12px 30px rgba(255,126,182,.18);
-}
-html,body{min-height:100%;}
-body{
-  font-family:'Zen Maru Gothic',sans-serif; color:var(--text); min-height:100vh;
-  background:
-    radial-gradient(circle at 10% 10%, rgba(255,190,220,.8) 0%, rgba(255,190,220,0) 28%),
-    radial-gradient(circle at 90% 12%, rgba(170,225,255,.9) 0%, rgba(170,225,255,0) 30%),
-    radial-gradient(circle at 50% 100%, rgba(194,245,202,.9) 0%, rgba(194,245,202,0) 28%),
-    linear-gradient(180deg,var(--bg1),var(--bg2) 55%,var(--bg3));
-  display:flex;flex-direction:column;align-items:center;overflow-x:hidden;padding-bottom:40px;user-select:none;
-}
-#sparkles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-.spark{position:absolute;opacity:.8;animation:floaty var(--d,8s) ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(255,255,255,.8));}
-@keyframes floaty{0%,100%{transform:translateY(0) translateX(0) scale(1);opacity:.15;}50%{transform:translateY(-16px) translateX(var(--x,8px)) scale(1.15);opacity:.85;}}
-.bubble{position:fixed;bottom:-40px;border-radius:50%;background:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(2px);pointer-events:none;z-index:0;animation:rise linear infinite;}
-@keyframes rise{0%{transform:translateY(0) translateX(0);opacity:0;}10%{opacity:.7;}100%{transform:translateY(-120vh) translateX(var(--tx,20px));opacity:0;}}
-header{position:relative;z-index:10;width:100%;text-align:center;padding:18px 14px 12px;}
-.hdr-icon{font-size:2.55rem;display:block;margin-bottom:4px;animation:glow 2.6s ease-in-out infinite;}
-@keyframes glow{0%,100%{filter:drop-shadow(0 0 8px rgba(255,126,182,.35));}50%{filter:drop-shadow(0 0 18px rgba(127,199,255,.5)) drop-shadow(0 0 32px rgba(255,216,107,.3));}}
-h1{font-family:'Fredoka',sans-serif;font-size:1.72rem;font-weight:700;letter-spacing:1.5px;background:linear-gradient(135deg,#ff76b3,#7bc5ff 55%,#78d9b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 6px rgba(255,255,255,.45));}
-.short-title{display:none;}
-.subtitle{font-size:.74rem;letter-spacing:2px;color:#b17d99;margin-top:2px;font-weight:700;}
-.diff-tabs{display:flex;justify-content:center;gap:7px;margin:12px 0 14px;flex-wrap:wrap;}
-.diff-tab{padding:7px 15px;border:2px solid rgba(255,126,182,.22);border-radius:999px;font-family:'Zen Maru Gothic',sans-serif;font-size:.82rem;font-weight:900;cursor:pointer;transition:all .18s;background:rgba(255,255,255,.75);color:#af7996;box-shadow:0 6px 16px rgba(255,126,182,.08);}
-.diff-tab:hover{transform:translateY(-1px);background:#fff;}
-.diff-tab.active{background:linear-gradient(135deg,#ff91c1,#7fc7ff);border-color:transparent;color:#fff;box-shadow:0 8px 20px rgba(127,199,255,.28);}
-.players-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 12px;flex-wrap:wrap;}
-.player-panel{background:var(--panel);border:2px solid rgba(255,255,255,.8);border-radius:20px;padding:10px 18px;min-width:140px;text-align:center;transition:all .28s;cursor:pointer;position:relative;box-shadow:var(--shadow);backdrop-filter:blur(10px);}
-.player-panel.active{background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,239,248,.95));border-color:#ffc4df;box-shadow:0 0 0 3px rgba(255,255,255,.6),0 16px 28px rgba(255,126,182,.22);}
-.player-panel.active::after{content:'▼ あなたのターン！';position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:.68rem;font-weight:900;color:#ff75ae;white-space:nowrap;animation:turnPulse 1s ease-in-out infinite;}
-@keyframes turnPulse{0%,100%{opacity:.75;}50%{opacity:1;}}
-.p-name{font-size:.86rem;font-weight:900;color:#8b6480;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:5px;}
-.p-name input{background:none;border:none;border-bottom:2px solid rgba(255,126,182,.25);color:#8b6480;font-family:'Zen Maru Gothic',sans-serif;font-size:.85rem;font-weight:900;width:95px;text-align:center;outline:none;padding:1px 2px;}
-.p-name input:focus{border-bottom-color:#ff8fc2;}
-.p-score-row{font-size:1.34rem;font-weight:900;color:#ff6ead;line-height:1;}
-.p-score-label{font-size:.68rem;color:#b18aa0;margin-top:1px;}
-.vs-badge{font-family:'Fredoka',sans-serif;font-size:1rem;font-weight:700;color:#b997ac;width:32px;text-align:center;}
-.status-bar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
-.stat{background:var(--panel);border:2px solid rgba(255,255,255,.82);border-radius:20px;padding:5px 14px;font-size:.84rem;font-weight:800;color:#9c7891;min-width:95px;text-align:center;box-shadow:0 8px 20px rgba(127,199,255,.09);}
-#reset-btn{display:block;margin:8px auto 0;padding:8px 26px;border:none;border-radius:999px;background:linear-gradient(135deg,#ff95c4,#ffd57d);color:#fff;font-family:'Zen Maru Gothic',sans-serif;font-size:.92rem;font-weight:900;cursor:pointer;transition:all .18s;letter-spacing:.6px;box-shadow:0 12px 22px rgba(255,149,196,.26);}
-#reset-btn:hover{transform:translateY(-2px) scale(1.01);}
-#board-wrap{position:relative;z-index:5;margin:18px auto 0;padding:0 10px;width:100%;max-width:960px;}
-#board{display:grid;gap:var(--gap);justify-content:center;}
-.card{display:block;width:var(--card-w);height:var(--card-h);padding:0;border:0;background:transparent;color:inherit;font:inherit;-webkit-appearance:none;appearance:none;perspective:850px;cursor:pointer;outline:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
-.card:focus-visible{outline:3px solid #e873ad;outline-offset:3px;border-radius:16px;}
-.card-inner{display:block;width:100%;height:100%;position:relative;pointer-events:none;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,.2,.2,1);border-radius:16px;}
-.card.flipped .card-inner,.card.matched .card-inner{transform:rotateY(180deg);}
-.card-face{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;}
-.card-back{background:linear-gradient(135deg,#ffe6f3,#d8efff 48%,#e8ffe9);border:2px solid rgba(255,255,255,.9);box-shadow:0 10px 22px rgba(255,126,182,.18), inset 0 0 0 3px rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;}
-/* Hide the reverse face after the halfway point of the flip. In Safari, 3D
-   backface clipping alone can leave the ribbon painted over the front art. */
-.card.flipped .card-back,.card.matched .card-back{visibility:hidden;transition:visibility 0s linear .25s;}
-.card-back::before{content:'';position:absolute;inset:8px;border-radius:12px;border:2px dashed rgba(255,126,182,.28);}
-.back-center{position:relative;z-index:1;width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.72);box-shadow:0 6px 16px rgba(255,126,182,.15);font-size:1.7rem;}
-.back-corners span{position:absolute;font-size:1rem;opacity:.8}
-.back-corners span:nth-child(1){top:8px;left:10px}
-.back-corners span:nth-child(2){top:8px;right:10px}
-.back-corners span:nth-child(3){bottom:8px;left:10px}
-.back-corners span:nth-child(4){bottom:8px;right:10px}
-.card-front{transform:rotateY(180deg);border:2px solid rgba(255,255,255,.96);box-shadow:0 10px 22px rgba(127,199,255,.18);background:#fff;}
-.front-art{position:absolute;inset:0;background-repeat:no-repeat;background-size:300% 300%;border-radius:14px;}
-.front-shine{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.25),rgba(255,255,255,0) 36%,rgba(255,255,255,.15) 70%,rgba(255,255,255,0));pointer-events:none;}
-.card.matched .card-front{border-color:#ffe396;box-shadow:0 0 0 3px rgba(255,255,255,.72),0 0 24px rgba(255,216,107,.62),0 0 50px rgba(255,126,182,.18);animation:matchPop .5s ease-out;}
-@keyframes matchPop{0%{transform:rotateY(180deg) scale(.92);}55%{transform:rotateY(180deg) scale(1.09);}100%{transform:rotateY(180deg) scale(1);}}
-.card.wrong .card-front{border-color:#ff8aa7;animation:wrongFlash .5s;}
-@keyframes wrongFlash{50%{filter:brightness(1.18) saturate(1.3);}}
-@media (hover:hover) and (pointer:fine){.card:not(.flipped):not(.matched):hover .card-inner{transform:rotateY(10deg) translateY(-5px);filter:drop-shadow(0 12px 18px rgba(255,126,182,.16));}}
-#praise-popup{position:fixed;inset:0;z-index:8000;display:none;align-items:center;justify-content:center;pointer-events:none;}
-#praise-popup.show{display:flex;}
-.praise-inner{position:relative;display:flex;flex-direction:column;align-items:center;animation:praiseIn .4s cubic-bezier(.3,.8,.4,1.4);}
-@keyframes praiseIn{0%{transform:scale(.2) translateY(40px);opacity:0;}100%{transform:scale(1) translateY(0);opacity:1;}}
-.praise-card{width:110px;height:150px;border-radius:18px;border:4px solid rgba(255,255,255,.95);background:#fff;box-shadow:0 0 28px rgba(255,255,255,.85), 0 10px 30px rgba(255,126,182,.28);overflow:hidden;position:relative;}
-#praise-art{position:absolute;inset:0;background-repeat:no-repeat;background-size:300% 300%;}
-.speech-bbl{background:rgba(255,255,255,.95);border:2px solid rgba(255,181,210,.85);border-radius:18px;padding:10px 18px;margin-top:10px;font-size:1.12rem;font-weight:900;color:#ff72ad;text-align:center;letter-spacing:.5px;box-shadow:0 10px 22px rgba(255,126,182,.12);}
-.praise-fx{position:absolute;pointer-events:none;animation:popfx .85s ease-out forwards;}
-@keyframes popfx{0%{transform:translate(0,0) scale(1);opacity:1;}100%{transform:translate(var(--px),var(--py)) scale(.2);opacity:0;}}
-.burst{position:fixed;pointer-events:none;z-index:7999;animation:burst .95s ease-out forwards;}
-@keyframes burst{0%{transform:translate(0,0) rotate(0deg) scale(1);opacity:1;}100%{transform:translate(var(--ix),var(--iy)) rotate(var(--ir,360deg)) scale(.25);opacity:0;}}
-#overlay{display:none;position:fixed;inset:0;background:rgba(255,245,251,.7);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(7px);}
-#overlay.show{display:flex;}
-.ov-card{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,249,252,.98));border:2px solid rgba(255,255,255,.98);border-radius:28px;padding:36px 32px;text-align:center;max-width:92vw;box-shadow:0 26px 60px rgba(255,126,182,.16),0 6px 16px rgba(127,199,255,.18);animation:bounceIn .5s;}
-@keyframes bounceIn{0%{transform:scale(.4);opacity:0;}70%{transform:scale(1.06);}100%{transform:scale(1);opacity:1;}}
-.ov-card .big{font-size:3.4rem;margin-bottom:6px;}
-.ov-card h2{font-family:'Fredoka',sans-serif;font-size:1.6rem;font-weight:700;margin-bottom:6px;background:linear-gradient(135deg,#ff7eb6,#7ec7ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-.ov-scores{display:flex;gap:16px;justify-content:center;margin:14px 0 20px;flex-wrap:wrap;}
-.ov-pcard{background:rgba(255,255,255,.88);border-radius:16px;padding:12px 18px;border:2px solid rgba(255,197,223,.55);min-width:140px;}
-.ov-pcard.winner{border-color:#ffd774;box-shadow:0 0 0 3px rgba(255,255,255,.7),0 0 20px rgba(255,215,116,.26);}
-.ov-pcard .ov-pn{font-size:.85rem;color:#b18aa0;margin-bottom:4px;}
-.ov-pcard .ov-ps{font-size:1.75rem;font-weight:900;color:#ff76ad;}
-.ov-pcard.winner .ov-ps{color:#e2aa2c;}
-.ov-btn{padding:10px 28px;border:none;border-radius:999px;background:linear-gradient(135deg,#7fc7ff,#8adfbd);color:#fff;font-family:'Zen Maru Gothic',sans-serif;font-size:.92rem;font-weight:900;cursor:pointer;transition:all .18s;letter-spacing:.7px;box-shadow:0 12px 24px rgba(127,199,255,.22);}
-.ov-btn:hover{transform:translateY(-2px);}
-.conf{position:fixed;pointer-events:none;z-index:10000;animation:cfall var(--cd,3s) ease-in forwards;}
-@keyframes cfall{0%{transform:translateY(-30px) rotate(0);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
-@media(max-width:640px), (max-width:1000px) and (max-height:500px){
-  html,body{min-height:0;}
-  body{min-height:100svh;padding-bottom:4px;}
-  body>.tk-portal-return{position:absolute;top:6px;left:6px;min-height:30px;padding:4px 8px;font-size:10px;}
-  header{padding:7px 6px 2px;}
-  .hdr-icon,.subtitle,.p-score-label,.player-panel.active::after{display:none;}
-  h1{font-size:clamp(.78rem,3.4vw,1rem);line-height:30px;letter-spacing:0;white-space:nowrap;padding-left:94px;}
-  .diff-tabs{flex-wrap:nowrap;gap:4px;margin:4px 0 5px;}
-  .diff-tab{padding:4px 5px;border-width:1px;font-size:clamp(.60rem,2.3vw,.72rem);line-height:1.2;white-space:nowrap;}
-  .players-row{flex-wrap:nowrap;gap:4px;margin-bottom:4px;}
-  .player-panel{flex:1;min-width:0;padding:4px 5px;border-width:1px;border-radius:12px;}
-  .p-name{margin-bottom:0;font-size:.72rem;gap:2px;}
-  .p-name input{width:clamp(56px,18vw,80px);font-size:.72rem;}
-  .p-score-row{font-size:1rem;}
-  .vs-badge{width:16px;font-size:.72rem;}
-  .status-bar{flex-wrap:nowrap;gap:4px;margin-bottom:0;}
-  .stat{min-width:0;padding:3px 6px;border-width:1px;border-radius:12px;font-size:clamp(.61rem,2.5vw,.72rem);}
-  #reset-btn{margin:5px auto 0;padding:4px 16px;font-size:.72rem;line-height:1.25;}
-  #board-wrap{margin:3px auto 0;padding:0 6px;}
-  .ov-card{padding:28px 18px;}
-}
-@media(max-width:330px){
-  header{padding-top:36px;}
-  h1{position:absolute;top:6px;left:90px;right:115px;padding:0;font-size:.7rem;line-height:30px;pointer-events:none;}
-  .full-title{display:none;}
-  .short-title{display:inline;}
-  .diff-tabs{margin:0 0 3px;}
-  .diff-count{display:none;}
-  .player-panel{padding:2px 3px;}
-  .p-name{font-size:.65rem;}
-  .p-name input{font-size:.65rem;}
-  .p-score-row{font-size:.85rem;}
-  .status-bar{gap:2px;}
-  .stat{padding:2px 4px;}
-  #reset-btn{position:absolute;top:6px;right:6px;min-height:30px;margin:0;padding:4px 8px;font-size:.65rem;}
-}
-@media(min-width:641px) and (max-width:1000px) and (max-height:500px){
-  header{padding-top:36px;}
-  h1{position:absolute;top:6px;left:110px;right:120px;padding:0;font-size:.85rem;line-height:30px;}
-  .diff-tabs{margin:0 0 3px;}
-  .player-panel{padding:2px 5px;}
-  .p-name{font-size:.7rem;}
-  .p-score-row{font-size:.9rem;}
-  #reset-btn{position:absolute;top:6px;right:6px;min-height:30px;margin:0;padding:4px 10px;font-size:.68rem;}
-}
-</style>
-<link rel="stylesheet" href="../shared/portal-return.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f7ee">
+  <meta name="description" content="かわいい動物のペアを見つけよう。2人で遊べる、スマートフォン対応の神経衰弱。">
+  <title>PAIR GARDEN — ペアガーデン | TK777</title>
+  <link rel="preload" href="sanrio_sheet_1.webp" as="image" type="image/webp">
+  <link rel="preload" href="sanrio_sheet_2.webp" as="image" type="image/webp">
+  <link rel="stylesheet" href="./style.css?v=20261104-rebuild">
 </head>
 <body>
-<a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
-<div id="sparkles"></div>
-<header>
-  <span class="hdr-icon">🎀</span>
-  <h1 aria-label="神経衰弱 KAWAII MEMORY MATCH"><span class="full-title">KAWAII MEMORY MATCH</span><span class="short-title" aria-hidden="true">神経衰弱</span></h1>
-  <div class="subtitle">〜 サンリオテイストの神経衰弱 対戦版 〜</div>
-  <div class="diff-tabs">
-    <button class="diff-tab active" aria-label="やさしい、6ペア" onclick="setDiff('easy')">🍓 やさしい<span class="diff-count"> (6ペア)</span></button>
-    <button class="diff-tab" aria-label="ふつう、10ペア" onclick="setDiff('medium')">🌈 ふつう<span class="diff-count"> (10ペア)</span></button>
-    <button class="diff-tab" aria-label="むずかしい、18ペア" onclick="setDiff('hard')">👑 むずかしい<span class="diff-count"> (18ペア)</span></button>
-  </div>
-  <div class="players-row">
-    <div class="player-panel active" id="p1-panel">
-      <div class="p-name">🩷 <input type="text" id="p1-name" value="プレイヤー1" maxlength="8"></div>
-      <div class="p-score-row"><span id="p1-score">0</span></div>
-      <div class="p-score-label">ペア獲得</div>
-    </div>
-    <div class="vs-badge">VS</div>
-    <div class="player-panel" id="p2-panel">
-      <div class="p-name">💙 <input type="text" id="p2-name" value="プレイヤー2" maxlength="8"></div>
-      <div class="p-score-row"><span id="p2-score">0</span></div>
-      <div class="p-score-label">ペア獲得</div>
-    </div>
-  </div>
-  <div class="status-bar">
-    <div class="stat">🃏 ペア: <span id="s-pairs">0</span>/<span id="s-total">0</span></div>
-    <div class="stat">⏱️ <span id="s-time">0:00</span></div>
-    <div class="stat">✋ 手数: <span id="s-moves">0</span></div>
-  </div>
-  <button id="reset-btn" onclick="newGame()">🎀 はじめから 🎀</button>
-</header>
-<div id="board-wrap"><div id="board" aria-label="神経衰弱のカード一覧"></div></div>
-<div id="praise-popup">
-  <div class="praise-inner" id="praise-inner">
-    <div class="praise-card"><div id="praise-art"></div><div class="front-shine"></div></div>
-    <div class="speech-bbl" id="praise-text"></div>
-  </div>
-</div>
-<div id="overlay">
-  <div class="ov-card">
-    <div class="big" id="ov-icon">🏆</div>
-    <h2 id="ov-title">ゲーム終了！</h2>
-    <div class="ov-scores">
-      <div class="ov-pcard" id="ov-p1c">
-        <div class="ov-pn" id="ov-p1n">プレイヤー1</div>
-        <div class="ov-ps"><span id="ov-p1s">0</span> ペア</div>
+  <div class="game-shell" id="game">
+    <header class="topbar">
+      <a class="portal-link" href="../index.html" aria-label="ゲーム一覧に戻る"><span aria-hidden="true">←</span><span>ゲーム一覧</span></a>
+      <div class="brand" aria-label="ペアガーデン 神経衰弱">
+        <svg class="brand-flower" viewBox="0 0 40 40" aria-hidden="true"><ellipse cx="20" cy="12" rx="6" ry="10"/><ellipse cx="20" cy="28" rx="6" ry="10"/><ellipse cx="12" cy="20" rx="10" ry="6"/><ellipse cx="28" cy="20" rx="10" ry="6"/><circle cx="20" cy="20" r="5"/></svg>
+        <span><b>PAIR GARDEN</b><small>ペアガーデン</small></span>
       </div>
-      <div class="ov-pcard" id="ov-p2c">
-        <div class="ov-pn" id="ov-p2n">プレイヤー2</div>
-        <div class="ov-ps"><span id="ov-p2s">0</span> ペア</div>
-      </div>
-    </div>
-    <button class="ov-btn" onclick="newGame();document.getElementById('overlay').classList.remove('show')">💖 もう一度あそぶ</button>
-    <div><a class="tk-portal-return tk-portal-return--inline tk-portal-return--overlay" href="../index.html">← ゲーム一覧へ</a></div>
-  </div>
-</div>
-<script>
-const sparkles=document.getElementById('sparkles');
-const fxIcons=['✨','💖','⭐','🌼','🎀','☁️'];
-for(let i=0;i<42;i++){
-  const s=document.createElement('div');s.className='spark';
-  s.textContent=fxIcons[Math.floor(Math.random()*fxIcons.length)];
-  s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';
-  s.style.fontSize=(.7+Math.random()*1.05)+'rem';
-  s.style.setProperty('--d',(4+Math.random()*8)+'s');
-  s.style.setProperty('--x',((Math.random()-.5)*16)+'px');
-  sparkles.appendChild(s);
-}
-for(let i=0;i<18;i++){
-  const b=document.createElement('div');b.className='bubble';
-  const sz=10+Math.random()*26;
-  b.style.width=b.style.height=sz+'px';
-  b.style.left=Math.random()*100+'vw';
-  b.style.setProperty('--tx',((Math.random()-.5)*70)+'px');
-  b.style.animationDuration=(10+Math.random()*12)+'s';
-  b.style.animationDelay=(-Math.random()*15)+'s';
-  document.body.appendChild(b);
-}
+      <button class="settings-button" id="settingsButton" type="button" aria-label="設定と遊び方を開く"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg><span>設定</span></button>
+    </header>
 
-const SHEET_1='sanrio_sheet_1.webp';
-const SHEET_2='sanrio_sheet_2.webp';
-const CARD_POOL=[
-  {id:'cat_strawberry',sheet:SHEET_1,row:0,col:0,name:'いちごねこ'},
-  {id:'dog_beret',sheet:SHEET_1,row:0,col:1,name:'ベレーわんこ'},
-  {id:'bunny_hood',sheet:SHEET_1,row:0,col:2,name:'フードうさぎ'},
-  {id:'kuromi_style',sheet:SHEET_1,row:1,col:0,name:'いたずらラビ'},
-  {id:'pudding_dog',sheet:SHEET_1,row:1,col:1,name:'プリンドッグ'},
-  {id:'wing_puppy',sheet:SHEET_1,row:1,col:2,name:'おそらわんこ'},
-  {id:'penguin',sheet:SHEET_1,row:2,col:0,name:'ぺんぎん'},
-  {id:'chick',sheet:SHEET_1,row:2,col:1,name:'ひよこ'},
-  {id:'frog',sheet:SHEET_1,row:2,col:2,name:'かえるプリンス'},
-  {id:'lamb',sheet:SHEET_2,row:0,col:0,name:'こひつじ'},
-  {id:'panda',sheet:SHEET_2,row:0,col:1,name:'ぱんだ'},
-  {id:'seal',sheet:SHEET_2,row:0,col:2,name:'あざらし'},
-  {id:'fox',sheet:SHEET_2,row:1,col:0,name:'きつね'},
-  {id:'koala',sheet:SHEET_2,row:1,col:1,name:'こあら'},
-  {id:'unicorn',sheet:SHEET_2,row:1,col:2,name:'ゆにこーん'},
-  {id:'hedgehog',sheet:SHEET_2,row:2,col:0,name:'はりねずみ'},
-  {id:'hamster',sheet:SHEET_2,row:2,col:1,name:'はむすたー'},
-  {id:'deer',sheet:SHEET_2,row:2,col:2,name:'しか'},
-];
-const DIFFS={easy:{pairs:6,cols:4},medium:{pairs:10,cols:5},hard:{pairs:18,cols:6}};
-function isLandscapePhone(){return window.innerWidth>640&&window.innerWidth<=1000&&window.innerHeight<=500;}
-function boardColumns(){return isLandscapePhone()?{easy:6,medium:10,hard:12}[diff]:DIFFS[diff].cols;}
-// Shuffle without sort(() => Math.random()-.5), which can produce biased decks.
-function shuffle(array){
-  for(let i=array.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [array[i],array[j]]=[array[j],array[i]];
-  }
-  return array;
-}
-function fitCards(){
-  const cols=boardColumns();
-  const rows=Math.ceil(DIFFS[diff].pairs*2/cols);
-  const compact=window.innerWidth<=640||isLandscapePhone();
-  const gap=window.innerWidth<=420||isLandscapePhone()?4:window.innerWidth<=640?6:8;
-  const viewport=window.visualViewport;
-  const visibleWidth=viewport&&viewport.width?viewport.width:window.innerWidth;
-  const maxBoardWidth=Math.min(visibleWidth-(compact?12:28),940);
-  let width=Math.min(94,Math.max(34,Math.floor((maxBoardWidth-gap*(cols-1))/cols)));
-  if(compact){
-    const boardTop=document.getElementById('board-wrap').getBoundingClientRect().top+window.scrollY;
-    const visibleHeight=viewport&&viewport.height?viewport.height:window.innerHeight;
-    const heightLimit=Math.floor((visibleHeight-boardTop-8-gap*(rows-1))*94/(rows*132));
-    width=Math.max(34,Math.min(width,heightLimit));
-  }
-  const root=document.documentElement.style;
-  root.setProperty('--card-w',width+'px');
-  root.setProperty('--card-h',Math.round(width*132/94)+'px');
-  root.setProperty('--gap',gap+'px');
-  document.getElementById('board').style.gridTemplateColumns=`repeat(${cols},var(--card-w))`;
-}
-const PRAISE=['✨ すごーい！','🎀 やったね！','💖 おみごと！','🌟 さいこう！','👑 えらい！','💫 その調子！','🍓 ナイスペア！','🫶 かんぺき！','🌈 さすが！','🩷 かわいくクリア！'];
-let diff='easy',cards=[],flipped=[],matched=0,moves=0;
-let seconds=0,timer=null,canFlip=true,gameStarted=false;
-let currentPlayer=0,scores=[0,0],praiseTimer=null;
-let turnTimeout=null,winTimeout=null,pendingTurn=null,gameId=0;
-let lastHandledTouchAt=-Infinity;
-window.addEventListener('resize',fitCards);
-window.addEventListener('pageshow',fitCards);
-if(window.visualViewport)window.visualViewport.addEventListener('resize',fitCards);
-if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fitCards);
-function setDiff(d){
-  diff=d;
-  document.querySelectorAll('.diff-tab').forEach((b,i)=>b.classList.toggle('active',['easy','medium','hard'][i]===d));
-  newGame();
-}
-function posPct(v){return v===0?'0%':(v===1?'50%':'100%');}
-function applyCardArt(el,c){
-  el.style.backgroundImage=`url('${c.sheet}')`;
-  el.style.backgroundPosition=`${posPct(c.col)} ${posPct(c.row)}`;
-}
-function newGame(){
-  gameId++;
-  lastHandledTouchAt=-Infinity;
-  clearInterval(timer);
-  clearTimeout(turnTimeout);
-  clearTimeout(winTimeout);
-  clearTimeout(praiseTimer);
-  turnTimeout=winTimeout=praiseTimer=pendingTurn=null;
-  fitCards();
-  matched=0;moves=0;seconds=0;flipped=[];canFlip=true;gameStarted=false;currentPlayer=0;scores=[0,0];
-  updatePlayerUI();
-  document.getElementById('s-moves').textContent='0';
-  document.getElementById('s-time').textContent='0:00';
-  document.getElementById('s-pairs').textContent='0';
-  document.getElementById('overlay').classList.remove('show');
-  document.getElementById('praise-popup').classList.remove('show');
-  const {pairs}=DIFFS[diff],cols=boardColumns();
-  document.getElementById('s-total').textContent=pairs;
-  const pool=shuffle([...CARD_POOL]).slice(0,pairs);
-  const deck=shuffle([...pool,...pool]);
-  cards=deck.map((c,i)=>({...c,cardIdx:i,matched:false,flipped:false}));
-  const board=document.getElementById('board');
-  board.style.gridTemplateColumns=`repeat(${cols},var(--card-w))`;
-  board.innerHTML='';
-  cards.forEach((c,i)=>board.appendChild(createCardEl(c,i)));
-}
-function createCardEl(c,idx){
-  const el=document.createElement('button');el.className='card';el.id=`card-${idx}`;
-  const cardGameId=gameId;
-  el.type='button';el.setAttribute('aria-label',`カード ${idx+1}`);
-  const inner=document.createElement('span');inner.className='card-inner';
-  const back=document.createElement('span');back.className='card-face card-back';
-  back.innerHTML=`<span class="back-corners"><span>💖</span><span>✨</span><span>⭐</span><span>🎀</span></span><span class="back-center">🎀</span>`;
-  const front=document.createElement('span');front.className='card-face card-front';
-  const art=document.createElement('span');art.className='front-art';applyCardArt(art,c);
-  const shine=document.createElement('span');shine.className='front-shine';
-  front.appendChild(art);front.appendChild(shine);
-  inner.appendChild(back);inner.appendChild(front);el.appendChild(inner);
-  let touchStart=null;
-  el.addEventListener('touchstart',event=>{
-    if(event.touches.length!==1){touchStart=null;return;}
-    const touch=event.touches[0];
-    touchStart={id:touch.identifier,x:touch.clientX,y:touch.clientY,at:Date.now(),moved:false};
-  },{passive:true});
-  el.addEventListener('touchmove',event=>{
-    if(!touchStart)return;
-    const touch=Array.from(event.changedTouches).find(t=>t.identifier===touchStart.id);
-    if(touch&&Math.hypot(touch.clientX-touchStart.x,touch.clientY-touchStart.y)>12)touchStart.moved=true;
-  },{passive:true});
-  el.addEventListener('touchcancel',()=>{touchStart=null;},{passive:true});
-  el.addEventListener('touchend',event=>{
-    const start=touchStart;touchStart=null;
-    if(!start||cardGameId!==gameId||event.touches.length!==0)return;
-    const touch=Array.from(event.changedTouches).find(t=>t.identifier===start.id);
-    if(!touch||start.moved||Math.hypot(touch.clientX-start.x,touch.clientY-start.y)>12||Date.now()-start.at>650)return;
-    if(event.cancelable)event.preventDefault();
-    lastHandledTouchAt=Date.now();
-    flipCard(idx);
-  },{passive:false});
-  el.addEventListener('click',event=>{
-    if(cardGameId!==gameId||(event.detail>0&&Date.now()-lastHandledTouchAt<750))return;
-    flipCard(idx);
-  });
-  return el;
-}
-function flipCard(idx){
-  // A backgrounded mobile browser may delay timers until the next interaction.
-  if(pendingTurn&&Date.now()>=pendingTurn.deadline)checkMatch(pendingTurn);
-  if(!canFlip) return;
-  const c=cards[idx];
-  if(c.matched||c.flipped||flipped.length>=2) return;
-  if(!gameStarted){gameStarted=true;timer=setInterval(()=>{seconds++;updateTimer();},1000);}
-  c.flipped=true;
-  const node=document.getElementById(`card-${idx}`);
-  node.classList.add('flipped');
-  node.setAttribute('aria-label',`${c.name}、おもて`);
-  flipped.push(idx);
-  if(flipped.length===2){
-    moves++;document.getElementById('s-moves').textContent=moves;canFlip=false;
-    const turn={a:flipped[0],b:flipped[1],gameId,deadline:Date.now()+1000};
-    pendingTurn=turn;turnTimeout=setTimeout(()=>checkMatch(turn),1000);
-  }
-}
-function checkMatch(turn){
-  if(pendingTurn!==turn||turn.gameId!==gameId)return;
-  pendingTurn=null;clearTimeout(turnTimeout);turnTimeout=null;
-  const {a,b}=turn,ca=cards[a],cb=cards[b];
-  try {
-    if(ca.id===cb.id){
-      ca.matched=cb.matched=true;matched++;
-      document.getElementById('s-pairs').textContent=matched;
-      document.getElementById(`card-${a}`).classList.add('matched');
-      document.getElementById(`card-${b}`).classList.add('matched');
-      document.getElementById(`card-${a}`).setAttribute('aria-label',`${ca.name}、ペア成立`);
-      document.getElementById(`card-${b}`).setAttribute('aria-label',`${cb.name}、ペア成立`);
-      scores[currentPlayer]++;updatePlayerUI();burstFX(a);burstFX(b);showPraise(ca);
-      if(matched===DIFFS[diff].pairs)winTimeout=setTimeout(winGame,550);
-    } else {
-      [a,b].forEach(i=>{
-        cards[i].flipped=false;
-        const node=document.getElementById(`card-${i}`);
-        node.classList.remove('flipped','wrong');
-        node.setAttribute('aria-label',`カード ${i+1}`);
-      });
-      currentPlayer=1-currentPlayer;updatePlayerUI();
-    }
-  } finally {
-    flipped=[];
-    canFlip=matched<DIFFS[diff].pairs;
-  }
-}
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&pendingTurn&&Date.now()>=pendingTurn.deadline)checkMatch(pendingTurn);
-});
-function updatePlayerUI(){
-  document.getElementById('p1-score').textContent=scores[0];document.getElementById('p2-score').textContent=scores[1];
-  document.getElementById('p1-panel').classList.toggle('active',currentPlayer===0);
-  document.getElementById('p2-panel').classList.toggle('active',currentPlayer===1);
-}
-function showPraise(card){
-  clearTimeout(praiseTimer);
-  const popup=document.getElementById('praise-popup');
-  const msg=PRAISE[Math.floor(Math.random()*PRAISE.length)];
-  const pname=document.getElementById(currentPlayer===0?'p1-name':'p2-name').value||`プレイヤー${currentPlayer+1}`;
-  const art=document.getElementById('praise-art');applyCardArt(art,card);
-  document.getElementById('praise-text').textContent=`${pname}、${msg}`;
-  const inner=document.getElementById('praise-inner');inner.querySelectorAll('.praise-fx').forEach(x=>x.remove());
-  const icons=['💖','✨','⭐','🎀','🌼','🫧'];
-  for(let i=0;i<12;i++){
-    const s=document.createElement('div');s.className='praise-fx';
-    const ang=Math.random()*Math.PI*2,dist=55+Math.random()*70;
-    s.textContent=icons[Math.floor(Math.random()*icons.length)];
-    s.style.cssText=`top:45%;left:50%;font-size:${.8+Math.random()*1}rem;color:#ff89bd;--px:${Math.cos(ang)*dist}px;--py:${Math.sin(ang)*dist}px;animation-delay:${i*.04}s;`;
-    inner.appendChild(s);
-  }
-  popup.classList.add('show');praiseTimer=setTimeout(()=>popup.classList.remove('show'),1650);
-}
-function burstFX(idx){
-  const el=document.getElementById(`card-${idx}`);if(!el) return;
-  const rect=el.getBoundingClientRect();const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
-  const chips=['💖','⭐','✨','🎀','🌼','🫧'];
-  for(let i=0;i<8;i++){
-    const c=document.createElement('div');c.className='burst';
-    const ang=Math.random()*Math.PI*2,dist=46+Math.random()*64;
-    c.textContent=chips[Math.floor(Math.random()*chips.length)];
-    c.style.cssText=`left:${cx}px;top:${cy}px;font-size:${.75+Math.random()*.78}rem;color:${['#ff77b1','#7fc7ff','#8bdabf','#ffd86b'][Math.floor(Math.random()*4)]};--ix:${Math.cos(ang)*dist}px;--iy:${Math.sin(ang)*dist}px;--ir:${(Math.random()-.5)*720}deg;animation-delay:${i*.04}s;`;
-    document.body.appendChild(c);setTimeout(()=>c.remove(),1200);
-  }
-}
-function updateTimer(){const m=Math.floor(seconds/60),s=seconds%60;document.getElementById('s-time').textContent=`${m}:${String(s).padStart(2,'0')}`;}
-function winGame(){
-  clearInterval(timer);
-  const [s0,s1]=scores;const pn0=document.getElementById('p1-name').value||'プレイヤー1';const pn1=document.getElementById('p2-name').value||'プレイヤー2';
-  let icon,title;
-  if(s0>s1){icon='👑';title=`${pn0} の勝ち！🎉`;} else if(s1>s0){icon='👑';title=`${pn1} の勝ち！🎉`;} else {icon='🤝';title='引き分け！すごい！';}
-  document.getElementById('ov-icon').textContent=icon;document.getElementById('ov-title').textContent=title;
-  document.getElementById('ov-p1n').textContent=pn0;document.getElementById('ov-p2n').textContent=pn1;
-  document.getElementById('ov-p1s').textContent=s0;document.getElementById('ov-p2s').textContent=s1;
-  const p1c=document.getElementById('ov-p1c'),p2c=document.getElementById('ov-p2c');
-  p1c.classList.toggle('winner',s0>s1);p2c.classList.toggle('winner',s1>s0);
-  if(s0===s1){p1c.classList.add('winner');p2c.classList.add('winner');}
-  document.getElementById('overlay').classList.add('show');launchConfetti();
-}
-function launchConfetti(){
-  const cols=['#ff8dc0','#fff','#7ec7ff','#ffd86b','#b79cff','#83dfc6'];const emjs=['💖','⭐','✨','🎀','🌼','🫧'];
-  for(let i=0;i<65;i++){
-    setTimeout(()=>{
-      const el=document.createElement('div');el.className='conf';
-      if(Math.random()>.38){el.textContent=emjs[Math.floor(Math.random()*emjs.length)];el.style.fontSize=(.8+Math.random()*.9)+'rem';}
-      else{const sz=7+Math.random()*8;el.style.cssText+=`width:${sz}px;height:${sz}px;background:${cols[Math.floor(Math.random()*cols.length)]};border-radius:${Math.random()>.5?'50%':'4px'};`;}
-      el.style.left=Math.random()*100+'vw';el.style.top='-25px';el.style.cssText+=`--cd:${2+Math.random()*2.5}s;`;document.body.appendChild(el);setTimeout(()=>el.remove(),5000);
-    },i*45);
-  }
-}
-document.addEventListener('keydown',e=>{if((e.key==='r'||e.key==='R')&&!e.target.closest('input'))newGame();});
-newGame();
-</script>
+    <section class="scoreboard" id="scoreboard" aria-label="プレイヤーの得点">
+      <div class="player-pill is-active" data-player="0">
+        <span class="player-mark" aria-hidden="true">1</span>
+        <span class="player-copy"><small>PLAYER 01</small><strong id="player0Name">プレイヤー1</strong></span>
+        <span class="player-points"><b id="player0Score">0</b><small>ペア</small></span>
+      </div>
+      <div class="player-pill" data-player="1">
+        <span class="player-mark" aria-hidden="true">2</span>
+        <span class="player-copy"><small>PLAYER 02</small><strong id="player1Name">プレイヤー2</strong></span>
+        <span class="player-points"><b id="player1Score">0</b><small>ペア</small></span>
+      </div>
+    </section>
+
+    <div class="message-strip">
+      <p id="turnStatus" role="status" aria-live="polite">プレイヤー1の番</p>
+      <p id="feedback" aria-live="polite">カードを2枚選ぼう。</p>
+    </div>
+
+    <main class="play-area" id="playArea">
+      <div class="board" id="board" role="group" aria-label="神経衰弱のカード一覧"></div>
+    </main>
+
+    <footer class="toolbar">
+      <div class="metrics" aria-label="ゲームの進み具合">
+        <span class="metric"><small>PAIRS</small><b id="progress">0 / 6</b></span>
+        <span class="metric"><small>MOVES</small><b id="moves">0手</b></span>
+        <span class="metric"><small>TIME</small><b id="time">0:00</b></span>
+      </div>
+      <div class="toolbar-actions">
+        <button class="quiet-button" id="restartButton" type="button" aria-label="ゲームをはじめからやり直す"><span class="button-icon" aria-hidden="true">↻</span><span class="control-label">やり直す</span></button>
+        <button class="quiet-button" id="soundButton" type="button" aria-label="効果音を切り替える" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m11 5-5 4H3v6h3l5 4V5Zm4 3c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/></svg><span class="control-label">音 ON</span></button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-heading"><div><p class="eyebrow">MAKE IT YOUR GAME</p><h2 id="settingsTitle">遊びかたを選ぼう。</h2></div><button class="close-button" id="closeSettings" type="button" aria-label="設定を閉じる">×</button></div>
+    <form id="settingsForm">
+      <label class="field-label" for="pairsSelect">カードの枚数</label>
+      <select id="pairsSelect" name="pairs"><option value="6">やさしい · 12枚 / 6ペア</option><option value="10">ふつう · 20枚 / 10ペア</option><option value="18">むずかしい · 36枚 / 18ペア</option></select>
+      <div class="name-fields"><div><label class="field-label" for="name0">プレイヤー1</label><input id="name0" name="name0" value="プレイヤー1" maxlength="12" autocomplete="off"></div><div><label class="field-label" for="name1">プレイヤー2</label><input id="name1" name="name1" value="プレイヤー2" maxlength="12" autocomplete="off"></div></div>
+      <button class="primary-button" id="applySettings" type="submit">設定してはじめる <span aria-hidden="true">↗</span></button>
+      <p class="form-note">設定を反映すると、新しいゲームが始まります。</p>
+    </form>
+    <div class="how-to"><p class="eyebrow">HOW TO PLAY</p><h3>覚えて、見つけて、もう1ペア。</h3><ol><li>順番にカードを2枚開きます。</li><li><strong>同じ絵なら1ペア獲得。</strong>続けて自分の番です。</li><li>違う絵ならカードが戻り、相手の番になります。</li><li>すべてのペアを見つけたとき、獲得数の多い人が勝ちです。</li></ol><p class="keyboard-note">タップ・クリックで選択。キーボードは矢印キーで移動、Enter / Spaceで開けます。</p></div>
+  </dialog>
+
+  <dialog class="small-dialog" id="restartDialog" aria-labelledby="restartTitle">
+    <p class="eyebrow">FRESH START</p><h2 id="restartTitle">もう一度、はじめから？</h2><p class="dialog-copy">いまの得点と手数をリセットして、カードを配り直します。</p><div class="dialog-actions"><button class="secondary-button" id="cancelRestart" type="button">続ける</button><button class="primary-button" id="confirmRestart" type="button">やり直す</button></div>
+  </dialog>
+
+  <dialog class="result-dialog" id="resultDialog" aria-labelledby="winnerTitle">
+    <div class="result-flower" aria-hidden="true">✿</div><p class="eyebrow">A LOVELY GAME.</p><h2 id="winnerTitle">おみごと！</h2><p class="dialog-copy" id="resultSummary"></p><div class="result-scores" id="resultScores"></div><button class="primary-button" id="playAgain" type="button">もう一度あそぶ <span aria-hidden="true">↗</span></button><button class="text-button" id="closeResult" type="button">できあがった盤面を見る</button>
+  </dialog>
+
+  <script type="module" src="./app.mjs?v=20261104-rebuild"></script>
 </body>
 </html>
