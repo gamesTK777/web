@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111521">
+  <meta name="description" content="ひとりでCPUと、友だちとはそれぞれの端末で。2〜6人で遊べるオンラインUNO。">
+  <title>UNO — COLOR CIRCUIT | TK777 ARCADE</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="portal-link" href="../index.html">← <span>ゲーム一覧</span></a>
+    <a class="wordmark" href="./index.html" aria-label="UNO トップ"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span> COLOR CIRCUIT</a>
+    <button class="icon-button" id="rulesButton" type="button" aria-label="遊び方を開く">？</button>
+  </header>
+
+  <main>
+    <section class="home" id="homeScreen">
+      <div class="hero">
+        <div class="hero-copy"><p class="eyebrow">TK777 CARD CLUB / 2–6 PLAYERS</p><h1>UNO<span class="hero-dot">.</span></h1><p class="hero-tagline">その1枚で、<br>流れを変えよう。</p><p class="hero-note">色をつないで、手札をゼロに。<br>ひとりでも、離れた友だちとも。</p></div>
+        <div class="hero-cards" aria-hidden="true"><div class="playing-card red art-card art-one"><span class="card-corner">7</span><b class="card-main">7</b></div><div class="playing-card blue art-card art-two"><span class="card-corner">⇄</span><b class="card-main">⇄</b></div><div class="playing-card yellow art-card art-three"><span class="card-corner">+2</span><b class="card-main">+2</b></div></div>
+      </div>
+
+      <section class="setup-panel" aria-label="対戦を始める">
+        <div class="setup-heading"><p class="eyebrow">LET’S DEAL.</p><h2>今日は、誰と遊ぶ？</h2></div>
+        <label for="nickname">あなたのニックネーム</label><input id="nickname" maxlength="16" autocomplete="nickname" placeholder="ゲスト" spellcheck="false">
+        <div class="mode-tabs" role="group" aria-label="対戦モード"><button class="mode-tab active" data-mode="solo" type="button" aria-pressed="true"><strong>ひとりで</strong><small>CPUと気軽に対戦</small></button><button class="mode-tab" data-mode="online" type="button" aria-pressed="false"><strong>みんなで</strong><small>別々の端末で対戦</small></button></div>
+        <div id="soloSetup"><label for="soloCount">プレイヤー人数 <span>あなた ＋ CPU</span></label><select id="soloCount"><option value="2">2人</option><option value="3">3人</option><option value="4" selected>4人</option><option value="5">5人</option><option value="6">6人</option></select><button class="primary-button start-button" id="soloStart" type="button">カードを配る <span aria-hidden="true">↗</span></button><p class="setup-footnote">登録不要。そのまますぐに遊べます。</p></div>
+        <div id="onlineSetup" hidden>
+          <div class="online-tabs" role="group" aria-label="ルームの作成または参加"><button class="active" type="button" data-room-mode="create" aria-pressed="true">ルームを作る</button><button type="button" data-room-mode="join" aria-pressed="false">ルームに入る</button></div>
+          <div id="createSetup"><label for="roomCapacity">ルームの定員</label><select id="roomCapacity"><option value="2">2人まで</option><option value="3">3人まで</option><option value="4" selected>4人まで</option><option value="5">5人まで</option><option value="6">6人まで</option></select><button class="primary-button start-button" id="createRoom" type="button">ルームを作る <span aria-hidden="true">＋</span></button></div>
+          <div id="joinSetup" hidden><label for="roomCodeInput">ルームの合言葉</label><input id="roomCodeInput" class="code-input" maxlength="8" placeholder="8文字のコード" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="primary-button start-button" id="joinRoom" type="button">ルームに参加 <span aria-hidden="true">↗</span></button></div>
+          <p class="setup-footnote">1人につき1台の端末を用意。合言葉を知っている人が参加できます。</p>
+        </div>
+        <p id="setupStatus" class="form-status" role="status" aria-live="polite"></p>
+      </section>
+    </section>
+
+    <section class="lobby" id="lobbyScreen" hidden aria-label="対戦ルーム">
+      <div class="lobby-intro"><p class="eyebrow">YOUR PRIVATE TABLE</p><h1>みんな、集まった？</h1><p>同じ合言葉で参加すると、ここに仲間が並びます。<br>手札はそれぞれの端末にだけ表示されます。</p></div>
+      <div class="lobby-card"><div class="room-code-label">ルームの合言葉</div><div class="room-code" id="lobbyRoomCode"></div><button class="secondary-button" id="copyInvite" type="button">招待リンクをコピー ↗</button><p class="invite-help">リンクを友だちに送って、同じルームへ。</p><div class="lobby-roster" id="lobbyRoster"></div><div class="lobby-status" id="lobbyStatus" role="status"></div><button class="text-button" id="retryLobby" type="button" hidden>接続を再確認</button><button class="primary-button" id="startOnline" type="button">みんなでスタート →</button><p class="lobby-start-note" id="lobbyStartNote"></p><button class="text-button" id="leaveLobby" type="button">ルームを退出する</button></div>
+    </section>
+
+    <section class="game-screen" id="gameScreen" hidden aria-label="UNOの対戦">
+      <div class="game-toolbar"><div><span class="session-label" id="sessionLabel">SOLO TABLE</span><span id="gameRoomCode" class="small-room-code"></span></div><button class="text-button" id="leaveGame" type="button">退出</button></div>
+      <div class="connection-banner" id="connectionBanner" hidden role="status"><span id="connectionText"></span><button id="retryConnection" type="button">再接続</button></div>
+      <div class="opponents" id="opponents" aria-label="参加プレイヤー"></div>
+      <div class="table-zone">
+        <div class="turn-banner" id="turnBanner" role="status" aria-live="polite"><span class="turn-dot"></span><strong id="turnText"></strong><span class="direction" id="direction" aria-label="順番の向き"></span></div>
+        <div class="play-surface"><div class="surface-orbit" aria-hidden="true"></div><div class="pile-group"><button class="deck-button" id="drawPile" type="button" aria-label="山札から1枚引く"><span class="deck-back"><b>UNO</b><small>DRAW</small></span><span class="pile-label">山札 <b id="deckCount">0</b></span></button><div class="discard-group"><div id="discardCard"></div><span class="pile-label current-color" id="currentColor"></span></div></div><div class="result-panel" id="resultPanel" hidden><p class="eyebrow">NICE GAME.</p><h2 id="winnerText"></h2><button class="primary-button" id="rematchButton" type="button">もう一度、遊ぶ ↗</button><p id="rematchNote"></p></div></div>
+        <p class="game-log" id="gameLog" aria-live="polite"></p>
+      </div>
+      <section class="hand-zone" aria-label="自分の手札">
+        <div class="hand-heading"><div><span class="eyebrow">YOUR HAND</span><strong id="selfName"></strong><span class="hand-count" id="handCount"></span></div><div class="hand-tools"><span class="hand-help" id="handHelp">光るカードを選択</span><div class="hand-nav" role="group" aria-label="手札の表示位置"><button id="previousHand" type="button" aria-label="前の手札を表示">‹</button><button id="nextHand" type="button" aria-label="次の手札を表示">›</button></div></div></div>
+        <div class="hand" id="hand" tabindex="-1" aria-label="自分のカード"></div>
+        <div class="game-actions"><button class="secondary-button draw-action" id="drawButton" type="button">＋ 1枚引く <kbd>D</kbd></button><button class="secondary-button" id="passButton" type="button" hidden>出さずにパス <kbd>P</kbd></button><button class="uno-button" id="unoButton" type="button" aria-pressed="false"><b>UNO!</b><span>残り1枚を宣言</span></button></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+  <dialog id="colorDialog" class="color-dialog" aria-labelledby="colorDialogTitle"><div class="dialog-head"><div><p class="eyebrow">YOUR NEXT COLOR</p><h2 id="colorDialogTitle">次の色を選ぼう</h2></div><button class="icon-button" id="cancelColor" type="button" aria-label="色の選択を取り消す">×</button></div><div class="color-options"><button type="button" data-color="red">● <span>赤</span></button><button type="button" data-color="yellow">◆ <span>黄</span></button><button type="button" data-color="green">▲ <span>緑</span></button><button type="button" data-color="blue">■ <span>青</span></button></div></dialog>
+  <dialog id="rulesDialog" aria-labelledby="rulesTitle"><div class="dialog-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rulesTitle">1枚から、始まる逆転。</h2></div><button class="icon-button" id="closeRules" type="button" aria-label="遊び方を閉じる">×</button></div><div class="rules-content"><p>場のカードと<strong>同じ色・数字・記号</strong>のカードを出し、最初に手札をなくした人が勝ち。最初の手札は7枚です。</p><div class="rule-grid"><div><b>⊘ スキップ</b><p>次の人の番を飛ばします。</p></div><div><b>⇄ リバース</b><p>順番の向きを反転。2人対戦ではもう一度自分の番です。</p></div><div><b>＋2 / ＋4</b><p>次の人がカードを引き、その番はお休み。重ね出しはできません。</p></div><div><b>✦ ワイルド</b><p>好きな色へ変更。＋4は場と同じ色を持っていないときだけ出せます。</p></div></div><p><strong>引いたカードが出せるときは、その1枚を出すかパス。</strong>出せないカードなら自動で次の人の番になります。</p><div class="uno-rule"><strong>残り1枚になる前に「UNO!」</strong><p>宣言ボタンをオンにしてからカードを出しましょう。このゲームでは宣言を忘れると、その場で2枚追加されます。</p></div><p>オンラインでは各自1台の端末を使います。手札を端末同士で渡す必要はありません。自分の端末だけに、自分の手札が届きます。</p><p class="muted">接続が切れた場合は同じブラウザーで開き直すと復帰できます。操作がないまま一定時間が経過すると、サーバーが自動で番を進めます。</p><p class="keyboard-help">キーボード：← → 手札を選択 ／ Enter 出す ／ D 引く ／ P パス ／ U UNO宣言</p></div></dialog>
+  <dialog id="leaveDialog" class="leave-dialog" aria-labelledby="leaveTitle"><div class="dialog-head"><h2 id="leaveTitle">テーブルを離れますか？</h2><button class="icon-button" id="cancelLeave" type="button" aria-label="戻る">×</button></div><p id="leaveExplanation"></p><div class="dialog-actions"><button class="secondary-button" id="stayButton" type="button">対戦に戻る</button><button class="danger-button" id="confirmLeave" type="button">退出する</button></div></dialog>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

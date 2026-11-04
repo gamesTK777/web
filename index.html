@@ -234,6 +234,11 @@
     }
 
     .game-card:hover .game-icon { transform: scale(1.1) rotate(-3deg); }
+    .game-icon--uno { position: relative; }
+    .uno-mini { position:absolute;display:grid;place-items:center;width:29px;height:43px;border:2px solid #fff;border-radius:6px;color:white;font:900 20px/1 system-ui;box-shadow:0 3px 8px #0006; }
+    .uno-mini:nth-child(1) { background:#ed4763;transform:translateX(-17px) rotate(-18deg); }
+    .uno-mini:nth-child(2) { background:#3988ea;transform:translateY(-4px); }
+    .uno-mini:nth-child(3) { background:#22a77b;transform:translateX(17px) rotate(18deg); }
 
     .game-title {
       font-family: 'Press Start 2P', cursive;
@@ -336,6 +341,13 @@
         <div class="game-icon">🃏</div>
         <div class="game-title">ソリティア</div>
         <p class="game-desc">定番のカードゲーム。すべてのカードをホームセルに移動させよう。</p>
+        <div class="play-btn">PLAY →</div>
+      </a>
+
+      <a href="uno/index.html" class="game-card">
+        <div class="game-icon game-icon--uno" aria-hidden="true"><span class="uno-mini">2</span><span class="uno-mini">↺</span><span class="uno-mini">4</span></div>
+        <div class="game-title">UNO — COLOR CIRCUIT</div>
+        <p class="game-desc">色と数字をつなぐカードバトル。1人でCPU対戦、ルームを作れば別々の端末で2～6人対戦。</p>
         <div class="play-btn">PLAY →</div>
       </a>
 
