@@ -1,9 +1,14 @@
 import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261105';
-import {drawScene} from './renderer.mjs?v=20261105';
+import {drawScene} from './renderer.mjs?v=20261105-16bit';
+import {createAudioManager} from './audio.mjs?v=20261105-16bit';
 
 const $=id=>document.getElementById(id), KEY='tk777-lantern-merchant-v1';
 const money=n=>Number(n).toLocaleString('ja-JP'), esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state=newGame(), tab='bag', fresh=true, persistAllowed=true, savedAt=null, saveFailed=false, loadError='', toastTimer, confirmTask=null, frameInfo=null, lastFrame=0;
+const sound=createAudioManager(), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let sessionStarted=false, zoom=3, facing='down', motion=null, effects=[], volume=.35, muted=false;
+try{const settings=JSON.parse(localStorage.getItem('tk777-lantern-audio')||'{}');if(typeof settings.muted==='boolean')muted=settings.muted;if(Number.isFinite(settings.volume))volume=Math.max(0,Math.min(1,settings.volume));}catch{}
+sound.setVolume(volume);sound.setMuted(muted);
 try { const text=localStorage.getItem(KEY); if(text){const data=JSON.parse(text);state=validateSave(data.state??data);savedAt=data.savedAt??null;fresh=false;} } catch {loadError='保存された記録を読み込めませんでした。元の記録は保護しています。保存画面からバックアップを読み込むか、はじめから開始してください。';persistAllowed=false;fresh=false;}
 
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);}
@@ -14,10 +19,30 @@ function save(manual=false){
 }
 function confirm(title,message,task){confirmTask=task;$('confirmTitle').textContent=title;$('confirmText').textContent=message;$('confirmDialog').showModal();}
 function count(id){return [...state.inventory,...state.runLoot].filter(i=>i.id===id).reduce((s,i)=>s+i.qty,0);}
+function draw(time=performance.now()){frameInfo=drawScene($('world'),state,{time,zoom,motion,effects,reducedMotion:reduced});}
+function visualEvent(previous,action,result){
+  const time=performance.now(),sameFloor=previous.mode==='dungeon'&&state.mode==='dungeon'&&previous.floor===state.floor;
+  if(action.type==='move')facing=action.dx<0?'left':action.dx>0?'right':action.dy<0?'up':'down';
+  const from=sameFloor?(frameInfo?.playerWorld??previous.player):state.player;
+  motion={from:{...from},to:{...state.player},startedAt:time,duration:reduced?0:190,facing,kind:sameFloor&&result.event==='move'?'move':result.event==='attack'?'attack':'idle'};
+  const add=(kind,text='',position=state.player)=>effects.push({kind,...position,text,startedAt:time,duration:800});
+  if(!sameFloor)effects=[];
+  let event=result.event;
+  if(event==='attack')add('attack','', {x:previous.player.x+(action.dx||0),y:previous.player.y+(action.dy||0)});
+  if(sameFloor&&state.hp<previous.hp){add('hurt',`−${previous.hp-state.hp}`);sound.play('hurt');}
+  if(sameFloor&&state.runLoot.reduce((n,i)=>n+i.qty,0)>previous.runLoot.reduce((n,i)=>n+i.qty,0)){add('pickup','GET');event='pickup';}
+  if(state.level>previous.level){add('level',`LEVEL ${state.level}`);event='level';}
+  if(action.type==='use'&&state.hp>previous.hp){add('heal',`+${state.hp-previous.hp}`);event='heal';}
+  if(action.type==='use'&&action.id==='ration')event='heal';
+  effects=effects.slice(-16);sound.setScene(state.mode);sound.play(event||'ui');
+}
+function updateSound(){const status=sound.getStatus();$('soundButton').textContent=muted?'♪ OFF':'♪ 音';$('soundButton').classList.toggle('sound-off',muted);$('muteAudio').checked=muted;$('audioVolume').value=Math.round(volume*100);$('volumeValue').textContent=`${Math.round(volume*100)}%`;$('audioStatus').textContent=!sessionStarted?'ゲーム開始後に再生されます。':muted?'ミュート中です。':status.playing?'オリジナルBGMを再生しています。':'音が聞こえない場合は、ミュートの解除や端末の音量をご確認ください。';}
+function storeSound(){try{localStorage.setItem('tk777-lantern-audio',JSON.stringify({muted,volume}));}catch{}updateSound();}
 function dispatch(action){
+  if(!sessionStarted)return;
   const previous=state, result=act(state,action);
-  if(!result.ok){toast(result.message);return;}
-  state=result.state;save();render();
+  if(!result.ok){toast(result.message);sound.play('error');return;}
+  state=result.state;visualEvent(previous,action,result);save();render();
   if(!['move','wait','attack'].includes(result.event))toast(result.message);
   if(previous.mode==='dungeon'&&state.mode==='town'){
     const earned=state.gold-previous.gold;
@@ -29,6 +54,7 @@ function dispatch(action){
 function render(){
   const dungeon=state.mode==='dungeon', weapon=WEAPONS.find(w=>w.id===state.weaponId);
   document.body.dataset.mode=state.mode;
+  $('worldHud').innerHTML=`<div class="hud-stat"><small>LEVEL</small><b>${state.level}</b></div><div class="hud-stat health ${state.hp/state.maxHp<.3?'low':''}"><small>HP</small><b>${state.hp} / ${state.maxHp}</b><div class="hud-meter"><i style="width:${state.hp/state.maxHp*100}%"></i></div></div><div class="hud-stat"><small>満腹度</small><b>${Math.floor(state.hunger)}%</b></div><div class="hud-stat gold"><small>GOLD</small><b>${money(state.gold)} G</b></div>`;
   $('dayLabel').textContent=`DAY ${String(state.day).padStart(2,'0')}`;
   $('levelBadge').textContent=`LV. ${state.level}`;$('weaponName').textContent=weapon.name;
   $('hpText').textContent=`${state.hp} / ${state.maxHp}`;$('hpBar').style.width=`${state.hp/state.maxHp*100}%`;
@@ -50,7 +76,7 @@ function render(){
   $('questTitle').textContent=quest[0];$('questDescription').textContent=quest[1];$('milestones').innerHTML=progress.map(done=>`<i class="${done?'done':''}"></i>`).join('');
   $('eventLog').replaceChildren(...state.log.slice(-7).reverse().map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   $('recordStats').innerHTML=`<div><b>${state.stats.runs}</b>探索回数</div><div><b>B${state.maxFloor}</b>到達階層</div><div><b>${state.stats.clears}</b>遺物帰還</div>`;
-  renderWorkspace();frameInfo=drawScene($('world'),state,{time:performance.now()});
+  renderWorkspace();updateZoom();draw();
 }
 function itemRow(item,qty,run=false){return `<div class="item-row"><span class="item-symbol">${esc(item.icon)}</span><div class="item-info"><b>${esc(item.name)} ×${qty}</b><small>${run?'今回の探索品':item.kind==='loot'?`売値 ${item.sell} G / 個`:esc(item.description)}</small></div>${state.mode==='dungeon'?(item.kind==='consumable'?`<button data-use="${item.id}">使う</button>`:''):`<button data-sell="${item.id}" data-qty="${qty}">売る ${money(item.sell*qty)}G</button>`}</div>`;}
 function renderWorkspace(){
@@ -83,13 +109,13 @@ function inspectFloor(){if(state.mode==='town'){dispatch({type:'enter'});return;
 
 document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.tab){tab=b.dataset.tab;renderWorkspace();return;}
+  if(b.dataset.tab){tab=b.dataset.tab;renderWorkspace();sound.play('ui');return;}
   if(b.dataset.close){$(b.dataset.close).close();return;}
   if(b.dataset.move){const [dx,dy]=b.dataset.move.split(',').map(Number);dispatch({type:'move',dx,dy});return;}
   if(b.dataset.action){dispatch({type:b.dataset.action});return;}
   if(b.dataset.use){if(b.dataset.use==='recall')returnHome();else dispatch({type:'use',id:b.dataset.use});return;}
   if(b.dataset.sell){const i=ITEMS.find(i=>i.id===b.dataset.sell);const action={type:'sell',id:i.id,qty:Number(b.dataset.qty)};if(i.kind==='consumable')confirm('道具を売却しますか？',`${i.name} ${action.qty}個を売却します。冒険で使う分が不要か確認してください。`,()=>dispatch(action));else dispatch(action);return;}
-  if(b.hasAttribute('data-sell-all')){const loot=state.inventory.filter(i=>ITEMS.find(s=>s.id===i.id).kind==='loot');if(!loot.length){toast('売却できる素材はまだありません。');return;}const value=loot.reduce((s,i)=>s+ITEMS.find(v=>v.id===i.id).sell*i.qty,0);for(const i of loot){const r=act(state,{type:'sell',id:i.id,qty:i.qty});if(r.ok)state=r.state;}save();render();toast(`素材をまとめて売却し、${money(value)} G を受け取りました。`);return;}
+  if(b.hasAttribute('data-sell-all')){const loot=state.inventory.filter(i=>ITEMS.find(s=>s.id===i.id).kind==='loot');if(!loot.length){toast('売却できる素材はまだありません。');return;}const value=loot.reduce((s,i)=>s+ITEMS.find(v=>v.id===i.id).sell*i.qty,0);for(const i of loot){const r=act(state,{type:'sell',id:i.id,qty:i.qty});if(r.ok)state=r.state;}save();render();sound.play('sale');toast(`素材をまとめて売却し、${money(value)} G を受け取りました。`);return;}
   if(b.dataset.buy)dispatch({type:'buyItem',id:b.dataset.buy,qty:1});
   if(b.dataset.weapon)dispatch({type:'buyWeapon',id:b.dataset.weapon});
   if(b.dataset.stockBuy)dispatch({type:'buyStock',id:b.dataset.stockBuy,qty:1});
@@ -99,17 +125,30 @@ document.addEventListener('click',e=>{
 });
 $('primaryAction').addEventListener('click',inspectFloor);$('potionButton').addEventListener('click',()=>dispatch({type:'use',id:'potion'}));$('foodButton').addEventListener('click',()=>dispatch({type:'use',id:'ration'}));$('returnButton').addEventListener('click',returnHome);
 for(const id of ['helpButton','tipsButton'])$(id).addEventListener('click',()=>$('helpDialog').showModal());
-$('startButton').addEventListener('click',()=>{$('welcomeDialog').close();save();});
+$('startButton').addEventListener('click',()=>{sessionStarted=true;sound.start(state.mode).then(ok=>{updateSound();if(!ok&&!muted)toast('音声を開始できませんでした。「♪ 音」から再生をお試しください。');});$('welcomeDialog').close();save();draw();});
+$('welcomeDialog').addEventListener('cancel',e=>e.preventDefault());
+$('welcomeDialog').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();}});
+$('welcomeDialog').addEventListener('close',()=>{if(!sessionStarted)requestAnimationFrame(()=>{if(!sessionStarted&&!$('welcomeDialog').open)$('welcomeDialog').showModal();});});
+$('soundButton').addEventListener('click',()=>{if(sessionStarted&&!muted)sound.resume().then(updateSound);updateSound();$('soundDialog').showModal();});
+$('stageSoundButton').addEventListener('click',()=>{if(sessionStarted&&!muted)sound.resume().then(updateSound);updateSound();$('soundDialog').showModal();});
+$('muteAudio').addEventListener('change',e=>{muted=e.target.checked;sound.setMuted(muted);if(sessionStarted&&!muted)sound.resume().then(updateSound);storeSound();});
+$('audioVolume').addEventListener('input',e=>{volume=Number(e.target.value)/100;sound.setVolume(volume);storeSound();});
+function updateZoom(){const active=state.mode==='dungeon';$('zoomLabel').textContent=active?`${zoom}×`:'全景';$('zoomOut').disabled=!active||zoom===2;$('zoomIn').disabled=!active||zoom===4;}
+function setZoom(value){zoom=Math.max(2,Math.min(4,value));updateZoom();draw();}
+$('zoomOut').addEventListener('click',()=>setZoom(zoom-1));$('zoomIn').addEventListener('click',()=>setZoom(zoom+1));
+function setFocus(value){document.body.classList.toggle('focus-mode',value);$('focusButton').textContent=value?'✕ 戻す':'⛶ 拡大';$('focusButton').setAttribute('aria-label',value?'拡大表示を閉じる':'ゲーム画面を拡大表示');$('focusButton').setAttribute('aria-pressed',String(value));requestAnimationFrame(()=>draw());}
+$('focusButton').addEventListener('click',()=>setFocus(!document.body.classList.contains('focus-mode')));
 $('saveButton').addEventListener('click',()=>{$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'まだ保存されていません。';$('saveDialog').showModal();});
 $('manualSave').addEventListener('click',()=>{save(true);$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'バックアップをご利用ください。';});
 $('exportSave').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({game:'lantern-ledger',version:1,savedAt:new Date().toISOString(),state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`lantern-ledger-day${state.day}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('バックアップファイルを書き出しました。');});
-$('importSave').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw new Error();const data=JSON.parse(await file.text());if(data.game&&data.game!=='lantern-ledger')throw new Error();const imported=validateSave(data.state??data);confirm('この記録を読み込みますか？',`${imported.day}日目・レベル${imported.level}・${money(imported.gold)}G の記録に置き換えます。現在の進行を残すには、先に書き出してください。`,()=>{state=imported;persistAllowed=true;save();render();$('saveDialog').close();toast('旅の記録を読み込みました。');});}catch{toast('このファイルは読み込めません。有効なバックアップを選んでください。現在の記録は変更していません。');}});
-$('newGameButton').addEventListener('click',()=>confirm('記録を消してはじめから？','このブラウザーの進行を新しい記録で上書きします。残したい場合は先にバックアップを書き出してください。',()=>{state=newGame();persistAllowed=true;save();tab='bag';render();$('saveDialog').close();$('welcomeDialog').showModal();}));
+$('importSave').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw new Error();const data=JSON.parse(await file.text());if(data.game&&data.game!=='lantern-ledger')throw new Error();const imported=validateSave(data.state??data);confirm('この記録を読み込みますか？',`${imported.day}日目・レベル${imported.level}・${money(imported.gold)}G の記録に置き換えます。現在の進行を残すには、先に書き出してください。`,()=>{state=imported;motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;save();render();$('saveDialog').close();toast('旅の記録を読み込みました。');});}catch{toast('このファイルは読み込めません。有効なバックアップを選んでください。現在の記録は変更していません。');}});
+$('newGameButton').addEventListener('click',()=>confirm('記録を消してはじめから？','このブラウザーの進行を新しい記録で上書きします。残したい場合は先にバックアップを書き出してください。',()=>{state=newGame();motion=null;effects=[];sessionStarted=false;fresh=true;sound.pause();persistAllowed=true;save();tab='bag';render();$('saveDialog').close();showStart();}));
 $('confirmCancel').addEventListener('click',()=>{$('confirmDialog').close();confirmTask=null;});$('confirmOk').addEventListener('click',()=>{const task=confirmTask;confirmTask=null;$('confirmDialog').close();task?.();});$('confirmDialog').addEventListener('cancel',()=>confirmTask=null);
 const moves={ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1],ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0]};
 document.addEventListener('keydown',e=>{
   if(document.querySelector('dialog[open]')||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||e.ctrlKey||e.metaKey||e.altKey)return;
   const key=e.key.length===1?e.key.toLowerCase():e.key;
+  if(key==='Escape'&&document.body.classList.contains('focus-mode')){e.preventDefault();setFocus(false);return;}
   if(key==='?'){e.preventDefault();$('helpDialog').showModal();return;}
   if(state.mode!=='dungeon')return;
   if(moves[key]){e.preventDefault();if(!e.repeat){const [dx,dy]=moves[key];dispatch({type:'move',dx,dy});}return;}
@@ -120,9 +159,10 @@ let pointer=null;
 $('world').addEventListener('pointerdown',e=>{if(state.mode!=='dungeon'||(e.pointerType==='mouse'&&e.button!==0))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY};$('world').setPointerCapture(e.pointerId);});
 $('world').addEventListener('pointerup',e=>{if(!pointer||pointer.id!==e.pointerId)return;let dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;pointer=null;if(state.mode!=='dungeon')return;if(Math.hypot(dx,dy)<15){const rect=$('world').getBoundingClientRect();const center=frameInfo?.playerScreen??{x:rect.width/2,y:rect.height/2};dx=e.clientX-rect.left-center.x;dy=e.clientY-rect.top-center.y;if(Math.hypot(dx,dy)<12){toast('方向をタップ・スワイプすると移動します。');return;}}dispatch({type:'move',dx:Math.abs(dx)>Math.abs(dy)?Math.sign(dx):0,dy:Math.abs(dx)>Math.abs(dy)?0:Math.sign(dy)});});
 for(const event of ['pointercancel','lostpointercapture'])$('world').addEventListener(event,()=>pointer=null);
-window.addEventListener('blur',()=>pointer=null);document.addEventListener('visibilitychange',()=>{pointer=null;if(document.hidden)save();});
-new ResizeObserver(()=>{frameInfo=drawScene($('world'),state,{time:performance.now()});}).observe($('canvasWrap'));
-const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function animate(time){if(!document.hidden&&!reduced&&time-lastFrame>100){frameInfo=drawScene($('world'),state,{time});lastFrame=time;}requestAnimationFrame(animate);}
-render();requestAnimationFrame(animate);
-if(fresh)$('welcomeDialog').showModal();if(loadError){$('saveStatus').textContent='記録の確認が必要';$('saveStatus').classList.add('failed');toast(loadError);}else if(!fresh)toast(`${state.day}日目の旅を再開しました。`);
+window.addEventListener('blur',()=>pointer=null);document.addEventListener('visibilitychange',()=>{pointer=null;if(document.hidden){if(sessionStarted)save();sound.pause();}else if(sessionStarted)sound.resume().then(updateSound);});
+window.addEventListener('pagehide',()=>sound.pause());window.addEventListener('pageshow',()=>{if(sessionStarted&&!document.hidden)sound.resume().then(updateSound);});
+new ResizeObserver(()=>draw()).observe($('canvasWrap'));
+function animate(time){const active=motion&&time-motion.startedAt<motion.duration;const interval=reduced?100:active?16:33;if(!document.hidden&&time-lastFrame>interval){effects=effects.filter(e=>time-e.startedAt<e.duration);draw(time);lastFrame=time;}requestAnimationFrame(animate);}
+function showStart(){const heading=$('welcomeDialog').querySelector('h2');heading.innerHTML=fresh?'灯りをともして、<br>大きな冒険へ。':`第${state.day}日の旅を、<br>ここからもう一度。`;$('startButton').textContent=fresh?'ゲーム開始 →':'つづきから →';let note=$('welcomeDialog').querySelector('.start-audio-note');if(!note){note=document.createElement('p');note.className='start-audio-note';$('startButton').before(note);}note.textContent=muted?'音はミュート中です。開始後「♪ OFF」で切り替えられます。':'開始ボタンを押すとBGMと効果音が流れます。音量は「♪ 音」で調整できます。';$('welcomeDialog').showModal();}
+render();updateSound();setZoom(3);requestAnimationFrame(animate);showStart();
+if(loadError){$('saveStatus').textContent='記録の確認が必要';$('saveStatus').classList.add('failed');toast(loadError);}
