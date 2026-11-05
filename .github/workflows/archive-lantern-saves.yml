@@ -1,0 +1,77 @@
+name: Archive encrypted Lantern saves
+
+on:
+  schedule:
+    - cron: '3,18,33,48 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lantern-save-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Store the latest encrypted saves
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          root = Path('lantern-merchant/data')
+          cursor_path = root / 'archive-cursor.json'
+          cursor = json.loads(cursor_path.read_text())['cursor'] if cursor_path.exists() else 0
+          changed = 0
+          for _ in range(200):
+              request = Request(f'https://tk777-neonshift-scores.takesuke.chatgpt.site/api/lantern-archive?after={cursor}', headers={'Accept':'application/json','User-Agent':'TK777-Lantern-Archive/1.0'})
+              with urlopen(request, timeout=30) as response:
+                  page = json.load(response)
+              for entry in page['entries']:
+                  if not isinstance(entry['seq'], int) or entry['seq'] <= cursor:
+                      raise ValueError('Non-increasing archive position')
+                  if not re.fullmatch(r'[0-9a-f]{64}', entry['id']):
+                      raise ValueError('Invalid save id')
+                  if entry['schema'] != 1 or not re.fullmatch(r'[0-9a-f]{24}', entry['iv']):
+                      raise ValueError('Invalid encrypted envelope')
+                  if not isinstance(entry['ciphertext'], str) or len(entry['ciphertext']) > 140000:
+                      raise ValueError('Oversized encrypted envelope')
+                  # Allowlist fields: auth hashes and recovery keys must never enter Git.
+                  saved = {key:entry[key] for key in ('schema','id','revision','iv','ciphertext','updatedAt')}
+                  target = root / 'saves' / (entry['id'] + '.json')
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_text(json.dumps(saved, ensure_ascii=False, separators=(',',':')) + '\n', encoding='utf-8')
+                  cursor = entry['seq']
+                  changed += 1
+              if page['next'] != cursor:
+                  raise ValueError('Archive cursor mismatch')
+              if not page['hasMore']:
+                  break
+          else:
+              raise RuntimeError('Archive backlog exceeds batch budget')
+          root.mkdir(parents=True, exist_ok=True)
+          cursor_path.write_text(json.dumps({'schema':1,'cursor':cursor})+'\n', encoding='utf-8')
+          print(f'Archived {changed} encrypted save updates.')
+          PY
+      - name: Commit encrypted records
+        shell: bash
+        run: |
+          git add lantern-merchant/data
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Back up encrypted Lantern game saves'
+          for attempt in 1 2 3; do
+            git pull --rebase origin main
+            if git push origin HEAD:main; then exit 0; fi
+          done
+          exit 1
