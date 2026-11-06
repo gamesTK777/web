@@ -11,3 +11,49 @@ body.focus-mode{overflow:hidden}.focus-mode .topbar,.focus-mode .page-heading,.f
 @media(max-height:500px) and (orientation:landscape){.focus-mode .world-top{min-height:50px;display:flex}.focus-mode .world-hud{gap:10px}.focus-mode .dungeon-controls{position:absolute;bottom:10px;left:10px;right:10px;background:#132f31bc;z-index:2;min-height:0;padding:6px;justify-content:space-between;border:0}.focus-mode .dpad{grid-template-columns:repeat(3,33px);grid-template-rows:repeat(3,25px)}.focus-mode .quick-actions{display:flex}.focus-mode .canvas-wrap{padding-bottom:0}.focus-mode .scene-caption{bottom:104px}}
 .focus-mode .center-column{display:flex;flex-direction:column}.focus-mode[data-mode="dungeon"] .world-panel{height:auto;flex:1;min-height:0}.view-tools #stageSoundButton{font-size:13px}
 .start-options{display:flex;gap:10px;margin-top:10px}.start-options button{flex:1;font-size:12px}.cloud-panel{padding:18px;background:#10252880;border:1px solid #e6be7d33;border-radius:10px}.cloud-panel h3{margin-top:0}.cloud-panel label,#restoreDialog>label{display:block;font-size:11px;color:var(--muted);margin:12px 0 7px}textarea{font:12px monospace;line-height:1.7;width:100%;resize:vertical;border:1px solid #ffffff30;background:#0d2225;color:var(--gold);border-radius:8px;padding:12px;overflow-wrap:anywhere}.cloud-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.cloud-actions button{font-size:11px;flex:1;white-space:nowrap}.dpad button{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.start-options button:first-child{color:var(--gold);border-color:#e6be7d55}
+/* The illustrated island stays the focus; controls use readable screen pixels. */
+[hidden]{display:none!important}
+.canvas-vignette{opacity:.28;pointer-events:none}
+#world{image-rendering:pixelated;touch-action:none;-webkit-touch-callout:none;user-select:none}
+.world-hud small{font-size:10px}.world-hud b{font-size:16px}
+.view-tools{gap:5px}.view-tools span{min-width:36px}.view-tools #overviewButton{font-size:11px}
+.town-tools{display:flex;align-items:center;gap:8px;padding:0 2px;flex-wrap:wrap}
+.town-tools>span{margin-right:auto;font-size:12px;color:#c5d4bd;letter-spacing:.6px}
+.town-tools button{min-height:42px;padding:9px 17px;font-size:12px;border-color:#b5c49636;background:#203b39}
+body[data-mode="town"] .dungeon-controls{justify-content:flex-start;background:#132b2b70;border-color:#b5c49625}
+body[data-mode="town"] .dungeon-controls>p{display:block;max-width:440px;color:#bccbb9}
+.town-dialog-gold{color:var(--gold);font-weight:700}
+.town-dialog-actions{display:grid;grid-template-columns:1fr;gap:10px;margin:18px 0}
+.town-dialog-actions button{min-height:52px;font-size:14px;text-align:left;padding:14px 18px}
+.town-dialog-actions small{display:block;color:#bccbb9;margin-top:4px;font-size:12px}
+.town-dialog-close{background:transparent}
+#townDialog h2{font-size:23px;line-height:1.5;margin:0}
+#townDialogDescription{font-size:14px;line-height:1.9;color:#c4d1c5}
+.plot.selected{border-color:var(--gold)}
+.focus-mode[data-mode="town"] .world-panel{height:auto;flex:1;min-height:0}
+.focus-mode[data-mode="town"] .town-tools{padding:7px 12px;background:#102726;flex:none}
+.focus-mode[data-mode="town"] .dungeon-controls{flex:none;min-height:108px;margin:0;border-radius:0;padding:8px 16px}
+.focus-mode .town-tools>span{font-size:11px}
+.focus-mode[data-mode="town"] .world-bottom{display:none}
+.focus-mode[data-mode="town"] .dungeon-controls{position:absolute;bottom:62px;left:12px;right:auto;width:auto;min-height:0;padding:7px;background:#142e30c9;border:1px solid #b4c49233;border-radius:12px;z-index:2}
+.focus-mode[data-mode="town"] .dungeon-controls>p{display:none}
+.focus-mode[data-mode="town"] .scene-caption{left:auto;right:14px;bottom:14px}
+@media(max-width:760px){
+ .world-hud small{font-size:9px}.world-hud b{font-size:13px}.world-top{grid-template-columns:1fr!important}
+ .view-tools{grid-row:3;justify-content:flex-end;width:100%;gap:7px}.view-tools button{min-height:36px;min-width:36px}
+ .world-top h2{font-size:17px!important}.world-hud{grid-row:2}
+ .canvas-wrap,body[data-mode="town"] .canvas-wrap{height:clamp(310px,50svh,540px)}
+ .town-tools{gap:6px;display:grid;grid-template-columns:repeat(4,1fr)}.town-tools>span{display:none}
+ .town-tools button{padding:8px 3px;min-height:44px;font-size:11px}
+ body[data-mode="town"] .dungeon-controls{gap:12px;justify-content:center}
+ body[data-mode="town"] .dungeon-controls>p{font-size:11px;max-width:175px;min-width:0;flex:1;margin:0}
+ .dpad,body[data-mode="dungeon"] .dpad{grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,36px)}
+ .scene-caption{font-size:11px}.world-bottom>span{font-size:11px}
+ .focus-mode .town-tools{padding:5px 8px;padding-bottom:max(5px,env(safe-area-inset-bottom))}.focus-mode[data-mode="town"] .dungeon-controls{min-height:0;padding:5px;bottom:calc(66px + env(safe-area-inset-bottom));left:8px}
+ #townDialog h2{font-size:20px}.focus-mode .world-top{min-height:122px}
+}
+@media(max-height:500px) and (orientation:landscape){
+ .focus-mode[data-mode="town"] .town-tools{position:absolute;right:10px;bottom:10px;z-index:3;background:#102726d9}
+ .focus-mode[data-mode="town"] .dungeon-controls{position:absolute;bottom:10px;left:10px;right:auto;min-height:0;width:auto;background:#102726b0}
+ .focus-mode[data-mode="town"] .dungeon-controls>p{display:none}
+}

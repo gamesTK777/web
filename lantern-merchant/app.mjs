@@ -1,5 +1,7 @@
 import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261105';
-import {drawScene} from './renderer.mjs?v=20261105-16bit';
+import {drawScene} from './renderer.mjs?v=20261106-art';
+import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261106-art';
+import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
 import {createAudioManager} from './audio.mjs?v=20261105-16bit';
 import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261105-cloud';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
@@ -9,10 +11,12 @@ const money=n=>Number(n).toLocaleString('ja-JP'), esc=v=>String(v).replace(/[&<>
 let state=newGame(), tab='bag', fresh=true, persistAllowed=true, savedAt=null, saveFailed=false, loadError='', toastTimer, confirmTask=null, frameInfo=null, lastFrame=0;
 const sound=createAudioManager(), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sessionStarted=false, zoom=3, facing='down', motion=null, effects=[], volume=.35, muted=false;
+let townZoom=matchMedia('(max-width:760px)').matches?1.5:1,selectedPlot=-1,selectedBuilding=null,townCamera=null;
+const townNavigation=createTownNavigation({isWalkable:isTownWalkable,spawn:TOWN_SPAWN,reducedMotion:reduced});
 let cloudReady=false,cloudBusy=false,cloudConflict=false,newCloudSlot=false,cloudGeneration=0,cloudReconnectQueued=false;
 try{newCloudSlot=localStorage.getItem('tk777-lantern-new-cloud-slot')==='1';}catch{}
 const cloud=createCloudSave({endpoint:'https://tk777-neonshift-scores.takesuke.chatgpt.site/api/lantern-save',onStatus:status=>{const line=$('cloudStatus');if(line)line.textContent=status.message;if($('cloudCode'))$('cloudCode').value=cloud.getCode();if(status.phase==='conflict'){cloudReady=false;cloudConflict=true;}else if(status.phase==='error'&&!status.connected)cloudReady=false;}});
-const held=createHoldInput({onMove:(dx,dy)=>dispatch({type:'move',dx,dy}),canMove:()=>sessionStarted&&state.mode==='dungeon'&&!document.querySelector('dialog[open]')&&!document.hidden});
+const held=createHoldInput({onMove:moveDirection,canMove:()=>sessionStarted&&!document.querySelector('dialog[open]')&&!document.hidden});
 try{const settings=JSON.parse(localStorage.getItem('tk777-lantern-audio')||'{}');if(typeof settings.muted==='boolean')muted=settings.muted;if(Number.isFinite(settings.volume))volume=Math.max(0,Math.min(1,settings.volume));}catch{}
 sound.setVolume(volume);sound.setMuted(muted);
 try { const text=localStorage.getItem(KEY); if(text){const data=JSON.parse(text);state=validateSave(data.state??data);savedAt=data.savedAt??null;fresh=false;} } catch {loadError='保存された記録を読み込めませんでした。元の記録は保護しています。保存画面からバックアップを読み込むか、はじめから開始してください。';persistAllowed=false;fresh=false;}
@@ -24,7 +28,7 @@ function save(manual=false){
   catch{$('saveStatus').textContent='保存できません';$('saveStatus').classList.add('failed');$('saveButton').textContent='未保存 !';if(manual||!saveFailed)toast('ブラウザーへの保存ができません。バックアップを書き出してください。');saveFailed=true;return false;}
 }
 function confirm(title,message,task){held.clear();confirmTask=task;$('confirmTitle').textContent=title;$('confirmText').textContent=message;$('confirmDialog').showModal();}
-function applyCloudState(value){state=validateSave(value);held.clear();motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;const ready=cloudReady;cloudReady=false;save();cloudReady=ready;render();}
+function applyCloudState(value){state=validateSave(value);held.clear();resetTownView();motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;const ready=cloudReady;cloudReady=false;save();cloudReady=ready;render();}
 async function connectCloud(localSavedAt=savedAt){
   if(cloudConflict)return;if(cloudBusy){cloudReconnectQueued=true;return;}cloudBusy=true;const generation=cloudGeneration;
   try{const local=state,localTime=localSavedAt;const result=newCloudSlot?await cloud.newSlot(state):await cloud.enable(state);if(generation!==cloudGeneration)return;newCloudSlot=false;try{localStorage.removeItem('tk777-lantern-new-cloud-slot');}catch{}
@@ -35,9 +39,16 @@ async function connectCloud(localSavedAt=savedAt){
     cloudReady=true;if(result.restored&&!localChanged)applyCloudState(remote);else cloud.queue(state);
   }catch(error){if(generation===cloudGeneration){cloudReady=cloud.getStatus().connected&&!cloud.getStatus().needsRestore;$('cloudStatus').textContent=error.message||'オンライン保存に接続できません。端末内の記録は残っています。';}}finally{cloudBusy=false;if(cloudReconnectQueued&&sessionStarted){cloudReconnectQueued=false;void connectCloud();}}
 }
-function restartGame(){held.clear();cloudGeneration++;cloudReady=false;cloudConflict=false;newCloudSlot=true;try{localStorage.setItem('tk777-lantern-new-cloud-slot','1');}catch{}state=newGame();motion=null;effects=[];sessionStarted=false;fresh=true;sound.pause();persistAllowed=true;save();tab='bag';render();if($('saveDialog').open)$('saveDialog').close();if(!$('welcomeDialog').open)showStart();else showStartContents();}
+function restartGame(){held.clear();cloudGeneration++;cloudReady=false;cloudConflict=false;newCloudSlot=true;try{localStorage.setItem('tk777-lantern-new-cloud-slot','1');}catch{}state=newGame();resetTownView();motion=null;effects=[];sessionStarted=false;fresh=true;sound.pause();persistAllowed=true;save();tab='bag';render();if($('saveDialog').open)$('saveDialog').close();if(!$('welcomeDialog').open)showStart();else showStartContents();}
 function count(id){return [...state.inventory,...state.runLoot].filter(i=>i.id===id).reduce((s,i)=>s+i.qty,0);}
-function draw(time=performance.now()){frameInfo=drawScene($('world'),state,{time,zoom,motion,effects,reducedMotion:reduced});}
+function resetTownView(){townNavigation.reset();selectedPlot=-1;selectedBuilding=null;townCamera=null;}
+function draw(time=performance.now()){frameInfo=drawScene($('world'),state,{time,zoom,motion,effects,reducedMotion:reduced,townZoom,townCamera,townPlayer:townNavigation.getVisual(time),selectedPlot,selectedBuilding});}
+function moveDirection(dx,dy){
+  if(!sessionStarted||document.querySelector('dialog[open]'))return;
+  if(state.mode==='dungeon'){dispatch({type:'move',dx,dy});return;}
+  townCamera=null;selectedBuilding=null;selectedPlot=-1;
+  if(townNavigation.move(dx,dy,state))draw();
+}
 function visualEvent(previous,action,result){
   const time=performance.now(),sameFloor=previous.mode==='dungeon'&&state.mode==='dungeon'&&previous.floor===state.floor;
   if(action.type==='move')facing=action.dx<0?'left':action.dx>0?'right':action.dy<0?'up':'down';
@@ -45,6 +56,12 @@ function visualEvent(previous,action,result){
   motion={from:{...from},to:{...state.player},startedAt:time,duration:reduced?0:190,facing,kind:sameFloor&&result.event==='move'?'move':result.event==='attack'?'attack':'idle'};
   const add=(kind,text='',position=state.player)=>effects.push({kind,...position,text,startedAt:time,duration:800});
   if(!sameFloor)effects=[];
+  if(state.mode==='town'&&result.event==='build'){
+    const index=action.type==='buyLand'?state.plots.length-1:action.index;
+    selectedPlot=index;selectedBuilding=null;townNavigation.ensurePosition(state);
+    const plot=getTownPlot(index);townCamera={x:plot.bounds.x+plot.bounds.width/2,y:plot.bounds.y+plot.bounds.height/2};
+    effects.push({kind:'build',index,startedAt:time,duration:1400});
+  }
   let event=result.event;
   if(event==='attack')add('attack','', {x:previous.player.x+(action.dx||0),y:previous.player.y+(action.dy||0)});
   if(sameFloor&&state.hp<previous.hp){add('hurt',`−${previous.hp-state.hp}`);sound.play('hurt');}
@@ -58,10 +75,11 @@ function updateSound(){const status=sound.getStatus();$('soundButton').textConte
 function storeSound(){try{localStorage.setItem('tk777-lantern-audio',JSON.stringify({muted,volume}));}catch{}updateSound();}
 function dispatch(action){
   if(!sessionStarted)return;
+  if(state.mode==='town'&&action.type==='wait'){inspectTown();return;}
   const previous=state, result=act(state,action);
   if(!result.ok){toast(result.message);sound.play('error');return;}
   state=result.state;visualEvent(previous,action,result);save();render();
-  if(previous.mode!==state.mode||previous.floor!==state.floor)held.clear();
+  if(previous.mode!==state.mode||previous.floor!==state.floor){held.clear();resetTownView();}
   if(!['move','wait','attack'].includes(result.event))toast(result.message);
   if(previous.mode==='dungeon'&&state.mode==='town'){
     const earned=state.gold-previous.gold;
@@ -85,9 +103,12 @@ function render(){
   $('locationEyebrow').textContent=dungeon?'THE LANTERN DEPTHS':'YOUR HOMETOWN';
   $('locationBadge').textContent=dungeon?`TURN ${state.runTurns}`:'安全な拠点';
   $('sceneCaption').textContent=dungeon?`探索袋 ${state.runLoot.reduce((s,i)=>s+i.qty,0)}/30 · 拾得金 ${state.runGold} G`:`所有地 ${state.plots.length} 区画 · 建物 ${state.plots.filter(p=>p.building).length} 棟`;
-  $('sceneHint').textContent=dungeon?'一歩ずつ、灯りの届く先へ。':'街で準備を整えて、迷宮へ。';
+  $('sceneHint').textContent=dungeon?'一歩ずつ、灯りの届く先へ。':'施設・区画をタップして選択。WASD / 矢印で街を散歩。';
   $('primaryAction').innerHTML=dungeon?'足元を調べる <span>↓</span>':'迷宮へ出発 <span>↗</span>';
-  $('dungeonControls').hidden=!dungeon;
+  $('dungeonControls').hidden=false;$('townTools').hidden=dungeon;
+  $('dungeonControls').querySelector('.quick-actions').hidden=!dungeon;
+  $('movementHelp').textContent=dungeon?'矢印 / WASD 長押しで移動・攻撃。タップ・スワイプにも対応。':'矢印 / WASD 長押しで散歩。画面スワイプで移動、施設や区画をタップして選択。';
+  $('waitButton').setAttribute('aria-label',dungeon?'1ターン待つ':'近くの施設を調べる');$('waitButton').textContent=dungeon?'・':'調';
   $('potionButton').innerHTML=`回復薬 <b>${count('potion')}</b>`;$('potionButton').disabled=!count('potion');
   $('foodButton').innerHTML=`食料 <b>${count('ration')}</b>`;$('foodButton').disabled=!count('ration');
   const progress=[state.stats.runs>0,state.stats.earned>0,rentTotal(state)>0,state.weaponId!=='starter',state.stats.clears>0];
@@ -126,11 +147,60 @@ function renderWorkspace(){
 function returnHome(){if(state.mode!=='dungeon')return;const free=state.map.tiles[state.player.y][state.player.x]===3; if(free)dispatch({type:'return'});else if(!count('recall'))toast('帰灯石がありません。青い帰還門へ戻りましょう。');else confirm('帰灯石を使って帰還？','帰灯石を1つ使い、拾った品を持って街へ戻ります。',()=>dispatch({type:'return'}));}
 function inspectFloor(){if(state.mode==='town'){dispatch({type:'enter'});return;} const tile=state.map.tiles[state.player.y][state.player.x];if(tile===2)dispatch({type:'stairs'});else if(tile===3)returnHome();else toast('階段か青い帰還門の上で使えます。敵には移動で攻撃できます。');}
 
+function openWorkspace(value){
+  if($('townDialog').open)$('townDialog').close();setFocus(false);tab=value;renderWorkspace();
+  requestAnimationFrame(()=>$('workspaceContent').closest('.workspace').scrollIntoView({behavior:reduced?'instant':'smooth',block:'start'}));
+}
+function selectTown(type,value){
+  if(!sessionStarted||state.mode!=='town')return;
+  held.clear();sound.play('ui');let title,description,buttons='';
+  if(type==='plot'){
+    selectedPlot=Number(value);selectedBuilding=null;
+    const plot=getTownPlot(selectedPlot);if(!plot)return;
+    townCamera={x:plot.bounds.x+plot.bounds.width/2,y:plot.bounds.y+plot.bounds.height/2};
+    const owned=state.plots[selectedPlot],building=BUILDINGS.find(b=>b.id===owned?.building);
+    title=`第${selectedPlot+1}区画 · ${building?building.name:owned?'建築できる空き地':'未購入の土地'}`;
+    if(building){
+      description=`Lv.${owned.level} · 翌日の家賃 ${building.rent*owned.level} G。屋根や窓も増築に合わせて育ちます。`;
+      buttons=`<button data-town-upgrade="${selectedPlot}" ${owned.level>=3||state.gold<upgradeCost(state,selectedPlot)?'disabled':''}>${owned.level>=3?'最大まで増築済み':`増築する · ${upgradeCost(state,selectedPlot)} G`}</button>`;
+    }else if(owned){
+      description='この区画に建物を建てると、探索から帰った翌日に家賃が入ります。';
+      buttons=BUILDINGS.map(b=>`<button data-town-build="${b.id}" data-index="${selectedPlot}" ${state.gold<b.cost?'disabled':''}>${b.name} · ${b.cost} G<small>家賃 ${b.rent} G / 日</small></button>`).join('');
+    }else{
+      description=selectedPlot===state.plots.length?'敷地を広げて、新しい灯りをともしましょう。':'土地は第'+(state.plots.length+1)+'区画から順に購入できます。';
+      buttons=`<button data-town-buy-land ${selectedPlot!==state.plots.length||state.gold<landCost(state)?'disabled':''}>第${state.plots.length+1}区画を購入 · ${money(landCost(state))} G</button>`;
+    }
+  }else{
+    const place=TOWN_LANDMARKS.find(b=>b.id===value);if(!place)return;
+    selectedBuilding=place.id;selectedPlot=-1;townCamera={x:place.bounds.x+place.bounds.width/2,y:place.bounds.y+place.bounds.height/2};title=place.name;
+    if(value==='trade'){description='旅の収穫を売り、次の冒険の道具を揃える場所。';buttons='<button data-town-workspace="bag">持ち物を売る</button><button data-town-workspace="shop">道具・装備を買う</button>';}
+    else if(value==='inn'){description=state.gold>=20?'20 GでHPと満腹度を全回復。日付は進みません。':'所持金が少ないときは、無料でHPと満腹度を60%まで回復できます。';buttons=`<button data-town-rest ${state.hp===state.maxHp&&state.hunger===100?'disabled':''}>${state.hp===state.maxHp&&state.hunger===100?'すでに元気いっぱいです':state.gold>=20?'宿で休む · 20 G':'救護所で休む · 無料'}</button>`;}
+    else{description='灯りを手に、翠灯の迷宮へ。拾った宝物は生きて持ち帰りましょう。';buttons='<button class="primary" data-town-enter>迷宮へ出発する →</button>';}
+  }
+  $('townDialogTitle').textContent=title;$('townDialogDescription').textContent=description;
+  $('townDialogGold').textContent=`所持金 ${money(state.gold)} G`;$('townDialogActions').innerHTML=buttons;
+  draw();$('townDialog').showModal();
+}
+function inspectTown(){
+  const p=townNavigation.getVisual(),candidates=TOWN_LANDMARKS.map(b=>({type:'building',value:b.id,x:b.entry.x,y:b.entry.y}));
+  for(let i=0;i<state.plots.length;i++){const q=getTownPlot(i);candidates.push({type:'plot',value:i,x:q.bounds.x+q.bounds.width/2,y:q.bounds.y+q.bounds.height});}
+  candidates.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y));
+  if(candidates[0])selectTown(candidates[0].type,candidates[0].value);
+}
+
 document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.townFacility){selectTown('building',b.dataset.townFacility);return;}
+  if(b.hasAttribute('data-town-estate')){openWorkspace('estate');return;}
+  if(b.dataset.townWorkspace){openWorkspace(b.dataset.townWorkspace);return;}
+  if(b.dataset.townBuild){$('townDialog').close();dispatch({type:'build',id:b.dataset.townBuild,index:Number(b.dataset.index)});return;}
+  if(b.dataset.townUpgrade!==undefined){$('townDialog').close();dispatch({type:'upgrade',index:Number(b.dataset.townUpgrade)});return;}
+  if(b.hasAttribute('data-town-buy-land')){$('townDialog').close();dispatch({type:'buyLand'});return;}
+  if(b.hasAttribute('data-town-enter')){$('townDialog').close();dispatch({type:'enter'});return;}
+  if(b.hasAttribute('data-town-rest')){$('townDialog').close();dispatch({type:'rest'});return;}
   if(b.dataset.tab){tab=b.dataset.tab;renderWorkspace();sound.play('ui');return;}
   if(b.dataset.close){$(b.dataset.close).close();return;}
-  if(b.dataset.move){if(e.detail===0){const [dx,dy]=b.dataset.move.split(',').map(Number);dispatch({type:'move',dx,dy});}return;}
+  if(b.dataset.move){if(e.detail===0){const [dx,dy]=b.dataset.move.split(',').map(Number);moveDirection(dx,dy);}return;}
   if(b.dataset.action){dispatch({type:b.dataset.action});return;}
   if(b.dataset.use){if(b.dataset.use==='recall')returnHome();else dispatch({type:'use',id:b.dataset.use});return;}
   if(b.dataset.sell){const i=ITEMS.find(i=>i.id===b.dataset.sell);const action={type:'sell',id:i.id,qty:Number(b.dataset.qty)};if(i.kind==='consumable')confirm('道具を売却しますか？',`${i.name} ${action.qty}個を売却します。冒険で使う分が不要か確認してください。`,()=>dispatch(action));else dispatch(action);return;}
@@ -154,9 +224,10 @@ $('soundButton').addEventListener('click',()=>{if(sessionStarted&&!muted)sound.r
 $('stageSoundButton').addEventListener('click',()=>{if(sessionStarted&&!muted)sound.resume().then(updateSound);updateSound();$('soundDialog').showModal();});
 $('muteAudio').addEventListener('change',e=>{muted=e.target.checked;sound.setMuted(muted);if(sessionStarted&&!muted)sound.resume().then(updateSound);storeSound();});
 $('audioVolume').addEventListener('input',e=>{volume=Number(e.target.value)/100;sound.setVolume(volume);storeSound();});
-function updateZoom(){const active=state.mode==='dungeon';$('zoomLabel').textContent=active?`${zoom}×`:'全景';$('zoomOut').disabled=!active||zoom===2;$('zoomIn').disabled=!active||zoom===4;}
-function setZoom(value){zoom=Math.max(2,Math.min(4,value));updateZoom();draw();}
-$('zoomOut').addEventListener('click',()=>setZoom(zoom-1));$('zoomIn').addEventListener('click',()=>setZoom(zoom+1));
+function updateZoom(){const active=state.mode==='dungeon';$('zoomLabel').textContent=active?`${zoom}×`:townZoom===1?'全景':`${townZoom}×`;$('zoomOut').disabled=active?zoom===2:townZoom===1;$('zoomIn').disabled=active?zoom===4:townZoom===2;$('overviewButton').hidden=active;}
+function setZoom(value){if(state.mode==='dungeon')zoom=Math.max(2,Math.min(4,value));else townZoom=Math.max(1,Math.min(2,value));updateZoom();draw();}
+$('zoomOut').addEventListener('click',()=>setZoom(state.mode==='dungeon'?zoom-1:townZoom-.5));$('zoomIn').addEventListener('click',()=>setZoom(state.mode==='dungeon'?zoom+1:townZoom+.5));
+$('overviewButton').addEventListener('click',()=>{townCamera=null;setZoom(1);});
 function setFocus(value){document.body.classList.toggle('focus-mode',value);$('focusButton').textContent=value?'✕ 戻す':'⛶ 拡大';$('focusButton').setAttribute('aria-label',value?'拡大表示を閉じる':'ゲーム画面を拡大表示');$('focusButton').setAttribute('aria-pressed',String(value));requestAnimationFrame(()=>draw());}
 $('focusButton').addEventListener('click',()=>setFocus(!document.body.classList.contains('focus-mode')));
 $('saveButton').addEventListener('click',()=>{$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'まだ保存されていません。';$('saveDialog').showModal();});
@@ -168,7 +239,7 @@ $('copyCloudCode').addEventListener('click',async()=>{const code=cloud.getCode()
 $('openRestore').addEventListener('click',()=>{held.clear();$('restoreCode').value=cloud.getCode();$('restoreDialog').showModal();});
 $('restoreCloudButton').addEventListener('click',()=>{const code=$('restoreCode').value.trim();if(!code){$('restoreStatus').textContent='引き継ぎコードを入力してください。';return;}confirm('このコードの旅を読み込みますか？','現在の端末内の進行を、このコードの記録に置き換えます。現在の記録を残す場合は先にバックアップを書き出してください。',async()=>{const generation=++cloudGeneration,before=state;cloudReady=false;cloudConflict=false;$('restoreStatus').textContent='記録を確認しています…';$('restoreCloudButton').disabled=true;try{const result=await cloud.load(code);if(generation!==cloudGeneration||state!==before)throw new Error('進行が変わったため読み込みを中止しました。');const validated=validateSave(result.state);try{localStorage.removeItem('tk777-lantern-new-cloud-slot');}catch{}cloudReady=!result.fromBackup;newCloudSlot=false;fresh=false;applyCloudState(validated);$('restoreDialog').close();if($('saveDialog').open)$('saveDialog').close();if(!sessionStarted)showStartContents();toast(result.fromBackup?'GitHubのバックアップから記録を読み込みました。':'オンラインの記録を読み込みました。');}catch(error){if(generation===cloudGeneration){cloudConflict=true;$('restoreStatus').textContent=error.message||'読み込めませんでした。';}}finally{$('restoreCloudButton').disabled=false;}});});
 $('exportSave').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({game:'lantern-ledger',version:1,savedAt:new Date().toISOString(),state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`lantern-ledger-day${state.day}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('バックアップファイルを書き出しました。');});
-$('importSave').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw new Error();const data=JSON.parse(await file.text());if(data.game&&data.game!=='lantern-ledger')throw new Error();const imported=validateSave(data.state??data);confirm('この記録を読み込みますか？',`${imported.day}日目・レベル${imported.level}・${money(imported.gold)}G の記録に置き換えます。現在の進行を残すには、先に書き出してください。`,()=>{state=imported;motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;save();render();$('saveDialog').close();toast('旅の記録を読み込みました。');});}catch{toast('このファイルは読み込めません。有効なバックアップを選んでください。現在の記録は変更していません。');}});
+$('importSave').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw new Error();const data=JSON.parse(await file.text());if(data.game&&data.game!=='lantern-ledger')throw new Error();const imported=validateSave(data.state??data);confirm('この記録を読み込みますか？',`${imported.day}日目・レベル${imported.level}・${money(imported.gold)}G の記録に置き換えます。現在の進行を残すには、先に書き出してください。`,()=>{state=imported;resetTownView();motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;save();render();$('saveDialog').close();toast('旅の記録を読み込みました。');});}catch{toast('このファイルは読み込めません。有効なバックアップを選んでください。現在の記録は変更していません。');}});
 $('newGameButton').addEventListener('click',()=>confirm('初めから冒険しますか？','新しい冒険を別のコードで保存します。以前の記録を残したい場合は、引き継ぎコードを先に控えてください。',restartGame));
 $('confirmCancel').addEventListener('click',()=>{$('confirmDialog').close();confirmTask=null;});$('confirmOk').addEventListener('click',()=>{const task=confirmTask;confirmTask=null;$('confirmDialog').close();task?.();});$('confirmDialog').addEventListener('cancel',()=>confirmTask=null);
 document.addEventListener('keydown',e=>{
@@ -176,23 +247,37 @@ document.addEventListener('keydown',e=>{
   const key=e.key.length===1?e.key.toLowerCase():e.key;
   if(key==='Escape'&&document.body.classList.contains('focus-mode')){e.preventDefault();setFocus(false);return;}
   if(key==='?'){e.preventDefault();$('helpDialog').showModal();return;}
-  if(state.mode!=='dungeon')return;
   if(isMovementKey(e.code)){e.preventDefault();held.keyDown(e.code);return;}
   if(e.target.closest('button,a')&&(key==='Enter'||key===' '))return;
+  if(state.mode==='town'){if(key==='e'||key==='Enter'||key===' '){e.preventDefault();if(!e.repeat)inspectTown();}return;}
   if([' ','.','e','Enter','h','f','r'].includes(key)){e.preventDefault();if(e.repeat)return;if(key===' '||key==='.')dispatch({type:'wait'});if(key==='e'||key==='Enter')inspectFloor();if(key==='h')dispatch({type:'use',id:'potion'});if(key==='f')dispatch({type:'use',id:'ration'});if(key==='r')returnHome();}
 });
 document.addEventListener('keyup',e=>held.keyUp(e.code));
 for(const button of document.querySelectorAll('[data-move]')){button.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();const[dx,dy]=button.dataset.move.split(',').map(Number);button.setPointerCapture(e.pointerId);held.pointerDown(e.pointerId,dx,dy);});for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>held.pointerUp(e.pointerId));button.addEventListener('contextmenu',e=>e.preventDefault());}
 new MutationObserver(()=>{if(document.querySelector('dialog[open]'))held.clear();}).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
 let pointer=null;
-$('world').addEventListener('pointerdown',e=>{if(state.mode!=='dungeon'||(e.pointerType==='mouse'&&e.button!==0))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY};$('world').setPointerCapture(e.pointerId);});
-$('world').addEventListener('pointerup',e=>{if(!pointer||pointer.id!==e.pointerId)return;let dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;pointer=null;if(state.mode!=='dungeon')return;if(Math.hypot(dx,dy)<15){const rect=$('world').getBoundingClientRect();const center=frameInfo?.playerScreen??{x:rect.width/2,y:rect.height/2};dx=e.clientX-rect.left-center.x;dy=e.clientY-rect.top-center.y;if(Math.hypot(dx,dy)<12){toast('方向をタップ・スワイプすると移動します。');return;}}dispatch({type:'move',dx:Math.abs(dx)>Math.abs(dy)?Math.sign(dx):0,dy:Math.abs(dx)>Math.abs(dy)?0:Math.sign(dy)});});
+$('world').addEventListener('pointerdown',e=>{if(!sessionStarted||document.querySelector('dialog[open]')||(e.pointerType==='mouse'&&e.button!==0))return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY};$('world').setPointerCapture(e.pointerId);});
+$('world').addEventListener('pointerup',e=>{
+  if(!pointer||pointer.id!==e.pointerId)return;let dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;pointer=null;
+  if(!sessionStarted||document.querySelector('dialog[open]'))return;
+  if(Math.hypot(dx,dy)<15){
+    const rect=$('world').getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+    if(state.mode==='town'){
+      const hit=[...(frameInfo?.hitRegions||[])].reverse().find(r=>x>=r.x&&x<=r.x+r.width&&y>=r.y&&y<=r.y+r.height);
+      if(hit){selectTown(hit.type,hit.type==='plot'?hit.index:hit.id);return;}
+    }
+    const center=frameInfo?.playerScreen??{x:rect.width/2,y:rect.height/2};dx=x-center.x;dy=y-center.y;
+    if(Math.hypot(dx,dy)<12){toast('方向をタップ・スワイプすると移動します。');return;}
+  }
+  moveDirection(Math.abs(dx)>Math.abs(dy)?Math.sign(dx):0,Math.abs(dx)>Math.abs(dy)?0:Math.sign(dy));
+});
+$('world').addEventListener('pointermove',e=>{if(state.mode!=='town'||pointer)return;const r=$('world').getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;$('world').style.cursor=(frameInfo?.hitRegions||[]).some(b=>x>=b.x&&x<=b.x+b.width&&y>=b.y&&y<=b.y+b.height)?'pointer':'default';});
 for(const event of ['pointercancel','lostpointercapture'])$('world').addEventListener(event,()=>pointer=null);
 window.addEventListener('blur',()=>{pointer=null;held.clear();});document.addEventListener('visibilitychange',()=>{pointer=null;held.clear();if(document.hidden){if(sessionStarted){save();if(cloudReady)void cloud.flush();}sound.pause();}else if(sessionStarted)sound.resume().then(updateSound);});
 window.addEventListener('pagehide',()=>{held.clear();sound.pause();});window.addEventListener('pageshow',()=>{held.clear();if(sessionStarted&&!document.hidden)sound.resume().then(updateSound);});
 new ResizeObserver(()=>draw()).observe($('canvasWrap'));
-function animate(time){const active=motion&&time-motion.startedAt<motion.duration;const interval=reduced?100:active?16:33;if(!document.hidden&&time-lastFrame>interval){effects=effects.filter(e=>time-e.startedAt<e.duration);draw(time);lastFrame=time;}requestAnimationFrame(animate);}
+function animate(time){const active=state.mode==='town'?townNavigation.getVisual(time).motion.kind==='move':motion&&time-motion.startedAt<motion.duration;const interval=reduced?100:active?16:33;if(!document.hidden&&time-lastFrame>interval){effects=effects.filter(e=>time-e.startedAt<e.duration);draw(time);lastFrame=time;}requestAnimationFrame(animate);}
 function showStartContents(){const heading=$('welcomeDialog').querySelector('h2');heading.innerHTML=fresh?'灯りをともして、<br>大きな冒険へ。':`第${state.day}日の旅を、<br>ここからもう一度。`;$('startButton').textContent=fresh?'ゲーム開始 →':'つづきから →';let note=$('welcomeDialog').querySelector('.start-audio-note');if(!note){note=document.createElement('p');note.className='start-audio-note';$('startButton').before(note);}note.textContent=muted?'音はミュート中です。開始後「♪ OFF」で切り替えられます。':'開始ボタンを押すとBGMと効果音が流れます。音量は「♪ 音」で調整できます。';}
 function showStart(){showStartContents();held.clear();$('welcomeDialog').showModal();}
-render();updateSound();setZoom(3);requestAnimationFrame(animate);showStart();
+render();updateSound();requestAnimationFrame(animate);showStart();
 if(loadError){$('saveStatus').textContent='記録の確認が必要';$('saveStatus').classList.add('failed');toast(loadError);}

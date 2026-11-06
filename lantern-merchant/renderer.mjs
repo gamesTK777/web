@@ -1,3 +1,5 @@
+import {drawTown} from './town-art.mjs?v=20261106-art';
+import {drawExplorer as player} from './hero-art.mjs?v=20261106-art';
 /* Original, code-drawn artwork for Lantern & Ledger. No external art assets. */
 const C = {
   night:'#071719', deep:'#0b2328', water:'#163b49', ripple:'#2d5960', land:'#304c43',
@@ -22,117 +24,6 @@ function stars(c,w,h,time){
     c.globalAlpha=.15+.2*Math.sin(time/2200+i)**2;rect(c,x,y,hash(i,9)>.8?2:1,1,'#bfd0a7');
   }c.globalAlpha=1;
 }
-function tree(c,x,y,s=1){
-  c.save();c.translate(x,y);c.scale(s,s);
-  c.fillStyle='#0b241f66';c.beginPath();c.ellipse(3,5,26,8,0,0,Math.PI*2);c.fill();
-  poly(c,[[-7,8],[-3,-26],[5,-28],[8,8],[13,11],[1,8],[-9,11]],'#353e32');
-  rect(c,-2,-27,5,34,'#8c7950');rect(c,2,-26,2,33,'#b09b64');rect(c,-4,-16,3,22,'#5b6240');
-  poly(c,[[1,-15],[-11,-27],[-9,-29],[4,-20]],'#9c8755');
-  const clusters=[[-12,-23,15], [10,-23,17], [-17,-36,14], [2,-39,19], [16,-38,14], [0,-52,13]];
-  for(let k=0;k<clusters.length;k++){
-    const [xx,yy,r]=clusters[k];
-    poly(c,[[xx-r,yy],[xx-r+3,yy-r*.6],[xx-r*.5,yy-r*.8],[xx,yy-r],[xx+r*.7,yy-r*.6],[xx+r,yy-1],[xx+r*.6,yy+r*.5],[xx-r*.4,yy+r*.6]],'#264c40');
-    poly(c,[[xx-r+3,yy-2],[xx-r+5,yy-r*.6],[xx,yy-r+2],[xx+r*.6,yy-r*.5],[xx+r-2,yy-2],[xx,yy+r*.3]],k%2?'#577c50':'#466e49');
-    for(let i=0;i<10;i++){const px=xx+(hash(i,k)-.5)*r*1.4,py=yy-r*.7+hash(k,i)*r*.85;rect(c,px,py,3+hash(i,k+8)*3,2,i%3===0?'#a0ae6d':i%2?'#73935c':'#668955');}
-  }
-  rect(c,0,-62,4,2,'#c1c381');c.restore();
-}
-
-function lamp(c,x,y,time,scale=1){
-  c.save();c.translate(x,y);c.scale(scale,scale);glow(c,0,-24,34,'rgba(242,188,100,.18)');
-  rect(c,-2,-28,4,31,'#303e36');rect(c,-5,2,10,3,'#263a32');rect(c,-8,-33,16,3,C.woodDark);
-  rect(c,-6,-30,12,14,C.amber);rect(c,-4,-29,8,11,C.gold);rect(c,-2,-27,4,7,C.light);
-  rect(c,-8,-18,16,3,C.woodDark);rect(c,-2,-37,4,4,C.gold);
-  c.globalAlpha=.4+Math.sin(time/450+x)*.13;rect(c,-3,-27,6,6,'#fff6c6');c.globalAlpha=1;c.restore();
-}
-function roof(c,x,y,w,h,color,light,trim){
-  poly(c,[[x-9,y],[x+w*.5,y-h],[x+w+9,y],[x+w,y+7],[x,y+7]],'#2b3937');
-  poly(c,[[x-8,y],[x+w*.5,y-h+1],[x+w+8,y],[x+w,y+5],[x,y+5]],color);
-  poly(c,[[x-8,y],[x+w*.5,y-h+1],[x+w*.5,y+4],[x,y+5]],light);
-  for(let k=1;k<7;k++){
-    let yy=y-h+k*h/7,xx=x+w*.5-(w*.5+9)*k/7,ww=(w+18)*k/7;
-    rect(c,xx,yy,ww,1,trim);rect(c,xx+1,yy+1,ww-2,1,'#dfc38a35');
-    for(let sx=xx+4+(k%2)*4;sx<xx+ww-2;sx+=10)rect(c,sx,yy+2,1,h/7-2,trim);
-  }
-  rect(c,x-10,y,w+20,3,trim);rect(c,x-9,y, w+18,1,'#e1c48b');rect(c,x-7,y+4,w+14,3,'#293e35');
-  rect(c,x+w*.5-2,y-h,4,h,'#bdad8240');
-}
-
-function house(c,x,y,type='cottage',level=1,scale=1){
-  c.save();c.translate(x,y);c.scale(scale,scale);
-  const workshop=type==='workshop',w=workshop?76:65,h=workshop?47:52;
-  c.globalAlpha=.25;poly(c,[[-8,4],[w,6],[w+20,18],[8,18]],'#041511');c.globalAlpha=1;
-  rect(c,0,-h,w,h,C.cream);rect(c,w-17,-h,17,h,'#b6b795');rect(c,-3,-5,w+6,9,'#89917a');
-  rect(c,5,-h,4,h,'#8f775d');rect(c,w-22,-h,4,h,'#8f775d');
-  rect(c,w/2-8,-26,16,27,C.woodDark);rect(c,w/2-5,-23,10,24,C.wood);rect(c,w/2+1,-14,3,3,C.gold);
-  rect(c,12,-35,14,17,'#4b6051');rect(c,14,-33,10,13,C.gold);rect(c,18,-33,2,13,'#9e7747');rect(c,14,-27,10,2,'#9e7747');
-  if(workshop){
-    rect(c,51,-38,16,17,'#3c4c40');rect(c,53,-36,12,13,'#e4944d');rect(c,57,-36,3,13,C.woodDark);
-    rect(c,55,-89,12,40,'#787d6c');rect(c,52,-90,17,7,'#adb09a');
-    roof(c,0,-h,w,32,'#536776','#6d8387','#425861');
-    rect(c,-8,-12,14,16,C.wood);rect(c,-10,-9,18,4,'#a98c65');
-    rect(c,w+5,-6,16,11,'#827752');rect(c,w+7,-9,12,4,'#a59868');
-  }else{
-    roof(c,0,-h,w,35,level>1?'#9b6552':'#aa754d',level>1?'#c38b60':'#c9945b','#725343');
-    rect(c,49,-78,10,20,'#ad9b7a');rect(c,47,-80,14,5,'#d1c1a2');
-    rect(c,11,-13,15,7,'#537955');rect(c,14,-16,4,5,'#d6be78');rect(c,21,-15,4,5,'#bc7858');
-  }
-  if(level>1){rect(c,w-14,-35,8,10,C.gold);rect(c,-4,-h-1,w+8,4,C.gold);}
-  c.restore();
-}
-// A 40×48 logical-pixel explorer with a four-direction gait and layered clothing.
-function player(c,x,y,size,time=0,motion={}){
-  const facing=motion.facing||'down',progress=motion.progress??1,walking=motion.kind==='move'&&progress<1;
-  const step=walking?Math.sin(progress*Math.PI*4):0,lift=Math.abs(step),attack=motion.kind==='attack'&&progress<1?Math.sin(progress*Math.PI):0;
-  const side=facing==='left'||facing==='right',back=facing==='up';
-  c.save();c.translate(Math.round(x),Math.round(y));c.scale(size/40,size/40);
-  c.fillStyle='#06121780';c.beginPath();c.ellipse(0,9,13,4,0,0,Math.PI*2);c.fill();
-  if(facing==='left')c.scale(-1,1);
-  c.translate(side?attack*4:0,Math.round(-lift*1.5));
-  // The cloak swings opposite to the legs, with three shaded folds and gilt edging.
-  const sway=Math.round(step*2);
-  poly(c,[[-10,-17],[8,-18],[13+sway,7],[5,10],[-13+sway,7]],'#14272c');
-  poly(c,[[-9,-17],[7,-17],[11+sway,6],[3,8],[-11+sway,6]],'#8d5141');
-  poly(c,[[-7,-15],[1,-16],[4+sway,7],[-7+sway,5]],'#bd7550');
-  rect(c,-9+sway,5,18,2,'#dab276');
-  // Separate legs and shoes visibly alternate during a step.
-  const legL=Math.round(step*3),legR=Math.round(-step*3);
-  rect(c,-8,1+legL,7,8,'#1a2630');rect(c,2,1+legR,7,8,'#1a2630');
-  rect(c,-7,2+legL,5,5,'#5a696d');rect(c,3,2+legR,4,5,'#72807e');
-  rect(c,-9,7+legL,8,4,'#292b31');rect(c,2,7+legR,9,4,'#292b31');
-  rect(c,-8,8+legL,6,1,'#b69b75');rect(c,3,8+legR,7,1,'#b69b75');
-  // Tunic, seams, belt, satchel and metal buckle.
-  poly(c,[[-8,-19],[7,-19],[10,1],[-10,1]],'#263d41');
-  poly(c,[[-6,-18],[5,-18],[7,0],[-8,0]],back?'#3b6863':'#d1a05c');
-  rect(c,-4,-15,4,12,back?'#629183':'#f2cf88');rect(c,3,-15,3,12,back?'#29534f':'#ae793f');
-  rect(c,-9,-1,18,3,'#5d4437');rect(c,-1,-1,4,3,'#f3cf74');rect(c,0,0,2,1,'#674b3a');
-  if(back){rect(c,-7,-16,14,13,'#563f33');rect(c,-6,-15,12,11,'#b88c52');rect(c,-5,-14,10,4,'#d9b675');rect(c,-1,-13,2,7,'#79613e');rect(c,-4,-3,8,2,'#826544');}
-  else{rect(c,4,-13,3,14,'#855d3a');rect(c,3,0,7,5,'#806442');rect(c,4,1,5,2,'#d4ad6b');}
-  // Arms swing independently. A small blade rests on the left and lantern on right.
-  const armL=Math.round(-step*3),armR=Math.round(step*3);
-  rect(c,-12,-15+armL,5,11,'#1b343b');rect(c,-11,-14+armL,3,8,'#609083');
-  rect(c,-11,-6+armL,4,4,'#b67e58');rect(c,-10,-6+armL,2,3,'#f1c49a');
-  rect(c,8,-15+armR,5,10,'#253d42');rect(c,9,-14+armR,3,7,'#82ab8d');
-  rect(c,10,-6+armR,5,4,'#c68c61');rect(c,11,-6+armR,3,2,'#f8d2a6');
-  if(attack){c.save();c.translate(-11,-3+armL);c.rotate(-attack*.8);poly(c,[[-2,0],[-2,-15],[0,-20],[2,-15],[2,0]],'#233d43');rect(c,-1,-15,2,15,'#e3f3dc');rect(c,-4,-1,8,3,'#e5b45f');c.restore();}
-  else{rect(c,-13,-1+armL,3,8,'#9ba6a0');rect(c,-14,-3+armL,5,2,'#ddb56a');}
-  // Neck, hair and rounded hood with readable facial features.
-  rect(c,-3,-23,7,5,'#ab7553');rect(c,-2,-23,5,4,'#e8b98a');
-  poly(c,[[-11,-26],[-10,-33],[-5,-37],[5,-37],[11,-32],[12,-24],[7,-19],[-7,-19]],'#162c36');
-  poly(c,[[-9,-27],[-8,-32],[-4,-35],[5,-35],[9,-31],[10,-25],[5,-21],[-6,-21]],'#386c69');
-  poly(c,[[-8,-30],[-4,-34],[5,-34],[7,-31],[-3,-31],[-7,-25]],'#76a69a');
-  if(back){rect(c,-4,-30,8,9,'#487c73');rect(c,-2,-34,3,4,'#a4c4a3');rect(c,-3,-23,7,2,'#254c50');}
-  else if(side){rect(c,0,-30,9,9,'#c58f65');rect(c,3,-29,7,7,'#f3cfa3');rect(c,9,-26,3,3,'#dba678');rect(c,6,-28,2,3,'#26343b');rect(c,6,-28,1,1,'#f8efe0');rect(c,0,-31,8,3,'#523e34');rect(c,-1,-29,4,5,'#684b37');}
-  else{rect(c,-6,-29,13,9,'#c58f65');rect(c,-4,-28,9,8,'#f4cda0');rect(c,-6,-30,13,3,'#604539');rect(c,-6,-28,3,5,'#78533c');rect(c,-3,-26,2,3,'#27333a');rect(c,3,-26,2,3,'#27333a');rect(c,-3,-26,1,1,'#f7e9d0');rect(c,3,-26,1,1,'#f7e9d0');rect(c,-1,-21,4,1,'#a46b51');}
-  // Teal scarf and golden clasp.
-  rect(c,-8,-20,17,4,'#213c46');rect(c,-7,-19,14,2,'#8dc5b7');rect(c,4,-18,4,7,'#568c83');rect(c,4,-17,3,2,'#d8ca80');
-  const lanternY=-1+armR;
-  rect(c,14,lanternY-5,2,5,'#263d40');rect(c,12,lanternY-5,6,1,'#d3b277');
-  rect(c,11,lanternY,9,10,'#332c28');rect(c,12,lanternY+1,7,7,'#c8873d');rect(c,13,lanternY+2,5,5,'#f6c66b');rect(c,14,lanternY+2,3,4,'#fff3be');
-  rect(c,10,lanternY,11,2,'#a77742');rect(c,10,lanternY+9,11,2,'#b18d56');rect(c,12,lanternY+2,1,6,'#79552d');rect(c,18,lanternY+2,1,6,'#79552d');
-  c.restore();
-}
-
 function monster(c,e,x,y,size,time){
   c.save();c.translate(Math.round(x),Math.round(y));c.scale(size/40,size/40);
   const kind=String(e.kind||'moss'),pulse=Math.sin(time/420+e.x),step=Math.sin(time/180+e.y);
@@ -196,85 +87,6 @@ export function drawIcon(c,type,x,y,size=24){
   }else{
     poly(c,[[-10,4],[-8,-5],[-2,-9],[6,-7],[10,1],[5,8],[-5,9]],'#87988b');poly(c,[[-8,-5],[-2,-9],[6,-7],[2,1],[-6,1]],'#b1be9e');rect(c,2,2,5,3,'#536e65');
   }c.restore();
-}
-
-function town(c,w,h,state,time,selectedPlot){
-  rect(c,0,0,w,h,C.night);stars(c,w,h,time);
-  const scale=Math.min(w/940,h/550),ox=(w-1000*scale)/2,oy=(h-590*scale)/2;
-  c.save();c.translate(ox,oy);c.scale(scale,scale);
-  // River surrounds the inhabited terrace; subtle strips make its surface legible.
-  poly(c,[[0,390],[130,300],[220,325],[340,450],[540,410],[670,455],[830,390],[1000,420],[1000,620],[0,620]],'#112f39');
-  for(let i=0;i<80;i++){
-    let x=hash(i,8)*1000,y=390+hash(i,3)*220;
-    c.globalAlpha=.15+hash(i,1)*.15;rect(c,x+Math.sin(time/2000+i)*2,y,8+hash(i,2)*20,2,'#65968c');
-  }c.globalAlpha=1;
-  poly(c,[[77,185],[147,122],[324,90],[462,120],[550,87],[741,119],[872,167],[918,257],[910,409],[835,464],[686,489],[562,452],[439,476],[292,453],[168,421],[91,340]],'#162f2b');
-  poly(c,[[77,171],[147,108],[324,76],[462,106],[550,73],[741,105],[872,153],[918,243],[910,395],[835,450],[686,475],[562,438],[439,462],[292,439],[168,407],[91,326]],'#3a5144');
-  poly(c,[[95,176],[154,117],[323,90],[461,120],[551,88],[733,118],[857,164],[904,247],[894,385],[824,434],[686,459],[563,422],[436,447],[301,424],[180,395],[108,320]],'#435c49');
-  for(let i=0;i<110;i++){
-    let x=120+hash(i,60)*750,y=140+hash(i,42)*240;
-    rect(c,x,y,3,4,hash(i,4)>.5?'#587052':'#354e42');
-  }
-  // Central promenade, with split paths to the four kinds of town activity.
-  rect(c,433,155,91,267,'#737761');rect(c,182,270,648,63,'#737761');
-  rect(c,441,157,75,265,'#899079');rect(c,184,278,643,47,'#899079');
-  for(let row=0;row<26;row++)for(let col=0;col<5;col++){const x=442+col*15+(row%2)*3,y=160+row*10;rect(c,x,y,12,8,hash(row,col)>.5?'#a2a58a':'#929983');rect(c,x,y,12,1,'#bec0a0');rect(c,x+1,y+7,11,1,'#6e7c6b');}
-  for(let row=0;row<4;row++)for(let col=0;col<41;col++){const x=186+col*15+(row%2)*3,y=280+row*11;rect(c,x,y,12,9,hash(row+2,col)>.5?'#9fa38a':'#8a947d');rect(c,x,y,12,1,'#b8bca0');rect(c,x,y+8,12,1,'#6d7a67');}
-  // A narrow canal and wooden footbridge.
-  poly(c,[[115,349],[328,367],[417,417],[424,458],[391,450],[311,398],[132,380]],'#173d46');
-  for(let i=0;i<15;i++)rect(c,140+i*13,365+i*.7,8,2,'#42696b');
-  c.save();c.translate(321,376);c.rotate(.22);rect(c,-32,-23,64,44,'#5c5141');
-  for(let i=-30;i<32;i+=9)rect(c,i,-21,7,40,'#b59b6a');rect(c,-35,-25,70,4,'#d3b67a');rect(c,-35,21,70,4,'#d3b67a');c.restore();
-  // The archive and market are permanent landmarks.
-  house(c,202,241,'workshop',2,1.35);label(c,'交易所',250,257,12,'#d0d0ae');
-  house(c,278,388,'cottage',2,1.0);label(c,'旅人の宿',312,411,11,'#c1c7aa');
-  rect(c,143,298,69,35,'#695341');rect(c,139,288,77,13,'#d6bd7f');
-  for(let i=0;i<7;i++)rect(c,139+i*11,288,6,13,i%2?'#91a98a':'#e1c789');
-  drawIcon(c,'potion',158,316,18);drawIcon(c,'ration',180,316,18);drawIcon(c,'crystal',201,316,18);
-  // Curated gardens and small props add the density of a 16-bit town map.
-  for(const [gx,gy] of [[376,190],[542,192],[373,344],[547,344]]){
-    rect(c,gx,gy,29,35,'#314e3b');rect(c,gx,gy,29,3,'#829170');rect(c,gx,gy+32,29,3,'#a2a581');
-    for(let k=0;k<12;k++){const xx=gx+3+hash(k,gx)*23,yy=gy+4+hash(k,gy)*25;rect(c,xx,yy+3,2,4,'#628257');rect(c,xx-1,yy,4,4,k%3?'#d8b17c':'#be8082');rect(c,xx,yy+1,1,1,'#ffdeb1');}
-  }
-  for(let k=0;k<22;k++){const xx=130+k*12,yy=379+k*.7;rect(c,xx+Math.sin(time/1300+k)*3,yy,6,1,'#7fada26b');}
-  for(const [bx,by] of [[237,278],[298,279],[558,278]]){rect(c,bx,by,29,4,'#c8ad7c');rect(c,bx+2,by+4,3,9,'#615941');rect(c,bx+24,by+4,3,9,'#615941');rect(c,bx,by-5,29,3,'#9d875d');}
-  // The original ancient gate, where the expedition begins.
-  glow(c,478,145,85,'rgba(192,197,123,.13)');
-  rect(c,437,107,82,65,'#263d38');rect(c,448,119,60,51,'#122927');
-  rect(c,431,103,18,72,'#81917c');rect(c,507,103,18,72,'#627b6c');rect(c,438,91,80,18,'#a6af8b');rect(c,449,82,58,12,'#697f6c');
-  rect(c,448,171,63,8,'#aaa98b');rect(c,443,179,72,6,'#7a8973');
-  for(let i=0;i<5;i++)rect(c,455+i*11,104,3,5,C.gold);
-  poly(c,[[477,112],[486,130],[478,151],[469,131]],'#788e72');poly(c,[[478,119],[482,131],[478,142],[474,131]],'#cdd29b');
-  label(c,'翠灯の迷宮',478,64,13,'#d0cda7');
-  // Owned parcels are part of the town scene, visibly changing as the estate grows.
-  const plots=Array.isArray(state.plots)?state.plots:[];
-  for(let i=0;i<12;i++){
-    const col=i%3,row=Math.floor(i/3),x=586+col*91,y=178+row*69;
-    const owned=i<plots.length,p=plots[i],selected=selectedPlot===i;
-    rect(c,x-7,y-29,80,51,owned?'#526a50':'#3d5545');
-    if(owned){
-      rect(c,x-7,y+20,80,3,selected?C.gold:'#7d8c65');
-      if(p?.building)house(c,x+10,y+12,p.building,p.level||1,.65);
-      else{
-        for(let q=0;q<3;q++)rect(c,x+8+q*19,y-12,12,2,'#7d8e66');
-        rect(c,x+32,y-8,3,19,'#c7ad75');rect(c,x+22,y-11,23,12,'#a0ae80');
-        label(c,'+',x+33,y-5,12,'#3e5a46');
-      }
-      if(selected){rect(c,x-7,y-29,80,2,C.gold);rect(c,x-7,y-29,2,51,C.gold);rect(c,x+71,y-29,2,51,C.gold);}
-    }else{
-      for(let q=0;q<4;q++)rect(c,x+q*22,y+8,3,13,'#728169');rect(c,x,y+11,69,2,'#728169');
-      rect(c,x+20,y-9,2,6,'#637d57');rect(c,x+37,y-14,2,5,'#637d57');
-    }
-  }
-  label(c,`あなたの敷地  ${plots.length} / 12`,713,468,12,'#c6c6a6');
-  for(const t of [[114,185,1.25],[144,131,.9],[179,105,1],[332,103,.8],[365,145,1.1],[552,125,.7],[849,137,1],[893,214,.85],[899,365,.8],[856,428,.8],[563,414,.8],[194,391,.8],[112,307,.9]])tree(c,...t);
-  lamp(c,420,258,time,1);lamp(c,536,258,time,1);lamp(c,413,380,time,1);lamp(c,545,386,time,1);lamp(c,365,298,time,.85);
-  // Barrel stacks, flags and tiny flowers ground the pixel scene.
-  for(const [x,y] of [[186,245],[182,354],[345,403]]){rect(c,x,y,10,12,'#8e7855');rect(c,x,y+3,10,2,'#c3a974');rect(c,x,y+9,10,2,'#c3a974');}
-  for(const [x,y] of [[378,232],[552,350],[171,188],[843,334]]){rect(c,x,y,2,7,'#748b5b');rect(c,x-2,y-2,6,4,'#d7b578');}
-  glow(c,493,329,58,'rgba(237,188,104,.17)');player(c,477,321,47,time,{facing:'down'});
-  label(c,'帰る場所が、少しずつ大きくなる。',500,546,13,'#80988a');
-  c.restore();
 }
 
 const PALETTES = [
@@ -426,5 +238,5 @@ export function drawScene(canvas,state,options={}){
   if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
   const c=canvas.getContext('2d');if(!c)return null;c.setTransform(dpr,0,0,dpr,0,0);c.imageSmoothingEnabled=false;
   if(state.mode==='dungeon')return dungeon(c,w,h,state,time,options);
-  town(c,w,h,state,time,options.selectedPlot??-1);return null;
+  return drawTown(c,w,h,state,time,options,player,drawIcon);
 }
