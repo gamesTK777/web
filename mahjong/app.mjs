@@ -121,7 +121,7 @@ function renderResult(){
 function endRun(){
  if(!started||ended)return;ended=true;stopTimers();duration=Math.max(100,Date.now()-startedAt);
  for(const d of document.querySelectorAll('dialog[open]'))d.close();
- $('finalTitle').textContent=run.phase==='complete'?'七彩麻雀、完全制覇。':'今回の挑戦、おつかれさまでした。';
+ $('finalTitle').textContent=run.phase==='complete'?'セブン麻雀、完全制覇。':'今回の挑戦、おつかれさまでした。';
  $('finalScore').innerHTML=`${fmt(run.score)} <small>pt</small>`;$('finalSummary').textContent=`${run.completedStages} / 7ステージ突破 · ${run.totalBattles}対戦 / ${run.totalWins}勝 · 再挑戦 ${run.retries}回`;
  $('submitScore').disabled=false;$('finalRankStatus').textContent='ニックネームを入れて、今回のスコアを共有ランキングへ。';
  render();show('finalDialog');void loadRanking('finalRanking','finalRankStatus');
