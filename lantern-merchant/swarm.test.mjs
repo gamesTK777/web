@@ -19,28 +19,28 @@ function doorway(s){
 }
 function distances(s,start){const found=new Map([[`${start.x},${start.y}`,0]]),queue=[start];for(let i=0;i<queue.length;i++)for(const next of neighbors(queue[i])){const key=`${next.x},${next.y}`;if(walkable(s,next)&&!found.has(key)){found.set(key,found.get(`${queue[i].x},${queue[i].y}`)+1);queue.push(next);}}return found;}
 
-test('seeded houses appear only in B2-B4, keep entrances open, add bounded diverse creatures and useful treasure',()=>{
- const houses=[0,0,0,0,0,0],expectedRewards=['potion','bomb','ration','amber','prism'];
+test('seeded houses appear only in B2-B4 and B6-B9, keep entrances open, add bounded diverse creatures and useful treasure',()=>{
+ const houses=Array(11).fill(0),expectedRewards=['potion','bomb','ration','amber','prism'];
  for(let seed=1;seed<=120;seed++){
   let s=floor(seed,1);
-  for(let f=1;f<=5;f++){
-   const swarm=s.map.swarm,normal=3+f+(f===5?1:0),occupied=new Set([`${s.player.x},${s.player.y}`]);
-   assert.equal(s.enemies.length,normal+(swarm?f+4:0));
+  for(let f=1;f<=10;f++){
+   const swarm=s.map.swarm,normal=[4,5,6,7,8,9,10,11,12,12][f-1]+(f===10?1:0),occupied=new Set([`${s.player.x},${s.player.y}`]);
+   assert.equal(s.enemies.length,normal+(swarm?(f<=4?f+4:8):0));
    for(const entity of [...s.enemies,...s.loot]){const key=`${entity.x},${entity.y}`;assert.ok(!occupied.has(key));occupied.add(key);assert.equal(s.map.tiles[entity.y][entity.x],1);}
    const reachable=distances(s,s.player);for(const p of cells(s))assert.ok(reachable.has(`${p.x},${p.y}`));
-   if(f===1||f===5)assert.equal(Object.hasOwn(s.map,'swarm'),false);
+   if([1,5,10].includes(f))assert.equal(Object.hasOwn(s.map,'swarm'),false);
    if(swarm){
     houses[f]++;assert.equal(swarm.status,'dormant');assert.ok(swarm.roomIndex>=1&&swarm.roomIndex<=4);
-    const room=s.map.rooms[swarm.roomIndex],members=s.enemies.filter(e=>swarm.enemyIds.includes(e.id));assert.equal(members.length,f+4);assert.equal(new Set(members.map(e=>e.kind)).size,members.length);
+    const room=s.map.rooms[swarm.roomIndex],members=s.enemies.filter(e=>swarm.enemyIds.includes(e.id));assert.equal(members.length,f<=4?f+4:8);assert.equal(new Set(members.map(e=>e.kind)).size,members.length);
     for(const enemy of members){assert.ok(inside(enemy,room));assert.notEqual(enemy.kind,'boss');assert.ok(ENEMY_BY_ID[enemy.kind].firstFloor<=f);assert.ok(!neighbors(enemy).some(p=>!inside(p,room)&&walkable(s,p)),'dormant creatures never occupy a door');}
     for(const id of expectedRewards)assert.ok(s.loot.some(item=>item.id===id&&inside(item,room)),id);
     assert.equal(s.loot.length,8+f+5);assert.ok(!s.loot.some(item=>item.id==='relic'));
    }
    assert.deepEqual(validateSave(copy(s)),s);
-   if(f<5)s=descend(s);
+   if(f<10)s=descend(s);
   }
  }
- for(const f of [2,3,4])assert.ok(houses[f]>120*.2&&houses[f]<120*.5,`B${f}: ${houses[f]}`);
+ for(const f of [2,3,4,6,7,8,9])assert.ok(houses[f]>120*.18&&houses[f]<120*.52,`B${f}: ${houses[f]}`);
  assert.deepEqual(floor(3,3),floor(3,3),'generation remains deterministic');
 });
 
@@ -130,9 +130,9 @@ test('version-one maps without encounter metadata retain their exact shape and d
  let checked=0;
  for(let seed=1;seed<=30;seed++){
   let s=floor(seed,1);
-  for(let f=1;f<=5;f++){
+  for(let f=1;f<=10;f++){
    if(!s.map.swarm){const restored=validateSave(JSON.stringify(s));assert.deepEqual(restored,s);assert.equal(Object.hasOwn(restored.map,'swarm'),false);checked++;}
-   if(f<5)s=descend(s);
+   if(f<10)s=descend(s);
   }
  }
  assert.ok(checked>90);

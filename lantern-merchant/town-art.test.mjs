@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {newGame, validateSave} from './engine.mjs';
 import {drawTown, getTownPlot, isTownWalkable, townTransform, TOWN_LANDMARKS, TOWN_SPAWN} from './town-art.mjs';
 import {createTownNavigation} from './town-navigation.mjs';
+import {preloadEnvironment,getEnvironmentRevision} from './anime-environment.mjs?v=20261108-anime10';
 
 function freeze(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -150,4 +151,20 @@ test('cached artwork, construction effects and navigation preserve existing town
     assert.equal(JSON.stringify(state), before);
     assert.deepEqual(validateSave(JSON.parse(before)).plots, state.plots);
   }
+});
+
+test('decoded anime scenery replaces cached fallbacks while retaining all hit regions and actor depth',async()=>{
+  const state=town(true),before=drawTown(context(),960,590,state,0,{townPlayer:{x:245,y:298}}),revision=getEnvironmentRevision();
+  const previousImage=globalThis.Image;
+  globalThis.Image=class{constructor(){this.width=this.naturalWidth=640;this.height=this.naturalHeight=640;}set src(url){this.url=url;queueMicrotask(()=>this.onload?.());}async decode(){}};
+  try{
+    await preloadEnvironment({retryFailed:true});assert.ok(getEnvironmentRevision()>revision);
+    const calls=[],info=drawTown(context(960,590,calls),960,590,state,1200,{townPlayer:{x:245,y:298}},()=>calls.push({method:'hero'}));
+    assert.deepEqual(info.hitRegions,before.hitRegions);
+    const trade=calls.findIndex(call=>call.method==='drawImage'&&call.args[0].url?.endsWith('/trade.webp'));
+    const hero=calls.findIndex(call=>call.method==='hero');assert.ok(trade>=0);assert.ok(hero>trade);
+    assert.ok(calls.some(call=>call.method==='drawImage'&&call.args[0].url?.endsWith('/cottage.webp')));
+    assert.ok(calls.some(call=>call.method==='drawImage'&&call.args[0].url?.endsWith('/tree.webp')));
+    assert.equal(JSON.stringify(state),JSON.stringify(town(true)));
+  }finally{globalThis.Image=previousImage;}
 });

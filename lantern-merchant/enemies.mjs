@@ -1,4 +1,5 @@
 // Original creatures of the Lantern Labyrinth. Stable IDs keep version-1 saves valid.
+export const MAX_FLOOR=10;
 const definitions = [
   {id:'moss',name:'苔玉',firstFloor:1,behavior:'hunter',baseHp:5,hpPerFloor:3,baseAttack:1,defense:0,baseXp:5,description:'苔をまとった丸い魔物。近づくと1歩ずつ追ってくる。'},
   {id:'sprout',name:'芽狐',firstFloor:1,behavior:'shy',baseHp:4,hpPerFloor:2,baseAttack:1,defense:0,baseXp:4,description:'若葉の尾を持つ小さな狐。6マス以内でこちらに気づく。'},
@@ -14,13 +15,16 @@ const definitions = [
   {id:'mimic',name:'宝箱もどき',firstFloor:4,behavior:'ambush',baseHp:11,hpPerFloor:3,baseAttack:2,defense:1,baseXp:10,description:'宝箱の姿に潜む魔物。3マス以内に近づくまではじっと待つ。'},
   {id:'lizard',name:'熾蜥蜴',firstFloor:4,behavior:'hunter',baseHp:7,hpPerFloor:3,baseAttack:2,defense:0,baseXp:8,description:'熾火の尾を持つ蜥蜴。炎のような勢いで1歩ずつ追ってくる。'},
   {id:'knight',name:'空鎧',firstFloor:5,behavior:'slow',baseHp:14,hpPerFloor:3,baseAttack:3,defense:2,baseXp:12,description:'誰も着ていない古い鎧。移動は1ターンおきだが、接近戦では強敵。'},
-  {id:'boss',name:'灯晶の番人',firstFloor:5,behavior:'guardian',baseHp:65,hpPerFloor:0,baseAttack:11,defense:3,baseXp:100,boss:true,description:'最深部で暁の種を守る番人。結晶の鎧と強い一撃に備えよう。'},
+  {id:'boss',name:'灯晶の番人',firstFloor:MAX_FLOOR,behavior:'guardian',baseHp:65,hpPerFloor:0,baseAttack:11,defense:3,baseXp:100,boss:true,description:'地下10階で暁の種を守る番人。結晶の鎧と強い一撃に備えよう。'},
 ];
 export const ENEMY_TYPES=Object.freeze(definitions.map(definition=>Object.freeze({...definition})));
 export const ENEMY_BY_ID=Object.freeze(Object.assign(Object.create(null),Object.fromEntries(ENEMY_TYPES.map(type=>[type.id,type]))));
 export function enemiesForFloor(floor){return ENEMY_TYPES.filter(type=>!type.boss&&type.firstFloor<=floor);}
 export function enemyStats(kind,floor){
   const type=ENEMY_BY_ID[kind];if(!type)throw new Error('Unknown creature kind');
-  const f=Math.max(1,Math.min(5,Math.trunc(floor)||1));
+  const f=Math.max(1,Math.min(MAX_FLOOR,Math.trunc(floor)||1));
+  // Existing saved creatures keep their serialized stats. Only newly generated
+  // final guardians use the deeper expedition's stronger encounter values.
+  if(type.boss&&f===MAX_FLOOR)return{hp:115,attack:16,defense:4,xp:200};
   return{hp:type.baseHp+type.hpPerFloor*f,attack:type.baseAttack+(type.boss?0:f),defense:type.defense,xp:type.baseXp+(type.boss?0:f*3)};
 }

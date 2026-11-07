@@ -1,6 +1,8 @@
-import {drawTown} from './town-art.mjs?v=20261106-art';
+import {drawTown} from './town-art.mjs?v=20261108-anime10';
 import {drawExplorer as pixelPlayer} from './hero-art.mjs?v=20261106-art';
-import {drawAnimeExplorer,drawAnimeMonster,MONSTER_ART} from './anime-characters.mjs?v=20261107-swarm';
+import {drawAnimeExplorer,drawAnimeMonster,MONSTER_ART} from './anime-characters.mjs?v=20261108-anime10';
+import {drawAnimeDungeonTile} from './anime-environment.mjs?v=20261108-anime10';
+import {drawSwordImpact} from './combat-art.mjs?v=20261108-anime10';
 import {drawExtraMonsterFallback} from './monster-art.mjs?v=20261107-enemies15';
 import {drawSwarmRoom,drawSwarmSleep,drawSwarmActive} from './swarm-art.mjs?v=20261107-swarm';
 /* Original pixel environments with the approved anime character illustrations. */
@@ -14,7 +16,7 @@ const C = {
 const rect=(c,x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(Math.round(x),Math.round(y),Math.ceil(w),Math.ceil(h));};
 const poly=(c,points,color)=>{c.fillStyle=color;c.beginPath();points.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.fill();};
 const hash=(x,y)=>{let n=(x*374761393+y*668265263)|0;n=(n^(n>>>13))*1274126177;return ((n^(n>>>16))>>>0)/4294967295;};
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const clamp=(n,a=0,b=1)=>Math.max(a,Math.min(b,n));
 function glow(c,x,y,r,color='rgba(237,188,104,.20)'){
   const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,color);g.addColorStop(1,'rgba(237,188,104,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
 }
@@ -151,6 +153,7 @@ function tileArtwork(c,value,variant,p){
   }
 }
 function drawTile(c,x,y,size,value,variant,paletteIndex){
+  if(drawAnimeDungeonTile(c,x,y,size,value,variant,paletteIndex))return;
   const key=`${paletteIndex}:${value}:${variant}`;let tile=tileCache.get(key);
   if(tile===undefined){
     tile=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(48,48):typeof document!=='undefined'?document.createElement('canvas'):null;
@@ -182,8 +185,7 @@ function drawEffect(c,e,px,py,tile,time){
   const life=clamp((time-e.startedAt)/(e.duration||650),0,1);if(life>=1)return;
   const x=px(e.x)+tile*.5,y=py(e.y)+tile*.55;c.save();c.globalAlpha=1-life;
   if(e.kind==='attack'){
-    c.translate(x,y);c.rotate(-.7+life*1.5);poly(c,[[-tile*.4,0],[-tile*.15,-tile*.15],[tile*.45,-tile*.22],[tile*.2,-tile*.03],[-tile*.15,tile*.07]],'#fff2cb');
-    poly(c,[[-tile*.3,0],[tile*.42,-tile*.22],[tile*.18,-tile*.04]],'#e5b66b');
+    drawSwordImpact(c,{x,y:y-tile*.22,size:tile,progress:life,facing:e.facing,damage:e.damage,reducedMotion:!!e.reducedMotion});
   }else if(e.kind==='hurt'){
     for(let i=0;i<8;i++){const a=i*Math.PI/4,r=tile*(.1+life*.5);rect(c,x+Math.cos(a)*r,y+Math.sin(a)*r,3,3,'#ee9779');}
   }else if(e.kind==='swarm-start'||e.kind==='swarm-clear'){
@@ -205,7 +207,7 @@ function drawEffect(c,e,px,py,tile,time){
 function dungeon(c,w,h,state,time,options){
   rect(c,0,0,w,h,'#09171e');
   const map=state.map,tiles=map.tiles,rows=map.height,cols=map.width,p=state.player;
-  const tile=Math.round(clamp(Number(options.zoom)||3,1.5,5)*24),paletteIndex=clamp((state.floor||1)-1,0,4);
+  const tile=Math.round(clamp(Number(options.zoom)||3,1.5,5)*24),paletteIndex=clamp(Math.floor(((state.floor||1)-1)/2),0,4);
   const motion=options.motion||{},duration=motion.duration||190,progress=options.reducedMotion?1:clamp((time-(motion.startedAt??-1000))/duration,0,1);
   const moving=motion.kind==='move'&&progress<1&&motion.from&&motion.to;
   const eased=progress*progress*(3-2*progress);
@@ -240,11 +242,18 @@ function dungeon(c,w,h,state,time,options){
   }
   const playerScreen={x:px(playerWorld.x)+tile*.5,y:py(playerWorld.y)+tile*.63};
   glow(c,playerScreen.x+tile*.25,playerScreen.y,tile*2.5,'rgba(232,183,95,.15)');
-  const actors=(state.enemies||[]).filter(e=>visible(e.x,e.y)&&e.hp>0).map(e=>({y:e.y,enemy:e}));actors.push({y:playerWorld.y,hero:true});actors.sort((a,b)=>a.y-b.y);
+  const hits=(options.effects||[]).filter(e=>e.kind==='enemy-hit'&&time>=e.startedAt&&time-e.startedAt<e.duration);
+  const ghosts=hits.filter(e=>e.killed&&!state.enemies.some(m=>m.id===e.enemy.id)).map(e=>e.enemy);
+  const actors=[...(state.enemies||[]),...ghosts].filter(e=>visible(e.x,e.y)).map(e=>({y:e.y,enemy:e}));actors.push({y:playerWorld.y,hero:true});actors.sort((a,b)=>a.y-b.y);
   const eventMembers=['dormant','active'].includes(map.swarm?.status)?new Set(map.swarm.enemyIds):null;
   for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress,reducedMotion:!!options.reducedMotion});else{
     const e=actor.enemy,x=px(e.x)+tile*.5,y=py(e.y)+tile*.66,size=tile*(e.kind==='boss'?.98:.78);
+    const hit=hits.findLast(h=>h.enemy.id===e.id),p=hit?clamp((time-hit.startedAt)/hit.duration,0,1):0;
+    const recoil=hit&&!options.reducedMotion&&p>.38?Math.sin(clamp((p-.38)/.6)*Math.PI):0;
+    const dir=hit?.facing==='left'?[-1,0]:hit?.facing==='right'?[1,0]:hit?.facing==='up'?[0,-1]:[0,1];
+    c.save();if(hit){c.translate(dir[0]*tile*.13*recoil,dir[1]*tile*.10*recoil);if(hit.killed)c.globalAlpha=1-clamp((p-.48)/.52);if(p>.41&&p<.62)c.filter='brightness(1.85) saturate(.35)';}
     const illustrated=monster(c,e,x,y,size,time,{reducedMotion:!!options.reducedMotion});
+    c.restore();
     if(eventMembers?.has(e.id)){
       const art=MONSTER_ART[e.kind]||{height:1},radius=Math.max(7,tile*.115);
       // Floating illustrations and loading fallbacks put their HP bars at
@@ -253,7 +262,7 @@ function dungeon(c,w,h,state,time,options){
       (map.swarm.status==='active'?drawSwarmActive:drawSwarmSleep)(c,x+size*.34,barTop-radius-4,tile);
     }
   }}
-  for(const e of options.effects||[])if(!e.kind?.startsWith('swarm-')||visible(e.x,e.y))drawEffect(c,e,px,py,tile,time);
+  for(const e of options.effects||[])if(e.kind!=='enemy-hit'&&(!['swarm-start','swarm-clear','attack'].includes(e.kind)||visible(e.x,e.y)))drawEffect(c,e,px,py,tile,options.reducedMotion&&e.kind==='attack'?e.startedAt+e.duration*.48:time);
   c.restore();
   const edge=c.createRadialGradient(playerScreen.x,playerScreen.y,Math.min(w,h)*.18,playerScreen.x,playerScreen.y,Math.max(w,h)*.8);edge.addColorStop(0,'rgba(2,10,22,0)');edge.addColorStop(1,'rgba(3,8,22,.34)');c.fillStyle=edge;c.fillRect(0,0,w,h);
   minimap(c,w,h,state,cameraX,cameraY,viewCols,viewRows);

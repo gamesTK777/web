@@ -1,0 +1,210 @@
+{
+  "generatedWith": "built-in image_gen",
+  "date": "2026-11-08",
+  "quality": 88,
+  "maxEdge": 640,
+  "totalBytes": 510000,
+  "assets": [
+    {
+      "id": "trade",
+      "file": "trade.webp",
+      "width": 540,
+      "height": 495,
+      "footAnchor": 0.8909090909090909,
+      "contentBounds": {
+        "x": 0.027777777777777776,
+        "y": 0.3878787878787879,
+        "width": 0.9444444444444444,
+        "height": 0.503030303030303
+      },
+      "bytes": 48794,
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255
+      },
+      "source": {
+        "file": "trade-original.png",
+        "width": 1774,
+        "height": 887,
+        "sha256": "5378bed9e68e7cf76e5295469be7e786d8b8fbaa9b0f9607e1f45939079d468a"
+      }
+    },
+    {
+      "id": "inn",
+      "file": "inn.webp",
+      "width": 498,
+      "height": 453,
+      "footAnchor": 0.8741721854304636,
+      "contentBounds": {
+        "x": 0.030120481927710843,
+        "y": 0.11699779249448124,
+        "width": 0.9397590361445783,
+        "height": 0.7571743929359823
+      },
+      "bytes": 63538,
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255
+      },
+      "source": {
+        "file": "inn-original.png",
+        "width": 1536,
+        "height": 1024,
+        "sha256": "aafbbac22e8f72c08aa6bda9176322311aca793a50bf2faa39e3159b40d881c2"
+      }
+    },
+    {
+      "id": "gate",
+      "file": "gate.webp",
+      "width": 480,
+      "height": 580,
+      "footAnchor": 0.8758620689655172,
+      "contentBounds": {
+        "x": 0.041666666666666664,
+        "y": 0.2103448275862069,
+        "width": 0.9166666666666666,
+        "height": 0.6655172413793103
+      },
+      "bytes": 56570,
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255
+      },
+      "source": {
+        "file": "gate-original.png",
+        "width": 1372,
+        "height": 1146,
+        "sha256": "9cb5462e66692e037073575fa196c187ae575fba7432a0c39faed9bfbdff1f1e"
+      }
+    },
+    {
+      "id": "cottage",
+      "file": "cottage.webp",
+      "width": 576,
+      "height": 576,
+      "footAnchor": 0.8541666666666666,
+      "contentBounds": {
+        "x": 0.08680555555555555,
+        "y": 0.0625,
+        "width": 0.828125,
+        "height": 0.7916666666666666
+      },
+      "bytes": 53202,
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255
+      },
+      "source": {
+        "file": "cottage-original.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "e39e55d117585eb28020374135ca5ff9affd7ca2bb71cfa11d11c58bdf37bb30"
+      }
+    },
+    {
+      "id": "workshop",
+      "file": "workshop.webp",
+      "width": 576,
+      "height": 576,
+      "footAnchor": 0.8541666666666666,
+      "contentBounds": {
+        "x": 0.1076388888888889,
+        "y": 0.0625,
+        "width": 0.7847222222222222,
+        "height": 0.7916666666666666
+      },
+      "bytes": 54724,
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255
+      },
+      "source": {
+        "file": "workshop-original.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "dd21a178ed30f6ff58d685279cb8fe4ab89775b89f2ad69bb79080512ff01425"
+      }
+    },
+    {
+      "id": "tree",
+      "file": "tree.webp",
+      "width": 416,
+      "height": 528,
+      "footAnchor": 0.8787878787878788,
+      "contentBounds": {
+        "x": 0.07932692307692307,
+        "y": 0.045454545454545456,
+        "width": 0.84375,
+        "height": 0.8333333333333334
+      },
+      "bytes": 48968,
+      "hasAlpha": true,
+      "alpha": {
+        "min": 0,
+        "max": 255
+      },
+      "source": {
+        "file": "tree-original.png",
+        "width": 1110,
+        "height": 1417,
+        "sha256": "045060d05d4087f650446827ed537fcdaed075e587eb6221afe6647df872b750"
+      }
+    },
+    {
+      "id": "grass",
+      "file": "grass.webp",
+      "width": 640,
+      "height": 640,
+      "footAnchor": null,
+      "contentBounds": null,
+      "bytes": 51646,
+      "hasAlpha": false,
+      "alpha": null,
+      "source": {
+        "file": "grass-original.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "86679bd347f3148aa3aed708eff6ca0d1413dea23be6378f06830de30b6b636a"
+      }
+    },
+    {
+      "id": "stone-floor",
+      "file": "stone-floor.webp",
+      "width": 640,
+      "height": 640,
+      "footAnchor": null,
+      "contentBounds": null,
+      "bytes": 72948,
+      "hasAlpha": false,
+      "alpha": null,
+      "source": {
+        "file": "stone-floor-original.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "4b80eb2073a5761d3ed73d44e09b9acc86eccb8c1988b8a34e77d45f4bab0249"
+      }
+    },
+    {
+      "id": "stone-wall",
+      "file": "stone-wall.webp",
+      "width": 640,
+      "height": 640,
+      "footAnchor": null,
+      "contentBounds": null,
+      "bytes": 59610,
+      "hasAlpha": false,
+      "alpha": null,
+      "source": {
+        "file": "stone-wall-original.png",
+        "width": 1254,
+        "height": 1254,
+        "sha256": "105a59f4d0a92996688b36b19ff128af02ee528042f87532a2bc3c1139dbb5e6"
+      }
+    }
+  ]
+}

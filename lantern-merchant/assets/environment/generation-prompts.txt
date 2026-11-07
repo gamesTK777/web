@@ -1,0 +1,55 @@
+Pal Merchant Diary — anime environment assets
+Generated with the built-in image_gen tool, 2026-11-08. No CLI/API fallback.
+Transparent assets retain generated alpha; only margin cropping, resizing, transparent canvas padding and WebP encoding were performed. Object canvases and foot anchors match existing gameplay geometry.
+
+trade
+PROMPT:
+Use case: stylized-concept. Asset type: one original transparent 2D anime fantasy RPG environment sprite, for a cozy island merchant adventure. Polished hand-painted anime background art with clean dark brown outlines, broad cel-shaded color planes, soft painterly edge accents and a few carefully drawn material details, NOT pixel art, NOT voxel, NOT photoreal or 3D rendered. Elevated frontal JRPG view: roof top is visible, front facade dominant, tiny right-side depth only, no dramatic isometric angle. Warm sunlight from upper left, soft unified shadow planes, ivory plaster and warm timber, aged teal and sienna roof accents, warm amber window light. Entire object centered, full roof and base visible with transparent empty margin on every side. No scenery, no ground patch, no drop shadow, no border, no text, no logos, no people, no detached objects. Front door at horizontal center of facade along bottom edge, readable at 150px tall. Genuine fully transparent alpha background. Subject: A single wide one-storey medieval trading cottage with a substantial teal tiled gable roof, cream timber-framed walls, central open wooden front door with a small stone step, golden shop windows, a modest muted coral and cream striped cloth awning, a few crates and a barrel tightly attached at its front corners as part of the silhouette. Cozy polished original design; broad low proportions.
+
+---
+
+inn
+PROMPT:
+Use case: stylized-concept. Asset type: one original transparent 2D anime fantasy RPG environment sprite, for a cozy island merchant adventure. Polished hand-painted anime background art with clean dark brown outlines, broad cel-shaded color planes, soft painterly edge accents and a few carefully drawn material details, NOT pixel art, NOT voxel, NOT photoreal or 3D rendered. Elevated frontal JRPG view: roof top is visible, front facade dominant, tiny right-side depth only, no dramatic isometric angle. Warm sunlight from upper left, soft unified shadow planes, ivory plaster and warm timber, aged teal and sienna roof accents, warm amber window light. Entire object centered, full roof and base visible with transparent empty margin on every side. No scenery, no ground patch, no drop shadow, no border, no text, no logos, no people, no detached objects. Front door at horizontal center of facade along bottom edge, readable at 150px tall. Genuine fully transparent alpha background. Subject: A single broad two-storey cozy fantasy inn, warm ivory plaster with timber framing, a sienna-red tiled gable roof and one small dormer, central welcoming front door at ground level with two stone steps, wide golden windows with recessed wooden frames, small chimney, subtle attached flower boxes. Clear complete architectural silhouette, broad proportions.
+
+---
+
+gate
+PROMPT:
+Use case: stylized-concept. Asset type: one original transparent 2D anime fantasy RPG environment sprite, for a cozy island merchant adventure. Polished hand-painted anime background art with clean dark brown outlines, broad cel-shaded color planes, soft painterly edge accents and a few carefully drawn material details, NOT pixel art, NOT voxel, NOT photoreal or 3D rendered. Elevated frontal JRPG view: roof top is visible, front facade dominant, tiny right-side depth only, no dramatic isometric angle. Warm sunlight from upper left, soft unified shadow planes, ivory plaster and warm timber, aged teal and sienna roof accents, warm amber window light. Entire object centered, full roof and base visible with transparent empty margin on every side. No scenery, no ground patch, no drop shadow, no border, no text, no logos, no people, no detached objects. Front door at horizontal center of facade along bottom edge, readable at 150px tall. Genuine fully transparent alpha background. Subject: A single rounded ancient stone dungeon entrance arch, two squat mossy stone piers supporting a deep dark arched opening with a soft teal magical portal glow inside it. Hand-carved grey-green stone blocks with upper-left highlights, a small teal crystal embedded in the upper arch, two stone steps at the centered doorway at the bottom. No terrain or rocks outside the arch footprint. Broad compact arch shape, clearly passable center.
+
+---
+
+cottage
+PROMPT:
+Use case: stylized-concept. Asset type: one original transparent 2D anime fantasy RPG environment sprite for a cozy island merchant adventure. Polished hand-painted anime background art, clean dark brown outlines, broad smooth cel-shaded planes, soft painterly material accents, NOT pixel art or 3D render. Elevated frontal JRPG view with roof top visible, front facade dominant, slight right side depth only. Warm sunlight upper left. Ivory plaster, warm timber, teal and sienna roof accents, amber windows. Entire object isolated and centered, complete outline and base visible. Genuine transparent alpha on all exterior pixels; absolutely no colored background, no glow outside silhouette, no shadow cloud, no backdrop or groundpatch. No text, logos, people, detached objects. The centered front door sits on the bottom edge of building. Compact near-square silhouette for 96x96 logical plot, readable at70px. Subject: One small cozy medieval rental cottage, steep teal gable roof with simple rounded tiles, a cream timber-framed facade, central wooden door with one step, two warm small windows and tightly attached flowerboxes. Modest simple one-floor home.
+
+---
+
+workshop
+PROMPT:
+Use case: stylized-concept. Asset type: one original transparent 2D anime fantasy RPG environment sprite for a cozy island merchant adventure. Polished hand-painted anime background art, clean dark brown outlines, broad smooth cel-shaded planes, soft painterly material accents, NOT pixel art or 3D render. Elevated frontal JRPG view with roof top visible, front facade dominant, slight right side depth only. Warm sunlight upper left. Ivory plaster, warm timber, teal and sienna roof accents, amber windows. Entire object isolated and centered, complete outline and base visible. Genuine transparent alpha on all exterior pixels; absolutely no colored background, no glow outside silhouette, no shadow cloud, no backdrop or groundpatch. No text, logos, people, detached objects. The centered front door sits on the bottom edge of building. Compact near-square silhouette for 96x96 logical plot, readable at70px. Subject: One small fantasy artisan workshop house, warm ivory walls with dark timber braces, a muted sienna gable roof, one thick squat chimney, central front wooden door and one golden arched window, a tiny attached side workbench with two tools represented by simple shapes. Compact silhouette, no sign or writing.
+
+---
+
+tree
+PROMPT:
+Use case: stylized-concept. Asset type: one original transparent 2D anime fantasy RPG tree sprite. A single broad leafy deciduous tree with visible sturdy warm-brown trunk rooted at centered bottom, a rounded layered canopy of sage emerald and olive-green leaves, clean dark outline and broad hand-painted cel-shaded leaf masses with a few leaf accents. Warm sunlight upperleft, elevated frontal JRPG view showing top canopy, no isometric block, no pixel art, no photoreal or 3D. Compact tall silhouette aspect104:132, complete canopy/trunk base visible with empty margin. Genuine fully transparent background outside exact tree outline. No ground patch, no background, no fog, no glowing halo, no castshadow, no scene, no people, no text.
+
+---
+
+grass
+PROMPT:
+Use case: stylized-concept. Asset type: a seamless repeatable square texture for a 2D anime fantasy RPG environment, seen orthographically. Polished hand-painted anime background artwork, broad cel-shaded painted shapes, a little soft gouache texture, calm midtone contrast, NOT pixel art, NOT photorealistic or 3D. This is a texture swatch that completely fills a perfect square. Tile seamlessly in both horizontal and vertical directions: left edge must join right edge and top edge must join bottom edge with no boundary line, frame, vignette or brightness gradient. Uniform diffuse light across the entire image. No objects, props, figures, text, symbols, borders or cast shadows. Subject: Top-down lush meadow grass: soft sage-green and olive-green ground with a restrained scattering of broad stylized curved grass blades and blended leafy brush masses. No flowers, no stones, no tree leaves, no conspicuous isolated motifs. Cohesive gentle surface readable behind a walking character.
+
+---
+
+stone-floor
+PROMPT:
+Use case: stylized-concept. Asset type: a seamless repeatable square texture for a 2D anime fantasy RPG environment, seen orthographically. Polished hand-painted anime background artwork, broad cel-shaded painted shapes, a little soft gouache texture, calm midtone contrast, NOT pixel art, NOT photorealistic or 3D. This is a texture swatch that completely fills a perfect square. Tile seamlessly in both horizontal and vertical directions: left edge must join right edge and top edge must join bottom edge with no boundary line, frame, vignette or brightness gradient. Uniform diffuse light across the entire image. No objects, props, figures, text, symbols, borders or cast shadows. Subject: Top-down ancient limestone floor paving: medium-large slightly irregular rounded rectangular stone slabs in subtle grey-green and warm limestone colors, gently bevelled worn edges, thin muted dark grout, a few fine cracks and very subtle moss seams. No large holes or debris. Stone layout continues naturally through every edge.
+
+---
+
+stone-wall
+PROMPT:
+Use case: stylized-concept. Asset type: a seamless repeatable square texture for a 2D anime fantasy RPG environment, seen orthographically. Polished hand-painted anime background artwork, broad cel-shaded painted shapes, a little soft gouache texture, calm midtone contrast, NOT pixel art, NOT photorealistic or 3D. This is a texture swatch that completely fills a perfect square. Tile seamlessly in both horizontal and vertical directions: left edge must join right edge and top edge must join bottom edge with no boundary line, frame, vignette or brightness gradient. Uniform diffuse light across the entire image. No objects, props, figures, text, symbols, borders or cast shadows. Subject: Flat FRONT ELEVATION of ancient dungeon masonry wall: three or four horizontal offset courses of broad slightly rounded stone blocks, grey-green slate and limestone, soft warm bevel highlights only at stone top edges, thin dark desaturated blue-grey mortar, very subtle lichen. NOT perspective, no wall corner or top ledge, no columns, no door, no lamps. Courses and block joints continue through boundaries.

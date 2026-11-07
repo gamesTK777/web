@@ -9,7 +9,7 @@ function context(){
   const c={calls,imageSmoothingEnabled:false,imageSmoothingQuality:'low',fillStyle:'#000'};
   c.save=()=>stack.push({imageSmoothingEnabled:c.imageSmoothingEnabled,imageSmoothingQuality:c.imageSmoothingQuality,fillStyle:c.fillStyle});
   c.restore=()=>Object.assign(c,stack.pop());
-  for(const key of ['translate','scale','rotate','beginPath','ellipse','fill','fillRect','drawImage','moveTo','lineTo','closePath'])c[key]=(...args)=>{calls.push({key,args});for(const arg of args)if(typeof arg==='number')assert.ok(Number.isFinite(arg),key+' uses finite coordinates');};
+  for(const key of ['translate','scale','rotate','beginPath','ellipse','arc','rect','clip','stroke','fill','fillRect','drawImage','moveTo','lineTo','closePath'])c[key]=(...args)=>{calls.push({key,args});for(const arg of args)if(typeof arg==='number')assert.ok(Number.isFinite(arg),key+' uses finite coordinates');};
   c.createRadialGradient=()=>({addColorStop(){}});return c;
 }
 function image(id){return{id,width:id==='explorer'?320:512,height:512};}

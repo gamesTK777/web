@@ -1,19 +1,21 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261107-swarm';
-import {drawScene} from './renderer.mjs?v=20261107-swarm';
-import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261107-swarm';
-import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261106-art';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-anime10';
+import {drawScene} from './renderer.mjs?v=20261108-anime10';
+import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-anime10';
+import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261108-anime10';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
 import {createAudioManager} from './audio.mjs?v=20261107-swarm';
 import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261107-swarm';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
-import {ENEMY_TYPES} from './enemies.mjs?v=20261107-enemies15';
+import {preloadEnvironment,getEnvironmentAssetStatus} from './anime-environment.mjs?v=20261108-anime10';
+import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-anime10';
+import {ENEMY_TYPES} from './enemies.mjs?v=20261108-anime10';
 
 const $=id=>document.getElementById(id), KEY='tk777-lantern-merchant-v1';
 const money=n=>Number(n).toLocaleString('ja-JP'), esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function showBestiary(){
   held.clear();
   if(!$('bestiaryGrid').childElementCount){
-    $('bestiaryGrid').innerHTML=ENEMY_TYPES.map(enemy=>`<article class="bestiary-card"><div class="bestiary-art"><img src="assets/characters/${encodeURIComponent(enemy.id)}.webp" alt="${esc(enemy.name)}" loading="lazy" decoding="async"></div><span class="bestiary-depth">${enemy.id==='boss'?'B5 · 迷宮の守り手':`B${enemy.firstFloor}〜`}</span><h3>${esc(enemy.name)}</h3><p>${esc(enemy.description)}</p></article>`).join('');
+    $('bestiaryGrid').innerHTML=ENEMY_TYPES.map(enemy=>`<article class="bestiary-card"><div class="bestiary-art"><img src="assets/characters/${encodeURIComponent(enemy.id)}.webp" alt="${esc(enemy.name)}" loading="lazy" decoding="async"></div><span class="bestiary-depth">${enemy.id==='boss'?`B${MAX_FLOOR} · 迷宮の守り手`:`B${enemy.firstFloor}〜`}</span><h3>${esc(enemy.name)}</h3><p>${esc(enemy.description)}</p></article>`).join('');
   }
   $('bestiaryDialog').showModal();
 }
@@ -63,7 +65,7 @@ function visualEvent(previous,action,result){
   if(action.type==='move')facing=action.dx<0?'left':action.dx>0?'right':action.dy<0?'up':'down';
   const from=sameFloor?(frameInfo?.playerWorld??previous.player):state.player;
   const moved=sameFloor&&(previous.player.x!==state.player.x||previous.player.y!==state.player.y);
-  motion={from:{...from},to:{...state.player},startedAt:time,duration:reduced?0:190,facing,kind:moved?'move':sameFloor&&action.type==='move'?'attack':'idle'};
+  motion={from:{...from},to:{...state.player},startedAt:time,duration:reduced?0:action.type==='move'&&!moved?ATTACK_DURATION:190,facing,kind:moved?'move':sameFloor&&action.type==='move'?'attack':'idle'};
   const add=(kind,text='',position=state.player)=>effects.push({kind,...position,text,startedAt:time,duration:800});
   if(!sameFloor)effects=[];
   if(state.mode==='town'&&result.event==='build'){
@@ -73,7 +75,12 @@ function visualEvent(previous,action,result){
     effects.push({kind:'build',index,startedAt:time,duration:1400});
   }
   let event=result.event;
-  if(event==='attack')add('attack','', {x:previous.player.x+(action.dx||0),y:previous.player.y+(action.dy||0)});
+  const victim=sameFloor&&action.type==='move'&&!moved?previous.enemies.find(e=>e.x===previous.player.x+action.dx&&e.y===previous.player.y+action.dy):null;
+  if(victim){
+    const after=state.enemies.find(e=>e.id===victim.id),damage=Math.max(0,victim.hp-(after?.hp||0));
+    effects.push({kind:'attack',x:victim.x,y:victim.y,facing,damage,startedAt:time,duration:reduced?180:ATTACK_DURATION,reducedMotion:reduced});
+    if(!reduced)effects.push({kind:'enemy-hit',enemy:{...victim},x:victim.x,y:victim.y,facing,killed:!after,startedAt:time,duration:ATTACK_DURATION});
+  }
   if(sameFloor&&state.hp<previous.hp){add('hurt',`−${previous.hp-state.hp}`);sound.play('hurt');}
   if(sameFloor&&state.runLoot.reduce((n,i)=>n+i.qty,0)>previous.runLoot.reduce((n,i)=>n+i.qty,0)){add('pickup','GET');event='pickup';}
   if(state.level>previous.level){add('level',`LEVEL ${state.level}`);event='level';}
@@ -127,7 +134,7 @@ function render(){
   $('potionButton').innerHTML=`回復薬 <b>${count('potion')}</b>`;$('potionButton').disabled=!count('potion');
   $('foodButton').innerHTML=`食料 <b>${count('ration')}</b>`;$('foodButton').disabled=!count('ration');
   const progress=[state.stats.runs>0,state.stats.earned>0,rentTotal(state)>0,state.weaponId!=='starter',state.stats.clears>0];
-  const quest=state.stats.clears>0?['街の灯りを増やそう','暁の種を持ち帰りました。土地を広げ、家賃と商いで豊かな街を育てよう。']:rentTotal(state)>0?['最深部の「暁の種」を探そう','家賃を装備に変えて、地下5階の番人へ。食料と帰灯石の準備を忘れずに。']:state.stats.earned>0?['最初の貸家を建てよう','土地と建物から「庭付き貸家」を建てると、翌日から家賃が届きます。']:['最初の宝物を持ち帰ろう','迷宮で素材を拾い、帰還して売却。まずは入口の近くから探索しよう。'];
+  const quest=state.stats.clears>0&&state.maxFloor>=MAX_FLOOR?['街の灯りを増やそう','暁の種を持ち帰りました。土地を広げ、家賃と商いで豊かな街を育てよう。']:rentTotal(state)>0?['最深部の「暁の種」を探そう','家賃を装備に変えて、地下10階の番人へ。食料と帰灯石の準備を忘れずに。']:state.stats.earned>0?['最初の貸家を建てよう','土地と建物から「庭付き貸家」を建てると、翌日から家賃が届きます。']:['最初の宝物を持ち帰ろう','迷宮で素材を拾い、帰還して売却。まずは入口の近くから探索しよう。'];
   $('questTitle').textContent=quest[0];$('questDescription').textContent=quest[1];$('milestones').innerHTML=progress.map(done=>`<i class="${done?'done':''}"></i>`).join('');
   $('eventLog').replaceChildren(...state.log.slice(-7).reverse().map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   $('recordStats').innerHTML=`<div><b>${state.stats.runs}</b>探索回数</div><div><b>B${state.maxFloor}</b>到達階層</div><div><b>${state.stats.clears}</b>遺物帰還</div>`;
@@ -310,3 +317,5 @@ function showStart(){showStartContents();held.clear();$('welcomeDialog').showMod
 render();updateSound();requestAnimationFrame(animate);showStart();
 void preloadCharacters({views:['up','left','right']}).then(()=>{document.body.dataset.characterArt=getCharacterAssetStatus().baseReady?'anime':'fallback';draw();});
 if(loadError){$('saveStatus').textContent='記録の確認が必要';$('saveStatus').classList.add('failed');toast(loadError);}
+
+void preloadEnvironment().then(()=>{const assets=getEnvironmentAssetStatus();document.body.dataset.environmentArt=assets.complete&&!assets.failed.length?'anime':'fallback';draw();});

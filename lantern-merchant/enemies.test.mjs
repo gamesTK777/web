@@ -15,16 +15,17 @@ function phase(id){return[...id].reduce((value,c)=>value+c.charCodeAt(0),0);}
 
 test('the original bestiary has exactly fifteen distinct named species and valid floor rosters',()=>{
  assert.equal(ENEMY_TYPES.length,15);assert.equal(new Set(ENEMY_TYPES.map(type=>type.id)).size,15);assert.equal(new Set(ENEMY_TYPES.map(type=>type.name)).size,15);
- for(const type of ENEMY_TYPES){assert.ok(type.description);assert.ok(Number.isInteger(type.firstFloor)&&type.firstFloor>=1&&type.firstFloor<=5);assert.equal(ENEMY_BY_ID[type.id],type);}
+ for(const type of ENEMY_TYPES){assert.ok(type.description);assert.ok(Number.isInteger(type.firstFloor)&&type.firstFloor>=1&&type.firstFloor<=10);assert.equal(ENEMY_BY_ID[type.id],type);}
  assert.equal(ENEMY_TYPES.filter(type=>type.boss).length,1);assert.equal(ENEMY_BY_ID.boss.name,'灯晶の番人');
- for(let floor=1;floor<=5;floor++)for(const type of enemiesForFloor(floor)){assert.ok(type.firstFloor<=floor);assert.equal(!!type.boss,false);}
+ for(let floor=1;floor<=10;floor++)for(const type of enemiesForFloor(floor)){assert.ok(type.firstFloor<=floor);assert.equal(!!type.boss,false);}
 });
 
-test('every generated five-floor expedition introduces all fifteen species without adding crowding or blocking the boss',()=>{
+test('every generated ten-floor expedition introduces all fifteen species without adding crowding or blocking the boss',()=>{
  for(let seed=1;seed<=40;seed++){
   let state=perform(newGame(seed),{type:'enter'});const encountered=new Set();
-  for(let floor=1;floor<=5;floor++){
-   assert.equal(state.enemies.length,3+floor+(floor===5?1:0)+(state.map.swarm?.enemyIds.length||0));
+  for(let floor=1;floor<=10;floor++){
+   const expectedNormal=[4,5,6,7,8,9,10,11,12,12][floor-1];
+   assert.equal(state.enemies.length,expectedNormal+(floor===10?1:0)+(state.map.swarm?.enemyIds.length||0));
    const occupied=new Set([`${state.player.x},${state.player.y}`]);
    for(const enemy of state.enemies){
     encountered.add(enemy.kind);assert.ok(ENEMY_BY_ID[enemy.kind].firstFloor<=floor);
@@ -34,7 +35,7 @@ test('every generated five-floor expedition introduces all fifteen species witho
    const boss=state.enemies.find(enemy=>enemy.kind==='boss');
    if(boss)for(const enemy of state.enemies.filter(enemy=>enemy!==boss))assert.ok(distance(enemy,boss)>1);
    assert.deepEqual(validateSave(copy(state)),state);
-   if(floor<5){const y=state.map.tiles.findIndex(row=>row.includes(2));state.player={x:state.map.tiles[y].indexOf(2),y};state=perform(state,{type:'stairs'});}
+   if(floor<10){const y=state.map.tiles.findIndex(row=>row.includes(2));state.player={x:state.map.tiles[y].indexOf(2),y};state=perform(state,{type:'stairs'});}
   }
   assert.equal(encountered.size,15,`seed ${seed}`);
  }
@@ -55,6 +56,17 @@ test('legacy creature combat values and final guardian rewards retain their old 
   assert.deepEqual(enemyStats('golem',floor),{hp:10+floor*3,attack:2+floor,defense:1,xp:5+floor*3});
  }
  assert.deepEqual(enemyStats('boss',5),{hp:65,attack:11,defense:3,xp:100});
+});
+
+test('deeper creature stats increase gradually and the new final guardian remains within equipped-player scale',()=>{
+ for(const type of ENEMY_TYPES.filter(type=>!type.boss)){
+  let prior=enemyStats(type.id,5);
+  for(let floor=6;floor<=10;floor++){
+   const current=enemyStats(type.id,floor);assert.equal(current.hp-prior.hp,type.hpPerFloor);assert.equal(current.attack-prior.attack,1);assert.equal(current.defense,prior.defense);assert.equal(current.xp-prior.xp,3);prior=current;
+  }
+ }
+ const boss=enemyStats('boss',10);assert.deepEqual(boss,{hp:115,attack:16,defense:4,xp:200});
+ assert.equal(ENEMY_BY_ID.boss.firstFloor,10);assert.equal(enemyStats('moss',999).hp,enemyStats('moss',10).hp);
 });
 
 test('slow creatures move once in two turns, while an undisturbed mimic waits outside its ambush radius',()=>{

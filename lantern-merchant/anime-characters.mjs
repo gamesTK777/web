@@ -1,3 +1,4 @@
+import {drawSwordExplorer,swordPose} from './combat-art.mjs?v=20261108-anime10';
 /* Approved anime illustrations are loaded once and drawn in presentation space.
  * These functions never change saved coordinates, combat, collision or inventory. */
 export const MONSTER_ART=Object.freeze({
@@ -82,12 +83,13 @@ export function createAnimeCharacterRenderer({loadImage=browserLoadImage,baseUrl
     const key=specific?'explorer-'+facing:'explorer',g=geometry(image,key,size,1.42),reduced=!!motion.reducedMotion;
     const progress=clamp(Number(motion.progress??1),0,1),walking=!reduced&&motion.kind==='move'&&progress<1;
     const attacking=!reduced&&motion.kind==='attack'&&progress<1,step=walking?Math.sin(progress*Math.PI*4):0;
-    const attack=attacking?Math.sin(progress*Math.PI):0,dir=facing==='left'?-1:facing==='right'?1:0;
+    const pose=attacking?swordPose(progress):null;
+    const attack=attacking?pose.cut*(1-pose.recover):0,dir=facing==='left'?-1:facing==='right'?1:0;
     const foot=y+size*.3,breath=reduced||walking||attacking?0:Math.sin(time/650)*.005;
-    c.save();shadow(c,x,foot,size);c.translate(x+dir*attack*size*.14,foot+(facing==='up'?-1:facing==='down'?1:0)*attack*size*.08);
+    c.save();shadow(c,x,foot,size);c.translate(x+dir*attack*size*.28,foot+(facing==='up'?-1:facing==='down'?1:0)*attack*size*.30);
     c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
     c.rotate((walking?step*.012:0)+dir*attack*.10);c.scale(1,1+breath);
-    if(walking)walkingImage(c,image,g,step);else fullImage(c,image,g);
+    if(attacking)drawSwordExplorer(c,image,g,facing,size,progress);else if(walking)walkingImage(c,image,g,step);else fullImage(c,image,g);
     c.restore();return true;
   }
 

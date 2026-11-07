@@ -1,5 +1,8 @@
 // Original turn-based adventure and town economy. No network or real-money transactions.
-import {ENEMY_BY_ID,enemiesForFloor,enemyStats} from './enemies.mjs?v=20261107-enemies15';
+import {ENEMY_BY_ID,enemiesForFloor,enemyStats,MAX_FLOOR} from './enemies.mjs?v=20261108-anime10';
+export {MAX_FLOOR};
+export const normalEnemyCount=floor=>Math.min(12,3+floor);
+export const swarmEnemyCount=floor=>floor>=2&&floor<=4?floor+4:floor>=6&&floor<=9?8:0;
 export const ITEMS = Object.freeze([
   {id:'potion',name:'若葉の薬',icon:'✚',kind:'consumable',buy:32,sell:12,description:'HPを24回復。迷宮では1ターン使います。'},
   {id:'ration',name:'旅人のパン',icon:'◒',kind:'consumable',buy:22,sell:8,description:'満腹度を45回復。'},
@@ -73,8 +76,8 @@ function randomFloorPoint(s,avoidStart=true,clearance=null) {
   return null;
 }
 function generateSwarm(s){
-  if(s.floor<2||s.floor>4||rand(s)>=.35)return;
-  const count=s.floor+4,blocked=new Set([...s.enemies,...s.loot,s.player].map(p=>`${p.x},${p.y}`));
+  const count=swarmEnemyCount(s.floor);if(!count||rand(s)>=.35)return;
+  const blocked=new Set([...s.enemies,...s.loot,s.player].map(p=>`${p.x},${p.y}`));
   const freeCells=room=>{const cells=[];for(let y=room.y;y<room.y+room.height;y++)for(let x=room.x;x<room.x+room.width;x++)if(s.map.tiles[y][x]===1&&!blocked.has(`${x},${y}`))cells.push({x,y});return cells;};
   const candidates=[1,2,3,4].map(roomIndex=>({roomIndex,room:s.map.rooms[roomIndex]})).filter(({room})=>{const free=freeCells(room);return free.length>=count+5&&free.filter(p=>!roomDoor(s,p,room)).length>=count;});
   if(!candidates.length)return;
@@ -117,14 +120,14 @@ function generateFloor(s) {
   // The count of creatures is unchanged; extra species do not crowd the map.
   const shuffle=list=>{const result=[...list];for(let i=result.length-1;i>0;i--){const j=between(s,0,i);[result[i],result[j]]=[result[j],result[i]];}return result;};
   const pool=enemiesForFloor(f),roster=[...shuffle(pool.filter(type=>type.firstFloor===f)),...shuffle(pool.filter(type=>type.firstFloor<f))];
-  const bossPoint=f===5?{x:rooms[5].cx,y:rooms[5].cy-1}:null;
-  for(let i=0;i<3+f;i++){
+  const bossPoint=f===MAX_FLOOR?{x:rooms[5].cx,y:rooms[5].cy-1}:null;
+  for(let i=0;i<normalEnemyCount(f);i++){
     const p=randomFloorPoint(s,true,bossPoint);if(!p)continue;const type=roster[i%roster.length],stats=enemyStats(type.id,f);
     s.enemies.push({id:`${s.stats.runs}-${f}-${i}`,kind:type.id,name:type.name,...p,...stats,maxHp:stats.hp});
   }
-  if(f===5){const stats=enemyStats('boss',f);s.enemies.push({id:`boss-${s.stats.runs}`,kind:'boss',name:ENEMY_BY_ID.boss.name,...bossPoint,...stats,maxHp:stats.hp});}
+  if(f===MAX_FLOOR){const stats=enemyStats('boss',f);s.enemies.push({id:`boss-${s.stats.runs}`,kind:'boss',name:ENEMY_BY_ID.boss.name,...bossPoint,...stats,maxHp:stats.hp});}
   for(let i=0;i<8+f;i++){
-    const p=randomFloorPoint(s,false);if(!p)continue;let id=i<2?'ration':i===2?'potion':f>=3&&rand(s)<.35?'prism':rand(s)<.28?'amber':rand(s)<.5?'ore':'herb';
+    const p=randomFloorPoint(s,false);if(!p)continue;let id=i<2?'ration':i===2?'potion':f>=3&&rand(s)<(f>=6?.5:.35)?'prism':rand(s)<(f>=6?.36:.28)?'amber':rand(s)<.5?'ore':'herb';
     s.loot.push({id,...p});
   }
   // An immediately visible find teaches collection on the first expedition.
@@ -136,12 +139,12 @@ function collect(s) {
   const here=s.loot.filter(l=>l.x===s.player.x&&l.y===s.player.y);
   for(const l of here){if(s.runLoot.reduce((n,v)=>n+v.qty,0)>=30){log(s,'探索袋がいっぱい（30個）。帰還して品物を整理しよう。');break;}add(s.runLoot,l.id,1);s.loot.splice(s.loot.indexOf(l),1);log(s,`${itemById[l.id].name}を見つけた。`);}
 }
-function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,'暁の種を手に入れた！ 階段から帰還しよう。');}clearSwarm(s);}
+function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,s.floor===MAX_FLOOR?'暁の種を手に入れた！ 階段から帰還しよう。':'暁の種を守り抜いた。さらに下層へ進めます。帰灯石で街に戻ることもできます。');}clearSwarm(s);}
 function advanceDay(s){
   s.day++;const rent=rentTotal(s);let dividend=0;for(const spec of STOCKS){const shares=s.stocks[spec.id];dividend+=Math.floor(shares/5);const volatility={loom:.10,guild:.17,beacon:.25}[spec.id];const drift=(spec.base-s.prices[spec.id])*.04;s.prices[spec.id]=clamp(Math.round(s.prices[spec.id]*(1+(rand(s)*2-1)*volatility)+drift),Math.ceil(spec.base*.35),spec.base*4);s.priceHistory[spec.id].push(s.prices[spec.id]);if(s.priceHistory[spec.id].length>24)s.priceHistory[spec.id].shift();}awardGold(s,rent+dividend);log(s,`${s.day}日目。家賃 ${rent}G・配当 ${dividend}G を受け取った。`);
 }
 function endRun(s,defeat=false){
-  const clear=s.runRelic&&!defeat,earned=defeat?Math.floor(s.runGold/2):s.runGold;
+  const clear=s.runRelic&&s.floor===MAX_FLOOR&&!s.enemies.some(enemy=>enemy.kind==='boss')&&!defeat,earned=defeat?Math.floor(s.runGold/2):s.runGold;
   if(!defeat)for(const i of s.runLoot){
     const kept=Math.min(i.qty,MAXSTACK-quantity(s.inventory,i.id));
     if(kept)add(s.inventory,i.id,kept);
@@ -221,7 +224,7 @@ export function act(state,action){
   if(action.type==='wait'){log(s,'周囲の気配をうかがった。');event=tick(s)||'wait';return finish();}
   if(action.type==='stairs'){
     if(s.map.tiles[s.player.y][s.player.x]!==2)return fail('光る階段の上で使ってください。');
-    if(s.floor===5){if(!s.runRelic)return fail('灯晶の番人を倒し、暁の種を手に入れよう。');event=endRun(s);return finish();}
+    if(s.floor===MAX_FLOOR){if(!s.runRelic||s.enemies.some(enemy=>enemy.kind==='boss'))return fail('地下10階の灯晶の番人を倒し、暁の種を手に入れよう。');event=endRun(s);return finish();}
     s.floor++;s.turn++;s.runTurns++;generateFloor(s);message=`B${s.floor}へ降りた。帰還口からはいつでも街へ戻れます。`;event='stairs';return finish();
   }
   if(action.type==='return'){
@@ -276,7 +279,7 @@ export function validateSave(raw){
   if(!obj(source)||source.version!==1)invalid();
   const s=newGame(num(source.seed,1,4294967295));s.rng=num(source.rng,0,4294967295);
   for(const key of ['day','gold','level','xp','hp','hunger','floor','maxFloor','turn','runGold','runTurns']){
-    const bounds={day:[1,1000000],gold:[0,MAXGOLD],level:[1,30],xp:[0,10000],hp:[1,181],hunger:[0,100],floor:[1,5],maxFloor:[0,5],turn:[0,100000000],runGold:[0,MAXGOLD],runTurns:[0,10000000]}[key];s[key]=num(source[key],...bounds,key!=='hunger');
+    const bounds={day:[1,1000000],gold:[0,MAXGOLD],level:[1,30],xp:[0,10000],hp:[1,181],hunger:[0,100],floor:[1,MAX_FLOOR],maxFloor:[0,MAX_FLOOR],turn:[0,100000000],runGold:[0,MAXGOLD],runTurns:[0,10000000]}[key];s[key]=num(source[key],...bounds,key!=='hunger');
   }
   if(!['town','dungeon'].includes(source.mode)||!weaponById[source.weaponId])invalid();s.mode=source.mode;s.weaponId=source.weaponId;recalc(s);if(s.hp>s.maxHp)invalid();
   function inventory(v){const ids=new Set();return list(v,ITEMS.length).map(e=>{if(!obj(e)||!itemById[e.id]||ids.has(e.id))invalid();ids.add(e.id);return{id:e.id,qty:num(e.qty,1,MAXSTACK)};});}
@@ -297,12 +300,12 @@ export function validateSave(raw){
   // Optional encounter metadata extends version 1 without rewriting older maps.
   // Generated-only IDs prevent a forged room from putting ordinary enemies asleep.
   if(Object.hasOwn(m,'swarm')){
-    const swarm=m.swarm;if(!obj(swarm)||s.floor<2||s.floor>4)invalid();
+    const swarm=m.swarm;if(!obj(swarm)||!swarmEnemyCount(s.floor))invalid();
     const roomIndex=num(swarm.roomIndex,1,4),room=s.map.rooms[roomIndex];
     if(!room||room.width<5||room.width>7||room.height<5||room.height>7||room.x+room.width>W-1||room.y+room.height>H-1||room.cx!==room.x+Math.floor(room.width/2)||room.cy!==room.y+Math.floor(room.height/2))invalid();
     for(let y=room.y;y<room.y+room.height;y++)for(let x=room.x;x<room.x+room.width;x++)if(s.map.tiles[y][x]!==1)invalid();
     if(!['dormant','active','cleared'].includes(swarm.status))invalid();
-    const ids=list(swarm.enemyIds,8);if(ids.length!==s.floor+4)invalid();
+    const ids=list(swarm.enemyIds,8);if(ids.length!==swarmEnemyCount(s.floor))invalid();
     const expectedPrefix=`swarm-${s.stats.runs}-${s.floor}-${roomIndex}-`;
     for(let i=0;i<ids.length;i++)if(ids[i]!==expectedPrefix+i)invalid();
     const members=s.enemies.filter(e=>ids.includes(e.id));

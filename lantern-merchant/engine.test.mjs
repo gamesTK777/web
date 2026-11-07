@@ -243,14 +243,14 @@ test('defeat discards expedition finds while protecting town equipment and asset
   assert.deepEqual(validateSave(copy(state)), state);
 });
 
-test('five floors lead to a guarded finale and the recovered relic completes the expedition', () => {
+test('ten floors lead to a guarded finale and the recovered relic completes the expedition', () => {
   let state = perform(newGame(61), { type: 'enter' });
-  for (let floor = 1; floor <= 5; floor++) {
+  for (let floor = 1; floor <= 10; floor++) {
     assert.equal(state.floor, floor);
     assert.equal(state.maxFloor, floor);
     const y = state.map.tiles.findIndex(row => row.includes(2));
     state.player = { x: state.map.tiles[y].indexOf(2), y };
-    if (floor < 5) state = perform(state, { type: 'stairs' });
+    if (floor < 10) state = perform(state, { type: 'stairs' });
   }
   const blocked = act(state, { type: 'stairs' });
   assert.equal(blocked.ok, false);
@@ -270,6 +270,52 @@ test('five floors lead to a guarded finale and the recovered relic completes the
   assert.equal(count(state, 'relic'), 1);
   assert(state.gold >= 680);
   assert.deepEqual(validateSave(copy(state)), state);
+});
+
+function expeditionAt(floor,seed=73) {
+  let state=perform(newGame(seed),{type:'enter'});
+  while(state.floor<floor){const y=state.map.tiles.findIndex(row=>row.includes(2));state.player={x:state.map.tiles[y].indexOf(2),y};state=perform(state,{type:'stairs'});}
+  return state;
+}
+function standOnStairs(state) {const y=state.map.tiles.findIndex(row=>row.includes(2));state.player={x:state.map.tiles[y].indexOf(2),y};return state;}
+
+test('old fifth-floor guardian and recovered-relic saves retain their holdings and can continue to B6',()=>{
+  for(const recovered of [false,true]){
+    let state=expeditionAt(5);standOnStairs(state);
+    const bossPoint={x:state.player.x,y:state.player.y-1};
+    state.enemies=state.enemies.filter(e=>e.x!==bossPoint.x||e.y!==bossPoint.y);
+    if(!recovered)state.enemies.push({id:'boss-1',kind:'boss',name:'灯晶の番人',...bossPoint,hp:31,maxHp:65,attack:11,defense:3,xp:100});
+    state.gold=3210;state.plots=[{building:'cottage',level:2}];state.stocks.loom=10;state.stats.clears=2;
+    state.runGold=71;state.runRelic=recovered;state.runLoot=[{id:recovered?'relic':'ore',qty:1}];
+    state=validateSave(copy(state));const legacy=copy(state);
+    assert.deepEqual(validateSave(JSON.stringify(state)),legacy);
+    if(!recovered)assert.equal(state.enemies.find(e=>e.kind==='boss').maxHp,65,'loading never upgrades an old guardian');
+    const next=perform(state,{type:'stairs'});
+    assert.equal(next.floor,6);assert.equal(next.maxFloor,6);assert.equal(next.mode,'dungeon');
+    for(const field of ['gold','inventory','plots','stocks','runLoot','runGold','runRelic'])assert.deepEqual(next[field],legacy[field],field);
+    assert.equal(next.stats.clears,2);assert.deepEqual(validateSave(JSON.stringify(next)),next);
+    if(recovered){const returned=perform(legacy,{type:'return'});assert.equal(returned.stats.clears,2);assert.equal(count(returned,'relic'),1);assert.equal(returned.gold,3210+71,'an old relic remains valuable but does not award a new B10 clear');}
+  }
+});
+
+test('carrying a legacy relic cannot bypass the living B10 guardian or award a completion on recall',()=>{
+  let state=expeditionAt(10);standOnStairs(state);state.runRelic=true;state.runLoot=[{id:'relic',qty:1}];state.stats.clears=2;
+  const before=copy(state),blocked=act(state,{type:'stairs'});
+  assert.equal(blocked.ok,false);assert.match(blocked.message,/地下10階/);assert.deepEqual(blocked.state,before);
+  const recalled=act(state,{type:'use',id:'recall'});assert.equal(recalled.ok,true);assert.equal(recalled.event,'return');assert.equal(recalled.state.stats.clears,2);assert.equal(count(recalled.state,'relic'),1);
+  const boss=state.enemies.find(e=>e.kind==='boss');boss.hp=1;state.enemies=[boss];
+  state=perform(state,{type:'move',dx:0,dy:-1});assert.equal(count(state,'relic','runLoot'),2);
+  const complete=act(state,{type:'stairs'});assert.equal(complete.ok,true);assert.equal(complete.event,'victory');assert.equal(complete.state.stats.clears,3);assert.equal(count(complete.state,'relic'),2);
+});
+
+test('deep floors and completed saves round-trip through version one while B11 remains invalid',()=>{
+  for(let floor=6;floor<=10;floor++){
+    const state=expeditionAt(floor);assert.deepEqual(validateSave(JSON.stringify(state)),state);assert.equal(state.version,1);
+    const normal=state.enemies.filter(e=>!state.map.swarm?.enemyIds.includes(e.id)&&e.kind!=='boss');assert.ok(normal.length>=9&&normal.length<=12);
+    assert.equal(state.enemies.filter(e=>e.kind==='boss').length,floor===10?1:0);
+  }
+  for(const key of ['floor','maxFloor']){const state=newGame(99);state[key]=11;assert.throws(()=>validateSave(state));}
+  const town=newGame(99);town.floor=10;town.maxFloor=10;town.stats.clears=7;assert.deepEqual(validateSave(JSON.stringify(town)),town);
 });
 
 test('unknown and prototype-like catalog keys are rejected without mutating holdings', () => {
