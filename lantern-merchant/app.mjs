@@ -1,5 +1,6 @@
 import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261105';
-import {drawScene} from './renderer.mjs?v=20261106-art';
+import {drawScene} from './renderer.mjs?v=20261107-anime';
+import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261107-anime';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261106-art';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
 import {createAudioManager} from './audio.mjs?v=20261105-16bit';
@@ -280,4 +281,5 @@ function animate(time){const active=state.mode==='town'?townNavigation.getVisual
 function showStartContents(){const heading=$('welcomeDialog').querySelector('h2');heading.innerHTML=fresh?'灯りをともして、<br>大きな冒険へ。':`第${state.day}日の旅を、<br>ここからもう一度。`;$('startButton').textContent=fresh?'ゲーム開始 →':'つづきから →';let note=$('welcomeDialog').querySelector('.start-audio-note');if(!note){note=document.createElement('p');note.className='start-audio-note';$('startButton').before(note);}note.textContent=muted?'音はミュート中です。開始後「♪ OFF」で切り替えられます。':'開始ボタンを押すとBGMと効果音が流れます。音量は「♪ 音」で調整できます。';}
 function showStart(){showStartContents();held.clear();$('welcomeDialog').showModal();}
 render();updateSound();requestAnimationFrame(animate);showStart();
+void preloadCharacters({views:['up','left','right']}).then(()=>{document.body.dataset.characterArt=getCharacterAssetStatus().baseReady?'anime':'fallback';draw();});
 if(loadError){$('saveStatus').textContent='記録の確認が必要';$('saveStatus').classList.add('failed');toast(loadError);}

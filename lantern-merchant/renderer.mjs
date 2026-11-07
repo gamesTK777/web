@@ -1,6 +1,7 @@
 import {drawTown} from './town-art.mjs?v=20261106-art';
-import {drawExplorer as player} from './hero-art.mjs?v=20261106-art';
-/* Original, code-drawn artwork for Lantern & Ledger. No external art assets. */
+import {drawExplorer as pixelPlayer} from './hero-art.mjs?v=20261106-art';
+import {drawAnimeExplorer,drawAnimeMonster} from './anime-characters.mjs?v=20261107-anime';
+/* Original pixel environments with the approved anime character illustrations. */
 const C = {
   night:'#071719', deep:'#0b2328', water:'#163b49', ripple:'#2d5960', land:'#304c43',
   grass:'#47604b', grassHi:'#637855', path:'#7c7960', pathHi:'#969078',
@@ -24,7 +25,11 @@ function stars(c,w,h,time){
     c.globalAlpha=.15+.2*Math.sin(time/2200+i)**2;rect(c,x,y,hash(i,9)>.8?2:1,1,'#bfd0a7');
   }c.globalAlpha=1;
 }
-function monster(c,e,x,y,size,time){
+function player(c,x,y,size,time,motion){
+  if(!drawAnimeExplorer(c,x,y,size,time,motion))pixelPlayer(c,x,y,size,time,motion);
+}
+function monster(c,e,x,y,size,time,options){
+  if(drawAnimeMonster(c,e,x,y,size,time,options))return;
   c.save();c.translate(Math.round(x),Math.round(y));c.scale(size/40,size/40);
   const kind=String(e.kind||'moss'),pulse=Math.sin(time/420+e.x),step=Math.sin(time/180+e.y);
   c.fillStyle='#03141888';c.beginPath();c.ellipse(0,10,15,5,0,0,Math.PI*2);c.fill();
@@ -222,7 +227,7 @@ function dungeon(c,w,h,state,time,options){
   const playerScreen={x:px(playerWorld.x)+tile*.5,y:py(playerWorld.y)+tile*.63};
   glow(c,playerScreen.x+tile*.25,playerScreen.y,tile*2.5,'rgba(232,183,95,.15)');
   const actors=(state.enemies||[]).filter(e=>visible(e.x,e.y)&&e.hp>0).map(e=>({y:e.y,enemy:e}));actors.push({y:playerWorld.y,hero:true});actors.sort((a,b)=>a.y-b.y);
-  for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress});else{const e=actor.enemy;monster(c,e,px(e.x)+tile*.5,py(e.y)+tile*.66,tile*(e.kind==='boss'?.98:.78),time);}}
+  for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress,reducedMotion:!!options.reducedMotion});else{const e=actor.enemy;monster(c,e,px(e.x)+tile*.5,py(e.y)+tile*.66,tile*(e.kind==='boss'?.98:.78),time,{reducedMotion:!!options.reducedMotion});}}
   for(const e of options.effects||[])drawEffect(c,e,px,py,tile,time);
   c.restore();
   const edge=c.createRadialGradient(playerScreen.x,playerScreen.y,Math.min(w,h)*.18,playerScreen.x,playerScreen.y,Math.max(w,h)*.8);edge.addColorStop(0,'rgba(2,10,22,0)');edge.addColorStop(1,'rgba(3,8,22,.34)');c.fillStyle=edge;c.fillRect(0,0,w,h);
@@ -238,5 +243,5 @@ export function drawScene(canvas,state,options={}){
   if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
   const c=canvas.getContext('2d');if(!c)return null;c.setTransform(dpr,0,0,dpr,0,0);c.imageSmoothingEnabled=false;
   if(state.mode==='dungeon')return dungeon(c,w,h,state,time,options);
-  return drawTown(c,w,h,state,time,options,player,drawIcon);
+  return drawTown(c,w,h,state,time,options,(ctx,x,y,size,clock,motion)=>player(ctx,x,y,size,clock,{...motion,reducedMotion:!!options.reducedMotion}),drawIcon);
 }

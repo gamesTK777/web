@@ -57,3 +57,9 @@ body[data-mode="town"] .dungeon-controls>p{display:block;max-width:440px;color:#
  .focus-mode[data-mode="town"] .dungeon-controls{position:absolute;bottom:10px;left:10px;right:auto;min-height:0;width:auto;background:#102726b0}
  .focus-mode[data-mode="town"] .dungeon-controls>p{display:none}
 }
+.anime-portrait{position:relative;width:72px;height:86px;overflow:hidden;flex:none;background:radial-gradient(ellipse at 50% 25%,#5c7551,#243f3c)}
+.anime-portrait img{position:absolute;top:0;left:50%;transform:translateX(-50%);width:145px;height:226px;max-width:none;object-fit:contain;object-position:top;filter:drop-shadow(0 2px 5px #07171966)}
+.welcome-art.anime-welcome{height:170px;flex-direction:row;gap:22px;overflow:hidden;padding:0 20px;background:radial-gradient(ellipse at 40% 40%,#6f7851,#1c3c39 80%)}
+.anime-welcome .welcome-explorer{width:155px;height:240px;align-self:flex-start;object-fit:contain;margin-top:8px;filter:drop-shadow(0 0 18px #edbf7040)}
+.anime-welcome span{max-width:190px;font-size:10px;line-height:2.1;letter-spacing:2px}
+@media(max-width:760px){.welcome-art.anime-welcome{height:125px;gap:15px;padding:0 12px}.anime-welcome .welcome-explorer{width:125px;height:194px}.anime-welcome span{font-size:8px;max-width:140px}}

@@ -1,0 +1,79 @@
+灯都の採集商 アニメ調キャラクター生成プロンプト
+生成日：2026-11-07
+方式：内蔵の画像生成ツール（built-in image_gen）、背景透過、元のキャラクター画像を参照
+主人公：元のドット絵を参照。敵4種類：各元画像と、新しい主人公画像を画風の参照として使用。
+
+===== 灯りの採集商 / explorer =====
+Use case: style-transfer.
+Asset type: original fantasy RPG character illustration, a standalone full-body transparent PNG.
+Input image 1 is the edit target: the existing pixel-art protagonist of the original game Lantern & Ledger. Transform this SAME character into polished modern Japanese anime character art.
+Subject: a youthful, gender-neutral wandering merchant-adventurer. Preserve the teal hood and short teal cloak, visible short chestnut hair, ochre-gold tunic with cream highlights, cross-body brown leather strap and satchel, travel backpack, dark trousers and sturdy brown boots. Keep a small sheathed/low-held silver knife at the viewer's left and a hand-held brass lantern with warm golden glass at the viewer's right. Friendly determined expression, readable warm eyes.
+Style: appealing 3.5-head-tall adventure-anime proportions, crisp delicate dark colored outlines, confident clean shapes, three-level cel shading, restrained soft highlights, rich but harmonious colors. Carefully drawn cloth folds, leather seams and brass details. This is smooth illustrated anime art, no pixelation, no 3D rendering, no photorealism. Consistent top-left soft light with warm lantern accents.
+Composition: exactly ONE complete character, slightly three-quarter front pose, neutral ready stance, head through boots entirely visible, centered, comfortable clear padding on all sides, character fills most of the canvas.
+Background: actual transparent alpha, no scenery, no floor plane, no checkerboard painted into the image, no graphic panel. Only a small natural contact shadow if subtle. No text, no labels, no border, no logos or watermark.
+Preserve the original outfit palette, lantern, travel gear and identity. Do not replace with an existing franchise character.
+
+===== 苔玉 / moss =====
+Use case: style-transfer.
+Asset type: standalone original fantasy RPG enemy character illustration, transparent PNG.
+Input image 1: EDIT TARGET, the existing pixel-art enemy. Keep this character's identity, silhouette and key colors.
+Input image 2: SUPPORTING STYLE REFERENCE ONLY, the newly illustrated teal-hooded adventurer from the same game. Match its polished Japanese anime illustration quality: crisp fine dark-colored outlines, clean cel-shaded planes, nuanced restrained highlights, detailed but readable material edges, harmonious storybook-adventure mood. Do NOT depict this human character in the output and do NOT give its clothes or human features to the monster.
+Primary request: redraw the enemy from input 1 as a polished anime-style fantasy game creature that belongs in the same illustrated world as input 2. Smooth illustration, not pixel art, not 3D, not realistic.
+Composition: exactly ONE creature, complete full-body cutout, centered, all limbs and appendages inside the frame, slight front three-quarter angle or nearly frontal as appropriate, generous clear padding, no cropping. Light consistently from the upper left. Keep the creature recognizable at small size.
+Background: genuinely transparent alpha; no scenery, no painted checkerboard, no panel, no opaque color field. No text, letters, labels, border, logo, or watermark.
+Subject: 苔玉, a small rounded beetle-like woodland monster. Preserve its green oval leaf-armored shell, clear paired elytra with a dark middle seam and layered leaf veins, exactly six short articulated insect legs (three per side), two short antennae ending in leaf tips, a small dark green head low at the front with two warm amber eyes. Colors moss green, olive and muted jade with lighter leaf highlights. The insect's head faces the viewer/front-bottom so it reads as a beetle, not a turtle or humanoid. Charming but alert, sturdy beetle anatomy; no human hands, no clothes, no wings, no horns. Integrate natural leaf-like armor detail without adding extra limbs.
+
+===== 夜羽 / moth =====
+Use case: style-transfer.
+Asset type: standalone original fantasy RPG enemy character illustration, transparent PNG.
+Input image 1: EDIT TARGET, the existing pixel-art enemy. Keep this character's identity, silhouette and key colors.
+Input image 2: SUPPORTING STYLE REFERENCE ONLY, the newly illustrated teal-hooded adventurer from the same game. Match its polished Japanese anime illustration quality: crisp fine dark-colored outlines, clean cel-shaded planes, nuanced restrained highlights, detailed but readable material edges, harmonious storybook-adventure mood. Do NOT depict this human character in the output and do NOT give its clothes or human features to the monster.
+Primary request: redraw the enemy from input 1 as a polished anime-style fantasy game creature that belongs in the same illustrated world as input 2. Smooth illustration, not pixel art, not 3D, not realistic.
+Composition: exactly ONE creature, complete full-body cutout, centered, all limbs and appendages inside the frame, slight front three-quarter angle or nearly frontal as appropriate, generous clear padding, no cropping. Light consistently from the upper left. Keep the creature recognizable at small size.
+Background: genuinely transparent alpha; no scenery, no painted checkerboard, no panel, no opaque color field. No text, letters, labels, border, logo, or watermark.
+Subject: 夜羽, a moth-like nocturnal monster. Preserve the slender lavender-purple segmented insect body, two glowing warm gold eyes, exactly two gold-tipped antennae, and one symmetrical pair of broad violet butterfly/moth wings, each side with an upper and lower lobe. The purple wings have pale lavender inset shapes and small gold eye-spot patterns, with deep violet edges. Wings spread in a calm hovering pose, complete antennae and both wing tips fully visible. Make it clearly an anime fantasy moth, delicate wing scales and crisp designed patterns, no human face, no human arms or clothing, no extra pairs of wings, no weapon. Restrained moonlit highlights and jewel-like warm eye spots.
+
+===== 鉱殻 / golem =====
+Use case: style-transfer.
+Asset type: standalone original fantasy RPG enemy character illustration, transparent PNG.
+Input image 1: EDIT TARGET, the existing pixel-art enemy. Keep this character's identity, silhouette and key colors.
+Input image 2: SUPPORTING STYLE REFERENCE ONLY, the newly illustrated teal-hooded adventurer from the same game. Match its polished Japanese anime illustration quality: crisp fine dark-colored outlines, clean cel-shaded planes, nuanced restrained highlights, detailed but readable material edges, harmonious storybook-adventure mood. Do NOT depict this human character in the output and do NOT give its clothes or human features to the monster.
+Primary request: redraw the enemy from input 1 as a polished anime-style fantasy game creature that belongs in the same illustrated world as input 2. Smooth illustration, not pixel art, not 3D, not realistic.
+Composition: exactly ONE creature, complete full-body cutout, centered, all limbs and appendages inside the frame, slight front three-quarter angle or nearly frontal as appropriate, generous clear padding, no cropping. Light consistently from the upper left. Keep the creature recognizable at small size.
+Background: genuinely transparent alpha; no scenery, no painted checkerboard, no panel, no opaque color field. No text, letters, labels, border, logo, or watermark.
+Subject: 鉱殻, a compact stone golem. Preserve its gray-green angular rock body, broad block-shaped torso, a separate rounded rectangular stone head with two narrow glowing amber eyes, two thick segmented stone arms ending in blunt fists, and two short stout stone legs with squared feet. A single luminous cyan / mint diamond-shaped crystal is inset in the middle of its chest. Colors muted slate green and mineral gray, shaded cracks, beveled planes and small weathered chips. Stocky sturdy proportions, neutral watchful stance, balanced anatomy. It must remain a stone construct, with no human skin, no hair, no clothing, no horns, no wings. No lavender crown crystals: those belong to the separate boss.
+
+===== 灯晶の番人 / boss =====
+Use case: style-transfer.
+Asset type: standalone original fantasy RPG enemy character illustration, transparent PNG.
+Input image 1: EDIT TARGET, the existing pixel-art enemy. Keep this character's identity, silhouette and key colors.
+Input image 2: SUPPORTING STYLE REFERENCE ONLY, the newly illustrated teal-hooded adventurer from the same game. Match its polished Japanese anime illustration quality: crisp fine dark-colored outlines, clean cel-shaded planes, nuanced restrained highlights, detailed but readable material edges, harmonious storybook-adventure mood. Do NOT depict this human character in the output and do NOT give its clothes or human features to the monster.
+Primary request: redraw the enemy from input 1 as a polished anime-style fantasy game creature that belongs in the same illustrated world as input 2. Smooth illustration, not pixel art, not 3D, not realistic.
+Composition: exactly ONE creature, complete full-body cutout, centered, all limbs and appendages inside the frame, slight front three-quarter angle or nearly frontal as appropriate, generous clear padding, no cropping. Light consistently from the upper left. Keep the creature recognizable at small size.
+Background: genuinely transparent alpha; no scenery, no painted checkerboard, no panel, no opaque color field. No text, letters, labels, border, logo, or watermark.
+Subject: 灯晶の番人, the dungeon boss and larger more imposing relative of the gray-green stone golem. Preserve a broad block-shaped purple-gray stone torso, heavy squared arms and fists, stout armored stone legs and squared feet, a separate stone head with two glowing gold eyes. A large luminous lavender-pink diamond crystal is embedded in the chest, and a thin antique-gold collar band runs across the upper chest. Preserve exactly THREE large lavender pointed crystals hovering like a crown: one centered above the head and one next to each shoulder. The body is violet-gray stone with faceted cel shading and restrained mineral cracks, luminous crystal faces with pale pink cores. Regal guardian posture, powerful and imposing, slightly cute adventure-anime design rather than horror. No human skin or clothing, no weapon, no wings, no extra creatures, no excessive crystal swarm. Both boots and all three floating crystals must fit inside the image.
+
+
+
+追加の方向別画像（内蔵画像生成ツールを使用）
+===== explorer-up =====
+Use case: identity-preserve. Asset type: directional character image for a 2D fantasy game.
+Input image is the edit target and exact character identity reference. Draw this SAME anime adventurer from a different direction for gameplay.
+Keep the exact character age, facial identity where visible, teal hood and cloak with gold edging, ochre tunic with cream trim, brown belt and diagonal strap, large brown backpack and bedroll, satchel, dark trousers, leather boots, small dagger and hanging warm brass lantern. Keep outfit design, materials, anime linework and cel shading consistent with the reference. Avoid redesigning or adding gear.
+Requested direction and pose: STRICTLY REAR VIEW. The character is walking away from the viewer, head and torso seen entirely from behind. The back of the teal hood and the brown backpack with the rolled travel blanket dominate the back silhouette. Both boots seen from behind. The warm brass lantern remains in the same hand as the source and is visible beside the hip. No face, eyes or nose visible.
+Composition: exactly one COMPLETE full body from hood through both boots, centered, relaxed upright pose suitable for a game walk sprite, full appendages contained with generous clear padding. Same proportions as reference. No scenery, no text, no logos, no floor plane. Use genuine transparent alpha. Soft upper-left illumination and local warm lantern light. No opaque background or painted checkerboard.
+
+===== explorer-left =====
+Use case: identity-preserve. Asset type: directional character image for a 2D fantasy game.
+Input image is the edit target and exact character identity reference. Draw this SAME anime adventurer from a different direction for gameplay.
+Keep the exact character age, facial identity where visible, teal hood and cloak with gold edging, ochre tunic with cream trim, brown belt and diagonal strap, large brown backpack and bedroll, satchel, dark trousers, leather boots, small dagger and hanging warm brass lantern. Keep outfit design, materials, anime linework and cel shading consistent with the reference. Avoid redesigning or adding gear.
+Requested direction and pose: STRICT LEFT-FACING PROFILE, head nose and entire torso face the LEFT edge of the image. Full-body side silhouette, both arms with lantern and dagger visible clearly without impossible joints; near leg slightly forward in a gentle walking-ready stance. Same teal hood, chestnut hair, ochre tunic, leather backpack with rolled blanket, satchel and brown boots.
+Composition: exactly one COMPLETE full body from hood through both boots, centered, relaxed upright pose suitable for a game walk sprite, full appendages contained with generous clear padding. Same proportions as reference. No scenery, no text, no logos, no floor plane. Use genuine transparent alpha. Soft upper-left illumination and local warm lantern light. No opaque background or painted checkerboard.
+
+===== explorer-right =====
+Use case: identity-preserve. Asset type: directional character image for a 2D fantasy game.
+Input image is the edit target and exact character identity reference. Draw this SAME anime adventurer from a different direction for gameplay.
+Keep the exact character age, facial identity where visible, teal hood and cloak with gold edging, ochre tunic with cream trim, brown belt and diagonal strap, large brown backpack and bedroll, satchel, dark trousers, leather boots, small dagger and hanging warm brass lantern. Keep outfit design, materials, anime linework and cel shading consistent with the reference. Avoid redesigning or adding gear.
+Requested direction and pose: STRICT RIGHT-FACING PROFILE, head nose and entire torso face the RIGHT edge of the image. Full-body side silhouette, both arms with lantern and dagger visible clearly without impossible joints; near leg slightly forward in a gentle walking-ready stance. Same teal hood, chestnut hair, ochre tunic, leather backpack with rolled blanket, satchel and brown boots.
+Composition: exactly one COMPLETE full body from hood through both boots, centered, relaxed upright pose suitable for a game walk sprite, full appendages contained with generous clear padding. Same proportions as reference. No scenery, no text, no logos, no floor plane. Use genuine transparent alpha. Soft upper-left illumination and local warm lantern light. No opaque background or painted checkerboard.
+

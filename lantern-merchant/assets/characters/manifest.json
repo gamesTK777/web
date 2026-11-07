@@ -1,0 +1,299 @@
+{
+  "version": 1,
+  "style": "anime",
+  "format": "webp",
+  "source": "Approved anime character illustrations generated 2026-11-07",
+  "maxEdge": 512,
+  "quality": 92,
+  "characters": {
+    "explorer": {
+      "name": "灯りの採集商",
+      "file": "explorer.webp",
+      "width": 329,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.991525
+      },
+      "contentBounds": {
+        "x": 0.165314,
+        "y": 0.007171,
+        "width": 0.730223,
+        "height": 0.985007
+      },
+      "bytes": 47698,
+      "hasAlpha": true,
+      "source": {
+        "file": "explorer.png",
+        "width": 1024,
+        "height": 1536,
+        "bytes": 1986694,
+        "sha256": "3f1d0d59688751f20bb3a1f733b553a0629a8309579d59afb209605abf158c08",
+        "crop": {
+          "left": 0,
+          "top": 2,
+          "width": 986,
+          "height": 1534
+        }
+      },
+      "alpha": {
+        "transparentPixels": 98420,
+        "visiblePixels": 67482,
+        "maxAlpha": 255
+      }
+    },
+    "moss": {
+      "name": "苔玉",
+      "file": "moss.webp",
+      "width": 512,
+      "height": 453,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.94148
+      },
+      "contentBounds": {
+        "x": 0.115854,
+        "y": 0.031842,
+        "width": 0.766006,
+        "height": 0.910499
+      },
+      "bytes": 49416,
+      "hasAlpha": true,
+      "source": {
+        "file": "moss.png",
+        "width": 1312,
+        "height": 1199,
+        "bytes": 1326273,
+        "sha256": "53e3e09682754feb0eecd3daed2ab283b482618a3420c575d0bfe5cc689b8500",
+        "crop": {
+          "left": 0,
+          "top": 21,
+          "width": 1312,
+          "height": 1162
+        }
+      },
+      "alpha": {
+        "transparentPixels": 134840,
+        "visiblePixels": 93627,
+        "maxAlpha": 255
+      }
+    },
+    "moth": {
+      "name": "夜羽",
+      "file": "moth.webp",
+      "width": 512,
+      "height": 482,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.850041
+      },
+      "contentBounds": {
+        "x": 0.044427,
+        "y": 0.044739,
+        "width": 0.915822,
+        "height": 0.806131
+      },
+      "bytes": 52672,
+      "hasAlpha": true,
+      "source": {
+        "file": "moth.png",
+        "width": 1289,
+        "height": 1220,
+        "bytes": 1612386,
+        "sha256": "a4f85d43118e5673ef44543c03a50171ee069a034c6efea8cc122788dbfe1779",
+        "crop": {
+          "left": 0,
+          "top": 13,
+          "width": 1283,
+          "height": 1207
+        }
+      },
+      "alpha": {
+        "transparentPixels": 128531,
+        "visiblePixels": 115018,
+        "maxAlpha": 255
+      }
+    },
+    "golem": {
+      "name": "鉱殻",
+      "file": "golem.webp",
+      "width": 512,
+      "height": 444,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.991007
+      },
+      "contentBounds": {
+        "x": 0.098361,
+        "y": 0.006295,
+        "width": 0.818891,
+        "height": 0.985612
+      },
+      "bytes": 39264,
+      "hasAlpha": true,
+      "source": {
+        "file": "golem.png",
+        "width": 1303,
+        "height": 1207,
+        "bytes": 1395966,
+        "sha256": "6140090a76df8fa6cafdfbadd5ce10ce9b9a7b046526950971d8700240f8fa5f",
+        "crop": {
+          "left": 0,
+          "top": 36,
+          "width": 1281,
+          "height": 1112
+        }
+      },
+      "alpha": {
+        "transparentPixels": 97565,
+        "visiblePixels": 127818,
+        "maxAlpha": 255
+      }
+    },
+    "boss": {
+      "name": "灯晶の番人",
+      "file": "boss.webp",
+      "width": 357,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.989684
+      },
+      "contentBounds": {
+        "x": 0.006903,
+        "y": 0.004127,
+        "width": 0.982249,
+        "height": 0.986245
+      },
+      "bytes": 46906,
+      "hasAlpha": true,
+      "source": {
+        "file": "boss.png",
+        "width": 1067,
+        "height": 1474,
+        "bytes": 1647962,
+        "sha256": "00e3f84ad3afd40736fdc94f715fbbc5d2479a25c35912b21db5c974e43893f9",
+        "crop": {
+          "left": 27,
+          "top": 8,
+          "width": 1014,
+          "height": 1454
+        }
+      },
+      "alpha": {
+        "transparentPixels": 74132,
+        "visiblePixels": 105966,
+        "maxAlpha": 255
+      }
+    },
+    "explorer-up": {
+      "name": "灯りの採集商・後ろ",
+      "file": "explorer-up.webp",
+      "width": 340,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.990183
+      },
+      "contentBounds": {
+        "x": 0.197239,
+        "y": 0.004581,
+        "width": 0.637081,
+        "height": 0.985602
+      },
+      "bytes": 43080,
+      "hasAlpha": true,
+      "source": {
+        "file": "explorer-up.png",
+        "width": 1024,
+        "height": 1536,
+        "bytes": 1882503,
+        "sha256": "e24d69839a32015e141ec20cae140a23431491a5d7a7d4dcba0a3d9dceb7a60d",
+        "crop": {
+          "left": 0,
+          "top": 8,
+          "width": 1014,
+          "height": 1528
+        }
+      },
+      "alpha": {
+        "transparentPixels": 108397,
+        "visiblePixels": 61167,
+        "maxAlpha": 255
+      }
+    },
+    "explorer-left": {
+      "name": "灯りの採集商・左",
+      "file": "explorer-left.webp",
+      "width": 332,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.980984
+      },
+      "contentBounds": {
+        "x": 0.164646,
+        "y": 0.006557,
+        "width": 0.655556,
+        "height": 0.975082
+      },
+      "bytes": 42800,
+      "hasAlpha": true,
+      "source": {
+        "file": "explorer-left.png",
+        "width": 1024,
+        "height": 1536,
+        "bytes": 1878929,
+        "sha256": "6a748364804b43be65bb669acb0f692c05e7237add5895b8aaa2445909ff077f",
+        "crop": {
+          "left": 0,
+          "top": 11,
+          "width": 990,
+          "height": 1525
+        }
+      },
+      "alpha": {
+        "transparentPixels": 107529,
+        "visiblePixels": 59142,
+        "maxAlpha": 255
+      }
+    },
+    "explorer-right": {
+      "name": "灯りの採集商・右",
+      "file": "explorer-right.webp",
+      "width": 342,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.995376
+      },
+      "contentBounds": {
+        "x": 0.157115,
+        "y": 0.005284,
+        "width": 0.679842,
+        "height": 0.990753
+      },
+      "bytes": 46042,
+      "hasAlpha": true,
+      "source": {
+        "file": "explorer-right.png",
+        "width": 1024,
+        "height": 1536,
+        "bytes": 1905874,
+        "sha256": "bd8e5d31f486f4be9014d2258a217fd34c8456a6393c6b961d1e3bb5bb414829",
+        "crop": {
+          "left": 0,
+          "top": 0,
+          "width": 1012,
+          "height": 1514
+        }
+      },
+      "alpha": {
+        "transparentPixels": 107545,
+        "visiblePixels": 64859,
+        "maxAlpha": 255
+      }
+    }
+  },
+  "totalBytes": 367878
+}
