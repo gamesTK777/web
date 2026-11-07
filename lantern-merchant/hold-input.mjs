@@ -76,8 +76,11 @@ export function createHoldInput({
     if (token === generation && held.has(entry[0])) repeatAfter(repeatDelay);
   }
   return {
-    keyDown(code) {
+    keyDown(code, {repeat = false} = {}) {
       if (!isMovementKey(code)) return false;
+      // Our timer owns held movement. OS repeats must not restart it after an
+      // encounter, modal, or focus change explicitly cleared the held inputs.
+      if (repeat) return true;
       press(`key:${code}`, DIRECTIONS[code]);
       return true;
     },

@@ -1,7 +1,8 @@
 import {drawTown} from './town-art.mjs?v=20261106-art';
 import {drawExplorer as pixelPlayer} from './hero-art.mjs?v=20261106-art';
-import {drawAnimeExplorer,drawAnimeMonster} from './anime-characters.mjs?v=20261107-enemies15';
+import {drawAnimeExplorer,drawAnimeMonster,MONSTER_ART} from './anime-characters.mjs?v=20261107-swarm';
 import {drawExtraMonsterFallback} from './monster-art.mjs?v=20261107-enemies15';
+import {drawSwarmRoom,drawSwarmSleep,drawSwarmActive} from './swarm-art.mjs?v=20261107-swarm';
 /* Original pixel environments with the approved anime character illustrations. */
 const C = {
   night:'#071719', deep:'#0b2328', water:'#163b49', ripple:'#2d5960', land:'#304c43',
@@ -30,7 +31,7 @@ function player(c,x,y,size,time,motion){
   if(!drawAnimeExplorer(c,x,y,size,time,motion))pixelPlayer(c,x,y,size,time,motion);
 }
 function monster(c,e,x,y,size,time,options){
-  if(drawAnimeMonster(c,e,x,y,size,time,options))return;
+  if(drawAnimeMonster(c,e,x,y,size,time,options))return true;
   c.save();c.translate(Math.round(x),Math.round(y));c.scale(size/40,size/40);
   const kind=String(e.kind||'moss'),pulse=options?.reducedMotion?0:Math.sin(time/420+e.x),step=options?.reducedMotion?0:Math.sin(time/180+e.y);
   c.fillStyle='#03141888';c.beginPath();c.ellipse(0,10,15,5,0,0,Math.PI*2);c.fill();
@@ -67,6 +68,7 @@ function monster(c,e,x,y,size,time,options){
   }
   c.restore();
   if(e.hp<e.maxHp){const headHeight=kind==='boss'?1.5:kind==='knight'?1.35:1.08;rect(c,x-size*.35,y-size*headHeight,size*.7,5,'#0e1d28');rect(c,x-size*.35+1,y-size*headHeight+1,(size*.7-2)*Math.max(0,e.hp/e.maxHp),3,'#eca27c');}
+  return false;
 }
 
 /** Draw an original compact pixel icon into an existing 2D context. */
@@ -184,6 +186,14 @@ function drawEffect(c,e,px,py,tile,time){
     poly(c,[[-tile*.3,0],[tile*.42,-tile*.22],[tile*.18,-tile*.04]],'#e5b66b');
   }else if(e.kind==='hurt'){
     for(let i=0;i<8;i++){const a=i*Math.PI/4,r=tile*(.1+life*.5);rect(c,x+Math.cos(a)*r,y+Math.sin(a)*r,3,3,'#ee9779');}
+  }else if(e.kind==='swarm-start'||e.kind==='swarm-clear'){
+    const clear=e.kind==='swarm-clear',color=clear?'#b9e6b9':'#ffc28b';
+    c.strokeStyle=color;c.lineWidth=Math.max(2,tile*.035);c.beginPath();c.ellipse(x,y+tile*.18,tile*(.25+life*.85),tile*(.12+life*.40),0,0,Math.PI*2);c.stroke();
+    for(let i=0;i<12;i++){
+      const angle=i*Math.PI/6,radius=tile*(.25+life*.80),xx=x+Math.cos(angle)*radius,yy=y+Math.sin(angle)*radius*.48-life*tile*.30;
+      rect(c,xx,yy,clear?2:3,clear?7:3,color);
+      if(clear)rect(c,xx-2,yy+2,6,2,color);
+    }
   }else if(e.kind==='pickup'||e.kind==='level'||e.kind==='heal'||e.kind==='stairs'){
     const color=e.kind==='heal'?'#a8e5ab':e.kind==='stairs'?'#b4ccf1':'#ffe6a3';
     for(let i=0;i<10;i++){const a=i*2.4,r=tile*(.15+life*.5);const xx=x+Math.sin(a)*r,yy=y+Math.cos(a)*r-life*tile*.4;rect(c,xx,yy,2,7,color);rect(c,xx-2,yy+2,6,2,color);}
@@ -220,6 +230,7 @@ function dungeon(c,w,h,state,time,options){
     }else if(vis&&tiles[y+1]?.[x]&&((x+2*y)%5===0))torchPoints.push({x:xx+tile*.5,y:yy+tile*.65});
     if(!vis){c.fillStyle='rgba(5,15,23,.67)';c.fillRect(xx,yy,tile+1,tile+1);}
   }
+  drawSwarmRoom(c,map,{visible,px,py,tile,time,reducedMotion:!!options.reducedMotion});
   for(const t of torchPoints){glow(c,t.x,t.y-tile*.3,tile*1.7,paletteIndex===4?'rgba(170,133,232,.16)':'rgba(255,184,91,.15)');torch(c,t.x,t.y,tile,time,paletteIndex);}
   for(const item of state.loot||[])if(visible(item.x,item.y)){
     const x=px(item.x)+tile*.5,y=py(item.y)+tile*.55;
@@ -230,8 +241,19 @@ function dungeon(c,w,h,state,time,options){
   const playerScreen={x:px(playerWorld.x)+tile*.5,y:py(playerWorld.y)+tile*.63};
   glow(c,playerScreen.x+tile*.25,playerScreen.y,tile*2.5,'rgba(232,183,95,.15)');
   const actors=(state.enemies||[]).filter(e=>visible(e.x,e.y)&&e.hp>0).map(e=>({y:e.y,enemy:e}));actors.push({y:playerWorld.y,hero:true});actors.sort((a,b)=>a.y-b.y);
-  for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress,reducedMotion:!!options.reducedMotion});else{const e=actor.enemy;monster(c,e,px(e.x)+tile*.5,py(e.y)+tile*.66,tile*(e.kind==='boss'?.98:.78),time,{reducedMotion:!!options.reducedMotion});}}
-  for(const e of options.effects||[])drawEffect(c,e,px,py,tile,time);
+  const eventMembers=['dormant','active'].includes(map.swarm?.status)?new Set(map.swarm.enemyIds):null;
+  for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress,reducedMotion:!!options.reducedMotion});else{
+    const e=actor.enemy,x=px(e.x)+tile*.5,y=py(e.y)+tile*.66,size=tile*(e.kind==='boss'?.98:.78);
+    const illustrated=monster(c,e,x,y,size,time,{reducedMotion:!!options.reducedMotion});
+    if(eventMembers?.has(e.id)){
+      const art=MONSTER_ART[e.kind]||{height:1},radius=Math.max(7,tile*.115);
+      // Floating illustrations and loading fallbacks put their HP bars at
+      // different heights. Keep the entire group badge above either bar.
+      const barTop=illustrated?y+size*.25-size*(art.height+(art.float||0)+.025)-8:y-size*(e.kind==='boss'?1.5:e.kind==='knight'?1.35:1.08);
+      (map.swarm.status==='active'?drawSwarmActive:drawSwarmSleep)(c,x+size*.34,barTop-radius-4,tile);
+    }
+  }}
+  for(const e of options.effects||[])if(!e.kind?.startsWith('swarm-')||visible(e.x,e.y))drawEffect(c,e,px,py,tile,time);
   c.restore();
   const edge=c.createRadialGradient(playerScreen.x,playerScreen.y,Math.min(w,h)*.18,playerScreen.x,playerScreen.y,Math.max(w,h)*.8);edge.addColorStop(0,'rgba(2,10,22,0)');edge.addColorStop(1,'rgba(3,8,22,.34)');c.fillStyle=edge;c.fillRect(0,0,w,h);
   minimap(c,w,h,state,cameraX,cameraY,viewCols,viewRows);

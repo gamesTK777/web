@@ -1,10 +1,10 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261107-enemies15';
-import {drawScene} from './renderer.mjs?v=20261107-enemies15';
-import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261107-enemies15';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261107-swarm';
+import {drawScene} from './renderer.mjs?v=20261107-swarm';
+import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261107-swarm';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261106-art';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
-import {createAudioManager} from './audio.mjs?v=20261105-16bit';
-import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261105-cloud';
+import {createAudioManager} from './audio.mjs?v=20261107-swarm';
+import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261107-swarm';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
 import {ENEMY_TYPES} from './enemies.mjs?v=20261107-enemies15';
 
@@ -62,7 +62,8 @@ function visualEvent(previous,action,result){
   const time=performance.now(),sameFloor=previous.mode==='dungeon'&&state.mode==='dungeon'&&previous.floor===state.floor;
   if(action.type==='move')facing=action.dx<0?'left':action.dx>0?'right':action.dy<0?'up':'down';
   const from=sameFloor?(frameInfo?.playerWorld??previous.player):state.player;
-  motion={from:{...from},to:{...state.player},startedAt:time,duration:reduced?0:190,facing,kind:sameFloor&&result.event==='move'?'move':result.event==='attack'?'attack':'idle'};
+  const moved=sameFloor&&(previous.player.x!==state.player.x||previous.player.y!==state.player.y);
+  motion={from:{...from},to:{...state.player},startedAt:time,duration:reduced?0:190,facing,kind:moved?'move':sameFloor&&action.type==='move'?'attack':'idle'};
   const add=(kind,text='',position=state.player)=>effects.push({kind,...position,text,startedAt:time,duration:800});
   if(!sameFloor)effects=[];
   if(state.mode==='town'&&result.event==='build'){
@@ -78,6 +79,10 @@ function visualEvent(previous,action,result){
   if(state.level>previous.level){add('level',`LEVEL ${state.level}`);event='level';}
   if(action.type==='use'&&state.hp>previous.hp){add('heal',`+${state.hp-previous.hp}`);event='heal';}
   if(action.type==='use'&&action.id==='ration')event='heal';
+  if(['swarm-start','swarm-clear'].includes(result.event)){
+    held.clear();event=result.event;
+    if(!reduced)effects.push({kind:event,...state.player,startedAt:time,duration:1600});
+  }
   effects=effects.slice(-16);sound.setScene(state.mode);sound.play(event||'ui');
 }
 function updateSound(){const status=sound.getStatus();$('soundButton').textContent=muted?'♪ OFF':'♪ 音';$('soundButton').classList.toggle('sound-off',muted);$('muteAudio').checked=muted;$('audioVolume').value=Math.round(volume*100);$('volumeValue').textContent=`${Math.round(volume*100)}%`;$('audioStatus').textContent=!sessionStarted?'ゲーム開始後に再生されます。':muted?'ミュート中です。':status.playing?'オリジナルBGMを再生しています。':'音が聞こえない場合は、ミュートの解除や端末の音量をご確認ください。';}
@@ -98,6 +103,7 @@ function dispatch(action){
   }
 }
 function render(){
+  renderSwarm();
   const dungeon=state.mode==='dungeon', weapon=WEAPONS.find(w=>w.id===state.weaponId);
   document.body.dataset.mode=state.mode;
   $('worldHud').innerHTML=`<div class="hud-stat"><small>LEVEL</small><b>${state.level}</b></div><div class="hud-stat health ${state.hp/state.maxHp<.3?'low':''}"><small>HP</small><b>${state.hp} / ${state.maxHp}</b><div class="hud-meter"><i style="width:${state.hp/state.maxHp*100}%"></i></div></div><div class="hud-stat"><small>満腹度</small><b>${Math.floor(state.hunger)}%</b></div><div class="hud-stat gold"><small>GOLD</small><b>${money(state.gold)} G</b></div>`;
@@ -126,6 +132,17 @@ function render(){
   $('eventLog').replaceChildren(...state.log.slice(-7).reverse().map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
   $('recordStats').innerHTML=`<div><b>${state.stats.runs}</b>探索回数</div><div><b>B${state.maxFloor}</b>到達階層</div><div><b>${state.stats.clears}</b>遺物帰還</div>`;
   renderWorkspace();updateZoom();draw();
+}
+function renderSwarm(){
+  const panel=$('swarmPanel'),swarm=state.mode==='dungeon'?state.map?.swarm:null,room=swarm&&state.map.rooms[swarm.roomIndex];
+  const known=!!room&&(swarm.status!=='dormant'||state.map.seen.some((row,y)=>y>=room.y&&y<room.y+room.height&&row.some((seen,x)=>seen&&x>=room.x&&x<room.x+room.width)));
+  panel.hidden=!known;if(!known)return;
+  panel.dataset.state=swarm.status;
+  const remaining=state.enemies.filter(enemy=>swarm.enemyIds.includes(enemy.id)).length;
+  const text=(id,value)=>{if($(id).textContent!==value)$(id).textContent=value;};
+  text('swarmTitle',swarm.status==='dormant'?'怪しい部屋に、眠る魔物たち':swarm.status==='active'?`魔物だまり！ 残り ${remaining} 体`:'目覚めた一団を撃破！');
+  text('swarmDescription',swarm.status==='dormant'?'中へ入ると敵が一斉に目覚めます。道具と退路を確認してから進もう。':swarm.status==='active'?'✦印の魔物をすべて倒すと制圧報酬。閃光の実や通路への退却、帰灯石も活用しよう。':`制圧報酬 +${state.floor*40} G を獲得。残った宝物を回収して帰還しよう。`);
+  $('swarmBombButton').hidden=swarm.status!=='active';$('swarmBombButton').disabled=count('bomb')<1;text('swarmBombButton',`閃光の実を使う · ${count('bomb')}`);
 }
 function itemRow(item,qty,run=false){return `<div class="item-row"><span class="item-symbol">${esc(item.icon)}</span><div class="item-info"><b>${esc(item.name)} ×${qty}</b><small>${run?'今回の探索品':item.kind==='loot'?`売値 ${item.sell} G / 個`:esc(item.description)}</small></div>${state.mode==='dungeon'?(item.kind==='consumable'?`<button data-use="${item.id}">使う</button>`:''):`<button data-sell="${item.id}" data-qty="${qty}">売る ${money(item.sell*qty)}G</button>`}</div>`;}
 function renderWorkspace(){
@@ -240,6 +257,7 @@ $('overviewButton').addEventListener('click',()=>{townCamera=null;setZoom(1);});
 function setFocus(value){document.body.classList.toggle('focus-mode',value);$('focusButton').textContent=value?'✕ 戻す':'⛶ 拡大';$('focusButton').setAttribute('aria-label',value?'拡大表示を閉じる':'ゲーム画面を拡大表示');$('focusButton').setAttribute('aria-pressed',String(value));requestAnimationFrame(()=>draw());}
 $('focusButton').addEventListener('click',()=>setFocus(!document.body.classList.contains('focus-mode')));
 $('bestiaryButton').addEventListener('click',showBestiary);
+$('swarmBombButton').addEventListener('click',()=>{held.clear();dispatch({type:'use',id:'bomb'});});
 $('saveButton').addEventListener('click',()=>{$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'まだ保存されていません。';$('saveDialog').showModal();});
 $('manualSave').addEventListener('click',()=>{save(true);$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'バックアップをご利用ください。';});
 $('manualSave').addEventListener('click',()=>{void syncCloud();});
@@ -257,7 +275,7 @@ document.addEventListener('keydown',e=>{
   const key=e.key.length===1?e.key.toLowerCase():e.key;
   if(key==='Escape'&&document.body.classList.contains('focus-mode')){e.preventDefault();setFocus(false);return;}
   if(key==='?'){e.preventDefault();$('helpDialog').showModal();return;}
-  if(isMovementKey(e.code)){e.preventDefault();held.keyDown(e.code);return;}
+  if(isMovementKey(e.code)){e.preventDefault();held.keyDown(e.code,{repeat:e.repeat});return;}
   if(e.target.closest('button,a')&&(key==='Enter'||key===' '))return;
   if(state.mode==='town'){if(key==='e'||key==='Enter'||key===' '){e.preventDefault();if(!e.repeat)inspectTown();}return;}
   if([' ','.','e','Enter','h','f','r'].includes(key)){e.preventDefault();if(e.repeat)return;if(key===' '||key==='.')dispatch({type:'wait'});if(key==='e'||key==='Enter')inspectFloor();if(key==='h')dispatch({type:'use',id:'potion'});if(key==='f')dispatch({type:'use',id:'ration'});if(key==='r')returnHome();}

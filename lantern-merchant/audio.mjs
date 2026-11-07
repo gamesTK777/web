@@ -166,6 +166,13 @@ export function createAudioManager(dependencies={}){
         case 'heal':notes([72,76,79,84],.24,.065,'flute',.07);break;
         case 'level':notes([74,78,81,86,90],.28,.085,'bell',.09);break;
         case 'stairs':notes([76,71,67,64],.16,.07,'harp',.07);break;
+        case 'swarm-start':
+          // A short rising minor warning leaves the next decision to the player.
+          percussion(t,'kick',.4,sfxBus);notes([52,55,58],.16,.075,'reed',.075);
+          tone(64,t+.27,.25,.06,'bell',sfxBus);tone(70,t+.27,.25,.045,'bell',sfxBus);break;
+        case 'swarm-clear':
+          notes([64,67,71,76,79,83,88],.24,.065,'bell',.075);
+          for(const note of [64,67,71])tone(note,t+.48,.32,.035,'flute',sfxBus);break;
         case 'return':notes([74,78,81,86],.3,.075,'harp',.1);break;
         case 'victory':notes([74,78,81,86,81,86,90],.34,.095,'bell',.12);break;
         case 'defeat':notes([64,62,59,55],.45,.073,'flute',.2);break;

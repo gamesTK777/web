@@ -50,6 +50,10 @@ function recalc(s) { s.maxHp=36+(s.level-1)*5; s.attack=5+(s.level-1)+weaponById
 function gainXp(s,n) { s.xp+=n; while(s.level<30&&s.xp>=xpNeeded(s.level)){s.xp-=xpNeeded(s.level); s.level++; recalc(s); s.hp=Math.min(s.maxHp,s.hp+12);log(s,`レベル${s.level}！ 最大HPと攻撃力が上がった。`);} if(s.level===30)s.xp=Math.min(s.xp,xpNeeded(30)); }
 function walkable(s,x,y) {return x>=0&&x<W&&y>=0&&y<H&&s.map.tiles[y][x]!==0;}
 function occupied(s,x,y) {return s.enemies.some(e=>e.x===x&&e.y===y&&e.hp>0);}
+const inRoom=(p,r)=>!!r&&p.x>=r.x&&p.x<r.x+r.width&&p.y>=r.y&&p.y<r.y+r.height;
+const swarmStartMessage='魔物だまり！ 眠っていた魔物が目覚めた。この魔物たちは次の行動から動き出す！';
+const swarmClearMessage=floor=>`魔物だまりを制圧！ 探索金 ${floor*40}G を手に入れた。`;
+function roomDoor(s,p,room){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const next={x:p.x+dx,y:p.y+dy};return !inRoom(next,room)&&walkable(s,next.x,next.y);});}
 function reveal(s) {
   if(!s.map)return;
   const {x:px,y:py}=s.player;
@@ -60,10 +64,37 @@ function reveal(s) {
     while(x0!==x||y0!==y){if((x0!==px||y0!==py)&&s.map.tiles[y0][x0]===0){visible=false;break;} const twice=2*err;if(twice>=dy){err+=dy;x0+=sx;}if(twice<=dx){err+=dx;y0+=sy;}}
     if(visible)s.map.visible[y][x]=s.map.seen[y][x]=true;
   }
+  const swarm=s.map.swarm,room=swarm&&s.map.rooms[swarm.roomIndex];
+  // The first surprise reveals the whole room; retreat restores normal sight.
+  if(swarm&&swarm.status!=='dormant'&&inRoom(s.player,room))for(let y=room.y;y<room.y+room.height;y++)for(let x=room.x;x<room.x+room.width;x++)s.map.visible[y][x]=s.map.seen[y][x]=true;
 }
 function randomFloorPoint(s,avoidStart=true,clearance=null) {
   for(let attempt=0;attempt<2000;attempt++){const x=between(s,1,W-2),y=between(s,1,H-2); if(s.map.tiles[y][x]===1&&!occupied(s,x,y)&&!s.loot.some(l=>l.x===x&&l.y===y)&&(!avoidStart||dist({x,y},s.player)>5)&&(!clearance||dist({x,y},clearance)>1))return{x,y};}
   return null;
+}
+function generateSwarm(s){
+  if(s.floor<2||s.floor>4||rand(s)>=.35)return;
+  const count=s.floor+4,blocked=new Set([...s.enemies,...s.loot,s.player].map(p=>`${p.x},${p.y}`));
+  const freeCells=room=>{const cells=[];for(let y=room.y;y<room.y+room.height;y++)for(let x=room.x;x<room.x+room.width;x++)if(s.map.tiles[y][x]===1&&!blocked.has(`${x},${y}`))cells.push({x,y});return cells;};
+  const candidates=[1,2,3,4].map(roomIndex=>({roomIndex,room:s.map.rooms[roomIndex]})).filter(({room})=>{const free=freeCells(room);return free.length>=count+5&&free.filter(p=>!roomDoor(s,p,room)).length>=count;});
+  if(!candidates.length)return;
+  const {roomIndex,room}=candidates[between(s,0,candidates.length-1)],shuffle=list=>{const out=[...list];for(let i=out.length-1;i>0;i--){const j=between(s,0,i);[out[i],out[j]]=[out[j],out[i]];}return out;};
+  const spots=shuffle(freeCells(room).filter(p=>!roomDoor(s,p,room))),kinds=shuffle(enemiesForFloor(s.floor)),enemyIds=[];
+  for(let i=0;i<count;i++){
+    const p=spots[i],type=kinds[i%kinds.length],stats=enemyStats(type.id,s.floor),id=`swarm-${s.stats.runs}-${s.floor}-${roomIndex}-${i}`;
+    s.enemies.push({id,kind:type.id,name:type.name,...p,...stats,maxHp:stats.hp});enemyIds.push(id);blocked.add(`${p.x},${p.y}`);
+  }
+  const rewards=shuffle(freeCells(room));for(const [i,id]of ['potion','bomb','ration','amber','prism'].entries())s.loot.push({id,...rewards[i]});
+  s.map.swarm={roomIndex,status:'dormant',enemyIds};
+}
+function activateSwarm(s){
+  const swarm=s.map?.swarm;
+  if(!swarm||swarm.status!=='dormant'||!inRoom(s.player,s.map.rooms[swarm.roomIndex]))return false;
+  swarm.status='active';log(s,swarmStartMessage);return true;
+}
+function clearSwarm(s){
+  const swarm=s.map?.swarm;if(!swarm||swarm.status==='cleared'||s.enemies.some(e=>swarm.enemyIds.includes(e.id)))return;
+  swarm.status='cleared';s.runGold=Math.min(MAXGOLD,s.runGold+s.floor*40);log(s,swarmClearMessage(s.floor));
 }
 function generateFloor(s) {
   const tiles=Array.from({length:H},()=>Array(W).fill(0)),rooms=[];
@@ -98,13 +129,14 @@ function generateFloor(s) {
   }
   // An immediately visible find teaches collection on the first expedition.
   if(f===1){const x=s.player.x+1,y=s.player.y;if(tiles[y][x]===1&&!s.loot.some(l=>l.x===x&&l.y===y))s.loot.push({id:'herb',x,y});}
+  generateSwarm(s);
   s.maxFloor=Math.max(s.maxFloor,f);reveal(s);
 }
 function collect(s) {
   const here=s.loot.filter(l=>l.x===s.player.x&&l.y===s.player.y);
   for(const l of here){if(s.runLoot.reduce((n,v)=>n+v.qty,0)>=30){log(s,'探索袋がいっぱい（30個）。帰還して品物を整理しよう。');break;}add(s.runLoot,l.id,1);s.loot.splice(s.loot.indexOf(l),1);log(s,`${itemById[l.id].name}を見つけた。`);}
 }
-function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,'暁の種を手に入れた！ 階段から帰還しよう。');}}
+function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,'暁の種を手に入れた！ 階段から帰還しよう。');}clearSwarm(s);}
 function advanceDay(s){
   s.day++;const rent=rentTotal(s);let dividend=0;for(const spec of STOCKS){const shares=s.stocks[spec.id];dividend+=Math.floor(shares/5);const volatility={loom:.10,guild:.17,beacon:.25}[spec.id];const drift=(spec.base-s.prices[spec.id])*.04;s.prices[spec.id]=clamp(Math.round(s.prices[spec.id]*(1+(rand(s)*2-1)*volatility)+drift),Math.ceil(spec.base*.35),spec.base*4);s.priceHistory[spec.id].push(s.prices[spec.id]);if(s.priceHistory[spec.id].length>24)s.priceHistory[spec.id].shift();}awardGold(s,rent+dividend);log(s,`${s.day}日目。家賃 ${rent}G・配当 ${dividend}G を受け取った。`);
 }
@@ -122,17 +154,20 @@ function endRun(s,defeat=false){
   s.runLoot=[];s.runGold=0;s.runRelic=false;s.enemies=[];s.loot=[];s.map=null;s.player={x:0,y:0};
   return defeat?'defeat':clear?'victory':'return';
 }
-function enemyTurn(s){
+function enemyTurn(s,{justAwakened=false}={}){
   let distances=null;
+  const swarm=s.map.swarm,members=new Set(swarm?.enemyIds||[]),widePursuit=swarm?.status==='active';
   const hit=(e,ranged=false)=>{const damage=Math.max(1,e.attack-s.defense+between(s,-1,1));s.hp-=damage;log(s,`${e.name}の${ranged?'遠隔':'攻撃'}。${damage}ダメージ。`);return s.hp<=0?endRun(s,true):null;};
   for(const e of [...s.enemies]){
     if(s.mode!=='dungeon')break;
+    const member=members.has(e.id);
+    if(member&&(swarm.status==='dormant'||justAwakened))continue;
     const distance=dist(e,s.player),behavior=ENEMY_BY_ID[e.kind]?.behavior||'hunter';
     // Cadence uses existing saved turn/ID data rather than adding timers or statuses.
     const phase=[...e.id].reduce((value,c)=>value+c.charCodeAt(0),0);
     if(distance===1){const event=hit(e);if(event)return event;continue;}
     const radius=behavior==='ambush'?3:behavior==='shy'?6:behavior==='watcher'?10:8;
-    if(distance>radius)continue;
+    if(distance>radius&&!(member&&widePursuit))continue;
     if(behavior==='glimmer'&&distance===2&&(e.x===s.player.x||e.y===s.player.y)&&(s.turn+phase)%2===0){
       const x=(e.x+s.player.x)/2,y=(e.y+s.player.y)/2;
       if(walkable(s,x,y)&&!occupied(s,x,y)){const event=hit(e,true);if(event)return event;continue;}
@@ -141,7 +176,7 @@ function enemyTurn(s){
     // Breadth-first distances avoid enemies getting stuck on corridor corners.
     if(!distances){
       const queue=[{...s.player}];distances=new Map([[`${s.player.x},${s.player.y}`,0]]);
-      for(let i=0;i<queue.length&&i<300;i++){const p=queue[i];const n=distances.get(`${p.x},${p.y}`);if(n>=12)continue;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!distances.has(key)){distances.set(key,n+1);queue.push({x,y});}}}
+      for(let i=0;i<queue.length&&i<(widePursuit?W*H:300);i++){const p=queue[i];const n=distances.get(`${p.x},${p.y}`);if(!widePursuit&&n>=12)continue;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!distances.has(key)){distances.set(key,n+1);queue.push({x,y});}}}
     }
     const steps=behavior==='charge'&&(s.turn+phase)%3===0?2:1;let moved=0;
     for(let step=0;step<steps&&dist(e,s.player)>1;step++){
@@ -155,7 +190,7 @@ function enemyTurn(s){
   }
   return null;
 }
-function tick(s){s.turn++;s.runTurns++;s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);if(s.hunger===0){s.hp-=2;if(s.hp<=0)return endRun(s,true);}else if(s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);const event=enemyTurn(s);if(s.mode==='dungeon')reveal(s);return event;}
+function tick(s){s.turn++;s.runTurns++;s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);if(s.hunger===0){s.hp-=2;if(s.hp<=0)return endRun(s,true);}else if(s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);const justAwakened=activateSwarm(s),event=enemyTurn(s,{justAwakened});if(s.mode==='dungeon')reveal(s);return event||(justAwakened?'swarm-start':null);}
 export function newGame(seed=Date.now()){
   const n=(Number(seed)>>>0)||1;
   const s={version:1,seed:n,rng:n,day:1,gold:180,level:1,xp:0,hp:36,maxHp:36,hunger:100,attack:5,defense:0,weaponId:'starter',inventory:[{id:'potion',qty:3},{id:'ration',qty:2},{id:'recall',qty:1}],stocks:Object.fromEntries(STOCKS.map(v=>[v.id,0])),prices:Object.fromEntries(STOCKS.map(v=>[v.id,v.base])),priceHistory:Object.fromEntries(STOCKS.map(v=>[v.id,[v.base]])),plots:[{building:null,level:1}],mode:'town',floor:1,maxFloor:0,turn:0,player:{x:0,y:0},map:null,enemies:[],loot:[],runLoot:[],runGold:0,runTurns:0,runRelic:false,log:['灯都へようこそ。迷宮の品を持ち帰り、あなたの街を育てよう。'],stats:{runs:0,clears:0,kills:0,earned:0}};
@@ -165,7 +200,11 @@ export function act(state,action){
   if(!action||typeof action.type!=='string')return{state,ok:false,message:'操作を選んでください。'};
   const s=clone(state);let message='',event='';
   const fail=text=>({state,ok:false,message:text});
-  const finish=()=>{if(message)log(s,message);return{state:s,ok:true,message:message||s.log.at(-1)||'',event};};
+  const finish=()=>{
+    if(!['defeat','return','victory'].includes(event)&&s.map?.swarm?.status==='cleared'&&state.map?.swarm?.status!=='cleared')event='swarm-clear';
+    if(event==='swarm-start')message=swarmStartMessage;else if(event==='swarm-clear')message=swarmClearMessage(s.floor);else if(message)log(s,message);
+    return{state:s,ok:true,message:message||s.log.at(-1)||'',event};
+  };
   const qty=action.qty??1;
   if(['sell','buyItem','buyStock','sellStock'].includes(action.type)&&(!Number.isInteger(qty)||qty<1||qty>999))return fail('数量は1〜999の整数で指定してください。');
   if(action.type==='enter'){
@@ -255,6 +294,23 @@ export function validateSave(raw){
   s.player=point(source.player);const occupiedPositions=new Set([`${s.player.x},${s.player.y}`]),enemyIds=new Set();
   s.enemies=list(source.enemies,40).map(e=>{const p=point(e);if(typeof e.kind!=='string'||!Object.hasOwn(ENEMY_BY_ID,e.kind))invalid();const key=`${p.x},${p.y}`;if(occupiedPositions.has(key)||enemyIds.has(e.id))invalid();occupiedPositions.add(key);enemyIds.add(e.id);const maxHp=num(e.maxHp,1,1000),hp=num(e.hp,1,maxHp);return{id:str(e.id,80),kind:e.kind,name:str(e.name,40),...p,hp,maxHp,attack:num(e.attack,1,100),defense:num(e.defense,0,100),xp:num(e.xp,1,1000)};});
   s.loot=list(source.loot,100).map(e=>{if(!itemById[e.id])invalid();return{id:e.id,...point(e)};});
+  // Optional encounter metadata extends version 1 without rewriting older maps.
+  // Generated-only IDs prevent a forged room from putting ordinary enemies asleep.
+  if(Object.hasOwn(m,'swarm')){
+    const swarm=m.swarm;if(!obj(swarm)||s.floor<2||s.floor>4)invalid();
+    const roomIndex=num(swarm.roomIndex,1,4),room=s.map.rooms[roomIndex];
+    if(!room||room.width<5||room.width>7||room.height<5||room.height>7||room.x+room.width>W-1||room.y+room.height>H-1||room.cx!==room.x+Math.floor(room.width/2)||room.cy!==room.y+Math.floor(room.height/2))invalid();
+    for(let y=room.y;y<room.y+room.height;y++)for(let x=room.x;x<room.x+room.width;x++)if(s.map.tiles[y][x]!==1)invalid();
+    if(!['dormant','active','cleared'].includes(swarm.status))invalid();
+    const ids=list(swarm.enemyIds,8);if(ids.length!==s.floor+4)invalid();
+    const expectedPrefix=`swarm-${s.stats.runs}-${s.floor}-${roomIndex}-`;
+    for(let i=0;i<ids.length;i++)if(ids[i]!==expectedPrefix+i)invalid();
+    const members=s.enemies.filter(e=>ids.includes(e.id));
+    if(members.some(e=>e.kind==='boss')||(swarm.status==='cleared'?members.length!==0:members.length===0))invalid();
+    if(swarm.status==='dormant'&&members.some(e=>!inRoom(e,room)||roomDoor(s,e,room)))invalid();
+    if(s.enemies.some(e=>e.id.startsWith('swarm-')&&!ids.includes(e.id)))invalid();
+    s.map.swarm={roomIndex,status:swarm.status,enemyIds:[...ids]};
+  }
   let exits=0,stairs=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){if((x===0||x===W-1||y===0||y===H-1)&&s.map.tiles[y][x]!==0)invalid();if(s.map.tiles[y][x]===2)stairs++;if(s.map.tiles[y][x]===3)exits++;}if(stairs!==1||exits!==1)invalid();
   // Reject disconnected imported floors, so a valid save cannot strand the player.
   const queue=[s.player],reached=new Set([`${s.player.x},${s.player.y}`]);for(let i=0;i<queue.length;i++){const p=queue[i];for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!reached.has(key)){reached.add(key);queue.push({x,y});}}}

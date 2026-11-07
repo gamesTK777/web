@@ -47,6 +47,21 @@ test('OS duplicate key-down events do not add moves or timers', () => {
   assert.equal(h.calls.length, 3); assert.equal(h.timers.size, 1);
 });
 
+test('OS auto-repeat cannot restart movement after an encounter clears a held key', () => {
+  const h = harness();
+  h.control.keyDown('ArrowLeft');
+  h.control.clear();
+  for (let i = 0; i < 12; i++) h.control.keyDown('ArrowLeft', {repeat: true});
+  h.advance(2000);
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.timers.size, 0);
+  h.control.keyUp('ArrowLeft');
+  h.control.keyDown('ArrowLeft', {repeat: false});
+  assert.equal(h.calls.length, 2);
+  h.advance(260);
+  assert.equal(h.calls.length, 3);
+});
+
 test('the newest held direction wins, and releasing it resumes the older direction', () => {
   const h = harness();
   h.control.keyDown('KeyW'); h.advance(100);

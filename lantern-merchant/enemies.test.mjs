@@ -24,7 +24,7 @@ test('every generated five-floor expedition introduces all fifteen species witho
  for(let seed=1;seed<=40;seed++){
   let state=perform(newGame(seed),{type:'enter'});const encountered=new Set();
   for(let floor=1;floor<=5;floor++){
-   assert.equal(state.enemies.length,3+floor+(floor===5?1:0));
+   assert.equal(state.enemies.length,3+floor+(floor===5?1:0)+(state.map.swarm?.enemyIds.length||0));
    const occupied=new Set([`${state.player.x},${state.player.y}`]);
    for(const enemy of state.enemies){
     encountered.add(enemy.kind);assert.ok(ENEMY_BY_ID[enemy.kind].firstFloor<=floor);

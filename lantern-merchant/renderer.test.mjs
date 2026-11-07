@@ -4,6 +4,7 @@ import {newGame, act} from './engine.mjs';
 import {drawScene} from './renderer.mjs';
 import {MONSTER_ART} from './anime-characters.mjs';
 import {ENEMY_TYPES} from './enemies.mjs';
+import {drawSwarmRoom} from './swarm-art.mjs';
 
 // Canvas contract probe, not a rasterizer. Visual quality is checked in-browser.
 function makeCanvas(width=1280,height=720) {
@@ -14,12 +15,12 @@ function makeCanvas(width=1280,height=720) {
     createPattern:()=>({}),measureText:text=>({width:String(text).length*7}),
     getImageData:()=>({data:new Uint8ClampedArray(4),width:1,height:1})
   };
-  let draws=0;
+  let draws=0;canvas.text=[];canvas.paints=[];
   const context=new Proxy({canvas}, {
     get(target,key){
       if(key in target)return target[key];
       if(key in methods)return methods[key];
-      return (...args)=>{draws++;for(const n of args)if(typeof n==='number')assert.ok(Number.isFinite(n),`${String(key)} received non-finite coordinate`);};
+      return (...args)=>{draws++;if(key==='fillText')canvas.text.push(args[0]);if(['fillRect','stroke','fillText'].includes(key))canvas.paints.push({kind:key,color:key==='stroke'?target.strokeStyle:target.fillStyle,args});for(const n of args)if(typeof n==='number')assert.ok(Number.isFinite(n),`${String(key)} received non-finite coordinate`);};
     },
     set(target,key,value){target[key]=value;return true;}
   });
@@ -78,5 +79,64 @@ test('every catalog enemy renders through the image-unavailable path without mut
     const state=deepFreeze({...base,enemies:[{id:'visual-'+kind,kind,name:kind,...base.player,hp:4,maxHp:10,attack:1,defense:0,xp:1}]}),before=JSON.stringify(state),canvas=makeCanvas(390,560);
     const info=drawScene(canvas,state,{time:1200,zoom:3,reducedMotion});
     assert.ok(info.playerScreen);assert.equal(JSON.stringify(state),before,kind);assert.ok(canvas.drawCount()>0);
+  }
+});
+
+function swarmProbe(){
+  const calls=[],stack=[],target={};
+  const c=new Proxy(target,{get(obj,key){
+    if(key in obj)return obj[key];
+    if(key==='save')return()=>stack.push({...obj});
+    if(key==='restore')return()=>{for(const k of Object.keys(obj))delete obj[k];Object.assign(obj,stack.pop());};
+    return(...args)=>calls.push({kind:key,args,color:key==='stroke'?obj.strokeStyle:obj.fillStyle,alpha:obj.globalAlpha});
+  },set(obj,key,value){obj[key]=value;return true;}});
+  return{c,calls};
+}
+
+test('event room marks reveal no hidden room and clip accents to currently visible floor tiles',()=>{
+  const map={tiles:Array.from({length:6},()=>Array(6).fill(1)),rooms:[{x:1,y:1,width:3,height:3}]};
+  for(const status of ['dormant','active','cleared']){
+    map.swarm={roomIndex:0,status,enemyIds:[]};
+    const hidden=swarmProbe();drawSwarmRoom(hidden.c,map,{visible:()=>false,px:x=>x*48,py:y=>y*48,tile:48,time:800});
+    assert.equal(hidden.calls.length,0,`${status}: an unseen event room must draw no geometry`);
+    const shown=swarmProbe();drawSwarmRoom(shown.c,map,{visible:(x,y)=>x===1&&y===2,px:x=>x*48,py:y=>y*48,tile:48,time:800});
+    assert.deepEqual(shown.calls.find(call=>call.kind==='rect').args,[48,96,48,48]);
+    for(const call of shown.calls.filter(call=>['moveTo','lineTo','fillRect'].includes(call.kind))){
+      assert.ok(call.args[0]>=48&&call.args[0]<=96);assert.ok(call.args[1]>=96&&call.args[1]<=144);
+    }
+    assert.ok(shown.calls.some(call=>call.kind==='stroke'));
+  }
+});
+
+test('event markers distinguish only visible sleeping or active group members, without altering save state',()=>{
+  const base=act(newGame(77),{type:'enter'}).state,{x,y}=base.player;
+  for(const status of ['dormant','active','cleared']){
+    const state=JSON.parse(JSON.stringify(base));
+    const enemy=(id,xx)=>({id,kind:'moss',name:'苔玉',x:xx,y,hp:8,maxHp:8,attack:2,defense:0,xp:8});
+    state.enemies=[enemy('sleeping',x+1),enemy('hidden',x+2),enemy('ordinary',x)];state.enemies[0].hp=4;
+    state.map.visible[y][x+2]=false;state.map.swarm={roomIndex:0,status,enemyIds:['sleeping','hidden']};
+    const before=JSON.stringify(state),canvas=makeCanvas();drawScene(canvas,deepFreeze(state),{time:1000,zoom:3});
+    assert.equal(canvas.text.filter(text=>text==='Z').length,status==='dormant'?1:0);
+    assert.equal(canvas.text.filter(text=>text==='✦').length,status==='active'?1:0,'ordinary roaming monsters and hidden members have no group badge');
+    if(status!=='cleared'){
+      const badge=canvas.paints.find(paint=>paint.kind==='fillText'&&paint.args[0]===(status==='active'?'✦':'Z'));
+      const health=canvas.paints.find(paint=>paint.color==='#eca27c');
+      assert.ok(badge.args[2]+Math.max(7,72*.115)<health.args[1]-1,'the complete badge stays above the HP bar');
+    }
+    assert.equal(JSON.stringify(state),before);
+  }
+});
+
+test('room signals remain still under reduced motion and transition bursts do not reveal offscreen events',()=>{
+  const map={tiles:Array.from({length:6},()=>Array(6).fill(1)),rooms:[{x:1,y:1,width:3,height:3}],swarm:{roomIndex:0,status:'active',enemyIds:[]}};
+  const probes=[swarmProbe(),swarmProbe()];
+  for(const [i,time]of [0,100000].entries())drawSwarmRoom(probes[i].c,map,{visible:()=>true,px:x=>x*48,py:y=>y*48,tile:48,time,reducedMotion:true});
+  assert.deepEqual(probes[0].calls,probes[1].calls);
+  const state=act(newGame(77),{type:'enter'}).state,hidden={x:state.player.x+2,y:state.player.y};state.map.visible[hidden.y][hidden.x]=false;
+  for(const kind of ['swarm-start','swarm-clear']){
+    const canvas=makeCanvas();drawScene(canvas,deepFreeze(state),{time:1200,zoom:3,effects:[{kind,...hidden,startedAt:1000,duration:1600}]});
+    assert.equal(canvas.paints.filter(paint=>paint.color===(kind==='swarm-start'?'#ffc28b':'#b9e6b9')).length,0);
+    const visibleCanvas=makeCanvas();drawScene(visibleCanvas,state,{time:1200,zoom:3,effects:[{kind,...state.player,startedAt:1000,duration:1600}]});
+    assert.ok(visibleCanvas.paints.some(paint=>paint.color===(kind==='swarm-start'?'#ffc28b':'#b9e6b9')));
   }
 });
