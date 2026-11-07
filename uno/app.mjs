@@ -1,4 +1,5 @@
 import { createGame, applyAction, publicView, chooseCpuAction, COLORS } from './engine.mjs';
+import { gameFeedback, turnIdentity } from './feedback.mjs?v=20261108-ui';
 
 const API = 'https://tk777-neonshift-scores.takesuke.chatgpt.site/api/uno';
 const SESSION_KEY = 'tk777-uno-session';
@@ -15,6 +16,7 @@ let unoArmed = false, pendingWild = null, handIds = '', toastTimer = null, selec
 let lastConnectionError = '', setupBusy = false, soloPlayers = 4, currentScreen = 'home';
 let handGesture = null, suppressHandClick = false;
 let apiPauseUntil = 0;
+let lastTurnCue = '', turnAnimation = null;
 const resumeButton = document.createElement('button');
 resumeButton.type = 'button'; resumeButton.className = 'secondary-button resume-button'; resumeButton.hidden = true;
 resumeButton.textContent = '前のルームへ再接続';
@@ -31,7 +33,7 @@ function stopTimers() { clearTimeout(pollTimer); clearTimeout(cpuTimer); pollTim
 function setSetupBusy(value, text) { setupBusy = value; for (const id of ['soloStart', 'createRoom', 'joinRoom']) $(id).disabled = value; resumeButton.disabled = value; if (typeof text === 'string') $('setupStatus').textContent = text; }
 function setSetupMode(next) { selectedMode = next; for (const button of document.querySelectorAll('[data-mode]')) { const active = button.dataset.mode === next; button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); } $('soloSetup').hidden = next !== 'solo'; $('onlineSetup').hidden = next !== 'online'; }
 function setRoomMode(next) { for (const button of document.querySelectorAll('[data-room-mode]')) { const active = button.dataset.roomMode === next; button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); } $('createSetup').hidden = next !== 'create'; $('joinSetup').hidden = next !== 'join'; }
-function resetHand() { handIds = ''; $('hand').replaceChildren(); }
+function resetHand() { handIds = ''; lastTurnCue = ''; turnAnimation?.cancel(); turnAnimation = null; $('hand').replaceChildren(); }
 function closeWild() { pendingWild = null; if ($('colorDialog').open) $('colorDialog').close(); }
 function clearOnline() { session = null; room = null; remove(SESSION_KEY); resumeButton.hidden = true; }
 function goHome() { generation++; stopTimers(); closeWild(); if ($('leaveDialog').open) $('leaveDialog').close(); mode = 'home'; room = null; localGame = null; busy = false; unoArmed = false; resetHand(); showScreen('home'); connectionRestored(); setSetupBusy(false, ''); }
@@ -73,7 +75,7 @@ function connectionRestored() { if (mode === 'online' && Date.now() < apiPauseUn
 function acceptView(view, expectedGeneration = generation) {
   if (!view || expectedGeneration !== generation || mode !== 'online' || !session || view.roomId !== session.roomId) return;
   if (room && view.version < room.version) return;
-  const turnChanged = room && room.game && view.game && room.game.currentPlayerId !== view.game.currentPlayerId;
+  const turnChanged = room && room.game && view.game && turnIdentity(room.game) !== turnIdentity(view.game);
   room = view; selfId = view.selfId || session.playerId;
   if (turnChanged || !view.game || view.game.currentPlayerId !== selfId) unoArmed = false;
   connectionRestored(); render();
@@ -140,6 +142,7 @@ function startSolo() {
 function viewGame() { return mode === 'solo' ? (localGame ? publicView(localGame, selfId) : null) : room && room.game; }
 function onlinePlayers() { return room && Array.isArray(room.players) ? room.players : []; }
 function isOurTurn(game = viewGame()) { return Boolean(game && game.phase === 'playing' && game.currentPlayerId === selfId); }
+function feedbackFor(game = viewGame()) { return gameFeedback(game, selfId, { armed: unoArmed, busy, blocked: Boolean(lastConnectionError) || (mode === 'online' && Date.now() < apiPauseUntil) }); }
 function isHost() { return Boolean(room && room.hostId === selfId); }
 function playerName(id, game = viewGame()) { const person = game && game.players.find(player => player.id === id); return person ? person.name : 'プレイヤー'; }
 function scheduleCpu() {
@@ -192,14 +195,14 @@ function makeCard(card, interactive = false) {
 }
 function selectCard(id) {
   const game = viewGame();
-  if (!game || busy || !isOurTurn(game) || !game.legalCardIds.includes(id)) return;
+  if (!game || !feedbackFor(game).canAct || !game.legalCardIds.includes(id)) return;
   const card = game.hand.find(item => item.id === id); if (!card) return;
   if (!card.color) { pendingWild = { cardId: id, generation }; $('colorDialog').showModal(); }
   else perform({ type: 'play', cardId: id, uno: unoArmed });
 }
 function toggleUno() {
-  const game = viewGame(); if (!game || !isOurTurn(game) || busy || game.hand.length !== 2) return;
-  unoArmed = !unoArmed; renderControls(); if (unoArmed) toast('UNO宣言！ カードを出すと残り1枚を宣言します。');
+  const feedback = feedbackFor(); if (!feedback.canAct || !feedback.unoAvailable) return;
+  unoArmed = !unoArmed; renderControls();
 }
 function renderLobby() {
   showScreen('lobby'); $('lobbyRoomCode').textContent = room.roomId;
@@ -220,7 +223,7 @@ function renderOpponents(game) {
     const online = onlinePlayers().find(item => item.id === player.id), row = document.createElement('div');
     row.className = 'opponent' + (player.id === game.currentPlayerId && game.phase === 'playing' ? ' active' : '') + (player.id === selfId ? ' self' : '') + (player.count === 1 ? ' uno' : '');
     const avatar = document.createElement('span'); avatar.className = 'avatar'; avatar.style.setProperty('--avatar', avatars[index]); avatar.textContent = String(player.name || '?').slice(0, 1);
-    const info = document.createElement('div'); info.className = 'opponent-info'; const name = document.createElement('strong'); name.textContent = player.name + (player.id === selfId ? ' · あなた' : ''); const status = document.createElement('small'); status.textContent = online && online.cpu ? 'CPUが代打中' : mode === 'solo' && player.id !== selfId ? 'CPU' : online && online.connected === false ? '再接続待ち' : player.id === selfId ? 'YOU' : 'PLAYER'; info.append(name, status);
+    const info = document.createElement('div'); info.className = 'opponent-info'; const name = document.createElement('strong'); name.textContent = player.name + (player.id === selfId ? ' · あなた' : ''); const status = document.createElement('small'); status.textContent = player.id === game.currentPlayerId && game.phase === 'playing' ? '▶ プレイ中' : online && online.cpu ? 'CPUが代打中' : mode === 'solo' && player.id !== selfId ? 'CPU' : online && online.connected === false ? '再接続待ち' : player.id === selfId ? 'YOU' : 'PLAYER'; info.append(name, status);
     const count = document.createElement('span'); count.className = 'card-amount'; count.textContent = player.count === 1 ? 'UNO!' : String(player.count); count.setAttribute('aria-label', '手札 ' + player.count + '枚'); row.append(avatar, info, count); node.append(row);
   });
 }
@@ -243,23 +246,55 @@ function moveHand(direction) { const hand = $('hand'), step = handStep(), amount
 function renderControls() {
   if (room && room.status === 'lobby') $('startOnline').disabled = busy || onlinePlayers().length < 2 || Boolean(lastConnectionError) || Date.now() < apiPauseUntil;
   const game = viewGame(); if (!game) return;
-  const ownTurn = isOurTurn(game), canAct = ownTurn && !busy && !lastConnectionError && (mode !== 'online' || Date.now() >= apiPauseUntil);
+  const feedback = feedbackFor(game), { ownTurn, canAct } = feedback;
+  unoArmed = feedback.armed;
+  renderTurnFeedback(game, feedback);
   for (const card of $('hand').children) { const legal = game.legalCardIds.includes(card.dataset.cardId); card.disabled = !canAct || !legal; card.classList.toggle('playable', ownTurn && legal); }
   $('drawButton').disabled = !canAct || !game.canDraw; $('drawPile').disabled = !canAct || !game.canDraw;
   $('passButton').hidden = !game.canPass || !ownTurn; $('passButton').disabled = !canAct || !game.canPass;
-  $('unoButton').disabled = !canAct || game.hand.length !== 2; $('unoButton').setAttribute('aria-pressed', String(unoArmed));
-  $('unoButton').querySelector('span').textContent = unoArmed ? '宣言スタンバイ' : '残り1枚を宣言';
+  $('unoButton').disabled = !canAct || !feedback.unoAvailable; $('unoButton').setAttribute('aria-pressed', String(unoArmed));
+  $('unoButton').dataset.state = feedback.unoState;
+  $('unoButton').setAttribute('aria-label', 'UNO宣言：' + feedback.unoLabel);
+  $('unoButton').title = unoArmed ? '選択済みです。もう一度押すと解除できます。' : feedback.unoHint;
+  $('unoButtonState').textContent = feedback.unoLabel;
+  $('unoButtonHint').textContent = feedback.unoHint;
+  $('unoCheck').textContent = unoArmed ? '✓' : feedback.unoAvailable ? '!' : '−';
+  $('wildUnoStatus').hidden = !feedback.unoAvailable;
+  $('wildUnoStatus').textContent = unoArmed ? '✓ UNO選択済み。この色でカードを出すと宣言します。' : 'UNOは未選択です。宣言する場合は一度戻ってUNO!を押してください。';
+  $('wildUnoStatus').classList.toggle('selected', unoArmed);
+  for (const button of document.querySelectorAll('[data-color]')) button.disabled = !canAct;
   $('handHelp').textContent = game.phase === 'finished' ? 'おつかれさまでした！' : busy ? 'テーブルを更新中…' : !ownTurn ? '相手の番を待っています' : game.canPass ? '引いた1枚を出すか、パス' : game.legalCardIds.length ? '光るカードを選択' : '山札から1枚引こう';
   $('rematchButton').hidden = mode === 'online' && !isHost(); $('rematchButton').disabled = busy || Boolean(lastConnectionError);
 }
+function renderTurnFeedback(game, feedback) {
+  $('gameScreen').dataset.turn = feedback.turnState;
+  $('turnBanner').classList.toggle('your-turn', feedback.turnState === 'self');
+  setFeedbackText('turnText', feedback.turnTitle);
+  setFeedbackText('handTurnTitle', feedback.turnTitle);
+  setFeedbackText('handTurnHint', feedback.turnHint);
+  setFeedbackText('handTurnIcon', feedback.turnState === 'self' ? '▶' : feedback.turnState === 'waiting' ? '…' : feedback.turnState === 'finished' ? '✓' : '↻');
+  const key = turnIdentity(game);
+  if (!feedback.ownTurn) { lastTurnCue = ''; turnAnimation?.cancel(); turnAnimation = null; }
+  else if (feedback.canAct && lastTurnCue !== key) {
+    lastTurnCue = key;
+    turnAnimation?.cancel();
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      turnAnimation = $('handTurnStatus').animate?.([
+        { transform: 'scale(.98)', boxShadow: '0 0 0 0 #d7f86b00' },
+        { transform: 'scale(1)', boxShadow: '0 0 0 7px #d7f86b55', offset: .35 },
+        { transform: 'scale(1)', boxShadow: '0 0 0 0 #d7f86b00' }
+      ], { duration: 850, easing: 'ease-out' }) || null;
+    }
+  }
+}
+function setFeedbackText(id, text) { if ($(id).textContent !== text) $(id).textContent = text; }
 function renderGame(game) {
   showScreen('game'); $('sessionLabel').textContent = mode === 'solo' ? 'SOLO / VS CPU' : 'ONLINE / PRIVATE TABLE'; $('gameRoomCode').textContent = mode === 'online' && room ? room.roomId : '';
   renderOpponents(game);
-  const ownTurn = isOurTurn(game); $('turnBanner').classList.toggle('your-turn', ownTurn);
-  $('turnText').textContent = game.phase === 'finished' ? 'ゲーム終了' : ownTurn ? 'あなたの番。次の1枚を選ぼう。' : playerName(game.currentPlayerId, game) + ' の番';
+  const ownTurn = isOurTurn(game);
   $('direction').textContent = game.direction === 1 ? '↻' : '↺'; $('direction').setAttribute('aria-label', game.direction === 1 ? '時計回り' : '反時計回り');
   if (game.topCard) $('discardCard').replaceChildren(makeCard(game.topCard));
-  $('currentColor').replaceChildren(); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.setProperty('--card-color', 'var(--' + game.color + ')'); const colorText = document.createElement('span'); colorText.textContent = (colorSymbols[game.color] || '') + ' ' + (colorNames[game.color] || '') + ' の番'; $('currentColor').append(dot, colorText);
+  $('currentColor').replaceChildren(); const dot = document.createElement('span'); dot.className = 'color-dot'; dot.style.setProperty('--card-color', 'var(--' + game.color + ')'); const colorText = document.createElement('span'); colorText.textContent = '場の色：' + (colorSymbols[game.color] || '') + ' ' + (colorNames[game.color] || ''); $('currentColor').append(dot, colorText);
   $('deckCount').textContent = game.deckCount;
   const latest = game.log && game.log[game.log.length - 1]; $('gameLog').textContent = latest ? (typeof latest === 'string' ? latest : latest.text) : '同じ色・数字・記号をつなげよう。';
   $('resultPanel').hidden = game.phase !== 'finished';
@@ -347,7 +382,7 @@ $('hand').addEventListener('touchend', event => {
 }, { passive: false });
 $('hand').addEventListener('touchcancel', () => { if (handGesture && handGesture.moved) suppressHandClick = true; handGesture = null; }, { passive: true });
 $('hand').addEventListener('click', event => { if (suppressHandClick && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); suppressHandClick = false; } }, true);
-for (const button of document.querySelectorAll('[data-color]')) button.addEventListener('click', () => { const pending = pendingWild; closeWild(); if (pending && pending.generation === generation) perform({ type: 'play', cardId: pending.cardId, color: button.dataset.color, uno: unoArmed }); });
+for (const button of document.querySelectorAll('[data-color]')) button.addEventListener('click', () => { if (!feedbackFor().canAct) return; const pending = pendingWild; closeWild(); if (pending && pending.generation === generation) perform({ type: 'play', cardId: pending.cardId, color: button.dataset.color, uno: unoArmed }); });
 $('cancelColor').addEventListener('click', closeWild); $('colorDialog').addEventListener('cancel', () => { pendingWild = null; });
 $('rulesButton').addEventListener('click', () => $('rulesDialog').showModal()); $('closeRules').addEventListener('click', () => $('rulesDialog').close());
 for (const id of ['leaveGame', 'leaveLobby']) $(id).addEventListener('click', requestLeave);

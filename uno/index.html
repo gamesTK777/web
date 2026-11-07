@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111521">
   <meta name="description" content="ひとりでCPUと、友だちとはそれぞれの端末で。2〜6人で遊べるオンラインUNO。">
   <title>UNO — COLOR CIRCUIT | TK777 ARCADE</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261108-ui">
 </head>
 <body>
   <header class="topbar">
@@ -52,17 +52,18 @@
         <p class="game-log" id="gameLog" aria-live="polite"></p>
       </div>
       <section class="hand-zone" aria-label="自分の手札">
+        <div class="hand-turn-status" id="handTurnStatus" role="status" aria-live="polite" aria-atomic="true"><span class="hand-turn-icon" id="handTurnIcon" aria-hidden="true">…</span><div><strong id="handTurnTitle">対戦を準備しています</strong><p id="handTurnHint"></p></div></div>
         <div class="hand-heading"><div><span class="eyebrow">YOUR HAND</span><strong id="selfName"></strong><span class="hand-count" id="handCount"></span></div><div class="hand-tools"><span class="hand-help" id="handHelp">光るカードを選択</span><div class="hand-nav" role="group" aria-label="手札の表示位置"><button id="previousHand" type="button" aria-label="前の手札を表示">‹</button><button id="nextHand" type="button" aria-label="次の手札を表示">›</button></div></div></div>
         <div class="hand" id="hand" tabindex="-1" aria-label="自分のカード"></div>
-        <div class="game-actions"><button class="secondary-button draw-action" id="drawButton" type="button">＋ 1枚引く <kbd>D</kbd></button><button class="secondary-button" id="passButton" type="button" hidden>出さずにパス <kbd>P</kbd></button><button class="uno-button" id="unoButton" type="button" aria-pressed="false"><b>UNO!</b><span>残り1枚を宣言</span></button></div>
+        <div class="game-actions"><button class="secondary-button draw-action" id="drawButton" type="button">＋ 1枚引く <kbd>D</kbd></button><button class="secondary-button" id="passButton" type="button" hidden>出さずにパス <kbd>P</kbd></button><button class="uno-button" id="unoButton" type="button" aria-pressed="false" aria-label="UNO宣言：手札2枚で選択"><i id="unoCheck" aria-hidden="true">−</i><b>UNO!</b><span class="uno-button-copy"><strong id="unoButtonState">手札2枚で選択</strong><small id="unoButtonHint">残り1枚にする前に宣言</small></span></button></div>
       </section>
     </section>
   </main>
 
   <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
-  <dialog id="colorDialog" class="color-dialog" aria-labelledby="colorDialogTitle"><div class="dialog-head"><div><p class="eyebrow">YOUR NEXT COLOR</p><h2 id="colorDialogTitle">次の色を選ぼう</h2></div><button class="icon-button" id="cancelColor" type="button" aria-label="色の選択を取り消す">×</button></div><div class="color-options"><button type="button" data-color="red">● <span>赤</span></button><button type="button" data-color="yellow">◆ <span>黄</span></button><button type="button" data-color="green">▲ <span>緑</span></button><button type="button" data-color="blue">■ <span>青</span></button></div></dialog>
+  <dialog id="colorDialog" class="color-dialog" aria-labelledby="colorDialogTitle"><div class="dialog-head"><div><p class="eyebrow">YOUR NEXT COLOR</p><h2 id="colorDialogTitle">次の色を選ぼう</h2></div><button class="icon-button" id="cancelColor" type="button" aria-label="色の選択を取り消す">×</button></div><p id="wildUnoStatus" class="wild-uno-status" role="status" hidden></p><div class="color-options"><button type="button" data-color="red">● <span>赤</span></button><button type="button" data-color="yellow">◆ <span>黄</span></button><button type="button" data-color="green">▲ <span>緑</span></button><button type="button" data-color="blue">■ <span>青</span></button></div></dialog>
   <dialog id="rulesDialog" aria-labelledby="rulesTitle"><div class="dialog-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rulesTitle">1枚から、始まる逆転。</h2></div><button class="icon-button" id="closeRules" type="button" aria-label="遊び方を閉じる">×</button></div><div class="rules-content"><p>場のカードと<strong>同じ色・数字・記号</strong>のカードを出し、最初に手札をなくした人が勝ち。最初の手札は7枚です。</p><div class="rule-grid"><div><b>⊘ スキップ</b><p>次の人の番を飛ばします。</p></div><div><b>⇄ リバース</b><p>順番の向きを反転。2人対戦ではもう一度自分の番です。</p></div><div><b>＋2 / ＋4</b><p>次の人がカードを引き、その番はお休み。重ね出しはできません。</p></div><div><b>✦ ワイルド</b><p>好きな色へ変更。＋4は場と同じ色を持っていないときだけ出せます。</p></div></div><p><strong>引いたカードが出せるときは、その1枚を出すかパス。</strong>出せないカードなら自動で次の人の番になります。</p><div class="uno-rule"><strong>残り1枚になる前に「UNO!」</strong><p>宣言ボタンをオンにしてからカードを出しましょう。このゲームでは宣言を忘れると、その場で2枚追加されます。</p></div><p>オンラインでは各自1台の端末を使います。手札を端末同士で渡す必要はありません。自分の端末だけに、自分の手札が届きます。</p><p class="muted">接続が切れた場合は同じブラウザーで開き直すと復帰できます。操作がないまま一定時間が経過すると、サーバーが自動で番を進めます。</p><p class="keyboard-help">キーボード：← → 手札を選択 ／ Enter 出す ／ D 引く ／ P パス ／ U UNO宣言</p></div></dialog>
   <dialog id="leaveDialog" class="leave-dialog" aria-labelledby="leaveTitle"><div class="dialog-head"><h2 id="leaveTitle">テーブルを離れますか？</h2><button class="icon-button" id="cancelLeave" type="button" aria-label="戻る">×</button></div><p id="leaveExplanation"></p><div class="dialog-actions"><button class="secondary-button" id="stayButton" type="button">対戦に戻る</button><button class="danger-button" id="confirmLeave" type="button">退出する</button></div></dialog>
-  <script type="module" src="app.mjs"></script>
+  <script type="module" src="app.mjs?v=20261108-ui"></script>
 </body>
 </html>
