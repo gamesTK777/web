@@ -1,4 +1,4 @@
-# 灯都の採集商 / Lantern & Ledger
+# パル商人日記 / Pal Merchant Diary
 
 オリジナルのターン制ダンジョン探索と街づくりゲーム。ビルド不要の静的HTML・CSS・ES modulesで動作します。
 
