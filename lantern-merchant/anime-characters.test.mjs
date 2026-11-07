@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createAnimeCharacterRenderer} from './anime-characters.mjs';
+import {createAnimeCharacterRenderer,MONSTER_ART} from './anime-characters.mjs';
+import {drawExtraMonsterFallback,EXTRA_MONSTER_KINDS} from './monster-art.mjs';
+const ENEMY_IDS=['moss','moth','golem','boss','sprout','cap','bat','shell','wisp','thorn','crab','owl','mimic','lizard','knight'];
 
 function context(){
   const calls=[],stack=[];
   const c={calls,imageSmoothingEnabled:false,imageSmoothingQuality:'low',fillStyle:'#000'};
   c.save=()=>stack.push({imageSmoothingEnabled:c.imageSmoothingEnabled,imageSmoothingQuality:c.imageSmoothingQuality,fillStyle:c.fillStyle});
   c.restore=()=>Object.assign(c,stack.pop());
-  for(const key of ['translate','scale','rotate','beginPath','ellipse','fill','fillRect','drawImage'])c[key]=(...args)=>{calls.push({key,args});for(const arg of args)if(typeof arg==='number')assert.ok(Number.isFinite(arg),key+' uses finite coordinates');};
+  for(const key of ['translate','scale','rotate','beginPath','ellipse','fill','fillRect','drawImage','moveTo','lineTo','closePath'])c[key]=(...args)=>{calls.push({key,args});for(const arg of args)if(typeof arg==='number')assert.ok(Number.isFinite(arg),key+' uses finite coordinates');};
   c.createRadialGradient=()=>({addColorStop(){}});return c;
 }
 function image(id){return{id,width:id==='explorer'?320:512,height:512};}
@@ -22,10 +24,10 @@ test('loading coalesces concurrent requests and leaves drawing available for fal
   const r=setup({loadImage:url=>{requests.push(url);return new Promise(resolve=>pending.push(()=>resolve(image('explorer'))));}});
   const c=context();assert.equal(r.drawAnimeExplorer(c,10,20),false);assert.equal(c.calls.length,0);
   const first=r.preloadCharacters(),second=r.preloadCharacters();await Promise.resolve();
-  assert.equal(requests.length,5);assert.equal(r.getCharacterAssetStatus().loading.length,5);
+  assert.equal(requests.length,16);assert.equal(r.getCharacterAssetStatus().loading.length,16);
   for(const finish of pending)finish();
   assert.equal((await first).baseReady,true);assert.equal((await second).baseReady,true);
-  await r.preloadCharacters();assert.equal(requests.length,5);
+  await r.preloadCharacters();assert.equal(requests.length,16);
 });
 
 test('a missing image does not block other characters and retries only when explicitly requested',async()=>{
@@ -39,8 +41,8 @@ test('a missing image does not block other characters and retries only when expl
 });
 
 test('directional assets are opt-in, deduplicated, and selected without changing motion data',async()=>{
-  const r=setup();await r.preloadCharacters();assert.equal(r.requests.length,5);
-  await r.preloadCharacters({views:['up','left','right','left','unknown']});assert.equal(r.requests.length,8);
+  const r=setup();await r.preloadCharacters();assert.equal(r.requests.length,16);
+  await r.preloadCharacters({views:['up','left','right','left','unknown']});assert.equal(r.requests.length,19);
   for(const facing of ['up','left','right','down']){
     const motion=Object.freeze({facing,kind:'idle',progress:1}),c=context();assert.equal(r.drawAnimeExplorer(c,100,100,40,1000,motion),true);
     const drawn=c.calls.find(v=>v.key==='drawImage').args[0];assert.equal(drawn.id,facing==='down'?'explorer':'explorer-'+facing);
@@ -48,7 +50,7 @@ test('directional assets are opt-in, deduplicated, and selected without changing
     assert.ok(Math.abs(draw.args[2]+56.8*anchor)<1e-10,'each approved view uses its own foot anchor');
     assert.deepEqual(motion,{facing,kind:'idle',progress:1});
   }
-  const snapshot=r.getCharacterAssetStatus();snapshot.ready.length=0;assert.equal(r.getCharacterAssetStatus().ready.length,8);
+  const snapshot=r.getCharacterAssetStatus();snapshot.ready.length=0;assert.equal(r.getCharacterAssetStatus().ready.length,19);
 });
 
 test('walking alternates boot regions, attacks lunge, and reduced motion draws one grounded still',async()=>{
@@ -65,7 +67,7 @@ test('walking alternates boot regions, attacks lunge, and reduced motion draws o
 
 test('all enemy forms preserve saved data and place damage bars above their complete silhouettes',async()=>{
   const r=setup();await r.preloadCharacters();
-  for(const kind of ['moss','moth','golem','boss'])for(const reducedMotion of [false,true]){
+  for(const kind of ENEMY_IDS)for(const reducedMotion of [false,true]){
     const enemy=Object.freeze({kind,x:2,y:4,hp:5,maxHp:10}),before=JSON.stringify(enemy),c=context();
     assert.equal(r.drawAnimeMonster(c,enemy,200,160,60,1000,{reducedMotion}),true);
     assert.equal(JSON.stringify(enemy),before);assert.equal(c.imageSmoothingEnabled,false);
@@ -78,6 +80,17 @@ test('reduced motion produces identical character transforms regardless of clock
   const r=setup();await r.preloadCharacters();
   const a=context(),b=context();
   r.drawAnimeExplorer(a,40,80,44,0,{reducedMotion:true});r.drawAnimeExplorer(b,40,80,44,100000,{reducedMotion:true});assert.deepEqual(a.calls,b.calls);
-  const e=Object.freeze({kind:'moth',hp:1,maxHp:1,x:4,y:6}),c=context(),d=context();
-  r.drawAnimeMonster(c,e,40,80,44,0,{reducedMotion:true});r.drawAnimeMonster(d,e,40,80,44,100000,{reducedMotion:true});assert.deepEqual(c.calls,d.calls);
+  for(const kind of ENEMY_IDS){const e=Object.freeze({kind,hp:1,maxHp:1,x:4,y:6}),c=context(),d=context();
+    r.drawAnimeMonster(c,e,40,80,44,0,{reducedMotion:true});r.drawAnimeMonster(d,e,40,80,44,100000,{reducedMotion:true});assert.deepEqual(c.calls,d.calls,kind);
+  }
+});
+
+test('all fifteen monster kinds request their own illustration and retain distinct fallback silhouettes',async()=>{
+  assert.deepEqual(Object.keys(MONSTER_ART).sort(),[...ENEMY_IDS].sort());
+  const r=setup();await r.preloadCharacters();assert.deepEqual(r.requests.filter(id=>id!=='explorer').sort(),[...ENEMY_IDS].sort());
+  const silhouettes=new Set();
+  for(const kind of EXTRA_MONSTER_KINDS){
+    const c=context();assert.equal(drawExtraMonsterFallback(c,kind),true);assert.ok(c.calls.length>30,kind+' is a complete silhouette');silhouettes.add(JSON.stringify(c.calls));
+  }
+  assert.equal(silhouettes.size,11);assert.equal(drawExtraMonsterFallback(context(),'unknown'),false);
 });

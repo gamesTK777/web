@@ -1,8 +1,18 @@
 /* Approved anime illustrations are loaded once and drawn in presentation space.
  * These functions never change saved coordinates, combat, collision or inventory. */
-const BASE_IDS=Object.freeze(['explorer','moss','moth','golem','boss']);
+export const MONSTER_ART=Object.freeze({
+  moss:{height:.95,motion:'sway'},moth:{height:1.10,motion:'flutter',float:.075},
+  golem:{height:1.20,motion:'heavy'},boss:{height:1.50,motion:'heavy',glow:'205,156,243'},
+  sprout:{height:1.08,motion:'sway'},cap:{height:1.04,motion:'breathe',glow:'247,190,99'},
+  bat:{height:.98,motion:'flutter',float:.09},shell:{height:.93,motion:'slow'},
+  wisp:{height:1.12,motion:'hover',float:.12,glow:'113,229,203'},thorn:{height:1.04,motion:'breathe'},
+  crab:{height:.94,motion:'scuttle'},owl:{height:1.12,motion:'sway'},
+  mimic:{height:1.04,motion:'breathe'},lizard:{height:1.02,motion:'sway',glow:'248,149,83'},
+  knight:{height:1.35,motion:'heavy',glow:'225,193,123'}
+});
+const BASE_IDS=Object.freeze(['explorer',...Object.keys(MONSTER_ART)]);
 const DIRECTIONS=Object.freeze(['up','left','right']);
-const DEFAULT_ANCHORS=Object.freeze({explorer:.991525,'explorer-up':.990183,'explorer-left':.980984,'explorer-right':.995376,moss:.94148,moth:.850041,golem:.991007,boss:.989684});
+const DEFAULT_ANCHORS=Object.freeze({explorer:.991525,'explorer-up':.990183,'explorer-left':.980984,'explorer-right':.995376,moss:.94148,moth:.850041,golem:.991007,boss:.989684,sprout:.96875,cap:.96875,bat:.90234375,shell:.955078125,wisp:.96875,thorn:.96875,crab:.955078125,owl:.96875,mimic:.96875,lizard:.94921875,knight:.96875});
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 function browserLoadImage(url){
@@ -48,7 +58,7 @@ export function createAnimeCharacterRenderer({loadImage=browserLoadImage,baseUrl
   function imageFor(id){return entries.get(id)?.phase==='ready'?entries.get(id).image:null;}
   function geometry(image,id,size,heightFactor){
     const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height;
-    return{iw,ih,width:size*heightFactor*iw/ih,height:size*heightFactor,anchor:anchors[id]??DEFAULT_ANCHORS[id]??DEFAULT_ANCHORS.explorer};
+    return{iw,ih,width:size*heightFactor*iw/ih,height:size*heightFactor,anchor:anchors[id]??DEFAULT_ANCHORS[id]??.97};
   }
   function fullImage(c,image,g){c.drawImage(image,-g.width/2,-g.height*g.anchor,g.width,g.height);}
 
@@ -83,17 +93,21 @@ export function createAnimeCharacterRenderer({loadImage=browserLoadImage,baseUrl
 
   function drawAnimeMonster(c,enemy,x,y,size=40,time=0,{reducedMotion=false}={}){
     const id=String(enemy.kind||'moss'),image=imageFor(id);if(!image)return false;
-    const factors={moss:.95,moth:1.10,golem:1.20,boss:1.50},g=geometry(image,id,size,factors[id]||1);
-    const phase=reducedMotion?0:Math.sin(time/(id==='moth'?170:650)+(Number(enemy.x)||0));
-    const foot=y+size*.25,float=id==='moth'?size*(.075+phase*.025):0;
-    c.save();shadow(c,x,foot,size,id==='moth'?.16:.28);
-    if(id==='boss'){
+    const art=MONSTER_ART[id]||{height:1,motion:'heavy'},g=geometry(image,id,size,art.height);
+    const period=art.motion==='flutter'?170:art.motion==='slow'?1100:650;
+    const phase=reducedMotion?0:Math.sin(time/period+(Number(enemy.x)||0));
+    const foot=y+size*.25,float=art.float?size*(art.float+phase*.025):0;
+    c.save();shadow(c,x,foot,size,art.float?.16:.28);
+    if(art.glow){
       const glow=c.createRadialGradient(x,foot-size*.35,0,x,foot-size*.35,size*.75);
-      glow.addColorStop(0,`rgba(205,156,243,${.10+phase*.018})`);glow.addColorStop(1,'rgba(205,156,243,0)');c.fillStyle=glow;c.fillRect(x-size*.75,foot-size*1.1,size*1.5,size*1.5);
+      glow.addColorStop(0,`rgba(${art.glow},${.10+phase*.018})`);glow.addColorStop(1,`rgba(${art.glow},0)`);c.fillStyle=glow;c.fillRect(x-size*.75,foot-size*1.1,size*1.5,size*1.5);
     }
     c.translate(x,foot-float);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
-    if(id==='moth')c.scale(reducedMotion?1:.94+phase*.06,1);
-    else if(id==='moss')c.rotate(phase*.012);
+    if(art.motion==='flutter')c.scale(reducedMotion?1:.94+phase*.06,1);
+    else if(art.motion==='sway')c.rotate(phase*.012);
+    else if(art.motion==='scuttle')c.translate(phase*size*.014,0);
+    else if(art.motion==='hover')c.rotate(phase*.018);
+    else if(art.motion==='breathe')c.scale(1+phase*.006,1+phase*.014);
     else c.scale(1,1+phase*.006);
     fullImage(c,image,g);c.restore();
     if(Number.isFinite(enemy.hp)&&Number.isFinite(enemy.maxHp)&&enemy.maxHp>0&&enemy.hp<enemy.maxHp){

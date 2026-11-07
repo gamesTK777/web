@@ -1,9 +1,9 @@
 {
-  "version": 1,
+  "version": 2,
   "style": "anime",
   "format": "webp",
   "source": "Approved anime character illustrations generated 2026-11-07",
-  "maxEdge": 512,
+  "maxEdge": 640,
   "quality": 92,
   "characters": {
     "explorer": {
@@ -293,7 +293,245 @@
         "visiblePixels": 64859,
         "maxAlpha": 255
       }
+    },
+    "sprout": {
+      "name": "芽狐",
+      "file": "sprout.webp",
+      "width": 546,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 53326,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "sprout-original.png",
+        "sha256": "663914773e99240d08b4e29f75ac28b055584de0fc608a1d5a7feb005ec8c43a"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "cap": {
+      "name": "灯茸",
+      "file": "cap.webp",
+      "width": 515,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 43824,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "cap-original.png",
+        "sha256": "d5cac8b378be0d543ca98123345e6fafd41eb7fbac9f3c03a856834d212cb000"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "bat": {
+      "name": "月蝙蝠",
+      "file": "bat.webp",
+      "width": 640,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.90234375
+      },
+      "bytes": 36216,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "bat-original.png",
+        "sha256": "8cfc412bc92fadd58010262ddb1392f0d58c51930dff3e559642f9c748598bef"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "shell": {
+      "name": "潮殻",
+      "file": "shell.webp",
+      "width": 640,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.955078125
+      },
+      "bytes": 52004,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "shell-original.png",
+        "sha256": "3e930c99f1dfbf018124d2416da3f00519cb4a5bef200f638016a0b3ba7cad9a"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "wisp": {
+      "name": "迷い灯",
+      "file": "wisp.webp",
+      "width": 487,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 34238,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "wisp-original.png",
+        "sha256": "d30bf33ef1afb28dae2a47ecc17b09e56d2df0f3561118ff72e6093d02b35116"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "thorn": {
+      "name": "茨猪",
+      "file": "thorn.webp",
+      "width": 640,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 54408,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "thorn-original.png",
+        "sha256": "9a6978422c1bb4e2e2f9593404ac84b8dd56943a13a29364a32d9d0dfd28d75d"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "crab": {
+      "name": "銅鋏",
+      "file": "crab.webp",
+      "width": 640,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.955078125
+      },
+      "bytes": 71588,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "crab-original.png",
+        "sha256": "cd43dd1cdcab0bde814ed21ea9633dfd2ab135a81814106b98173d1c8a818f84"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "owl": {
+      "name": "書梟",
+      "file": "owl.webp",
+      "width": 478,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 45290,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "owl-original.png",
+        "sha256": "13dcfb1e2db9c49e81f315332e057d4d6ea4b748bc9d79190cfd73f506fbfd62"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "mimic": {
+      "name": "宝箱もどき",
+      "file": "mimic.webp",
+      "width": 546,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 49318,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "mimic-original.png",
+        "sha256": "4c2f571127edc260888e45e66bbc56c9da434c8bea3f405bced4c33eb73a4b74"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "lizard": {
+      "name": "熾蜥蜴",
+      "file": "lizard.webp",
+      "width": 640,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.94921875
+      },
+      "bytes": 42656,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "lizard-original.png",
+        "sha256": "e02da108bfc191a07d6548e0e5695b9076df50c70def6281da6cac35abc0022c"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
+    },
+    "knight": {
+      "name": "空鎧",
+      "file": "knight.webp",
+      "width": 420,
+      "height": 512,
+      "anchor": {
+        "x": 0.5,
+        "y": 0.96875
+      },
+      "bytes": 51380,
+      "hasAlpha": true,
+      "quality": 85,
+      "source": {
+        "file": "knight-original.png",
+        "sha256": "5317c91886f60e33b0a9ea9da7a02a4bff9a0452e928b0302c468596e6a26774"
+      },
+      "alpha": {
+        "min": 0,
+        "max": 255
+      }
     }
   },
-  "totalBytes": 367878
+  "totalBytes": 367878,
+  "additions": {
+    "date": "2026-11-07",
+    "count": 11,
+    "generatedWith": "built-in image_gen",
+    "prompts": "generation-prompt-enemies.txt",
+    "bytes": 534248
+  }
 }

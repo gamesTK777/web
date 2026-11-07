@@ -1,6 +1,7 @@
 import {drawTown} from './town-art.mjs?v=20261106-art';
 import {drawExplorer as pixelPlayer} from './hero-art.mjs?v=20261106-art';
-import {drawAnimeExplorer,drawAnimeMonster} from './anime-characters.mjs?v=20261107-anime';
+import {drawAnimeExplorer,drawAnimeMonster} from './anime-characters.mjs?v=20261107-enemies15';
+import {drawExtraMonsterFallback} from './monster-art.mjs?v=20261107-enemies15';
 /* Original pixel environments with the approved anime character illustrations. */
 const C = {
   night:'#071719', deep:'#0b2328', water:'#163b49', ripple:'#2d5960', land:'#304c43',
@@ -31,9 +32,11 @@ function player(c,x,y,size,time,motion){
 function monster(c,e,x,y,size,time,options){
   if(drawAnimeMonster(c,e,x,y,size,time,options))return;
   c.save();c.translate(Math.round(x),Math.round(y));c.scale(size/40,size/40);
-  const kind=String(e.kind||'moss'),pulse=Math.sin(time/420+e.x),step=Math.sin(time/180+e.y);
+  const kind=String(e.kind||'moss'),pulse=options?.reducedMotion?0:Math.sin(time/420+e.x),step=options?.reducedMotion?0:Math.sin(time/180+e.y);
   c.fillStyle='#03141888';c.beginPath();c.ellipse(0,10,15,5,0,0,Math.PI*2);c.fill();
-  if(kind==='boss'||kind==='golem'){
+  if(drawExtraMonsterFallback(c,kind,{pulse,step})){
+    // Each added species has its own silhouette even before images decode.
+  }else if(kind==='boss'||kind==='golem'){
     const boss=kind==='boss',base=boss?'#56557f':'#526d71',mid=boss?'#9995b9':'#8ca49e',hi=boss?'#d6cae2':'#c1d1b7';
     c.translate(0,Math.round(pulse));
     // Separate stone feet, knee joints and three-facet shoulders.
@@ -49,7 +52,7 @@ function monster(c,e,x,y,size,time,options){
     if(boss){for(const [xx,yy]of [[-15,-24],[14,-24],[0,-39]]){poly(c,[[xx,yy-9],[xx+5,yy],[xx,yy+4],[xx-4,yy]],'#8c80b2');poly(c,[[xx,yy-8],[xx+1,yy+2],[xx-3,yy]],'#f2d6ed');}rect(c,-16,-15,32,2,'#d6b676');}
   }else if(kind==='moth'){
     c.translate(0,Math.round(pulse*3)-4);
-    const flap=.55+Math.abs(Math.sin(time/120+e.x))*.45;
+    const flap=options?.reducedMotion?1:.55+Math.abs(Math.sin(time/120+e.x))*.45;
     for(const dir of [-1,1]){c.save();c.scale(dir*flap,1);poly(c,[[2,-13],[12,-27],[23,-23],[24,-12],[17,0],[20,9],[9,13],[3,3]],'#342d52');poly(c,[[4,-12],[13,-24],[21,-21],[21,-12],[13,-3],[17,7],[10,10],[5,1]],'#8676ac');poly(c,[[5,-11],[13,-21],[18,-18],[16,-11],[9,-7]],'#c4afd2');rect(c,12,-16,4,4,'#e4c78a');rect(c,13,-15,2,2,'#5b466e');poly(c,[[7,-1],[11,1],[13,7],[8,5]],'#aa97be');c.restore();}
     rect(c,-3,-18,7,20,'#564468');rect(c,-2,-17,4,16,'#c0b8d3');rect(c,-4,-19,8,8,'#a59abd');rect(c,-3,-16,2,3,'#ffe6a1');rect(c,2,-16,2,3,'#ffe6a1');rect(c,-5,-24,2,6,'#d4bdcf');rect(c,5,-24,2,6,'#d4bdcf');rect(c,-7,-26,3,3,'#f5d998');rect(c,5,-26,3,3,'#f5d998');
   }else{
@@ -63,7 +66,7 @@ function monster(c,e,x,y,size,time,options){
     for(const dir of [-1,1]){rect(c,dir<0?-9:8,-23,2,8,'#73915f');poly(c,[[dir*8,-22],[dir*14,-29],[dir*8,-28],[dir*6,-23]],'#aac580');}
   }
   c.restore();
-  if(e.hp<e.maxHp){rect(c,x-size*.35,y-size*1.02,size*.7,5,'#0e1d28');rect(c,x-size*.35+1,y-size*1.02+1,(size*.7-2)*Math.max(0,e.hp/e.maxHp),3,'#eca27c');}
+  if(e.hp<e.maxHp){const headHeight=kind==='boss'?1.5:kind==='knight'?1.35:1.08;rect(c,x-size*.35,y-size*headHeight,size*.7,5,'#0e1d28');rect(c,x-size*.35+1,y-size*headHeight+1,(size*.7-2)*Math.max(0,e.hp/e.maxHp),3,'#eca27c');}
 }
 
 /** Draw an original compact pixel icon into an existing 2D context. */

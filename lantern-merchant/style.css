@@ -62,4 +62,16 @@ body[data-mode="town"] .dungeon-controls>p{display:block;max-width:440px;color:#
 .welcome-art.anime-welcome{height:170px;flex-direction:row;gap:22px;overflow:hidden;padding:0 20px;background:radial-gradient(ellipse at 40% 40%,#6f7851,#1c3c39 80%)}
 .anime-welcome .welcome-explorer{width:155px;height:240px;align-self:flex-start;object-fit:contain;margin-top:8px;filter:drop-shadow(0 0 18px #edbf7040)}
 .anime-welcome span{max-width:190px;font-size:10px;line-height:2.1;letter-spacing:2px}
+.notes .text-button{display:block;min-height:44px}
+.field-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 3px 8px;color:#a9bdad;font-size:11px}.field-tools .text-button{min-height:44px;white-space:nowrap;font-size:12px}
+#bestiaryDialog{width:min(1000px,calc(100vw - 24px));max-width:1000px}
+.bestiary-intro{font-size:13px;color:var(--muted,#bdccbd);line-height:1.9;margin-bottom:22px}
+.bestiary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:24px}
+.bestiary-card{background:linear-gradient(160deg,#29453e,#152d2e);border:1px solid #bdd1ac25;border-radius:14px;overflow:hidden;padding:10px 12px 14px}
+.bestiary-art{height:125px;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse,#c5d89916,transparent 70%)}
+.bestiary-art img{max-width:100%;width:120px;height:116px;object-fit:contain;filter:drop-shadow(0 5px 4px #06171766)}
+.bestiary-depth{font-size:10px;letter-spacing:.7px;color:#dfbd7b}
+.bestiary-card h3{font-size:15px;margin:7px 0;color:#f1e7cf}
+.bestiary-card p{font-size:11px;line-height:1.8;color:#bacbbd;margin:0}
+@media(max-width:760px){.bestiary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bestiary-art{height:112px}.bestiary-art img{height:105px;width:110px}.bestiary-card{padding:9px 11px 12px}#bestiaryDialog h2{font-size:19px}}
 @media(max-width:760px){.welcome-art.anime-welcome{height:125px;gap:15px;padding:0 12px}.anime-welcome .welcome-explorer{width:125px;height:194px}.anime-welcome span{font-size:8px;max-width:140px}}

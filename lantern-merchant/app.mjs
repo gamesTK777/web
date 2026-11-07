@@ -1,14 +1,22 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261105';
-import {drawScene} from './renderer.mjs?v=20261107-anime';
-import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261107-anime';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded} from './engine.mjs?v=20261107-enemies15';
+import {drawScene} from './renderer.mjs?v=20261107-enemies15';
+import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261107-enemies15';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261106-art';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
 import {createAudioManager} from './audio.mjs?v=20261105-16bit';
 import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261105-cloud';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
+import {ENEMY_TYPES} from './enemies.mjs?v=20261107-enemies15';
 
 const $=id=>document.getElementById(id), KEY='tk777-lantern-merchant-v1';
 const money=n=>Number(n).toLocaleString('ja-JP'), esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function showBestiary(){
+  held.clear();
+  if(!$('bestiaryGrid').childElementCount){
+    $('bestiaryGrid').innerHTML=ENEMY_TYPES.map(enemy=>`<article class="bestiary-card"><div class="bestiary-art"><img src="assets/characters/${encodeURIComponent(enemy.id)}.webp" alt="${esc(enemy.name)}" loading="lazy" decoding="async"></div><span class="bestiary-depth">${enemy.id==='boss'?'B5 · 迷宮の守り手':`B${enemy.firstFloor}〜`}</span><h3>${esc(enemy.name)}</h3><p>${esc(enemy.description)}</p></article>`).join('');
+  }
+  $('bestiaryDialog').showModal();
+}
 let state=newGame(), tab='bag', fresh=true, persistAllowed=true, savedAt=null, saveFailed=false, loadError='', toastTimer, confirmTask=null, frameInfo=null, lastFrame=0;
 const sound=createAudioManager(), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let sessionStarted=false, zoom=3, facing='down', motion=null, effects=[], volume=.35, muted=false;
@@ -231,6 +239,7 @@ $('zoomOut').addEventListener('click',()=>setZoom(state.mode==='dungeon'?zoom-1:
 $('overviewButton').addEventListener('click',()=>{townCamera=null;setZoom(1);});
 function setFocus(value){document.body.classList.toggle('focus-mode',value);$('focusButton').textContent=value?'✕ 戻す':'⛶ 拡大';$('focusButton').setAttribute('aria-label',value?'拡大表示を閉じる':'ゲーム画面を拡大表示');$('focusButton').setAttribute('aria-pressed',String(value));requestAnimationFrame(()=>draw());}
 $('focusButton').addEventListener('click',()=>setFocus(!document.body.classList.contains('focus-mode')));
+$('bestiaryButton').addEventListener('click',showBestiary);
 $('saveButton').addEventListener('click',()=>{$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'まだ保存されていません。';$('saveDialog').showModal();});
 $('manualSave').addEventListener('click',()=>{save(true);$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'バックアップをご利用ください。';});
 $('manualSave').addEventListener('click',()=>{void syncCloud();});

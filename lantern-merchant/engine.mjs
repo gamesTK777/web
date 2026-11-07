@@ -1,4 +1,5 @@
 // Original turn-based adventure and town economy. No network or real-money transactions.
+import {ENEMY_BY_ID,enemiesForFloor,enemyStats} from './enemies.mjs?v=20261107-enemies15';
 export const ITEMS = Object.freeze([
   {id:'potion',name:'若葉の薬',icon:'✚',kind:'consumable',buy:32,sell:12,description:'HPを24回復。迷宮では1ターン使います。'},
   {id:'ration',name:'旅人のパン',icon:'◒',kind:'consumable',buy:22,sell:8,description:'満腹度を45回復。'},
@@ -60,8 +61,8 @@ function reveal(s) {
     if(visible)s.map.visible[y][x]=s.map.seen[y][x]=true;
   }
 }
-function randomFloorPoint(s,avoidStart=true) {
-  for(let attempt=0;attempt<2000;attempt++){const x=between(s,1,W-2),y=between(s,1,H-2); if(s.map.tiles[y][x]===1&&!occupied(s,x,y)&&!s.loot.some(l=>l.x===x&&l.y===y)&&(!avoidStart||dist({x,y},s.player)>5))return{x,y};}
+function randomFloorPoint(s,avoidStart=true,clearance=null) {
+  for(let attempt=0;attempt<2000;attempt++){const x=between(s,1,W-2),y=between(s,1,H-2); if(s.map.tiles[y][x]===1&&!occupied(s,x,y)&&!s.loot.some(l=>l.x===x&&l.y===y)&&(!avoidStart||dist({x,y},s.player)>5)&&(!clearance||dist({x,y},clearance)>1))return{x,y};}
   return null;
 }
 function generateFloor(s) {
@@ -81,12 +82,16 @@ function generateFloor(s) {
   tiles[s.player.y][s.player.x]=3;
   tiles[rooms[5].cy][rooms[5].cx]=2;
   const f=s.floor;
+  // Show the newly introduced species first, then vary familiar creatures.
+  // The count of creatures is unchanged; extra species do not crowd the map.
+  const shuffle=list=>{const result=[...list];for(let i=result.length-1;i>0;i--){const j=between(s,0,i);[result[i],result[j]]=[result[j],result[i]];}return result;};
+  const pool=enemiesForFloor(f),roster=[...shuffle(pool.filter(type=>type.firstFloor===f)),...shuffle(pool.filter(type=>type.firstFloor<f))];
+  const bossPoint=f===5?{x:rooms[5].cx,y:rooms[5].cy-1}:null;
   for(let i=0;i<3+f;i++){
-    const p=randomFloorPoint(s);if(!p)continue; const kind=f>=3&&i%3===0?'golem':i%3===1?'moth':'moss';
-    const extra=kind==='golem'?5:0,hp=5+f*3+extra;
-    s.enemies.push({id:`${s.stats.runs}-${f}-${i}`,kind,name:{moss:'苔玉',moth:'夜羽',golem:'鉱殻'}[kind],...p,hp,maxHp:hp,attack:1+f+Math.floor(extra/3),defense:kind==='golem'?1:0,xp:5+f*3});
+    const p=randomFloorPoint(s,true,bossPoint);if(!p)continue;const type=roster[i%roster.length],stats=enemyStats(type.id,f);
+    s.enemies.push({id:`${s.stats.runs}-${f}-${i}`,kind:type.id,name:type.name,...p,...stats,maxHp:stats.hp});
   }
-  if(f===5){const p={x:rooms[5].cx,y:rooms[5].cy-1};s.enemies=s.enemies.filter(e=>dist(e,p)>1);s.enemies.push({id:`boss-${s.stats.runs}`,kind:'boss',name:'灯晶の番人',...p,hp:65,maxHp:65,attack:11,defense:3,xp:100});}
+  if(f===5){const stats=enemyStats('boss',f);s.enemies.push({id:`boss-${s.stats.runs}`,kind:'boss',name:ENEMY_BY_ID.boss.name,...bossPoint,...stats,maxHp:stats.hp});}
   for(let i=0;i<8+f;i++){
     const p=randomFloorPoint(s,false);if(!p)continue;let id=i<2?'ration':i===2?'potion':f>=3&&rand(s)<.35?'prism':rand(s)<.28?'amber':rand(s)<.5?'ore':'herb';
     s.loot.push({id,...p});
@@ -118,15 +123,35 @@ function endRun(s,defeat=false){
   return defeat?'defeat':clear?'victory':'return';
 }
 function enemyTurn(s){
+  let distances=null;
+  const hit=(e,ranged=false)=>{const damage=Math.max(1,e.attack-s.defense+between(s,-1,1));s.hp-=damage;log(s,`${e.name}の${ranged?'遠隔':'攻撃'}。${damage}ダメージ。`);return s.hp<=0?endRun(s,true):null;};
   for(const e of [...s.enemies]){
     if(s.mode!=='dungeon')break;
-    if(dist(e,s.player)===1){const damage=Math.max(1,e.attack-s.defense+between(s,-1,1));s.hp-=damage;log(s,`${e.name}の攻撃。${damage}ダメージ。`);if(s.hp<=0)return endRun(s,true);continue;}
-    if(dist(e,s.player)>8)continue;
+    const distance=dist(e,s.player),behavior=ENEMY_BY_ID[e.kind]?.behavior||'hunter';
+    // Cadence uses existing saved turn/ID data rather than adding timers or statuses.
+    const phase=[...e.id].reduce((value,c)=>value+c.charCodeAt(0),0);
+    if(distance===1){const event=hit(e);if(event)return event;continue;}
+    const radius=behavior==='ambush'?3:behavior==='shy'?6:behavior==='watcher'?10:8;
+    if(distance>radius)continue;
+    if(behavior==='glimmer'&&distance===2&&(e.x===s.player.x||e.y===s.player.y)&&(s.turn+phase)%2===0){
+      const x=(e.x+s.player.x)/2,y=(e.y+s.player.y)/2;
+      if(walkable(s,x,y)&&!occupied(s,x,y)){const event=hit(e,true);if(event)return event;continue;}
+    }
+    if(behavior==='slow'&&(s.turn+phase)%2===0)continue;
     // Breadth-first distances avoid enemies getting stuck on corridor corners.
-    const queue=[{...s.player}],d=new Map([[`${s.player.x},${s.player.y}`,0]]);
-    for(let i=0;i<queue.length&&i<300;i++){const p=queue[i];const n=d.get(`${p.x},${p.y}`);if(n>=12)continue;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!d.has(key)){d.set(key,n+1);queue.push({x,y});}}}
-    const moves=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(p=>walkable(s,p.x,p.y)&&!occupied(s,p.x,p.y)&&dist(p,s.player)>0).sort((a,b)=>(d.get(`${a.x},${a.y}`)??999)-(d.get(`${b.x},${b.y}`)??999));
-    if(moves.length&&(d.get(`${moves[0].x},${moves[0].y}`)??999)<(d.get(`${e.x},${e.y}`)??999)){e.x=moves[0].x;e.y=moves[0].y;}
+    if(!distances){
+      const queue=[{...s.player}];distances=new Map([[`${s.player.x},${s.player.y}`,0]]);
+      for(let i=0;i<queue.length&&i<300;i++){const p=queue[i];const n=distances.get(`${p.x},${p.y}`);if(n>=12)continue;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!distances.has(key)){distances.set(key,n+1);queue.push({x,y});}}}
+    }
+    const steps=behavior==='charge'&&(s.turn+phase)%3===0?2:1;let moved=0;
+    for(let step=0;step<steps&&dist(e,s.player)>1;step++){
+      const horizontalFirst=behavior==='sideways'||['moss','moth','golem','boss'].includes(e.kind);
+      const directions=horizontalFirst?[[1,0],[-1,0],[0,1],[0,-1]]:[[0,1],[0,-1],[1,0],[-1,0]];
+      const moves=directions.map(([dx,dy])=>({x:e.x+dx,y:e.y+dy})).filter(p=>walkable(s,p.x,p.y)&&!occupied(s,p.x,p.y)&&dist(p,s.player)>0).sort((a,b)=>(distances.get(`${a.x},${a.y}`)??999)-(distances.get(`${b.x},${b.y}`)??999));
+      if(!moves.length||(distances.get(`${moves[0].x},${moves[0].y}`)??999)>=(distances.get(`${e.x},${e.y}`)??999))break;
+      e.x=moves[0].x;e.y=moves[0].y;moved++;
+    }
+    if(moved===2)log(s,`${e.name}が勢いよく近づいた。`);
   }
   return null;
 }
@@ -228,7 +253,7 @@ export function validateSave(raw){
   s.map={width:W,height:H,tiles:grid(m.tiles,n=>num(n,0,3)),seen:grid(m.seen,bool),visible:grid(m.visible,bool),rooms:list(m.rooms,12).map(r=>{if(!obj(r))invalid();return{x:num(r.x,1,W-2),y:num(r.y,1,H-2),width:num(r.width,1,W-2),height:num(r.height,1,H-2),cx:num(r.cx,1,W-2),cy:num(r.cy,1,H-2)};})};
   const point=v=>{if(!obj(v))invalid();const p={x:num(v.x,0,W-1),y:num(v.y,0,H-1)};if(!walkable(s,p.x,p.y))invalid();return p;};
   s.player=point(source.player);const occupiedPositions=new Set([`${s.player.x},${s.player.y}`]),enemyIds=new Set();
-  s.enemies=list(source.enemies,40).map(e=>{const p=point(e);if(!['moss','moth','golem','boss'].includes(e.kind))invalid();const key=`${p.x},${p.y}`;if(occupiedPositions.has(key)||enemyIds.has(e.id))invalid();occupiedPositions.add(key);enemyIds.add(e.id);const maxHp=num(e.maxHp,1,1000),hp=num(e.hp,1,maxHp);return{id:str(e.id,80),kind:e.kind,name:str(e.name,40),...p,hp,maxHp,attack:num(e.attack,1,100),defense:num(e.defense,0,100),xp:num(e.xp,1,1000)};});
+  s.enemies=list(source.enemies,40).map(e=>{const p=point(e);if(typeof e.kind!=='string'||!Object.hasOwn(ENEMY_BY_ID,e.kind))invalid();const key=`${p.x},${p.y}`;if(occupiedPositions.has(key)||enemyIds.has(e.id))invalid();occupiedPositions.add(key);enemyIds.add(e.id);const maxHp=num(e.maxHp,1,1000),hp=num(e.hp,1,maxHp);return{id:str(e.id,80),kind:e.kind,name:str(e.name,40),...p,hp,maxHp,attack:num(e.attack,1,100),defense:num(e.defense,0,100),xp:num(e.xp,1,1000)};});
   s.loot=list(source.loot,100).map(e=>{if(!itemById[e.id])invalid();return{id:e.id,...point(e)};});
   let exits=0,stairs=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){if((x===0||x===W-1||y===0||y===H-1)&&s.map.tiles[y][x]!==0)invalid();if(s.map.tiles[y][x]===2)stairs++;if(s.map.tiles[y][x]===3)exits++;}if(stairs!==1||exits!==1)invalid();
   // Reject disconnected imported floors, so a valid save cannot strand the player.

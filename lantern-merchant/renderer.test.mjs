@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newGame, act} from './engine.mjs';
 import {drawScene} from './renderer.mjs';
+import {MONSTER_ART} from './anime-characters.mjs';
+import {ENEMY_TYPES} from './enemies.mjs';
 
 // Canvas contract probe, not a rasterizer. Visual quality is checked in-browser.
 function makeCanvas(width=1280,height=720) {
@@ -66,5 +68,15 @@ test('walking, combat effects, and reduced motion render safely through a turn b
       effects:[{kind:'hurt',...to,text:'-3',startedAt:1000,duration:650}]
     });
     assert.ok(Number.isFinite(info.playerScreen.x)&&Number.isFinite(info.playerScreen.y));
+  }
+});
+
+test('every catalog enemy renders through the image-unavailable path without mutating an old save',()=>{
+  assert.deepEqual(Object.keys(MONSTER_ART).sort(),ENEMY_TYPES.map(e=>e.id).sort());
+  const base=act(newGame(20261107),{type:'enter'}).state;
+  for(const kind of Object.keys(MONSTER_ART))for(const reducedMotion of [false,true]){
+    const state=deepFreeze({...base,enemies:[{id:'visual-'+kind,kind,name:kind,...base.player,hp:4,maxHp:10,attack:1,defense:0,xp:1}]}),before=JSON.stringify(state),canvas=makeCanvas(390,560);
+    const info=drawScene(canvas,state,{time:1200,zoom:3,reducedMotion});
+    assert.ok(info.playerScreen);assert.equal(JSON.stringify(state),before,kind);assert.ok(canvas.drawCount()>0);
   }
 });
