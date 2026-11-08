@@ -7,6 +7,8 @@ import * as arcade from './arcade.mjs';
 import * as tiles from './tiles.mjs';
 import * as cast from './cast.mjs';
 import * as encounterModule from './encounter.mjs';
+import * as voiceModule from './voice.mjs';
+import * as voiceLines from './voice-lines.mjs';
 
 // The actual app handlers and engine run with queued timers. This checks that
 // a conversation gates the real round, rather than testing a parallel mock app.
@@ -16,6 +18,8 @@ class Element {
   get innerHTML() { return this._html; }
   set textContent(value) { this._text = String(value); }
   get textContent() { return this._text; }
+  setAttribute(name,value) { this[name]=String(value); }
+  getAttribute(name) { return this[name]??null; }
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.children = nodes; }
   querySelector(selector) { return this.children.find(node => node.matches(selector)) || null; }
@@ -39,12 +43,12 @@ async function harness() {
   document.querySelectorAll = selector => [...nodes.values()].filter(node => node.matches(selector));
   document.querySelector = selector => document.querySelectorAll(selector)[0] || null;
   const timers = new Map(); let timerId = 0;
-  const context = vm.createContext({ document, window: {}, console, structuredClone, AbortController,
-    __engine: engine, __arcade: arcade, __tiles: tiles, __cast: cast, __encounter: encounterModule, createdRounds: 0,
+  const context = vm.createContext({ document, window: new Element('window'), console, structuredClone, AbortController,
+    __engine: engine, __arcade: arcade, __tiles: tiles, __cast: cast, __encounter: encounterModule, __voice: voiceModule, __voiceLines: voiceLines, createdRounds: 0,
     setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { fn, delay }); return id; }, clearTimeout(id) { timers.delete(id); },
     fetch: async url => ({ ok: true, json: async () => String(url).endsWith('/config') ? { version: 0, stages: cast.CAST.map(p => ({ id: p.id, name: `ステージ${p.id}の対戦相手`, portrait: null, rewards: [null, null, null], accent: '#315f6b' })) } : { id: 'test-session', entries: [] } })
   });
-  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter;`;
+  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {CharacterVoice}=__voice; const {chooseVoiceLine,getVoiceProfile}=__voiceLines;`;
   const hooks = `globalThis.hooks={ready:configReady,startBattle,nextEncounter,skipConversation,beginBattleRound,step,scheduleCpu,
     begin({stage=1,battle=1,portrait=null,name,retries=0}={}){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();run=createArcade();Object.assign(run,{stage,battle,retries,totalBattles:battle-1});runConfig=structuredClone(defaults);if(portrait)runConfig.stages[stage-1].portrait=portrait;if(name)runConfig.stages[stage-1].name=name;started=true;ended=false;encounter=null;round=null;startBattle();},
     reward(stage,win,custom=null){const result={winner:0,points:2000,han:1,fu:30};run={...createArcade(),stage,battle:win,wins:win-1};run=finishBattle(run,result);round={result};runConfig=structuredClone(defaults);if(custom)runConfig.stages[stage-1].rewards[win-1]=custom;showBattleResult();},

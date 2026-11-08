@@ -3,6 +3,8 @@ import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
 import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-cast';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
+import {CharacterVoice} from './voice.mjs?v=20261108-voice';
+import {chooseVoiceLine,getVoiceProfile} from './voice-lines.mjs?v=20261108-voice';
 const $=id=>document.getElementById(id),API='https://tk777-neonshift-scores.takesuke.chatgpt.site',MODE='mahjong:arcade';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('ja-JP');
@@ -11,6 +13,49 @@ const defaults={version:0,stages:CAST.map(profile=>({id:profile.id,name:profile.
 let config=defaults,runConfig=defaults,run=createArcade(),round=null,selected=null,riichiPicking=false,started=false,ended=false,submitted=false;
 let generation=0,cpuTimer=null,startedAt=0,duration=0,sessionPromise=null,toastTimer=null,logs=[];
 let audio=null,encounter=null,encounterRetryStage=null;
+let voiceState=null,currentSpokenLine=null,idleVoiceTimer=null,lastCharacterLineAt=0,activeSpeechOwner='';
+const voiceEventCounts=new Map(),VOICE_KEY='tk777-seven-mahjong-voice';
+function voicePreferences(){try{const p=JSON.parse(localStorage.getItem(VOICE_KEY));return{enabled:p?.enabled!==false,volume:Number.isFinite(p?.volume)?Math.max(0,Math.min(1,p.volume)):.8};}catch{return{enabled:true,volume:.8};}}
+const characterVoice=new CharacterVoice({...voicePreferences(),synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,onChange:state=>{voiceState=state;renderVoiceControls(state);}});
+voiceState=characterVoice.state();
+function saveVoicePreferences(){try{localStorage.setItem(VOICE_KEY,JSON.stringify({enabled:voiceState.enabled,volume:voiceState.volume}));}catch{}}
+function renderVoiceControls(state){
+ const label=!state.supported?'音声非対応':state.enabled?'音声オン':'音声オフ';
+ for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle']){const button=$(id);button.textContent='♪ '+label;button.setAttribute('aria-pressed',String(state.enabled));button.disabled=!state.supported;}
+ $('voiceEnabled').checked=state.enabled;$('voiceEnabled').disabled=!state.supported;
+ $('voiceVolume').value=String(Math.round(state.volume*100));$('voiceVolume').disabled=!state.supported;$('voiceVolumeValue').textContent=Math.round(state.volume*100)+'%';
+ const status=!state.supported?'このブラウザーは音声に対応していません。':!state.enabled?'声はオフです。台詞は文字で表示します。':state.volume===0?'音量は0%です。':state.availability==='unavailable'?'日本語の読み上げ音声が見つかりません。':state.blocked?'「もう一度聞く」か「声を聞く」を押してください。':state.error?'音声を再生できませんでした。「もう一度聞く」で再試行できます。':state.speaking?'キャラクターが話しています…':state.availability==='loading'?'日本語の音声を準備しています。':'会話・対局中・勝利時に話しかけます。';
+ $('voiceStatus').textContent=status;$('voiceHelp').textContent=status;
+ for(const id of ['encounterVoiceStatus','rewardVoiceStatus']){$(id).textContent=status;$(id).hidden=!state.enabled||!!state.supported&&state.availability!=='unavailable'&&!state.blocked&&!state.error;}
+ for(const id of ['voiceReplay','encounterReplay','rewardReplay'])$(id).disabled=!state.supported||!state.enabled||state.volume===0||!currentSpokenLine;
+ $('voiceTest').disabled=!state.supported||!state.enabled||state.volume===0;
+ $('cpuPortrait').dataset.speaking=String(state.speaking);$('encounterPortrait').dataset.speaking=String(state.speaking);
+ $('characterVoiceState').textContent=state.speaking?'発話中':'台詞';
+}
+function stopCharacterVoice(){clearTimeout(idleVoiceTimer);idleVoiceTimer=null;activeSpeechOwner='';characterVoice.stop();}
+function speakCharacter(text,{priority='important',key='',force=false}={}){
+ if(!text||document.hidden)return false;
+ if(priority==='ambient'&&Date.now()-lastCharacterLineAt<12000)return false;
+ const accepted=characterVoice.speak(run.stage,text,{key,priority,force});
+ if(priority==='ambient'&&!accepted&&voiceState.enabled&&voiceState.supported)return false;
+ activeSpeechOwner=document.querySelector('dialog[open]')?.id||'';
+ currentSpokenLine={stageId:run.stage,text,key,priority};lastCharacterLineAt=Date.now();
+ $('characterCaption').textContent=text;$('characterSpeaker').textContent=displayStageName(currentStage());$('characterCommentary').hidden=false;
+ renderVoiceControls(characterVoice.state());return accepted;
+}
+function sayEvent(event,{priority='ambient',key=''}={}){
+ const count=voiceEventCounts.get(event)||0,text=chooseVoiceLine(run.stage,event,{variant:count});voiceEventCounts.set(event,count+1);
+ return speakCharacter(text,{priority,key:key||`${generation}:${run.totalBattles}:${round?.turnCount??0}:${event}`});
+}
+function replayCharacterVoice(){if(!currentSpokenLine)return;characterVoice.unlock();activeSpeechOwner=document.querySelector('dialog[open]')?.id||'';characterVoice.speak(currentSpokenLine.stageId,currentSpokenLine.text,{key:currentSpokenLine.key,priority:'dialogue',force:true});}
+function setVoiceEnabled(enabled){characterVoice.setEnabled(enabled);voiceState=characterVoice.state();saveVoicePreferences();renderVoiceControls(voiceState);if(enabled){characterVoice.unlock();if(started&&!ended&&currentSpokenLine)replayCharacterVoice();}}
+function syncVoiceSample(){const profile=getVoiceProfile(Number($('voiceCharacter').value));$('voiceStyle').textContent=profile?`${profile.name}：${profile.style}`:'';}
+function scheduleIdleVoice(){
+ clearTimeout(idleVoiceTimer);idleVoiceTimer=null;
+ if(!started||ended||encounter||run.phase!=='playing'||!round||!legalActions(round).canDiscard||document.hidden||document.querySelector('dialog[open]'))return;
+ const token=generation,turn=round.turnCount;
+ idleVoiceTimer=setTimeout(()=>{idleVoiceTimer=null;if(token!==generation||!round||round.turnCount!==turn||ended||encounter||document.hidden||document.querySelector('dialog[open]'))return;sayEvent('playerTurn',{key:`${token}:${run.totalBattles}:${turn}:idle`});},20000);
+}
 async function api(path,payload){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
  try{const response=await fetch(API+path,{method:payload?'POST':'GET',headers:payload?{'Content-Type':'application/json'}:{},body:payload?JSON.stringify(payload):undefined,cache:'no-store',signal:controller.signal});const result=await response.json();if(!response.ok)throw Error(result.error||'通信できませんでした。');return result;}
@@ -23,9 +68,9 @@ function sound(kind='tile'){
  if(!audio)return;try{const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(kind==='win'?660:kind==='riichi'?480:340,t);o.frequency.exponentialRampToValueAtTime(kind==='win'?990:kind==='riichi'?720:240,t+.10);g.gain.setValueAtTime(.035,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.2);}catch{}
 }
 function appendLog(text){logs.push(text);logs=logs.slice(-7);}
-function show(id){clearTimeout(cpuTimer);cpuTimer=null;const d=$(id);if(!d.open)d.showModal();}
-function close(id){if($(id).open)$(id).close();scheduleCpu();}
-function stopTimers(){generation++;clearTimeout(cpuTimer);cpuTimer=null;}
+function show(id){clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();const d=$(id);if(!d.open)d.showModal();}
+function close(id){stopCharacterVoice();if($(id).open)$(id).close();scheduleCpu();}
+function stopTimers(){generation++;clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();}
 function currentStage(){return runConfig.stages[run.stage-1]||defaults.stages[run.stage-1];}
 function setPortrait(container,stage,className='registered-portrait'){
  const src=stage.portrait?asset(stage.portrait):defaultPortraitURL(stage.id),key=stage.id+':'+src+':'+displayStageName(stage);
@@ -36,9 +81,10 @@ function setPortrait(container,stage,className='registered-portrait'){
 }
 function startBattle(){
  stopTimers();selected=null;riichiPicking=false;round=null;
+ currentSpokenLine=null;$('characterCommentary').hidden=true;
  const stage=currentStage();encounter=createEncounter(run.stage,run.battle,{retry:encounterRetryStage===run.stage&&run.battle===1,name:displayStageName(stage)});encounterRetryStage=null;
  logs=[];appendLog(`第${run.stage}ステージ・第${run.battle}戦。まずは${displayStageName(stage)}とご挨拶。`);
- render();renderEncounter();show('encounterDialog');
+ render();show('encounterDialog');renderEncounter();
 }
 function renderEncounter(){
  if(!encounter)return;const stage=currentStage(),profile=getCast(run.stage);
@@ -49,12 +95,13 @@ function renderEncounter(){
  $('encounterProgress').textContent=`${encounter.index+1} / ${encounter.lines.length}`;
  $('encounterNext').textContent=encounter.index+1===encounter.lines.length?'対局をはじめる →':'会話のつづき →';
  setPortrait($('encounterPortrait'),stage,'encounter-photo');
+ speakCharacter(encounter.lines[encounter.index],{priority:'dialogue',key:`encounter:${generation}:${run.stage}:${run.battle}:${encounter.index}`});
 }
 function beginBattleRound(){
  if(!encounter?.complete||!started||ended||run.phase!=='playing')return;
  encounter=null;close('encounterDialog');stopTimers();
  round=createRound({stage:run.stage,dealer:run.totalBattles%2});
- appendLog(`${displayStageName(currentStage())}と対局開始。`);render();scheduleCpu();
+ appendLog(`${displayStageName(currentStage())}と対局開始。`);render();sayEvent('roundStart',{priority:'important'});scheduleCpu();
 }
 function nextEncounter(){
  if(!encounter||encounter.complete)return;encounter=advanceEncounter(encounter);
@@ -63,6 +110,7 @@ function nextEncounter(){
 function skipConversation(){if(!encounter)return;encounter=skipEncounter(encounter);beginBattleRound();}
 async function startRun(){
  if($('startButton').disabled)return;
+ characterVoice.unlock();
  try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio??=new Audio();void audio.resume();}}catch{}
  $('startButton').disabled=true;
  await configReady;runConfig=structuredClone(config);run=createArcade();encounterRetryStage=null;started=true;ended=false;submitted=false;startedAt=Date.now();duration=0;
@@ -72,18 +120,24 @@ async function startRun(){
 }
 function scheduleCpu(){
  clearTimeout(cpuTimer);cpuTimer=null;
+ scheduleIdleVoice();
  if(!started||ended||encounter||run.phase!=='playing'||!round||round.phase!=='cpu'||document.querySelector('dialog[open]')||document.hidden)return;
  const token=generation;cpuTimer=setTimeout(()=>{cpuTimer=null;if(token!==generation||ended||document.querySelector('dialog[open]'))return;step({type:'cpu'});},650);
 }
 function step(action){
  if(!started||ended||encounter||run.phase!=='playing'||!round)return;
+ const before=round;
  const result=actRound(round,action);
  if(!result.ok){notify(result.message||'その操作はできません。');return;}
  round=result.state;selected=null;riichiPicking=false;
  if(result.message)appendLog(result.message);
  sound(action.type==='riichi'||action.riichi?'riichi':'tile');
  if(round.phase==='finished'){run=finishBattle(run,round.result);render();showBattleResult();return;}
- render();scheduleCpu();
+ render();
+ if(!before.riichi[0]&&round.riichi[0])sayEvent('playerRiichi',{priority:'important'});
+ else if(!before.riichi[1]&&round.riichi[1])sayEvent('cpuRiichi',{priority:'important'});
+ else if(action.type==='cpu'&&round.turnCount>0&&round.turnCount%8===0)sayEvent('playerTurn');
+ scheduleCpu();
 }
 function discard(){
  if(!Number.isInteger(selected)){notify('打牌する牌を選んでください。');return;}
@@ -132,6 +186,7 @@ function showBattleResult(){
   reward.src=image?asset(image):fallbackURL;reward.alt=`${name}・${run.wins}勝目の記念画像`;
   let fallback=!image;reward.onerror=()=>{if(!fallback){fallback=true;$('rewardDialog').dataset.bundled='true';reward.src=fallbackURL;}else{reward.onerror=null;reward.hidden=true;$('rewardPlaceholder').hidden=false;$('rewardDialog').dataset.bundled='false';}};
   show('rewardDialog');
+  speakCharacter(profile.rewards[run.wins-1],{priority:'important',key:`victory:${generation}:${run.stage}:${run.wins}:${run.totalBattles}`});
  }else renderResult();
 }
 function renderResult(){
@@ -147,6 +202,7 @@ function renderResult(){
  $('retryStageButton').textContent=`3戦をやり直す（このステージの得点破棄・${run.stage*500}pt減点）`;
  $('endRunButton').textContent=run.phase==='complete'?'完全クリアの記録を見る':'終了してスコアを登録';
  show('resultDialog');
+ if(!won)sayEvent(result.winner===null?'draw':'cpuWin',{priority:'important',key:`result:${generation}:${run.totalBattles}`});
 }
 function endRun(){
  if(!started||ended)return;ended=true;encounter=null;stopTimers();duration=Math.max(100,Date.now()-startedAt);
@@ -181,8 +237,15 @@ $('endRunButton').onclick=endRun;$('finishButton').onclick=()=>{if(started&&!end
 $('finalRankForm').addEventListener('submit',submitScore);
 $('newRunButton').onclick=()=>{close('finalDialog');$('finalNickname').value='';void startRun();};
 $('adminLink').href=API+'/mahjong-admin/';
+for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle'])$(id).onclick=()=>setVoiceEnabled(!characterVoice.state().enabled);
+$('voiceEnabled').onchange=event=>setVoiceEnabled(event.target.checked);
+$('voiceVolume').oninput=event=>{characterVoice.setVolume(Number(event.target.value)/100);voiceState=characterVoice.state();saveVoicePreferences();renderVoiceControls(voiceState);};
+for(const id of ['voiceSettingsButton','welcomeVoiceSettings'])$(id).onclick=()=>{show('voiceDialog');$('voiceCharacter').value=String(run.stage);syncVoiceSample();renderVoiceControls(characterVoice.state());};
+$('voiceCharacter').onchange=()=>{stopCharacterVoice();syncVoiceSample();};
+$('voiceTest').onclick=()=>{const id=Number($('voiceCharacter').value);characterVoice.unlock();activeSpeechOwner='voiceDialog';characterVoice.speak(id,chooseVoiceLine(id,'roundStart'),{key:`sample:${id}`,priority:'dialogue',force:true});};
+for(const id of ['voiceReplay','encounterReplay','rewardReplay'])$(id).onclick=replayCharacterVoice;
 for(const id of ['welcomeDialog','encounterDialog','rewardDialog','resultDialog','finalDialog'])$(id).addEventListener('cancel',event=>event.preventDefault());
-document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',scheduleCpu));
+document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',()=>{if(activeSpeechOwner===d.id)stopCharacterVoice();scheduleCpu();}));
 document.addEventListener('keydown',event=>{
  if(/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)||event.ctrlKey||event.altKey||event.metaKey||document.querySelector('dialog[open]'))return;
  if(event.key==='?'){event.preventDefault();show('helpDialog');return;}
@@ -192,5 +255,7 @@ document.addEventListener('keydown',event=>{
  if(event.key==='Enter'||event.key===' '){if(event.target.closest('button,a'))return;event.preventDefault();if(!event.repeat)discard();}
  if(event.key.toLowerCase()==='r'&&!event.repeat&&!$('riichiButton').disabled){event.preventDefault();$('riichiButton').click();}
 });
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(cpuTimer);cpuTimer=null;}else scheduleCpu();});
-render();show('welcomeDialog');
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();}else scheduleCpu();});
+window.addEventListener('pagehide',()=>{clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();});
+window.addEventListener('pageshow',()=>scheduleCpu());
+render();syncVoiceSample();renderVoiceControls(characterVoice.state());show('welcomeDialog');
