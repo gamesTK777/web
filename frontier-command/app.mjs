@@ -1,9 +1,10 @@
-import {createGame,applyAction,getReachable,getAttackTargets,getProduction,planAIAction,serializeGame,deserializeGame,getIncome,defenseAt,canCapture,UNIT_TYPES,TERRAIN,MISSIONS} from './engine.mjs?v=20261108-frontier';
+import {createGame,applyAction,getReachable,getAttackTargets,planAIAction,serializeGame,deserializeGame,getIncome,defenseAt,canCapture,UNIT_TYPES,TERRAIN,MISSIONS} from './engine.mjs?v=20261109-production';
 import {renderBoard,cellFromPointer} from './renderer.mjs?v=20261108-combat';
 import {CommandAudio} from './audio.mjs?v=20261108-frontier';
 import {createBattlePresentation} from './presentation.mjs?v=20261108-anime-fullscreen';
 import {createCombatReport} from './combat-model.mjs?v=20261108-combat';
 import {createCombatPlayback} from './combat-playback.mjs?v=20261108-combat';
+import {createProductionController} from './production.mjs?v=20261109-production';
 
 const $=id=>document.getElementById(id),canvas=$('boardCanvas'),audio=new CommandAudio();
 const KEYS={auto:'tk777.frontier.autosave.v1',manual:'tk777.frontier.manual.v1',progress:'tk777.frontier.progress.v1',sound:'tk777.frontier.sound.v1'};
@@ -18,6 +19,7 @@ const money=value=>Number(value||0).toLocaleString('ja-JP');
 let game=createGame({missionId:missionItems[0].id,difficulty:'normal'}),started=false,phase='setup';
 let selectedId=null,targetId=null,cursor={x:0,y:0},moveUndo=null,effect=null,aiTimer=null,aiEpoch=0,aiActions=0,lastDraw=0,viewMoves=[],viewTargets=[],presentation=null;
 let combatPlayback=null,combatPlaying=false,combatSerial=0;
+let production=null;
 let soundOn=storage.get(KEYS.sound)!=='off',progress=[];
 try{const value=JSON.parse(storage.get(KEYS.progress)||'[]');if(Array.isArray(value))progress=value.filter(x=>missionItems.some(m=>m.id===x));}catch{}
 audio.setEnabled(false);
@@ -30,6 +32,7 @@ function selected(){return game.units.find(u=>u.id===selectedId);}
 function missionFor(id){return missionItems.find(m=>String(m.id)===String(id))||missionItems[0];}
 function isPaused(){return combatPlaying||!!document.querySelector('dialog[open]');}
 function canAct(){return started&&phase==='playing'&&game.turn===0&&!isPaused();}
+function canProduce(){return started&&phase==='playing'&&game.turn===0&&!combatPlaying&&$('productionDialog').open&&document.querySelectorAll('dialog[open]').length===1;}
 function status(text){$('statusText').textContent=text;}
 function saveAuto(){if(started&&!storage.set(KEYS.auto,serializeGame(game)))status('このブラウザーでは保存できません。ストレージの空き容量や設定を確認してください。');}
 function stopAI(){aiEpoch++;clearTimeout(aiTimer);aiTimer=null;}
@@ -66,7 +69,7 @@ function enterGame(next){
   const first=game.units.find(u=>u.team===0);cursor=first?{x:first.x,y:first.y}:{x:0,y:0};
   $('missionSelect').value=game.missionId;$('difficultySelect').value=game.difficulty||'normal';
   renderMissions();render();saveAuto();refreshSound();canvas.focus({preventScroll:true});
-  if(game.winner!==null)showResult();else {status('味方を選び、光るマスへ移動させましょう。空いている自軍工場からは生産できます。');queueAI();}
+  if(game.winner!==null)showResult();else {status('味方を選んで進軍。「部隊生産」からゴールドで増援を出撃させましょう。');queueAI();}
 }
 function startSelected(){
   const run=()=>enterGame(createGame({missionId:$('missionSelect').value,difficulty:$('difficultySelect').value}));
@@ -87,8 +90,9 @@ function selectCell(x,y){
     if(!clicked&&getReachable(game,current.id).some(p=>p.x===x&&p.y===y&&(p.x!==current.x||p.y!==current.y))){perform({type:'move',unitId:current.id,x,y});return;}
   }
   selectedId=clicked?.id??null;targetId=null;audio.sfx('select');render();
-  const clickedTile=tileAt(x,y);if(clicked?.team===1||(clicked?.team===0&&canCapture(game,clicked.id))||(!clicked&&clickedTile?.owner===0&&['factory','airfield'].includes(clickedTile.building)))presentation?.setInfoOpen(true);
+  const clickedTile=tileAt(x,y);if(clicked?.team===1||(clicked?.team===0&&canCapture(game,clicked.id))||(!clicked&&clickedTile?.owner===0&&['hq','factory','airfield'].includes(clickedTile.building)))presentation?.setInfoOpen(true);
   if(clicked?.team===0)status(clicked.acted?'この部隊は行動済みです。別の部隊を選んでください。':'光るマスへ移動。敵を選ぶと攻撃の予測が見られます。');
+  else if(!clicked&&clickedTile?.owner===0&&['hq','factory','airfield'].includes(clickedTile.building))status('味方の生産拠点です。「この拠点で部隊生産」から兵種と価格を確認できます。');
 }
 function eventText(action,before,after){
   const u=before.units.find(x=>x.id===action.unitId),name=u?unitName(u.type):'';
@@ -99,17 +103,17 @@ function eventText(action,before,after){
     return `${name}が${old?unitName(old.type):'敵部隊'}を攻撃。${now?`残りHP ${now.hp}`:'敵部隊を撃破！'}${counterLoss?`（反撃 ${counterLoss}、攻撃側HP ${attackerAfter?.hp||0}）`:''}`;
   }
   if(action.type==='capture'){const t=after.tiles[u.y*after.width+u.x];return t.owner===u.team?`${buildingName(t.building)}を占領しました！`:`${buildingName(t.building)}を占領中。残り ${t.capture}。次の自分の番にも占領しましょう。`;}
-  if(action.type==='produce')return `${unitName(action.unitType)}を生産しました。次の自分の番から行動できます。`;
+  if(action.type==='produce')return `${unitName(action.unitType)}を生産。${money(UNIT_TYPES[action.unitType].cost)} Gを使用、残り ${money(after.funds[before.turn])} G。次の自分の番から行動できます。`;
   if(action.type==='endTurn')return after.turn===0?'あなたの番です。収入と拠点での補修を確認しましょう。':'タイド隊が行動しています…';
   return `${name}が待機しました。`;
 }
-function perform(action,{ai=false}={}){
+function perform(action,{ai=false,fromProduction=false}={}){
   if(combatPlaying)return false;
-  if(!ai&&!canAct())return;
+  if(!ai&&!(fromProduction&&action.type==='produce'?canProduce():canAct()))return false;
   const before=game,result=applyAction(game,action);
   if(!result.ok){status(result.error||'その行動はできません。');audio.sfx('error');return false;}
   moveUndo=action.type==='move'&&!ai?clone(before):null;game=result.state;
-  const moved=game.units.find(u=>u.id===action.unitId),old=before.units.find(u=>u.id===action.unitId),enemy=before.units.find(u=>u.id===action.targetId);
+  const moved=game.units.find(u=>u.id===(action.unitId||result.event?.unitId)),old=before.units.find(u=>u.id===action.unitId),enemy=before.units.find(u=>u.id===action.targetId);
   const p=enemy||moved||{x:action.x,y:action.y};
   effect={type:action.type,unitId:action.unitId,x:p.x,y:p.y,fromX:old?.x,fromY:old?.y,team:before.turn,startedAt:performance.now()};
   if(action.type==='endTurn'){selectedId=null;targetId=null;aiActions=0;}
@@ -117,6 +121,7 @@ function perform(action,{ai=false}={}){
   const report=action.type==='attack'&&combatPlayback?createCombatReport(before,game,result.event):null;
   if(report){stopAI();combatPlaying=true;}
   else audio.sfx(action.type==='endTurn'?'turn':action.type);
+  if(action.type==='produce'&&!ai){cursor={x:action.x,y:action.y};presentation?.revealCell({...cursor,width:game.width,height:game.height});}
   render();if(action.type==='move'&&!ai)presentation?.setInfoOpen(true);status(eventText(action,before,game));saveAuto();
   if(report){
     // The engine result is already stored. Presentation can only delay the next
@@ -168,15 +173,13 @@ function renderSelection(){
       if(canCapture(game,u.id))actions.append(button(`占領する（残り ${t.capture??20}）`,()=>perform({type:'capture',unitId:u.id}),'primary'));
       actions.append(button('ここで待機',()=>perform({type:'wait',unitId:u.id}),'secondary'));
     }
-  } else if(canAct()&&t.owner===0&&['factory','airfield'].includes(t.building)){
-    const production=getProduction(game,cursor.x,cursor.y);
-    const options=Array.isArray(production)?production:production?.options||[];
-    for(const option of options){const id=typeof option==='string'?option:option.type||option.unitType||option.id,definition=UNIT_TYPES[id];if(!definition)continue;
-      const b=button(`${definition.name}  ${money(definition.cost)} G`,()=>perform({type:'produce',x:cursor.x,y:cursor.y,unitType:id}),'production-button');b.disabled=game.funds[0]<definition.cost||option.available===false||option.affordable===false;actions.append(b);}
-    if(!options.length)body.append(el('p','この拠点では現在、生産できる部隊がありません。'));
   } else if(!u){
     const units=game.units.filter(x=>x.team===0&&!x.acted);
     if(units.length){body.append(el('p','未行動の味方','small-label'));const list=el('div',undefined,'unit-shortcuts');for(const friendly of units)list.append(button(`${unitName(friendly.type)} ${friendly.hp}`,()=>{selectedId=friendly.id;targetId=null;cursor={x:friendly.x,y:friendly.y};render();presentation?.revealCell({...cursor,width:game.width,height:game.height});canvas.focus({preventScroll:true});},'unit-shortcut'));body.append(list);}
+  }
+  if(canAct()&&t.owner===0&&['hq','factory','airfield'].includes(t.building)){
+    actions.append(button('この拠点で部隊生産',()=>production?.open({x:u?.x??cursor.x,y:u?.y??cursor.y}),'production-button'));
+    body.append(el('p',u?'生産先に部隊がいます。空けてから新しい部隊を出撃させましょう。':'ゴールドを使ってHP10の部隊を生産。次の自分の番から行動できます。','hint'));
   }
 }
 function render(){
@@ -185,6 +188,7 @@ function render(){
   $('fundsLabel').textContent=`${money(game.funds[0])} G`;$('incomeLabel').textContent=`+${money(income(0))} G / 日`;
   $('objectiveText').textContent=m.objective||'敵本部を占領、または敵部隊と生産拠点を制圧';
   $('endTurnButton').disabled=!canAct();$('undoButton').disabled=!canAct()||!moveUndo;
+  $('productionButton').disabled=!canAct();$('productionButton').title=game.turn===1?'自分の番に生産できます':'ゴールドで部隊を生産';
   $('saveButton').disabled=!started;$('loadButton').disabled=!storage.get(KEYS.manual);$('restartButton').disabled=!started;
   $('eventLog').replaceChildren(...(game.log||[]).slice(-7).reverse().map(item=>el('li',typeof item==='string'?item:item.text||item.message||item.type||'部隊が行動しました。')));
   canvas.setAttribute('aria-label',`${m.name}。${game.width}×${game.height}マス。カーソル ${cursor.x+1},${cursor.y+1}。矢印で選びEnterで決定。`);
@@ -208,6 +212,7 @@ $('newGameDialog').addEventListener('close',()=>{refreshSound();render();queueAI
 $('helpButton').addEventListener('click',()=>{stopAI();$('helpDialog').showModal();refreshSound();});
 $('closeHelpButton').addEventListener('click',()=>$('helpDialog').close());
 $('helpDialog').addEventListener('close',()=>{refreshSound();render();queueAI();});
+$('productionButton').addEventListener('click',()=>{if(canAct())production?.open();});
 $('soundButton').addEventListener('click',()=>{soundOn=!soundOn;storage.set(KEYS.sound,soundOn?'on':'off');refreshSound();});
 $('saveButton').addEventListener('click',()=>{if(storage.set(KEYS.manual,serializeGame(game))){status('この端末に手動保存しました。「読込」で再開できます。');audio.sfx('save');render();}else status('保存できませんでした。ブラウザーのストレージ設定を確認してください。');});
 $('loadButton').addEventListener('click',()=>loadSaved('manual'));
@@ -228,4 +233,4 @@ canvas.addEventListener('keydown',event=>{
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopAI();audio.pause();}else{refreshSound();queueAI();}});
 window.addEventListener('pagehide',()=>{stopAI();cancelCombat();audio.pause();saveAuto();});
 window.addEventListener('pageshow',()=>{if(!started)return;if(!combatPlaying&&game.winner!==null&&phase!=='ended')showResult();else{refreshSound();render();queueAI();}});
-$('bootMessage').hidden=true;combatPlayback=createCombatPlayback({onStage:frame=>{if(frame.stage==='attack'||frame.stage==='counter')audio.sfx('attack');}});presentation=createBattlePresentation({canvas,scrollContainer:$('boardScroll'),getGridSize:()=>({columns:game.width,rows:game.height}),onZoomChange:()=>presentation?.revealCell({...cursor,width:game.width,height:game.height})});renderMissions();render();setupContinue();openSetup();requestAnimationFrame(animate);
+$('bootMessage').hidden=true;combatPlayback=createCombatPlayback({onStage:frame=>{if(frame.stage==='attack'||frame.stage==='counter')audio.sfx('attack');}});production=createProductionController({getState:()=>game,isEnabled:()=>started&&phase==='playing'&&game.turn===0&&!combatPlaying,onProduce:action=>perform(action,{fromProduction:true}),onOpen:()=>{stopAI();render();refreshSound();},onClose:()=>{render();refreshSound();canvas.focus({preventScroll:true});queueAI();},onLocate:({x,y})=>{selectedId=unitAt(x,y)?.id??null;targetId=null;cursor={x,y};render();presentation?.setInfoOpen(true);presentation?.revealCell({...cursor,width:game.width,height:game.height});status(`${buildingName(tileAt(x,y).building)}を表示しています。`);}});presentation=createBattlePresentation({canvas,scrollContainer:$('boardScroll'),getGridSize:()=>({columns:game.width,rows:game.height}),onZoomChange:()=>presentation?.revealCell({...cursor,width:game.width,height:game.height})});renderMissions();render();setupContinue();openSetup();requestAnimationFrame(animate);

@@ -23,7 +23,7 @@
 - `getAttackTargets(state,unitId)` returns `[{id,targetId,x,y,type,hp,damage,counter,canAttack,defeated}]`.
 - `damagePreview(state,attackerId,targetId,{from?,moved?})` returns the same damage fields; use optional `from:{x,y}` for a hypothetical position. Movement and action eligibility are enforced by `applyAction` and `getAttackTargets`.
 - `canCapture(state,unitId)` is true only for actionable friendly infantry on a hostile/neutral property.
-- `getProduction(state,x,y)` returns an array of permitted types `{type,...UNIT_TYPES[type],available,affordable,blocked,reason}`. Unavailable entries carry Japanese reasons. Cities/HQ return an empty array.
+- `getProduction(state,x,y)` returns an array of permitted types `{type,...UNIT_TYPES[type],available,affordable,blocked,reason}`. Unavailable entries carry Japanese reasons. HQ and factories produce ground units, airfields produce aircraft, and cities return an empty array. Each mission's allowed unit list still applies.
 - `getLegalActions(state,unitId)` returns action objects for that unit, including wait.
 - `defenseAt(state,x,y,unitType)` returns defense fraction (air gets no terrain cover).
 - `scoreFor(state,team=0)` returns campaign result score from victory, efficiency, captures, surviving HP, and days.

@@ -1,6 +1,6 @@
 // Original campaign maps. The terrain and building layer share one flat tile array.
 export const MISSIONS=Object.freeze([
-  {id:1,name:'はじまりの草原',subtitle:'FIRST CONTACT',width:12,height:10,briefing:'少数の部隊で前線へ。歩兵と偵察車を連携させ、敵本部を目指そう。',objective:'敵本部を占領、または敵部隊を全滅させる',hint:'森や都市で守り、弱った敵へ集中攻撃。歩兵だけが拠点を占領できます。',funds:3000,allowedUnits:['infantry','recon'],parDays:12},
+  {id:1,name:'はじまりの草原',subtitle:'FIRST CONTACT',width:12,height:10,briefing:'本部で歩兵や偵察車を生産し、都市を占領して戦力を整えよう。部隊を連携させ、敵本部を目指す。',objective:'敵本部を占領、または敵部隊と生産能力を制圧する',hint:'空いている味方本部から部隊を生産できます。歩兵で都市を占領して収入を増やし、敵本部を目指しましょう。',funds:3000,allowedUnits:['infantry','recon'],parDays:12},
   {id:2,name:'ふたつの橋',subtitle:'BRIDGEHEAD',width:14,height:11,briefing:'川向こうの工場を攻略する。中立都市を確保し、生産のための資金を増やそう。',objective:'占領と生産で戦線を広げ、敵本部を制圧する',hint:'工場を選ぶと生産できます。占領は通常2回必要。橋を塞ぐ部隊に注意。',funds:6000,allowedUnits:['infantry','recon','tank','artillery'],parDays:18},
   {id:3,name:'緑の峡谷',subtitle:'FOREST CORRIDOR',width:16,height:12,briefing:'山と森が進路を分ける峡谷。砲兵の射程と、地形の防御を使い分けよう。',objective:'地形を利用して敵の防衛線を突破する',hint:'砲兵は2〜3マス先へ攻撃できますが、移動した日は撃てません。',funds:8000,allowedUnits:['infantry','recon','tank','heavy','artillery','antiair'],parDays:22},
   {id:4,name:'群島の空',subtitle:'SKY OVER ISLANDS',width:16,height:12,briefing:'空から部隊が迫る。対空車と戦闘機で制空権を守り、橋を越えて進軍しよう。',objective:'陸と空の部隊を連携させ、敵本部を占領する',hint:'戦闘機は航空部隊専用。ヘリは地上に強く、対空車に弱い兵科です。',funds:10000,allowedUnits:['infantry','recon','tank','heavy','artillery','antiair','fighter','helicopter'],parDays:24},

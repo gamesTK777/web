@@ -1,4 +1,4 @@
-import {MISSIONS,buildMission} from './maps.mjs';
+import {MISSIONS,buildMission} from './maps.mjs?v=20261109-production';
 export {MISSIONS};
 export const SAVE_VERSION=1,MAX_UNITS=40,MAX_UNITS_PER_TEAM=20;
 const freeze=Object.freeze;
@@ -31,7 +31,8 @@ const DAMAGE=freeze({
   helicopter:{infantry:7,recon:7,tank:7,heavy:5,artillery:8,antiair:2,fighter:0,helicopter:5}
 });
 const DIRECTIONS=[[1,0],[-1,0],[0,1],[0,-1]];
-const PRODUCTION={factory:['infantry','recon','tank','heavy','artillery','antiair'],airfield:['fighter','helicopter']};
+const GROUND_PRODUCTION=['infantry','recon','tank','heavy','artillery','antiair'];
+const PRODUCTION={hq:GROUND_PRODUCTION,factory:GROUND_PRODUCTION,airfield:['fighter','helicopter']};
 const clone=value=>JSON.parse(JSON.stringify(value));
 const distance=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
 const enemy=team=>1-team;

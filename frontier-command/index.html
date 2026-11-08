@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=20261108-combat">
   <link rel="stylesheet" href="../shared/portal-return.css">
   <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
-  <link rel="stylesheet" href="style.css?v=20261108-combat">
+  <link rel="stylesheet" href="style.css?v=20261109-production-2">
 </head>
 <body>
   <header class="site-header">
@@ -38,8 +38,8 @@
       <div class="mission-status"><span class="micro-label">CURRENT OPERATION</span><strong id="missionLabel">はじまりの島</strong></div>
       <div class="hud-stat"><span class="micro-label">DAY</span><strong id="dayLabel">01</strong></div>
       <div class="hud-stat team-stat"><span class="micro-label">TURN</span><strong id="turnLabel">あなたの番</strong></div>
-      <div class="hud-stat funds-stat"><span class="micro-label">FUNDS</span><strong id="fundsLabel">0 <small>G</small></strong></div>
-      <div class="hud-stat income-stat"><span class="micro-label">INCOME / TURN</span><strong id="incomeLabel">+0 <small>G</small></strong></div>
+      <div class="hud-stat funds-stat"><span class="micro-label">ゴールド</span><strong id="fundsLabel">0 <small>G</small></strong></div>
+      <div class="hud-stat income-stat"><span class="micro-label">毎日の収入</span><strong id="incomeLabel">+0 <small>G</small></strong></div>
     </section>
 
     <div class="battle-layout">
@@ -67,10 +67,11 @@
         <div class="turn-controls">
           <button class="subtle-button" id="undoButton" type="button" disabled><span aria-hidden="true">↶</span> 移動を戻す</button>
           <button class="subtle-button play-control quick-save-button" id="quickSaveButton" type="button">↓ 保存</button>
+          <button class="production-open-button" id="productionButton" type="button">＋ 部隊生産</button>
           <p>全部隊を動かさなくても<br><strong>ターンを終了できます。</strong></p>
           <button class="primary-button end-turn-button" id="endTurnButton" type="button">ターン終了 <span aria-hidden="true">→</span></button>
         </div>
-        <p class="touch-guide"><span aria-hidden="true">◎</span> 味方 → 光るマスへ移動 → 敵を選んで予測を確認 → 「攻撃する」。＋で拡大し指でマップをスクロール、全景で全体表示に戻ります。</p>
+        <p class="touch-guide"><span aria-hidden="true">◎</span> 味方 → 移動 → 敵を選んで「攻撃する」。「＋ 部隊生産」でゴールド（G）を使って増援。マップは＋で拡大、全景で全体表示に戻ります。</p>
       </section>
 
       <aside class="command-sidebar" id="unitInfoPanel" aria-label="指揮パネル">
@@ -128,8 +129,8 @@
       <div class="help-steps">
         <section><b>01</b><div><h3>味方を選んで、移動する</h3><p>味方の部隊を選ぶと、行けるマスが光ります。移動先を選び、そのあと攻撃・占領・待機を決めましょう。動き終わった部隊は色が落ち着きます。確定前の直前の移動は「移動を戻す」で取り消せます。</p></div></section>
         <section><b>02</b><div><h3>得意な相手と、地形を選ぶ</h3><p>戦車は地上戦、対空車両は航空機、歩兵は占領が得意です。森や山では守りが強くなります。敵を選び、予測ダメージと反撃を確認してから「攻撃する」で確定します。</p></div></section>
-        <section><b>03</b><div><h3>占領して、収入と生産を増やす</h3><p>歩兵を拠点へ移動させて「占領」。完了まで続けて占領すると味方の拠点になります。空いている味方の工場や飛行場を選べば、新しい部隊を生産できます。</p></div></section>
-        <section><b>04</b><div><h3>準備ができたら、ターン終了</h3><p>味方拠点から収入を得て、次のターンに備えます。敵の本部を占領するか、敵の部隊と生産力を制圧すれば勝利です。</p></div></section>
+        <section><b>03</b><div><h3>ゴールドで、部隊を増やす</h3><p>画面下の「＋ 部隊生産」から拠点と部隊を選び、ゴールド（G）を払って生産します。空いている味方の本部・工場では地上部隊、飛行場では航空部隊を配備できます。新しい部隊はHP10で出撃し、次の自分の番から行動できます。資金不足や拠点が満杯の場合は、画面で理由を確認できます。</p></div></section>
+        <section><b>04</b><div><h3>拠点を占領して、毎日の収入を増やす</h3><p>歩兵を拠点へ移動させて「占領」。完了まで続けると味方の拠点になり、自分の番の開始時にゴールド収入を得られます。Gはゴールドの単位です。準備ができたらターン終了。敵の本部を占領するか、敵の部隊と生産力を制圧すれば勝利です。</p></div></section>
       </div>
       <div class="help-note"><strong>砲兵の大切なルール</strong><p>砲兵は離れた敵を攻撃できますが、移動したターンには砲撃できません。敵に接近されない場所で、前のターンから準備しましょう。</p></div>
       <div class="help-note combat-help-note"><strong>戦闘では、部隊の残数が見える</strong><p>HPと同じ数の兵士・車両が戦闘に参加します。HP10なら10体・10台で出撃し、ダメージに合わせて残数が減ります。戦闘演出は「演出をスキップ」またはEscapeキーで省略できます。</p></div>
@@ -175,7 +176,29 @@
       <div class="combat-footer"><span class="combat-footer-note">TACTICAL BATTLE / <span>射撃・被弾・反撃</span></span><div class="combat-footer-actions"><button type="button" id="skipCombatButton" class="combat-skip-button">演出をスキップ <span aria-hidden="true">≫</span></button><button type="button" id="combatCloseButton" class="primary-button combat-close-button" hidden>戦術マップへ <span aria-hidden="true">→</span></button></div></div>
     </div>
   </dialog>
+  <dialog id="productionDialog" class="game-dialog production-dialog" aria-labelledby="productionTitle">
+    <div class="production-shell">
+      <header class="production-header">
+        <div><p class="eyebrow">REINFORCEMENT DEPOT</p><h2 id="productionTitle">ゴールドで、部隊を生産。</h2></div>
+        <div class="production-wallet"><span>所持ゴールド</span><strong id="productionFunds">0 G</strong></div>
+        <button type="button" class="dialog-close production-close" id="closeProductionButton" aria-label="部隊生産を閉じる">×</button>
+      </header>
+      <section class="production-site">
+        <label for="productionSiteSelect"><span>生産する拠点</span><select id="productionSiteSelect"><option value="">生産拠点を確認しています…</option></select></label>
+        <p id="productionSiteStatus">本部・工場では地上部隊、飛行場では航空部隊を生産できます。</p>
+      </section>
+      <div class="production-body">
+        <section class="production-unit-column" aria-label="配備する部隊"><h3>部隊を選択 <span>種類と価格を確認しよう</span></h3><div id="productionUnitList" class="production-unit-list" role="group" aria-label="部隊を選択"></div></section>
+        <div id="productionPreview" class="production-preview"><h3>増援の準備をしよう。</h3><p>部隊を選ぶと、価格・生産後の残金・行動開始時期を確認できます。</p></div>
+      </div>
+      <footer class="production-footer">
+        <p id="productionMessage" class="production-message" role="status" aria-live="polite" aria-atomic="true">拠点と部隊を選んでください。</p>
+        <div class="production-footer-actions"><button type="button" id="locateProductionButton" class="outline-button">拠点をマップで見る</button><button type="button" id="confirmProductionButton" class="primary-button" disabled>この部隊を生産 <span aria-hidden="true">→</span></button></div>
+        <p class="production-footnote">Gはゴールドの単位。新しい部隊はHP10で出撃し、次の自分の番から行動します。</p>
+      </footer>
+    </div>
+  </dialog>
   <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
-  <script type="module" src="app.mjs?v=20261108-combat"></script>
+  <script type="module" src="app.mjs?v=20261109-production"></script>
 </body>
 </html>

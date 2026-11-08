@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {gunzipSync} from 'node:zlib';
 import {MISSIONS,UNIT_TYPES,createGame,tileAt,unitAt,getReachable,getAttackTargets,damagePreview,canCapture,getProduction,applyAction,endTurn,incomeFor,planAIAction,serializeGame,deserializeGame,validateGame} from './engine.mjs';
 
 const unit=(id,type,team,x,y,hp=10)=>({id,type,team,x,y,hp,moved:false,acted:false});
@@ -7,6 +8,45 @@ function sandbox(missionId=5){const state=createGame({missionId});state.tiles.fo
 function building(state,x,y,type,owner){Object.assign(tileAt(state,x,y),{building:type,owner});}
 function act(state,action){const result=applyAction(state,action);assert.equal(result.ok,true,result.error);return result.state;}
 function nextFriendly(state){return endTurn(endTurn(state).state).state;}
+
+// An actual version-1 save captured before headquarters production was enabled.
+// Keeping its original JSON (compressed for size) tests compatibility rather
+// than constructing a supposedly old save with the current serializer.
+const PRE_HQ_V1_SAVE_GZIP='H4sIAAAAAAAACu2bS2/UMBDHv8ucXSnZbQv4zoELBx6nag9u7OxaSuyt7WyJVpU22wtQyhGBhNRbK3EoB648Powpgm+BnFD6kEBdBFs2O5ckYyX/33g8cZQ4M4ZUm5w5oJAarZwUZiXRec4UX7FsJIDASBgrtQIaE7COOQF0fKExlzYc3+G1tS25GwCNOwQGQvYHDmgcEXAyExboxhicMIZJBRSsYEBgs5AZl6oPVBVZRkBvK2FOjYQNXWEE0E50akjVfyBYfvEMqfoPlXTBh9C8Q66DM8zCHklIQhKScC5CEpKQhKR2klJthHVtQ7VxpDAnFiV+SELSUqY5JNKV0LZeLT5pSdIPSUiaD8loxlvWpeUgXXpCxf8ONNiaB6aVY3Q+dNG8UuFvgeY2NSAIQS0GLcdch6T/kXSNSY6v0EhCEn7qaH+n2kjClRMkIQlJSEIS/k+HJCQhadFILahn6BEolHRNpYbkQKGIgYArhwIoSJUy5Uz4yuJqqYjAI6AdAiXQVQKDYVPskeuR4EBTlllBgCXupxU60sh2rii7Ppts90zWiESrS5rdWnNtNs3V37ga17K3atnubLJrV5Sd0dv1X0Wg0bw5w2D1CKSF4iEbulEUkbDpEeCsrNVcYVQd2HBwt8g3f6zYcZmmMikyVwIFFeqLMggcHnxKhgWEKiF1LltHMnHalPcEs6GmqGmU/L7YAnqjqTpqMjLT1tVELqwzugyuni0/NYYdCtWcJFWicwE0CsH500t7BDLdB7oBnz+8/vL40E+e+eqtr1766qOfPvXV8df9JyfPD/xk/9uLvZOjPT+Z+mrqqze+OvDVsZ9+8rvv/e47Xx356pWfTCFIMutuj2pafd/tfAf44dxKiTUAAA==';
+
+test('headquarters buys mission-one infantry and recon at exact prices with fresh units waiting until next turn',()=>{
+  const original=createGame({missionId:1}),before=JSON.stringify(original),hq={x:1,y:5};
+  assert.deepEqual(getProduction(original,hq.x,hq.y).map(option=>option.type),['infantry','recon']);
+  for(const type of ['infantry','recon']){
+    const result=applyAction(original,{type:'produce',...hq,unitType:type});assert.equal(result.ok,true,result.error);
+    const bought=unitAt(result.state,hq.x,hq.y);assert.equal(bought.type,type);assert.equal(bought.team,0);assert.equal(bought.hp,10);assert.equal(bought.moved,true);assert.equal(bought.acted,true);
+    assert.equal(result.state.funds[0],original.funds[0]-UNIT_TYPES[type].cost);assert.equal(result.state.funds[1],original.funds[1]);assert.equal(result.state.stats[0].spent,UNIT_TYPES[type].cost);assert.equal(result.event.cost,UNIT_TYPES[type].cost);assert.equal(result.event.unitId,bought.id);
+    assert.equal(getReachable(result.state,bought.id).length,0);const next=nextFriendly(result.state),ready=next.units.find(u=>u.id===bought.id);assert.equal(ready.moved,false);assert.equal(ready.acted,false);
+  }
+  assert.equal(JSON.stringify(original),before);
+  const allTypes=sandbox();building(allTypes,2,2,'hq',0);building(allTypes,3,3,'factory',0);assert.deepEqual(getProduction(allTypes,2,2).map(p=>p.type),getProduction(allTypes,3,3).map(p=>p.type));
+});
+
+test('headquarters production enforces occupancy, gold, ownership, mission restrictions and the army cap without spending',()=>{
+  const original=createGame({missionId:1}),cases=[];
+  const occupied=structuredClone(original);Object.assign(occupied.units[0],{x:1,y:5});cases.push({state:occupied,x:1,y:5,unitType:'infantry',reason:'このマスに部隊がいます'});
+  const poor=structuredClone(original);poor.funds[0]=999;cases.push({state:poor,x:1,y:5,unitType:'infantry',reason:'資金が足りません'});
+  cases.push({state:original,x:10,y:4,unitType:'infantry',reason:'自軍の施設ではありません'},{state:original,x:1,y:5,unitType:'tank'});
+  const full=sandbox(1);full.units=[];for(let y=0;y<full.height&&full.units.length<20;y++)for(let x=0;x<full.width&&full.units.length<20;x++){if(x===1&&y===5)continue;full.units.push(unit(`u${full.units.length+1}`,'infantry',0,x,y));}full.units.push(unit('u21','infantry',1,11,9));building(full,1,5,'hq',0);assert.equal(validateGame(full).valid,true);cases.push({state:full,x:1,y:5,unitType:'infantry',reason:'部隊数の上限です'});
+  for(const entry of cases){const snapshot=JSON.stringify(entry.state),choice=getProduction(entry.state,entry.x,entry.y).find(p=>p.type===entry.unitType);if(entry.reason){assert.equal(choice.available,false);assert.equal(choice.reason,entry.reason);}else assert.equal(choice,undefined);const result=applyAction(entry.state,{type:'produce',x:entry.x,y:entry.y,unitType:entry.unitType});assert.equal(result.ok,false);assert.equal(result.state,entry.state);assert.equal(JSON.stringify(entry.state),snapshot);}
+});
+
+test('an empty army can rebuild from an unoccupied headquarters, while suppressing that last facility ends the battle',()=>{
+  const initial=sandbox(1);initial.units=[unit('u1','recon',0,5,5),unit('u2','infantry',1,6,5,1)];initial.funds[1]=0;building(initial,1,5,'hq',0);building(initial,10,4,'hq',1);
+  let state=act(initial,{type:'attack',unitId:'u1',targetId:'u2'});assert.equal(state.winner,null);assert.equal(state.units.filter(u=>u.team===1).length,0);state=endTurn(state).state;assert.equal(state.funds[1],1500);assert.ok(getProduction(state,10,4).find(p=>p.type==='infantry').available);state=act(state,{type:'produce',x:10,y:4,unitType:'infantry'});assert.equal(unitAt(state,10,4).team,1);assert.equal(state.funds[1],500);
+  const suppressed=structuredClone(initial);suppressed.units.push(unit('u3','infantry',0,10,4));const won=act(suppressed,{type:'attack',unitId:'u1',targetId:'u2'});assert.equal(won.winner,0);assert.equal(won.victoryReason,'敵の戦力と生産能力を制圧');
+});
+
+test('the unchanged version-one save loads exactly and immediately gains headquarters production',()=>{
+  const oldJson=gunzipSync(Buffer.from(PRE_HQ_V1_SAVE_GZIP,'base64')).toString('utf8'),oldEnvelope=JSON.parse(oldJson),loaded=deserializeGame(oldJson);
+  assert.equal(oldEnvelope.version,1);assert.equal(loaded.version,1);assert.deepEqual(loaded,oldEnvelope.state);assert.equal(serializeGame(loaded),oldJson);assert.deepEqual(loaded.funds,[3000,3000]);
+  assert.deepEqual(getProduction(loaded,1,5).map(p=>p.type),['infantry','recon']);const bought=act(loaded,{type:'produce',x:1,y:5,unitType:'recon'});assert.equal(bought.funds[0],0);assert.equal(unitAt(bought,1,5).hp,10);assert.equal(validateGame(bought).valid,true);
+});
 
 test('all five original missions begin valid, balanced and fully serializable',()=>{for(const meta of MISSIONS){const state=createGame({missionId:String(meta.id)});assert.equal(state.width,meta.width);assert.equal(state.tiles.length,state.width*state.height);assert.deepEqual(validateGame(state),{valid:true,errors:[]});assert.deepEqual(deserializeGame(serializeGame(state)),state);assert.equal(state.units.filter(u=>u.team===0).length,state.units.filter(u=>u.team===1).length);assert.equal(state.tiles.filter(t=>t.building==='hq'&&t.owner===0).length,1);assert.equal(state.tiles.filter(t=>t.building==='hq'&&t.owner===1).length,1);}});
 test('movement is immutable, bounded, only once per day and ends only when waiting',()=>{const state=sandbox(),snapshot=JSON.stringify(state);let moved=act(state,{type:'move',unitId:'u1',x:3,y:1});assert.equal(JSON.stringify(state),snapshot);assert.equal(unitAt(moved,3,1).moved,true);assert.equal(unitAt(moved,3,1).acted,false);assert.equal(applyAction(moved,{type:'move',unitId:'u1',x:4,y:1}).ok,false);moved=act(moved,{type:'wait',unitId:'u1'});assert.equal(getReachable(moved,'u1').length,0);assert.equal(applyAction(moved,{type:'attack',unitId:'u1',targetId:'u2'}).ok,false);assert.equal(applyAction(state,{type:'move',unitId:'u2',x:14,y:11}).ok,false);assert.equal(applyAction(state,{type:'move',unitId:'u1',x:100,y:1}).ok,false);});
