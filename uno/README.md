@@ -24,3 +24,11 @@ Run `node --test uno/engine.test.mjs` from the web repository. The service tests
 - Sending/reconnecting states remain visible and block card/UNO input consistently, including keyboard shortcuts. The rules, online API, and two-card penalty are unchanged.
 - Run `node --test uno/*.test.mjs` for rules and UI integration checks. The UI tests execute the actual app handlers against the actual rules engine with an in-memory DOM and mocked networking; they do not replace browser QA.
 - Verified in desktop Chrome at normal, narrow portrait, and landscape sizes. iPhone Safari and a live multi-device online match were not tested in this update.
+
+## Card sound and motion
+
+- `audio.mjs` creates short paper-like deal/draw/play sounds with Web Audio and plays the bundled `assets/audio/uno-call.wav` for a confirmed UNO declaration. The original short female Japanese call was synthesized with Windows Microsoft Haruka Desktop; asset processing and provenance are recorded alongside the WAV. It does not depend on device text-to-speech voices.
+- Audio starts after a player gesture. The top-bar music-note button mutes all sounds; the sound dialog offers volume, previews and a saved preference. No sound plays on initial page load. Hidden pages, departure and mute cancel pending sound and voice playback. Opening sound settings pauses solo CPUs.
+- `motion.mjs` flies card backs from the deck toward the receiving hand, including initial deals and +2/+4 additions, and flies publicly played cards toward the discard pile. Opponents remain card backs/counts. Animations are capped at twelve simultaneous cards and under 800ms; the real hand stays interactive. Reduced-motion preferences replace flights with a brief stationary highlight.
+- `presentation.mjs` compares player-visible snapshots so repeated polls, controls-only renders and reconnects do not replay old sounds or deals. Confirmed UNO log events trigger one call; merely arming/canceling the UNO button remains silent. No rules, server API or hidden-hand access changed.
+- Validation: `node --test uno/*.test.mjs` (60 passing). Desktop Chrome browser QA covered actual audio decoding/playback start, seven-card deal, +2/+4, confirmed UNO, mute/volume and portrait/landscape layouts. iPhone hardware and simultaneous online devices were not available for this update.

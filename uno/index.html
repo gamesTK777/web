@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#111521">
   <meta name="description" content="ひとりでCPUと、友だちとはそれぞれの端末で。2〜6人で遊べるオンラインUNO。">
   <title>UNO — COLOR CIRCUIT | TK777 ARCADE</title>
-  <link rel="stylesheet" href="style.css?v=20261108-ui">
+  <link rel="stylesheet" href="style.css?v=20261108-fx">
 </head>
 <body>
   <header class="topbar">
     <a class="portal-link" href="../index.html">← <span>ゲーム一覧</span></a>
     <a class="wordmark" href="./index.html" aria-label="UNO トップ"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span> COLOR CIRCUIT</a>
-    <button class="icon-button" id="rulesButton" type="button" aria-label="遊び方を開く">？</button>
+    <div class="topbar-tools"><button class="icon-button" id="audioToggle" type="button" aria-pressed="true" aria-label="効果音・UNOボイス：オン">♪</button><button class="icon-button" id="rulesButton" type="button" aria-label="遊び方を開く">？</button></div>
   </header>
 
   <main>
@@ -33,6 +33,7 @@
           <div id="joinSetup" hidden><label for="roomCodeInput">ルームの合言葉</label><input id="roomCodeInput" class="code-input" maxlength="8" placeholder="8文字のコード" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="primary-button start-button" id="joinRoom" type="button">ルームに参加 <span aria-hidden="true">↗</span></button></div>
           <p class="setup-footnote">1人につき1台の端末を用意。合言葉を知っている人が参加できます。</p>
         </div>
+        <button class="text-button audio-settings-link" id="audioSettingsButton" type="button">♪ 効果音・声の設定</button>
         <p id="setupStatus" class="form-status" role="status" aria-live="polite"></p>
       </section>
     </section>
@@ -43,7 +44,7 @@
     </section>
 
     <section class="game-screen" id="gameScreen" hidden aria-label="UNOの対戦">
-      <div class="game-toolbar"><div><span class="session-label" id="sessionLabel">SOLO TABLE</span><span id="gameRoomCode" class="small-room-code"></span></div><button class="text-button" id="leaveGame" type="button">退出</button></div>
+      <div class="game-toolbar"><div><span class="session-label" id="sessionLabel">SOLO TABLE</span><span id="gameRoomCode" class="small-room-code"></span></div><div class="game-toolbar-tools"><button class="text-button" id="gameAudioSettings" type="button">音の設定</button><button class="text-button" id="leaveGame" type="button">退出</button></div></div>
       <div class="connection-banner" id="connectionBanner" hidden role="status"><span id="connectionText"></span><button id="retryConnection" type="button">再接続</button></div>
       <div class="opponents" id="opponents" aria-label="参加プレイヤー"></div>
       <div class="table-zone">
@@ -61,9 +62,10 @@
   </main>
 
   <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+  <dialog id="audioDialog" class="audio-dialog" aria-labelledby="audioTitle"><div class="dialog-head"><div><p class="eyebrow">SOUND ON.</p><h2 id="audioTitle">音の設定</h2></div><button class="icon-button" type="button" data-close-audio aria-label="音の設定を閉じる">×</button></div><p class="audio-intro">カードが届く音と、かわいい「ウーノ！」。<br>好きな音量で、テーブルを楽しもう。</p><label class="audio-switch"><input id="audioEnabled" type="checkbox" checked><span>効果音・UNOボイスを再生</span></label><div class="audio-volume-heading"><label for="audioVolume">音量</label><output id="audioVolumeValue" for="audioVolume">70%</output></div><input id="audioVolume" type="range" min="0" max="100" step="5" value="70"><div class="audio-test-buttons"><button class="secondary-button" id="audioTestCards" type="button">カードの音を聞く</button><button class="secondary-button" id="audioTestUno" type="button">UNO! の声を聞く</button></div><p class="audio-status" id="audioStatus" role="status"></p><button class="primary-button" type="button" data-close-audio>設定を閉じる</button></dialog>
   <dialog id="colorDialog" class="color-dialog" aria-labelledby="colorDialogTitle"><div class="dialog-head"><div><p class="eyebrow">YOUR NEXT COLOR</p><h2 id="colorDialogTitle">次の色を選ぼう</h2></div><button class="icon-button" id="cancelColor" type="button" aria-label="色の選択を取り消す">×</button></div><p id="wildUnoStatus" class="wild-uno-status" role="status" hidden></p><div class="color-options"><button type="button" data-color="red">● <span>赤</span></button><button type="button" data-color="yellow">◆ <span>黄</span></button><button type="button" data-color="green">▲ <span>緑</span></button><button type="button" data-color="blue">■ <span>青</span></button></div></dialog>
   <dialog id="rulesDialog" aria-labelledby="rulesTitle"><div class="dialog-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rulesTitle">1枚から、始まる逆転。</h2></div><button class="icon-button" id="closeRules" type="button" aria-label="遊び方を閉じる">×</button></div><div class="rules-content"><p>場のカードと<strong>同じ色・数字・記号</strong>のカードを出し、最初に手札をなくした人が勝ち。最初の手札は7枚です。</p><div class="rule-grid"><div><b>⊘ スキップ</b><p>次の人の番を飛ばします。</p></div><div><b>⇄ リバース</b><p>順番の向きを反転。2人対戦ではもう一度自分の番です。</p></div><div><b>＋2 / ＋4</b><p>次の人がカードを引き、その番はお休み。重ね出しはできません。</p></div><div><b>✦ ワイルド</b><p>好きな色へ変更。＋4は場と同じ色を持っていないときだけ出せます。</p></div></div><p><strong>引いたカードが出せるときは、その1枚を出すかパス。</strong>出せないカードなら自動で次の人の番になります。</p><div class="uno-rule"><strong>残り1枚になる前に「UNO!」</strong><p>宣言ボタンをオンにしてからカードを出しましょう。このゲームでは宣言を忘れると、その場で2枚追加されます。</p></div><p>オンラインでは各自1台の端末を使います。手札を端末同士で渡す必要はありません。自分の端末だけに、自分の手札が届きます。</p><p class="muted">接続が切れた場合は同じブラウザーで開き直すと復帰できます。操作がないまま一定時間が経過すると、サーバーが自動で番を進めます。</p><p class="keyboard-help">キーボード：← → 手札を選択 ／ Enter 出す ／ D 引く ／ P パス ／ U UNO宣言</p></div></dialog>
   <dialog id="leaveDialog" class="leave-dialog" aria-labelledby="leaveTitle"><div class="dialog-head"><h2 id="leaveTitle">テーブルを離れますか？</h2><button class="icon-button" id="cancelLeave" type="button" aria-label="戻る">×</button></div><p id="leaveExplanation"></p><div class="dialog-actions"><button class="secondary-button" id="stayButton" type="button">対戦に戻る</button><button class="danger-button" id="confirmLeave" type="button">退出する</button></div></dialog>
-  <script type="module" src="app.mjs?v=20261108-ui"></script>
+  <script type="module" src="app.mjs?v=20261108-fx"></script>
 </body>
 </html>

@@ -1,5 +1,8 @@
 import { createGame, applyAction, publicView, chooseCpuAction, COLORS } from './engine.mjs';
 import { gameFeedback, turnIdentity } from './feedback.mjs?v=20261108-ui';
+import { UnoAudio } from './audio.mjs?v=20261108-fx';
+import { UnoMotion } from './motion.mjs?v=20261108-fx';
+import { snapshotPublicGame, diffPublicSnapshots } from './presentation.mjs?v=20261108-fx';
 
 const API = 'https://tk777-neonshift-scores.takesuke.chatgpt.site/api/uno';
 const SESSION_KEY = 'tk777-uno-session';
@@ -17,6 +20,51 @@ let lastConnectionError = '', setupBusy = false, soloPlayers = 4, currentScreen 
 let handGesture = null, suppressHandClick = false;
 let apiPauseUntil = 0;
 let lastTurnCue = '', turnAnimation = null;
+let fxSnapshot = null, initialDealPending = false, audioState = null;
+const AUDIO_KEY = 'tk777-uno-audio';
+function audioPreferences() { try { const p = JSON.parse(localStorage.getItem(AUDIO_KEY)); return { enabled: p?.enabled !== false, volume: Number.isFinite(p?.volume) ? Math.max(0, Math.min(1, p.volume)) : .7 }; } catch { return { enabled: true, volume: .7 }; } }
+const unoAudio = new UnoAudio({ ...audioPreferences(), Context: window.AudioContext || window.webkitAudioContext, onChange: state => { audioState = state; renderAudioControls(state); } });
+const unoMotion = new UnoMotion({ document, window });
+audioState = unoAudio.state();
+function renderAudioControls(state) {
+  const label = !state.supported ? '音声非対応' : state.enabled ? '効果音・UNOボイス：オン' : '効果音・UNOボイス：オフ';
+  $('audioToggle').setAttribute('aria-label', label); $('audioToggle').setAttribute('aria-pressed', String(state.enabled)); $('audioToggle').title = label; $('audioToggle').textContent = state.enabled ? '♪' : '♩'; $('audioToggle').disabled = !state.supported;
+  $('audioEnabled').checked = state.enabled; $('audioEnabled').disabled = !state.supported;
+  $('audioVolume').value = String(Math.round(state.volume * 100)); $('audioVolume').disabled = !state.supported; $('audioVolumeValue').textContent = Math.round(state.volume * 100) + '%';
+  for (const id of ['audioTestCards', 'audioTestUno']) $(id).disabled = !state.supported || !state.enabled || state.volume === 0;
+  $('audioStatus').textContent = !state.supported ? 'このブラウザーでは音を使えません。ゲームはそのまま遊べます。' : !state.enabled ? '音はオフです。' : state.volume === 0 ? '音量は0%です。' : state.blocked ? '音を聞くボタンを押して、再生を有効にしてください。' : state.error === 'voice-unavailable' ? 'UNOボイスを読み込めませんでした。ページを再読み込みしてください。' : state.loadingVoice ? 'UNOボイスを準備しています…' : 'カードの音と、明るい「ウーノ！」の声を再生します。';
+}
+function saveAudioPreferences() { const state = unoAudio.state(); try { localStorage.setItem(AUDIO_KEY, JSON.stringify({ enabled: state.enabled, volume: state.volume })); } catch {} }
+function setAudioEnabled(enabled) { unoAudio.setEnabled(enabled); if (enabled) unoAudio.unlock(); saveAudioPreferences(); renderAudioControls(unoAudio.state()); }
+function openAudioSettings() { clearTimeout(cpuTimer); cpuTimer = null; unoAudio.stop(); unoMotion.stop(); $('audioDialog').showModal(); renderAudioControls(unoAudio.state()); }
+function stopPresentation() { unoAudio.stop(); unoMotion.stop(); }
+function oldRect(node) { const r = node?.getBoundingClientRect?.(); return r && r.width > 0 && r.height > 0 ? { x: r.x ?? r.left ?? 0, y: r.y ?? r.top ?? 0, width: r.width, height: r.height } : null; }
+function presentationSource(played) {
+  if (!played?.actorId) return null;
+  const node = played.actorId === selfId ? [...$('hand').children].find(card => card.dataset.cardId === played.card.id) : [...$('opponents').children].find(row => row.dataset.playerId === played.actorId);
+  return oldRect(node);
+}
+function processGameEffects(effects, from) {
+  if (document.hidden || $('audioDialog').open) return;
+  try {
+    if (effects.initial) unoMotion.stop();
+    const added = new Set(effects.addedHandIds), targets = [...$('hand').children].filter(card => added.has(card.dataset.cardId));
+    for (const incoming of effects.received) {
+      if (incoming.playerId === selfId) continue;
+      const row = [...$('opponents').children].find(node => node.dataset.playerId === incoming.playerId);
+      if (row) for (let n = 0; n < Math.min(incoming.count, effects.initial ? 2 : 4); n++) targets.push(row);
+    }
+    const incomingTargets = targets.slice(0, effects.played ? 11 : 12);
+    if (incomingTargets.length) {
+      unoMotion.receive({ targets: incomingTargets, source: $('drawPile'), initial: effects.initial });
+      const sounds = Math.min(7, Math.max(effects.addedHandIds.length, ...effects.received.map(item => item.count), 1));
+      for (let i = 0; i < sounds; i++) unoAudio.play(effects.initial ? 'deal' : 'draw', { delay: i * (effects.initial ? .032 : .042) });
+    }
+    if (effects.played) { unoAudio.play('play'); if (from) unoMotion.play({ from, to: $('discardCard'), card: effects.played.card }); }
+    if (effects.unoCount) unoAudio.play('uno', { delay: effects.played ? .07 : 0 });
+    if (effects.winner) unoAudio.play('win', { delay: .14 });
+  } catch { /* Decorative effects never block a valid card action. */ }
+}
 const resumeButton = document.createElement('button');
 resumeButton.type = 'button'; resumeButton.className = 'secondary-button resume-button'; resumeButton.hidden = true;
 resumeButton.textContent = '前のルームへ再接続';
@@ -33,10 +81,10 @@ function stopTimers() { clearTimeout(pollTimer); clearTimeout(cpuTimer); pollTim
 function setSetupBusy(value, text) { setupBusy = value; for (const id of ['soloStart', 'createRoom', 'joinRoom']) $(id).disabled = value; resumeButton.disabled = value; if (typeof text === 'string') $('setupStatus').textContent = text; }
 function setSetupMode(next) { selectedMode = next; for (const button of document.querySelectorAll('[data-mode]')) { const active = button.dataset.mode === next; button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); } $('soloSetup').hidden = next !== 'solo'; $('onlineSetup').hidden = next !== 'online'; }
 function setRoomMode(next) { for (const button of document.querySelectorAll('[data-room-mode]')) { const active = button.dataset.roomMode === next; button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); } $('createSetup').hidden = next !== 'create'; $('joinSetup').hidden = next !== 'join'; }
-function resetHand() { handIds = ''; lastTurnCue = ''; turnAnimation?.cancel(); turnAnimation = null; $('hand').replaceChildren(); }
+function resetHand({ deal = false } = {}) { handIds = ''; fxSnapshot = null; initialDealPending = deal; stopPresentation(); lastTurnCue = ''; turnAnimation?.cancel(); turnAnimation = null; $('hand').replaceChildren(); }
 function closeWild() { pendingWild = null; if ($('colorDialog').open) $('colorDialog').close(); }
 function clearOnline() { session = null; room = null; remove(SESSION_KEY); resumeButton.hidden = true; }
-function goHome() { generation++; stopTimers(); closeWild(); if ($('leaveDialog').open) $('leaveDialog').close(); mode = 'home'; room = null; localGame = null; busy = false; unoArmed = false; resetHand(); showScreen('home'); connectionRestored(); setSetupBusy(false, ''); }
+function goHome() { generation++; stopTimers(); closeWild(); if ($('leaveDialog').open) $('leaveDialog').close(); mode = 'home'; room = null; localGame = null; busy = false; unoArmed = false; if ($('audioDialog').open) $('audioDialog').close(); resetHand(); showScreen('home'); connectionRestored(); setSetupBusy(false, ''); }
 
 async function api(path, payload, auth = session) {
   if (Date.now() < apiPauseUntil) {
@@ -75,6 +123,7 @@ function connectionRestored() { if (mode === 'online' && Date.now() < apiPauseUn
 function acceptView(view, expectedGeneration = generation) {
   if (!view || expectedGeneration !== generation || mode !== 'online' || !session || view.roomId !== session.roomId) return;
   if (room && view.version < room.version) return;
+  if (room?.status === 'lobby' && view.status !== 'lobby' && view.game) initialDealPending = true;
   const turnChanged = room && room.game && view.game && turnIdentity(room.game) !== turnIdentity(view.game);
   room = view; selfId = view.selfId || session.playerId;
   if (turnChanged || !view.game || view.game.currentPlayerId !== selfId) unoArmed = false;
@@ -101,6 +150,7 @@ async function poll() { if (busy || pollRunning) { schedulePoll(500); return; } 
 
 async function openRoom(join) {
   if (setupBusy) return;
+  unoAudio.unlock();
   const code = $('roomCodeInput').value.trim().toUpperCase();
   if (join && !/^[A-Z0-9]{8}$/.test(code)) { setSetupBusy(false, '8文字の合言葉を入力してください。'); $('roomCodeInput').focus(); return; }
   setSetupBusy(true, join ? 'ルームに参加しています…' : 'ルームを作っています…');
@@ -133,11 +183,12 @@ async function resumeRoom() {
 }
 
 function startSolo() {
+  unoAudio.unlock();
   generation++; stopTimers(); closeWild(); mode = 'solo'; localGame = null; room = null; busy = false; unoArmed = false; selfId = 'you';
   connectionRestored();
   soloPlayers = Number($('soloCount').value); const players = [{ id: selfId, name: nickname() }];
   for (let i = 1; i < soloPlayers; i++) players.push({ id: 'cpu-' + i, name: ['CPU アオ', 'CPU モモ', 'CPU キイ', 'CPU ミドリ', 'CPU スミレ'][i - 1] });
-  localGame = createGame(players); resetHand(); render(); scheduleCpu();
+  localGame = createGame(players); resetHand({ deal: true }); render(); scheduleCpu();
 }
 function viewGame() { return mode === 'solo' ? (localGame ? publicView(localGame, selfId) : null) : room && room.game; }
 function onlinePlayers() { return room && Array.isArray(room.players) ? room.players : []; }
@@ -147,7 +198,7 @@ function isHost() { return Boolean(room && room.hostId === selfId); }
 function playerName(id, game = viewGame()) { const person = game && game.players.find(player => player.id === id); return person ? person.name : 'プレイヤー'; }
 function scheduleCpu() {
   clearTimeout(cpuTimer);
-  if (mode !== 'solo' || !localGame || localGame.phase !== 'playing') return;
+  if (mode !== 'solo' || !localGame || localGame.phase !== 'playing' || $('audioDialog').open || document.hidden) return;
   const game = publicView(localGame, selfId);
   if (game.currentPlayerId === selfId) return;
   const currentGeneration = generation;
@@ -159,6 +210,7 @@ function scheduleCpu() {
 }
 async function perform(action) {
   if (busy) return;
+  unoAudio.unlock();
   const currentGeneration = generation;
   if (mode === 'solo') {
     try { localGame = applyAction(localGame, selfId, action); unoArmed = false; render(); scheduleCpu(); }
@@ -222,6 +274,7 @@ function renderOpponents(game) {
   game.players.forEach((player, index) => {
     const online = onlinePlayers().find(item => item.id === player.id), row = document.createElement('div');
     row.className = 'opponent' + (player.id === game.currentPlayerId && game.phase === 'playing' ? ' active' : '') + (player.id === selfId ? ' self' : '') + (player.count === 1 ? ' uno' : '');
+    row.dataset.playerId = player.id;
     const avatar = document.createElement('span'); avatar.className = 'avatar'; avatar.style.setProperty('--avatar', avatars[index]); avatar.textContent = String(player.name || '?').slice(0, 1);
     const info = document.createElement('div'); info.className = 'opponent-info'; const name = document.createElement('strong'); name.textContent = player.name + (player.id === selfId ? ' · あなた' : ''); const status = document.createElement('small'); status.textContent = player.id === game.currentPlayerId && game.phase === 'playing' ? '▶ プレイ中' : online && online.cpu ? 'CPUが代打中' : mode === 'solo' && player.id !== selfId ? 'CPU' : online && online.connected === false ? '再接続待ち' : player.id === selfId ? 'YOU' : 'PLAYER'; info.append(name, status);
     const count = document.createElement('span'); count.className = 'card-amount'; count.textContent = player.count === 1 ? 'UNO!' : String(player.count); count.setAttribute('aria-label', '手札 ' + player.count + '枚'); row.append(avatar, info, count); node.append(row);
@@ -289,6 +342,10 @@ function renderTurnFeedback(game, feedback) {
 }
 function setFeedbackText(id, text) { if ($(id).textContent !== text) $(id).textContent = text; }
 function renderGame(game) {
+  const snapshot = snapshotPublicGame(game);
+  if (snapshot && !snapshot.gameStartStamp && fxSnapshot) snapshot.gameStartStamp = fxSnapshot.gameStartStamp;
+  const effects = diffPublicSnapshots(fxSnapshot, snapshot, { initial: initialDealPending }), from = presentationSource(effects.played);
+  fxSnapshot = snapshot; initialDealPending = false;
   showScreen('game'); $('sessionLabel').textContent = mode === 'solo' ? 'SOLO / VS CPU' : 'ONLINE / PRIVATE TABLE'; $('gameRoomCode').textContent = mode === 'online' && room ? room.roomId : '';
   renderOpponents(game);
   const ownTurn = isOurTurn(game);
@@ -301,6 +358,7 @@ function renderGame(game) {
   if (game.phase === 'finished') { $('winnerText').textContent = game.winnerId === selfId ? 'あなたの勝ち！' : playerName(game.winnerId, game) + ' の勝ち！'; $('rematchNote').textContent = mode === 'online' && !isHost() ? 'ホストが再戦を始めるのを待っています。' : '同じメンバーでもう一勝負。'; }
   if (pendingWild && (!ownTurn || game.phase !== 'playing' || !game.legalCardIds.includes(pendingWild.cardId))) closeWild();
   renderHand(game);
+  processGameEffects(effects, from);
 }
 function render() { if (mode === 'solo' && localGame) renderGame(publicView(localGame, selfId)); else if (mode === 'online' && room) { if (room.status === 'lobby') renderLobby(); else if (room.game) renderGame(room.game); } }
 
@@ -338,7 +396,15 @@ async function leave() {
 
 for (const button of document.querySelectorAll('[data-mode]')) button.addEventListener('click', () => { if (!setupBusy) { setSetupMode(button.dataset.mode); $('setupStatus').textContent = ''; } });
 for (const button of document.querySelectorAll('[data-room-mode]')) button.addEventListener('click', () => { if (!setupBusy) setRoomMode(button.dataset.roomMode); });
-$('soloStart').addEventListener('click', startSolo); $('createRoom').addEventListener('click', () => openRoom(false)); $('joinRoom').addEventListener('click', () => openRoom(true)); resumeButton.addEventListener('click', resumeRoom);
+$('soloStart').addEventListener('click', startSolo); $('createRoom').addEventListener('click', () => openRoom(false)); $('joinRoom').addEventListener('click', () => openRoom(true)); resumeButton.addEventListener('click', () => { unoAudio.unlock(); resumeRoom(); });
+$('audioToggle').addEventListener('click', () => setAudioEnabled(!unoAudio.state().enabled));
+$('audioEnabled').addEventListener('change', () => setAudioEnabled($('audioEnabled').checked));
+$('audioVolume').addEventListener('input', () => { unoAudio.setVolume(Number($('audioVolume').value) / 100); saveAudioPreferences(); renderAudioControls(unoAudio.state()); });
+for (const id of ['audioSettingsButton', 'gameAudioSettings']) $(id).addEventListener('click', openAudioSettings);
+$('audioTestCards').addEventListener('click', () => { unoAudio.unlock(); unoAudio.play('deal'); unoAudio.play('draw', { delay: .14 }); unoAudio.play('play', { delay: .3 }); });
+$('audioTestUno').addEventListener('click', () => { unoAudio.unlock(); unoAudio.play('uno'); });
+for (const button of document.querySelectorAll('[data-close-audio]')) button.addEventListener('click', () => $('audioDialog').close());
+$('audioDialog').addEventListener('close', () => { unoAudio.stop(); if (mode === 'solo') scheduleCpu(); });
 $('roomCodeInput').addEventListener('input', () => { $('roomCodeInput').value = $('roomCodeInput').value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
 $('roomCodeInput').addEventListener('keydown', event => { if (event.key === 'Enter') openRoom(true); });
 $('startOnline').addEventListener('click', () => perform({ type: 'start' }));
@@ -405,11 +471,14 @@ document.addEventListener('keydown', event => {
     const next = cards[(current < 0 ? (step === 1 ? 0 : cards.length - 1) : (current + step + cards.length) % cards.length)]; next.focus({ preventScroll: true }); next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
   }
 });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && mode === 'online') { clearTimeout(pollTimer); syncRoom().finally(() => schedulePoll()); } });
-window.addEventListener('pageshow', () => { if (mode === 'online') syncRoom().finally(() => schedulePoll()); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { stopPresentation(); clearTimeout(cpuTimer); cpuTimer = null; } else if (mode === 'online') { clearTimeout(pollTimer); syncRoom().finally(() => schedulePoll()); } else if (mode === 'solo') scheduleCpu(); });
+window.addEventListener('pagehide', () => { stopPresentation(); clearTimeout(cpuTimer); cpuTimer = null; });
+for (const eventName of ['pointerdown', 'keydown']) document.addEventListener(eventName, () => { if (mode !== 'home' && !document.hidden) unoAudio.unlock(); }, { capture: true });
+window.addEventListener('pageshow', () => { if (mode === 'online') syncRoom().finally(() => schedulePoll()); else if (mode === 'solo') scheduleCpu(); });
 window.addEventListener('online', () => { if (mode === 'online') syncRoom().finally(() => schedulePoll()); });
 
 $('nickname').value = stored(NAME_KEY) || '';
+renderAudioControls(unoAudio.state());
 try { const saved = JSON.parse(stored(SESSION_KEY)); if (saved && /^[A-Z0-9]{8}$/.test(saved.roomId) && typeof saved.token === 'string' && typeof saved.playerId === 'string') session = saved; } catch {}
 const invite = new URL(location.href).searchParams.get('room');
 if (invite) { setSetupMode('online'); setRoomMode('join'); $('roomCodeInput').value = invite.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8); }

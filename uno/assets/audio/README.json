@@ -1,0 +1,12 @@
+{
+  "text": "ウーノ！",
+  "voice": "Microsoft Haruka Desktop",
+  "method": "Windows System.Speech synthesis of original short game call; PCM16 mono; trim, level and edge fades. Game playback rate 1.12.",
+  "sampleRate": 22050,
+  "durationSeconds": 0.459,
+  "bytes": 20264,
+  "peak": 26869,
+  "rms": 6824.6,
+  "sha256": "23d58cf280377db7b61bda5a872130baaa8e9b3d1f0235891745688121676260",
+  "created": "2026-11-08"
+}

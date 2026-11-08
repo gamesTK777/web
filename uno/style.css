@@ -138,3 +138,31 @@ body.in-game{height:100dvh;overflow:hidden;min-height:0}
   .uno-button-copy strong{font-size:11px}
   .uno-button-copy small{font-size:8px}
 }
+
+/* Flights are decorative overlays; the real cards remain usable throughout. */
+.uno-motion-layer{position:fixed;inset:0;z-index:75;overflow:hidden;pointer-events:none;contain:layout paint;isolation:isolate}
+.uno-flying-card{position:absolute;left:0;top:0;pointer-events:none;user-select:none;-webkit-user-select:none;transform-origin:center;will-change:transform,opacity;box-shadow:0 12px 25px #0007,0 0 0 1px #d7f86b55;border-radius:10px}
+.uno-flight-back{display:grid;place-items:center;overflow:hidden;border:3px solid #f1f1e9;background:repeating-linear-gradient(135deg,#272d43 0,#272d43 5px,#354158 5px,#354158 8px);color:#f3f5ee}
+.uno-flight-back::before{content:'';position:absolute;inset:13% 10%;border:1px solid #d5e0f69c;border-radius:50%;transform:rotate(-20deg)}
+.uno-flight-brand{font-family:'Space Grotesk',sans-serif;font-weight:900;letter-spacing:-.07em;line-height:1;transform:rotate(-17deg);text-shadow:0 2px 1px #0004}
+.uno-flying-card.playing-card .card-main{font-size:clamp(25px,3vw,43px)}
+.uno-flying-card.playing-card .card-corner{font-size:12px}
+@media(prefers-reduced-motion:reduce){.uno-motion-layer{display:none}}
+
+.topbar-tools,.game-toolbar-tools{display:flex;align-items:center;gap:8px}
+#audioToggle[aria-pressed=false]{color:var(--muted);background:#ffffff05}
+.audio-settings-link{display:block;margin:8px auto 0}
+.game-toolbar-tools .text-button{padding:3px 7px;white-space:nowrap}
+.audio-dialog{width:min(460px,calc(100vw - 30px));overflow-x:hidden}
+.audio-intro{font-size:14px;line-height:1.8;color:var(--muted);margin:0 0 22px}
+.audio-switch{display:flex;align-items:center;gap:10px;padding:15px 12px;background:#ffffff07;border:1px solid #ffffff15;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer}
+.audio-switch input{width:21px;height:21px;accent-color:var(--lime);margin:0;flex:none}
+.audio-switch span{color:var(--ink);margin:0;font-weight:700}
+.audio-volume-heading{display:flex;justify-content:space-between;align-items:center;margin:23px 0 12px;font-size:13px}
+.audio-volume-heading output{color:var(--lime);font-variant-numeric:tabular-nums}
+#audioVolume{display:block;width:100%;height:26px;padding:0;accent-color:var(--lime);cursor:pointer;box-shadow:none;border:0;background:transparent}
+.audio-test-buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:21px}
+.audio-test-buttons button{font-size:12px;min-height:46px;padding:9px 6px}
+.audio-status{color:var(--muted);min-height:42px;font-size:12px;line-height:1.7;margin:15px 0}
+.audio-dialog>.primary-button{width:100%}
+@media(max-width:650px){.topbar-tools{gap:5px}.topbar-tools .icon-button{width:32px;height:32px}.game-toolbar-tools{gap:2px}.game-toolbar-tools .text-button{font-size:10px}.audio-intro{font-size:13px}.audio-switch{font-size:12px}}

@@ -5,6 +5,18 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import * as engine from './engine.mjs';
 import * as feedback from './feedback.mjs';
+import * as presentation from './presentation.mjs';
+
+// The sound and motion implementations have dedicated tests. These interaction
+// checks keep their decoration inert while running the actual app coordinator.
+class QuietAudio {
+  constructor({ onChange, enabled = true, volume = .7 }) { this.enabled = enabled; this.volume = volume; onChange(this.state()); }
+  state() { return { supported: false, enabled: this.enabled, volume: this.volume }; }
+  unlock() {} play() {} stop() {}
+  setEnabled(value) { this.enabled = value; }
+  setVolume(value) { this.volume = value; }
+}
+class QuietMotion { stop() {} receive() {} play() {} }
 
 // Run the real application and event handlers without a network or a browser.
 // Timers stay queued so CPU turns and polling cannot race these interaction checks.
@@ -95,7 +107,7 @@ async function harness({ reducedMotion = false } = {}) {
   const document = makeDocument(html), window = new Element('window'), timers = new Map(), requests = [];
   let timerId = 0, respond = () => { throw new Error('Unexpected network request'); };
   const context = vm.createContext({
-    document, window, __engine: engine, __feedback: feedback, URL, AbortController, crypto: webcrypto, console,
+    document, window, __engine: engine, __feedback: feedback, __presentation: presentation, UnoAudio: QuietAudio, UnoMotion: QuietMotion, URL, AbortController, crypto: webcrypto, console,
     location: new URL('https://example.test/uno/'), navigator: { clipboard: { writeText: async () => {} } },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     getComputedStyle: () => ({ gap: '8' }), matchMedia: () => ({ matches: reducedMotion }),
@@ -119,7 +131,7 @@ globalThis.testHooks = {
   replaceGame(game) { localGame = game; render(); },
   state() { return {unoArmed, localGame, room, pendingWild, busy}; }
 };`;
-  vm.runInContext(`const {createGame,applyAction,publicView,chooseCpuAction,COLORS} = __engine; const {gameFeedback,turnIdentity}=__feedback;\n` + application.replace(/^import .*;\r?$/gm, '') + hooks, context);
+  vm.runInContext(`const {createGame,applyAction,publicView,chooseCpuAction,COLORS} = __engine; const {gameFeedback,turnIdentity}=__feedback; const {snapshotPublicGame,diffPublicSnapshots}=__presentation;\n` + application.replace(/^import .*;\r?$/gm, '') + hooks, context);
   return { document, node: id => document.getElementById(id), hooks: context.testHooks, requests, setRespond: fn => { respond = fn; }, key: key => document.dispatch('keydown', { key }) };
 }
 
