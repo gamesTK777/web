@@ -1,7 +1,9 @@
 import {createGame,applyAction,getReachable,getAttackTargets,getProduction,planAIAction,serializeGame,deserializeGame,getIncome,defenseAt,canCapture,UNIT_TYPES,TERRAIN,MISSIONS} from './engine.mjs?v=20261108-frontier';
-import {renderBoard,cellFromPointer} from './renderer.mjs?v=20261108-anime-fullscreen';
+import {renderBoard,cellFromPointer} from './renderer.mjs?v=20261108-combat';
 import {CommandAudio} from './audio.mjs?v=20261108-frontier';
 import {createBattlePresentation} from './presentation.mjs?v=20261108-anime-fullscreen';
+import {createCombatReport} from './combat-model.mjs?v=20261108-combat';
+import {createCombatPlayback} from './combat-playback.mjs?v=20261108-combat';
 
 const $=id=>document.getElementById(id),canvas=$('boardCanvas'),audio=new CommandAudio();
 const KEYS={auto:'tk777.frontier.autosave.v1',manual:'tk777.frontier.manual.v1',progress:'tk777.frontier.progress.v1',sound:'tk777.frontier.sound.v1'};
@@ -15,6 +17,7 @@ const buildingName=type=>({city:'都市',factory:'工場',hq:'本部',airfield:'
 const money=value=>Number(value||0).toLocaleString('ja-JP');
 let game=createGame({missionId:missionItems[0].id,difficulty:'normal'}),started=false,phase='setup';
 let selectedId=null,targetId=null,cursor={x:0,y:0},moveUndo=null,effect=null,aiTimer=null,aiEpoch=0,aiActions=0,lastDraw=0,viewMoves=[],viewTargets=[],presentation=null;
+let combatPlayback=null,combatPlaying=false,combatSerial=0;
 let soundOn=storage.get(KEYS.sound)!=='off',progress=[];
 try{const value=JSON.parse(storage.get(KEYS.progress)||'[]');if(Array.isArray(value))progress=value.filter(x=>missionItems.some(m=>m.id===x));}catch{}
 audio.setEnabled(false);
@@ -25,12 +28,13 @@ function unitAt(x,y){return game.units.find(u=>u.x===x&&u.y===y);}
 function tileAt(x,y){return game.tiles[y*game.width+x];}
 function selected(){return game.units.find(u=>u.id===selectedId);}
 function missionFor(id){return missionItems.find(m=>String(m.id)===String(id))||missionItems[0];}
-function isPaused(){return !!document.querySelector('dialog[open]');}
+function isPaused(){return combatPlaying||!!document.querySelector('dialog[open]');}
 function canAct(){return started&&phase==='playing'&&game.turn===0&&!isPaused();}
 function status(text){$('statusText').textContent=text;}
 function saveAuto(){if(started&&!storage.set(KEYS.auto,serializeGame(game)))status('このブラウザーでは保存できません。ストレージの空き容量や設定を確認してください。');}
 function stopAI(){aiEpoch++;clearTimeout(aiTimer);aiTimer=null;}
-function refreshSound(){audio.setEnabled(soundOn&&started&&phase==='playing'&&!document.hidden&&!isPaused());if(audio.enabled)audio.start();$('soundButton').textContent=soundOn?'♪ 音 ON':'♪ 音 OFF';$('soundButton').setAttribute('aria-pressed',String(soundOn));}
+function refreshSound(){const enabled=soundOn&&started&&phase==='playing'&&!document.hidden;if(combatPlaying){audio.pause();audio.setEnabled(enabled);}else{audio.setEnabled(enabled&&!isPaused());if(audio.enabled)audio.start();}$('soundButton').textContent=soundOn?'♪ 音 ON':'♪ 音 OFF';$('soundButton').setAttribute('aria-pressed',String(soundOn));}
+function cancelCombat(){combatSerial++;combatPlaying=false;combatPlayback?.cancel();}
 
 const confirmDialog=el('dialog',undefined,'command-dialog confirm-dialog');
 const confirmHeading=el('h2'),confirmText=el('p'),confirmActions=el('div',undefined,'dialog-actions');
@@ -57,7 +61,7 @@ function renderMissions(){
 function setupContinue(){const b=$('continueButton');if(b)b.hidden=!storage.get(KEYS.auto);}
 function openSetup(id){stopAI();if(id!==undefined)$('missionSelect').value=id;setupContinue();updateMissionBrief();if(!$('newGameDialog').open)$('newGameDialog').showModal();$('closeSetupButton').hidden=!started;refreshSound();}
 function enterGame(next){
-  stopAI();for(const d of document.querySelectorAll('dialog[open]'))d.close();
+  stopAI();cancelCombat();for(const d of document.querySelectorAll('dialog[open]'))d.close();
   game=next;started=true;phase=game.winner===null?'playing':'ended';selectedId=null;targetId=null;moveUndo=null;effect=null;aiActions=0;
   const first=game.units.find(u=>u.team===0);cursor=first?{x:first.x,y:first.y}:{x:0,y:0};
   $('missionSelect').value=game.missionId;$('difficultySelect').value=game.difficulty||'normal';
@@ -91,7 +95,8 @@ function eventText(action,before,after){
   if(action.type==='move')return `${name}が移動。攻撃・占領・待機を選べます。`;
   if(action.type==='attack'){
     const old=before.units.find(x=>x.id===action.targetId),now=after.units.find(x=>x.id===action.targetId);
-    return `${name}が${old?unitName(old.type):'敵部隊'}を攻撃。${now?`残りHP ${now.hp}`:'敵部隊を撃破！'}`;
+    const attackerAfter=after.units.find(x=>x.id===action.unitId),counterLoss=(u?.hp||0)-(attackerAfter?.hp||0);
+    return `${name}が${old?unitName(old.type):'敵部隊'}を攻撃。${now?`残りHP ${now.hp}`:'敵部隊を撃破！'}${counterLoss?`（反撃 ${counterLoss}、攻撃側HP ${attackerAfter?.hp||0}）`:''}`;
   }
   if(action.type==='capture'){const t=after.tiles[u.y*after.width+u.x];return t.owner===u.team?`${buildingName(t.building)}を占領しました！`:`${buildingName(t.building)}を占領中。残り ${t.capture}。次の自分の番にも占領しましょう。`;}
   if(action.type==='produce')return `${unitName(action.unitType)}を生産しました。次の自分の番から行動できます。`;
@@ -99,6 +104,7 @@ function eventText(action,before,after){
   return `${name}が待機しました。`;
 }
 function perform(action,{ai=false}={}){
+  if(combatPlaying)return false;
   if(!ai&&!canAct())return;
   const before=game,result=applyAction(game,action);
   if(!result.ok){status(result.error||'その行動はできません。');audio.sfx('error');return false;}
@@ -108,7 +114,18 @@ function perform(action,{ai=false}={}){
   effect={type:action.type,unitId:action.unitId,x:p.x,y:p.y,fromX:old?.x,fromY:old?.y,team:before.turn,startedAt:performance.now()};
   if(action.type==='endTurn'){selectedId=null;targetId=null;aiActions=0;}
   else {selectedId=!ai?moved?.id??null:null;targetId=null;}
-  audio.sfx(action.type==='endTurn'?'turn':action.type);render();if(action.type==='move'&&!ai)presentation?.setInfoOpen(true);status(eventText(action,before,game));saveAuto();
+  const report=action.type==='attack'&&combatPlayback?createCombatReport(before,game,result.event):null;
+  if(report){stopAI();combatPlaying=true;}
+  else audio.sfx(action.type==='endTurn'?'turn':action.type);
+  render();if(action.type==='move'&&!ai)presentation?.setInfoOpen(true);status(eventText(action,before,game));saveAuto();
+  if(report){
+    // The engine result is already stored. Presentation can only delay the next
+    // action; skipping or navigation must never run combat a second time.
+    const serial=++combatSerial,after=game;refreshSound();
+    const settle=()=>{if(serial!==combatSerial)return;combatPlaying=false;effect=null;render();status(eventText(action,before,after));refreshSound();if(game.winner!==null){stopAI();showResult();}else{if(!isPaused())canvas.focus({preventScroll:true});queueAI();}};
+    try{Promise.resolve(combatPlayback.play(report)).then(settle,settle);}catch{settle();}
+    return true;
+  }
   if(game.winner!==null){phase='ended';stopAI();showResult();}else queueAI();
   return true;
 }
@@ -176,7 +193,7 @@ function render(){
 function draw(time){
   renderBoard(canvas,game,{selectedId,moves:viewMoves,targets:viewTargets,cursor,time,effect:effect&&time-effect.startedAt<650?effect:null});
 }
-function animate(time){if(!document.hidden&&time-lastDraw>45){lastDraw=time;draw(time);}requestAnimationFrame(animate);}
+function animate(time){if(!document.hidden&&!combatPlaying&&time-lastDraw>45){lastDraw=time;draw(time);}requestAnimationFrame(animate);}
 
 $('missionSelect').replaceChildren(...missionItems.map((m,i)=>{const node=el('option',`${String(i+1).padStart(2,'0')} · ${m.name}`);node.value=m.id;return node;}));
 $('missionBrief').setAttribute('aria-live','polite');
@@ -209,5 +226,6 @@ canvas.addEventListener('keydown',event=>{
   else if(key==='escape'){selectedId=null;targetId=null;render();}
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopAI();audio.pause();}else{refreshSound();queueAI();}});
-window.addEventListener('pagehide',()=>{stopAI();audio.pause();saveAuto();});
-$('bootMessage').hidden=true;presentation=createBattlePresentation({canvas,scrollContainer:$('boardScroll'),getGridSize:()=>({columns:game.width,rows:game.height}),onZoomChange:()=>presentation?.revealCell({...cursor,width:game.width,height:game.height})});renderMissions();render();setupContinue();openSetup();requestAnimationFrame(animate);
+window.addEventListener('pagehide',()=>{stopAI();cancelCombat();audio.pause();saveAuto();});
+window.addEventListener('pageshow',()=>{if(!started)return;if(!combatPlaying&&game.winner!==null&&phase!=='ended')showResult();else{refreshSound();render();queueAI();}});
+$('bootMessage').hidden=true;combatPlayback=createCombatPlayback({onStage:frame=>{if(frame.stage==='attack'||frame.stage==='counter')audio.sfx('attack');}});presentation=createBattlePresentation({canvas,scrollContainer:$('boardScroll'),getGridSize:()=>({columns:game.width,rows:game.height}),onZoomChange:()=>presentation?.revealCell({...cursor,width:game.width,height:game.height})});renderMissions();render();setupContinue();openSetup();requestAnimationFrame(animate);

@@ -279,6 +279,24 @@ export function drawUnitIcon(canvasOrCtx,type,team=0,options={}) {
   if(options.background!==false){roundRect(c,0,0,width,height,Math.min(width,height)*.15,'#c4e8e9');ellipse(c,width*.5,height*.63,width*.34,height*.16,'#8ec67e');}
   unitSprite(c,{type,team,hp:options.hp??10,acted:!!options.acted,id:'icon'},width*.5,height*.5,s,options.time||0,false,!!options.badge);c.restore();
 }
+
+/** One combatant, never an HP-scaled group. Infantry is exactly one person. */
+export function drawCombatUnit(c,type,team,x,y,size,options={}) {
+  if(!c||!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(size)||size<=0)return;
+  const p=TEAM[team]||TEAM[0],facing=options.facing===-1?-1:1,time=Number.isFinite(options.time)?options.time:0;
+  const recoil=Number.isFinite(options.recoil)?clamp(options.recoil,0,.1):0;
+  c.save();c.translate(x,y);c.scale(facing,1);c.translate(-size*recoil,0);c.lineCap='round';c.lineJoin='round';
+  if(Number.isFinite(options.alpha))c.globalAlpha=clamp(options.alpha,0,1);
+  if(type==='infantry')soldier(c,0,0,size,p);
+  else if(type==='recon')jeep(c,size,p);
+  else if(type==='heavy')tank(c,size,p,true);
+  else if(type==='artillery')artillery(c,size,p,false);
+  else if(type==='antiair')artillery(c,size,p,true);
+  else if(type==='fighter')fighter(c,size,p);
+  else if(type==='helicopter'){c.scale(.86,.86);helicopter(c,size,p,time);}
+  else tank(c,size,p,false);
+  c.restore();
+}
 function brackets(c,x,y,s,color,width=3) {
   c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';const p=s*.08,l=s*.19;
   for(const [xx,yy,dx,dy] of [[x+p,y+p,1,1],[x+s-p,y+p,-1,1],[x+p,y+s-p,1,-1],[x+s-p,y+s-p,-1,-1]]){c.beginPath();c.moveTo(xx,yy+dy*l);c.lineTo(xx,yy);c.lineTo(xx+dx*l,yy);c.stroke();}

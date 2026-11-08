@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#203c44">
   <meta name="description" content="小さな島々で、大きな一手を。占領・生産・地形を使いこなす、オリジナルのターン制戦略シミュレーション。">
   <title>フロンティア・コマンド | TK777 ARCADE</title>
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=20261108-anime-fullscreen">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=20261108-combat">
   <link rel="stylesheet" href="../shared/portal-return.css">
   <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
-  <link rel="stylesheet" href="style.css?v=20261108-anime-fullscreen">
+  <link rel="stylesheet" href="style.css?v=20261108-combat">
 </head>
 <body>
   <header class="site-header">
@@ -132,6 +132,7 @@
         <section><b>04</b><div><h3>準備ができたら、ターン終了</h3><p>味方拠点から収入を得て、次のターンに備えます。敵の本部を占領するか、敵の部隊と生産力を制圧すれば勝利です。</p></div></section>
       </div>
       <div class="help-note"><strong>砲兵の大切なルール</strong><p>砲兵は離れた敵を攻撃できますが、移動したターンには砲撃できません。敵に接近されない場所で、前のターンから準備しましょう。</p></div>
+      <div class="help-note combat-help-note"><strong>戦闘では、部隊の残数が見える</strong><p>HPと同じ数の兵士・車両が戦闘に参加します。HP10なら10体・10台で出撃し、ダメージに合わせて残数が減ります。戦闘演出は「演出をスキップ」またはEscapeキーで省略できます。</p></div>
       <section class="help-controls"><h3>操作方法</h3><dl><div><dt>マウス / iPhone</dt><dd>部隊やマスをクリック・タップ。＋で拡大し、マップの中をスクロール。「全景」でマップ全体を表示。</dd></div><div><dt>全画面でプレイ</dt><dd>ヘッダの「全画面でプレイ」で作戦専用の画面へ。「部隊情報」で指揮パネルを開閉できます。攻撃・占領・生産時は必要な情報が開きます。</dd></div><div><dt>キーボード</dt><dd>矢印キーでマスを選択、Enter / Spaceで決定、Escapeで解除。画面のボタンはTabでも選べます。</dd></div><div><dt>保存 / 続きから</dt><dd>進行はこの端末に自動保存。画面下の「保存」で手動保存、「続きから」で保存時点に戻ります。</dd></div></dl></section>
     </div>
   </dialog>
@@ -143,7 +144,38 @@
       <div class="result-actions"><button type="button" class="primary-button" id="nextMissionButton">次の作戦へ <span aria-hidden="true">→</span></button><button type="button" class="outline-button" id="retryButton">もう一度挑戦</button><button type="button" class="subtle-button" id="resultMenuButton">作戦を選び直す</button></div>
     </div>
   </dialog>
+
+  <dialog id="combatDialog" class="combat-dialog" aria-labelledby="combatTitle" aria-describedby="combatSummary">
+    <div class="combat-shell">
+      <header class="combat-header">
+        <div><p class="combat-eyebrow"><span aria-hidden="true">✦</span> FIELD ENGAGEMENT</p><h2 id="combatTitle">交戦中</h2></div>
+        <p id="combatStage" class="combat-stage" role="status" aria-live="polite" aria-atomic="true">部隊が展開しています</p>
+      </header>
+      <div class="combat-forces" aria-label="両軍の残存部隊">
+        <section id="combatLeftForce" class="combat-force-card combat-force-card--left" data-team="0" aria-labelledby="combatLeftName">
+          <div class="combat-force-heading"><span class="combat-team-mark" aria-hidden="true"></span><h3 id="combatLeftName">コーラル隊</h3><span class="combat-force-caption">FORMATION</span></div>
+          <strong id="combatLeftCount" class="combat-count" aria-live="polite" aria-atomic="true">残り 10 / 10</strong>
+          <progress id="combatLeftMeter" max="10" value="10" aria-label="左側の部隊の残数">10 / 10</progress>
+        </section>
+        <span class="combat-versus" aria-hidden="true">VS</span>
+        <section id="combatRightForce" class="combat-force-card combat-force-card--right" data-team="1" aria-labelledby="combatRightName">
+          <div class="combat-force-heading"><span class="combat-team-mark" aria-hidden="true"></span><h3 id="combatRightName">タイド隊</h3><span class="combat-force-caption">FORMATION</span></div>
+          <strong id="combatRightCount" class="combat-count" aria-live="polite" aria-atomic="true">残り 10 / 10</strong>
+          <progress id="combatRightMeter" max="10" value="10" aria-label="右側の部隊の残数">10 / 10</progress>
+        </section>
+      </div>
+      <div class="combat-canvas-frame">
+        <canvas id="combatCanvas" width="1280" height="520" role="img" aria-label="アニメ調の部隊戦闘。両軍の残数は上部に表示されます。">戦闘演出を表示しています。部隊の残数は上部の数値をご確認ください。</canvas>
+        <div class="combat-portrait-scenes">
+          <div id="combatLeftScene" class="combat-portrait-scene" data-team="0"><canvas id="combatLeftCanvas" width="640" height="520" role="img" aria-label="コーラル隊の戦闘部隊。残数は上部の表示をご確認ください。">コーラル隊の戦闘演出を表示しています。</canvas></div>
+          <div id="combatRightScene" class="combat-portrait-scene" data-team="1"><canvas id="combatRightCanvas" width="640" height="520" role="img" aria-label="タイド隊の戦闘部隊。残数は上部の表示をご確認ください。">タイド隊の戦闘演出を表示しています。</canvas></div>
+        </div>
+      </div>
+      <p id="combatSummary" class="combat-summary" aria-live="polite">攻撃と反撃による部隊の変化を表示します。</p>
+      <div class="combat-footer"><span class="combat-footer-note">TACTICAL BATTLE / <span>射撃・被弾・反撃</span></span><div class="combat-footer-actions"><button type="button" id="skipCombatButton" class="combat-skip-button">演出をスキップ <span aria-hidden="true">≫</span></button><button type="button" id="combatCloseButton" class="primary-button combat-close-button" hidden>戦術マップへ <span aria-hidden="true">→</span></button></div></div>
+    </div>
+  </dialog>
   <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
-  <script type="module" src="app.mjs?v=20261108-anime-fullscreen"></script>
+  <script type="module" src="app.mjs?v=20261108-combat"></script>
 </body>
 </html>
