@@ -1,18 +1,19 @@
 import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261107-mahjong';
-import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261107-mahjong';
+import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261108-gallery';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
-import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-cast';
+import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-gallery';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
-import {CharacterVoice} from './voice.mjs?v=20261108-natural';
+import {CharacterVoice} from './voice.mjs?v=20261108-gallery';
 import {chooseVoiceLine,getVoiceProfile} from './voice-lines.mjs?v=20261108-voice';
 const $=id=>document.getElementById(id),API='https://tk777-neonshift-scores.takesuke.chatgpt.site',MODE='mahjong:arcade';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('ja-JP');
 const colors=['#315f6b','#396c5c','#725d80','#8a625b','#526d91','#8b7452','#6f5b81'];
-const defaults={version:0,stages:CAST.map(profile=>({id:profile.id,name:profile.name,portrait:null,rewards:[null,null,null],accent:colors[profile.id-1]}))};
+const defaults={version:0,stages:CAST.map(profile=>({id:profile.id,name:profile.name,portrait:null,rewards:[null,null,null],gallery:Array(10).fill(null),accent:colors[profile.id-1]}))};
 let config=defaults,runConfig=defaults,run=createArcade(),round=null,selected=null,riichiPicking=false,started=false,ended=false,submitted=false;
 let generation=0,cpuTimer=null,startedAt=0,duration=0,sessionPromise=null,toastTimer=null,logs=[];
 let audio=null,encounter=null,encounterRetryStage=null;
+let stageGalleryIndex=0,stageGalleryStage=null;
 let voiceState=null,currentSpokenLine=null,idleVoiceTimer=null,lastCharacterLineAt=0,activeSpeechOwner='';
 const voiceEventCounts=new Map(),VOICE_KEY='tk777-seven-mahjong-voice';
 function voicePreferences(){try{const p=JSON.parse(localStorage.getItem(VOICE_KEY));return{enabled:p?.enabled!==false,volume:Number.isFinite(p?.volume)?Math.max(0,Math.min(1,p.volume)):.8};}catch{return{enabled:true,volume:.8};}}
@@ -21,13 +22,13 @@ voiceState=characterVoice.state();
 function saveVoicePreferences(){try{localStorage.setItem(VOICE_KEY,JSON.stringify({enabled:voiceState.enabled,volume:voiceState.volume}));}catch{}}
 function renderVoiceControls(state){
  const label=!state.supported?'音声非対応':state.enabled?'音声オン':'音声オフ';
- for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle']){const button=$(id);button.textContent='♪ '+label;button.setAttribute('aria-pressed',String(state.enabled));button.disabled=!state.supported;}
+ for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle','stageGalleryVoiceToggle']){const button=$(id);button.textContent='♪ '+label;button.setAttribute('aria-pressed',String(state.enabled));button.disabled=!state.supported;}
  $('voiceEnabled').checked=state.enabled;$('voiceEnabled').disabled=!state.supported;
  $('voiceVolume').value=String(Math.round(state.volume*100));$('voiceVolume').disabled=!state.supported;$('voiceVolumeValue').textContent=Math.round(state.volume*100)+'%';
  const status=!state.supported?'このブラウザーは音声に対応していません。':!state.enabled?'声はオフです。台詞は文字で表示します。':state.volume===0?'音量は0%です。':state.availability==='unavailable'?'日本語の読み上げ音声が見つかりません。':state.blocked?'「もう一度聞く」か「声を聞く」を押してください。':state.error?'音声を再生できませんでした。「もう一度聞く」で再試行できます。':state.loading?'自然な音声を準備しています…':state.speaking?'キャラクターが話しています…':state.availability==='loading'?'日本語の音声を準備しています。':'会話・対局中・勝利時に話しかけます。';
  $('voiceStatus').textContent=status;$('voiceHelp').textContent=status;
- for(const id of ['encounterVoiceStatus','rewardVoiceStatus']){$(id).textContent=status;$(id).hidden=!state.enabled||!!state.supported&&state.availability!=='unavailable'&&!state.blocked&&!state.error&&!state.loading;}
- for(const id of ['voiceReplay','encounterReplay','rewardReplay'])$(id).disabled=!state.supported||!state.enabled||state.volume===0||!currentSpokenLine;
+ for(const id of ['encounterVoiceStatus','rewardVoiceStatus','stageGalleryVoiceStatus']){$(id).textContent=status;$(id).hidden=!state.enabled||!!state.supported&&state.availability!=='unavailable'&&!state.blocked&&!state.error&&!state.loading;}
+ for(const id of ['voiceReplay','encounterReplay','rewardReplay','stageGalleryReplay'])$(id).disabled=!state.supported||!state.enabled||state.volume===0||!currentSpokenLine;
  $('voiceTest').disabled=!state.supported||!state.enabled||state.volume===0;
  $('cpuPortrait').dataset.speaking=String(state.speaking);$('encounterPortrait').dataset.speaking=String(state.speaking);
  $('characterVoiceState').textContent=state.speaking?'発話中':'台詞';
@@ -113,7 +114,7 @@ async function startRun(){
  characterVoice.unlock();
  try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio??=new Audio();void audio.resume();}}catch{}
  $('startButton').disabled=true;
- await configReady;runConfig=structuredClone(config);run=createArcade();encounterRetryStage=null;started=true;ended=false;submitted=false;startedAt=Date.now();duration=0;
+ await configReady;runConfig=structuredClone(config);run=createArcade();encounterRetryStage=null;stageGalleryStage=null;stageGalleryIndex=0;started=true;ended=false;submitted=false;startedAt=Date.now();duration=0;
  sessionPromise=api('/api/games/session',{mode:MODE}).then(r=>r.id).catch(()=>null);
  for(const d of document.querySelectorAll('dialog[open]'))d.close();$('startButton').disabled=false;
  startBattle();
@@ -132,7 +133,7 @@ function step(action){
  round=result.state;selected=null;riichiPicking=false;
  if(result.message)appendLog(result.message);
  sound(action.type==='riichi'||action.riichi?'riichi':'tile');
- if(round.phase==='finished'){run=finishBattle(run,round.result);render();showBattleResult();return;}
+ if(round.phase==='finished'){run=finishBattle(run,{...round.result,finalPoints:round.points});render();showBattleResult();return;}
  render();
  if(!before.riichi[0]&&round.riichi[0])sayEvent('playerRiichi',{priority:'important'});
  else if(!before.riichi[1]&&round.riichi[1])sayEvent('cpuRiichi',{priority:'important'});
@@ -150,7 +151,8 @@ function render(){
  $('stageNumber').textContent=run.stage;$('battleNumber').textContent=run.battle;$('stageName').textContent=profile.tableTitle;$('cpuName').textContent=name;$('opponentSeatName').textContent=name;
  $('cpuRole').textContent=profile.role;$('cpuPersonality').textContent=profile.personality;
  $('cpuLevel').textContent=`CPU LEVEL ${run.stage}`;$('scoreValue').textContent=fmt(run.score);
- $('stageDescription').textContent=`第${run.battle}戦 / 3戦 · 3戦全勝でステージ突破`;
+ $('stageDescription').textContent=`第${run.battle}戦 / 3戦 · 3対局の持ち点合計で上回れば突破`;
+ $('stagePlayerTotal').textContent=fmt(run.stageTotals[0]);$('stageCpuTotal').textContent=fmt(run.stageTotals[1]);
  $('stageMap').innerHTML=Array.from({length:7},(_,i)=>`<span class="stage-node ${i+1===run.stage?'current':''} ${i+1<=run.completedStages?'cleared':''}"><b>${String(i+1).padStart(2,'0')}</b><small>${i===6?'FINAL':'STAGE'}</small></span>`).join('');
  $('stageProgress').innerHTML=Array.from({length:3},(_,i)=>`<span class="${run.results[i]?(run.results[i].won?'won':'lost'):''}">${run.results[i]?(run.results[i].won?'✓ 勝利':run.results[i].draw?'― 流局':'× 敗北'):`第${i+1}戦`}</span>`).join('');
  setPortrait($('cpuPortrait'),stage);
@@ -192,17 +194,50 @@ function showBattleResult(){
 function renderResult(){
  const result=round.result,won=result.winner===0;
  $('resultKicker').textContent=`STAGE ${run.stage} · 第${run.battle}戦 / 3`;
- $('resultTitle').textContent=run.phase==='complete'?'全7ステージ完全クリア！':run.phase==='stage-clear'?'3戦全勝！ ステージ突破':run.phase==='stage-failed'?'ステージの再挑戦へ':won?'あなたの勝利':result.winner===null?'流局':'対戦相手の勝利';
- $('resultMessage').textContent=result.message|| (won?'おめでとうございます。':result.winner===null?'牌山が尽きました。流局は勝利に数えません。':'次の一局へ、気持ちを切り替えましょう。');
+ $('resultTitle').textContent=run.phase==='complete'?'全7ステージ完全クリア！':run.phase==='stage-clear'?'合計点でステージ突破！':run.phase==='stage-failed'?'3対局の結果 · 再挑戦へ':won?'あなたの勝利':result.winner===null?'流局':'対戦相手の勝利';
+ const summary=`持ち点合計：あなた ${fmt(run.stageTotals[0])}点 / 相手 ${fmt(run.stageTotals[1])}点。`;
+ $('resultMessage').textContent=(result.message|| (won?'おめでとうございます。':result.winner===null?'牌山が尽きました。':'次の一局へ、気持ちを切り替えましょう。'))+' '+summary+(run.phase==='stage-failed'?(run.stageTotals[0]===run.stageTotals[1]?'同点のため突破にはなりません。':'相手の合計点を上回れませんでした。'):run.battle<3?'負けても3対局目まで続きます。':'');
  $('resultScore').innerHTML=`+${fmt(run.lastAward+run.lastClearBonus)} <small>pt</small>`;
  $('resultDetails').textContent=`今回の和了点 ${fmt(result.points)} 点 · ${result.han||0}翻 ${result.fu||0}符${run.lastClearBonus?` · 突破ボーナス +${fmt(run.lastClearBonus)} pt`:''}`;
  $('yakuList').replaceChildren(...(result.yaku||[]).map(y=>{const li=document.createElement('li');li.textContent=typeof y==='string'?y:`${y.name} ${y.han}翻`;return li;}));
  $('resultWinningHand').innerHTML=(result.winningHand||[]).map(id=>tileHTML(id,{small:true})).join('');
+ $('stageResultRows').innerHTML=run.results.map((r,i)=>`<tr><th scope="row">第${i+1}戦 · ${r.won?'勝利':r.draw?'流局':'敗北'}</th><td>${fmt(r.finalPoints[0])}</td><td>${fmt(r.finalPoints[1])}</td></tr>`).join('');
+ $('stageResultTotal').textContent=`合計 ${fmt(run.stageTotals[0])} 対 ${fmt(run.stageTotals[1])} 点`;
  $('nextRoundButton').hidden=run.phase!=='battle-result';$('nextStageButton').hidden=run.phase!=='stage-clear';$('retryStageButton').hidden=run.phase!=='stage-failed';
  $('retryStageButton').textContent=`3戦をやり直す（このステージの得点破棄・${run.stage*500}pt減点）`;
- $('endRunButton').textContent=run.phase==='complete'?'完全クリアの記録を見る':'終了してスコアを登録';
+ $('nextStageButton').textContent='ご褒美の10枚を見る →';
+ $('endRunButton').textContent=run.phase==='complete'?'最後のご褒美10枚を見る →':'終了してスコアを登録';
  show('resultDialog');
  if(!won)sayEvent(result.winner===null?'draw':'cpuWin',{priority:'important',key:`result:${generation}:${run.totalBattles}`});
+}
+function renderStageGallery(){
+ const restoreSlotFocus=document.activeElement?.closest?.('#stageGallerySlots');
+ const stage=currentStage(),slots=Array.from({length:10},(_,i)=>stage.gallery?.[i]??null),id=slots[stageGalleryIndex];
+ $('stageGalleryCounter').textContent=`${stageGalleryIndex+1} / 10 · ${slots.filter(Boolean).length}枚登録`;
+ $('stageGalleryPrevious').disabled=stageGalleryIndex===0;$('stageGalleryNext').disabled=stageGalleryIndex===9;
+ $('stageGalleryImage').hidden=!id;$('stageGalleryEmpty').hidden=!!id;
+ $('stageGalleryEmpty').textContent=`画像 ${stageGalleryIndex+1} は未登録です。管理画面で、このステージのご褒美画像を登録できます。`;
+ const picture=$('stageGalleryImage');picture.onerror=null;
+ if(id){picture.alt=`${displayStageName(stage)}のステージ突破ご褒美 ${stageGalleryIndex+1} / 10`;picture.src=asset(id);picture.onerror=()=>{if(stageGalleryStage!==stage.id||stage.gallery?.[stageGalleryIndex]!==id)return;picture.hidden=true;$('stageGalleryEmpty').hidden=false;$('stageGalleryEmpty').textContent='画像を読み込めませんでした。ほかの画像へ進めます。';};}
+ else picture.removeAttribute('src');
+ $('stageGallerySlots').replaceChildren(...slots.map((image,index)=>{const button=document.createElement('button');button.type='button';button.textContent=String(index+1).padStart(2,'0');button.setAttribute('aria-label',`ご褒美画像${index+1}${image?'':'（未登録）'}`);button.setAttribute('aria-pressed',String(index===stageGalleryIndex));button.className=index===stageGalleryIndex?'is-current':'';button.onclick=()=>{stageGalleryIndex=index;renderStageGallery();};return button;}));
+ if(restoreSlotFocus)$('stageGallerySlots').querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+}
+function showStageGallery(){
+ if(!['stage-clear','complete'].includes(run.phase))return;
+ const stage=currentStage(),profile=getCast(run.stage);stageGalleryStage=stage.id;stageGalleryIndex=0;
+ close('resultDialog');$('stageGalleryKicker').textContent=`STAGE ${run.stage} CLEAR · BONUS GALLERY`;
+ $('stageGalleryName').textContent=displayStageName(stage);$('stageGallerySpeech').textContent=profile.stageReward;
+ $('stageGallerySummary').textContent=`3対局合計：あなた ${fmt(run.stageTotals[0])} 点 / ${displayStageName(stage)} ${fmt(run.stageTotals[1])} 点`;
+ $('stageGalleryContinue').textContent=run.phase==='complete'?'完全クリアの記録へ →':'次のステージへ →';
+ setPortrait($('stageGalleryPortrait'),stage,'gallery-person-photo');renderStageGallery();show('stageGalleryDialog');
+ speakCharacter(profile.stageReward,{priority:'dialogue',key:`stage-gallery:${generation}:${run.stage}:${run.totalBattles}`});
+}
+function changeStageGallery(delta){if(!$('stageGalleryDialog').open)return;stageGalleryIndex=Math.max(0,Math.min(9,stageGalleryIndex+delta));renderStageGallery();}
+function continueStageGallery(){
+ if(!$('stageGalleryDialog').open||stageGalleryStage!==run.stage||!['stage-clear','complete'].includes(run.phase))return;
+ stageGalleryStage=null;close('stageGalleryDialog');
+ if(run.phase==='complete')endRun();else{run=advanceArcade(run);startBattle();}
 }
 function endRun(){
  if(!started||ended)return;ended=true;encounter=null;stopTimers();duration=Math.max(100,Date.now()-startedAt);
@@ -231,20 +266,23 @@ $('riichiButton').onclick=()=>{riichiPicking=!riichiPicking;selected=null;render
 for(const id of ['helpButton','welcomeHelpButton'])$(id).onclick=()=>show('helpDialog');
 for(const id of ['rankingButton','welcomeRankingButton'])$(id).onclick=()=>{show('rankingDialog');void loadRanking();};$('refreshRankingButton').onclick=()=>void loadRanking();
 $('rewardContinue').onclick=()=>{close('rewardDialog');renderResult();};
-$('nextRoundButton').onclick=$('nextStageButton').onclick=()=>{close('resultDialog');run=advanceArcade(run);startBattle();};
+$('nextRoundButton').onclick=()=>{close('resultDialog');run=advanceArcade(run);startBattle();};
+$('nextStageButton').onclick=showStageGallery;
+$('stageGalleryPrevious').onclick=()=>changeStageGallery(-1);$('stageGalleryNext').onclick=()=>changeStageGallery(1);$('stageGalleryContinue').onclick=continueStageGallery;
+$('stageGalleryDialog').addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight'].includes(event.key)&&!event.altKey&&!event.ctrlKey&&!event.metaKey){event.preventDefault();if(!event.repeat)changeStageGallery(event.key==='ArrowLeft'?-1:1);}});
 $('retryStageButton').onclick=()=>{close('resultDialog');run=retryStage(run);encounterRetryStage=run.stage;startBattle();};
-$('endRunButton').onclick=endRun;$('finishButton').onclick=()=>{if(started&&!ended)show('quitDialog');};$('confirmFinishButton').onclick=endRun;
+$('endRunButton').onclick=()=>run.phase==='complete'?showStageGallery():endRun();$('finishButton').onclick=()=>{if(started&&!ended)show('quitDialog');};$('confirmFinishButton').onclick=endRun;
 $('finalRankForm').addEventListener('submit',submitScore);
 $('newRunButton').onclick=()=>{close('finalDialog');$('finalNickname').value='';void startRun();};
 $('adminLink').href=API+'/mahjong-admin/';
-for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle'])$(id).onclick=()=>setVoiceEnabled(!characterVoice.state().enabled);
+for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle','stageGalleryVoiceToggle'])$(id).onclick=()=>setVoiceEnabled(!characterVoice.state().enabled);
 $('voiceEnabled').onchange=event=>setVoiceEnabled(event.target.checked);
 $('voiceVolume').oninput=event=>{characterVoice.setVolume(Number(event.target.value)/100);voiceState=characterVoice.state();saveVoicePreferences();renderVoiceControls(voiceState);};
 for(const id of ['voiceSettingsButton','welcomeVoiceSettings'])$(id).onclick=()=>{show('voiceDialog');$('voiceCharacter').value=String(run.stage);syncVoiceSample();renderVoiceControls(characterVoice.state());};
 $('voiceCharacter').onchange=()=>{stopCharacterVoice();syncVoiceSample();};
 $('voiceTest').onclick=()=>{const id=Number($('voiceCharacter').value);characterVoice.unlock();activeSpeechOwner='voiceDialog';characterVoice.speak(id,chooseVoiceLine(id,'roundStart'),{key:`sample:${id}`,priority:'dialogue',force:true});};
-for(const id of ['voiceReplay','encounterReplay','rewardReplay'])$(id).onclick=replayCharacterVoice;
-for(const id of ['welcomeDialog','encounterDialog','rewardDialog','resultDialog','finalDialog'])$(id).addEventListener('cancel',event=>event.preventDefault());
+for(const id of ['voiceReplay','encounterReplay','rewardReplay','stageGalleryReplay'])$(id).onclick=replayCharacterVoice;
+for(const id of ['welcomeDialog','encounterDialog','rewardDialog','resultDialog','stageGalleryDialog','finalDialog'])$(id).addEventListener('cancel',event=>event.preventDefault());
 document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',()=>{if(activeSpeechOwner===d.id)stopCharacterVoice();scheduleCpu();}));
 document.addEventListener('keydown',event=>{
  if(/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)||event.ctrlKey||event.altKey||event.metaKey||document.querySelector('dialog[open]'))return;

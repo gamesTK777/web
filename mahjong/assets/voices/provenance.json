@@ -4,7 +4,7 @@
   "tool": "edge-tts 7.3.1",
   "originalDialogue": true,
   "playbackRate": 1,
-  "files": 231,
+  "files": 238,
   "failures": [],
   "presets": {
     "1": {
@@ -1422,6 +1422,48 @@
       "file": "sara/7431245b127690ac.mp3",
       "bytes": 25488,
       "sha256": "3a6ed652554f3603a5309c5774747d12c50c3446067a42fe3c7cc9d8bfbcbd7a"
+    },
+    {
+      "stageId": 1,
+      "file": "hinata/02bf16995779e7c0.mp3",
+      "bytes": 50544,
+      "sha256": "659865de1fad8b25823994f64018ba8ba9c14d80676549d4535fb51b812ef1c7"
+    },
+    {
+      "stageId": 2,
+      "file": "mio/6ff4cd1d3dfeefc4.mp3",
+      "bytes": 59184,
+      "sha256": "55c66f936daf491299913a5065b2533429fe06087ae5c7e35732d9b944388161"
+    },
+    {
+      "stageId": 3,
+      "file": "koharu/01fe455c487fb5d1.mp3",
+      "bytes": 62784,
+      "sha256": "a41a3418887ed27df4a08febb254f99a1a2bb4683f97315699ed08760189d980"
+    },
+    {
+      "stageId": 4,
+      "file": "akane/7dc0be54b7e7f35d.mp3",
+      "bytes": 56736,
+      "sha256": "7e1f8be2bebbc91719ff86130a6edbb7ce53bf53c29c327586c3b3f5838aa69a"
+    },
+    {
+      "stageId": 5,
+      "file": "shion/f9b2a311c5d94eda.mp3",
+      "bytes": 58896,
+      "sha256": "b9b1af122ecdea379197b8de0e741ffb7e8c0763e4a8baa0817b228b76bcdc31"
+    },
+    {
+      "stageId": 6,
+      "file": "nagi/6cf2965c9b00c520.mp3",
+      "bytes": 57168,
+      "sha256": "f09d84e6f6a1526457d8ff60914594e3b01ee9c940a985ca7b27b11e6e9df73f"
+    },
+    {
+      "stageId": 7,
+      "file": "sara/35aee376e026925a.mp3",
+      "bytes": 69408,
+      "sha256": "e6a2aaa9af1baa3b55a3058b4a16cac1c0c44e51ff3ccd335ae3cf17dbf28bf4"
     }
   ]
 }

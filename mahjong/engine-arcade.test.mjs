@@ -26,7 +26,7 @@ function playRound(run,seed){
   }
   assert.equal(round.phase,'finished');assert.ok(steps<200);
   assert.deepEqual(legalActions(round).discardIndices,[]);
-  return round.result;
+  return{...round.result,finalPoints:[...round.points]};
 }
 
 test('21 actual human wins across alternating dealer rounds complete all seven stages',()=>{
@@ -50,18 +50,17 @@ test('21 actual human wins across alternating dealer rounds complete all seven s
   assert.throws(()=>advanceArcade(run));assert.throws(()=>retryStage(run));
 });
 
-test('actual draws and CPU victories still permit all three battles but require a stage retry',()=>{
+test('actual draws and CPU victories still permit all three battles and held totals decide progression',()=>{
   for(const [seed,winner]of [[13,null],[49,1]]){
     let run=createArcade();const first=playRound(run,seed);assert.equal(first.winner,winner);
-    run=finishBattle(run,first);assert.equal(run.phase,'battle-result');
+    const totals=[...first.finalPoints];run=finishBattle(run,first);assert.equal(run.phase,'battle-result');
     for(let battle=2;battle<=3;battle++){
       run=advanceArcade(run);assert.equal(run.battle,battle);
-      const result=playRound(run,1);assert.equal(result.winner,0);run=finishBattle(run,result);
+      const result=playRound(run,1);assert.equal(result.winner,0);totals[0]+=result.finalPoints[0];totals[1]+=result.finalPoints[1];run=finishBattle(run,result);
     }
-    assert.equal(run.phase,'stage-failed');assert.equal(run.wins,2);assert.equal(run.completedStages,0);assert.ok(run.score>0);
-    assert.throws(()=>advanceArcade(run));
-    run=retryStage(run);
-    assert.equal(run.phase,'playing');assert.equal(run.stage,1);assert.equal(run.battle,1);assert.equal(run.wins,0);
-    assert.equal(run.score,0);assert.equal(run.retries,1);assert.equal(run.totalBattles,3);
+    const cleared=totals[0]>totals[1];assert.deepEqual(run.stageTotals,totals);assert.equal(run.phase,cleared?'stage-clear':'stage-failed');assert.equal(run.wins,2);assert.equal(run.completedStages,cleared?1:0);assert.ok(run.score>0);
+    if(cleared){run=advanceArcade(run);assert.equal(run.stage,2);assert.equal(run.retries,0);}
+    else{assert.throws(()=>advanceArcade(run));run=retryStage(run);assert.equal(run.stage,1);assert.equal(run.score,0);assert.equal(run.retries,1);}
+    assert.equal(run.phase,'playing');assert.equal(run.battle,1);assert.equal(run.wins,0);assert.deepEqual(run.stageTotals,[0,0]);assert.equal(run.totalBattles,3);
   }
 });

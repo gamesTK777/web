@@ -19,10 +19,11 @@ class Element {
   get textContent(){return this._text;}
   setAttribute(name,value){this.attributes[name]=String(value);}
   getAttribute(name){return this.attributes[name]??null;}
+  removeAttribute(name){delete this.attributes[name];}
   append(...nodes){this.children.push(...nodes);}
   replaceChildren(...nodes){this.children=nodes;}
   querySelector(selector){return this.children.find(node=>node.matches(selector))||null;}
-  matches(selector){return selector.split(',').some(part=>part.trim()===this.tagName.toLowerCase()||part.trim()==='dialog[open]'&&this.tagName==='DIALOG'&&this.open||part.trim()==='[data-tile-index]'&&this.dataset.tileIndex!==undefined);}
+  matches(selector){return selector.split(',').some(part=>{part=part.trim();const data=part.match(/^\[data-([\w-]+)\]$/);return part===this.tagName.toLowerCase()||part==='dialog[open]'&&this.tagName==='DIALOG'&&this.open||data&&this.dataset[data[1].replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]!==undefined;});}
   closest(selector){return this.matches(selector)?this:null;}
   addEventListener(type,fn){if(!this.listeners.has(type))this.listeners.set(type,[]);this.listeners.get(type).push(fn);}
   dispatch(type,extras={}){const event={type,target:this,key:'',repeat:false,preventDefault(){this.defaultPrevented=true;},...extras};for(const fn of this.listeners.get(type)||[])fn(event);this['on'+type]?.(event);return event;}
@@ -63,6 +64,7 @@ async function harness({supported=true}={}){
   const hooks=`globalThis.hooks={ready:configReady,startBattle,nextEncounter,skipConversation,beginBattleRound,step,scheduleCpu,render,renderEncounter,show,close,endRun,
     begin({stage=1,battle=1}={}){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();run={...createArcade(),stage,battle,totalBattles:battle-1};runConfig=structuredClone(defaults);started=true;ended=false;encounter=null;round=null;startBattle();},
     reward(stage,win){for(const d of document.querySelectorAll('dialog[open]'))d.close();const result={winner:0,points:2000,han:1,fu:30};run=finishBattle({...createArcade(),stage,battle:win,wins:win-1},result);round={result};runConfig=structuredClone(defaults);started=true;ended=false;showBattleResult();},
+    gallery(stage=1){for(const d of document.querySelectorAll('dialog[open]'))d.close();run={...createArcade(),stage};for(let i=0;i<3;i++){run=finishBattle(run,{winner:0,points:2000,finalPoints:[27000,23000]});if(i<2)run=advanceArcade(run);}runConfig=structuredClone(defaults);round=null;encounter=null;started=true;ended=false;showStageGallery();},
     setRound(value){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();round=structuredClone(value);run={...createArcade(),stage:value.stage};runConfig=structuredClone(defaults);started=true;ended=false;encounter=null;render();},
     state(){return{run,round,encounter,createdRounds};}};`;
   vm.runInContext(imports+source.replace(/^import .*;\r?$/gm,'')+hooks,context);
@@ -173,4 +175,21 @@ test('actual CPU wins and wall exhaustion produce terminal lines rather than ord
   assert.equal(engine.actRound(cpu,{type:'cpu'}).state.result.winner,1);f.hooks.setRound(cpu);const before=f.plays.length;f.hooks.step({type:'cpu'});assert.ok(hasEvent(f,7,'cpuWin'));assert.equal(f.plays.length,before+1);assert.equal(f.plays.at(-1).options.priority,'important');
   const drawn=engine.createRound({stage:3,seed:13,dealer:1});drawn.wall=[];f.hooks.setRound(drawn);const next=f.plays.length;f.hooks.step({type:'cpu'});
   assert.equal(f.hooks.state().round.result.winner,null);assert.ok(hasEvent(f,3,'draw'));assert.equal(f.plays.length,next+1);assert.equal(f.plays.at(-1).options.priority,'important');
+});
+
+
+test('all seven stage-clear galleries speak the current woman reward line and image navigation does not repeat it',async()=>{
+ const f=await harness();
+ for(let stage=1;stage<=7;stage++){
+  const before=f.plays.length;f.hooks.gallery(stage);assert.equal(f.node('stageGalleryDialog').open,true);assert.equal(f.plays.length,before+1);assert.equal(f.plays.at(-1).stageId,stage);assert.equal(f.plays.at(-1).text,cast.getCast(stage).stageReward);assert.equal(f.plays.at(-1).options.priority,'dialogue');
+  f.node('stageGalleryNext').click();f.node('stageGalleryNext').click();assert.equal(f.plays.length,before+1);
+ }
+ const before=f.plays.length;f.node('stageGalleryReplay').click();assert.equal(f.plays.length,before+1);assert.equal(f.plays.at(-1).options.force,true);
+ f.node('stageGalleryVoiceToggle').click();assert.equal(f.controller.state().enabled,false);const muted=f.plays.length;f.node('stageGalleryReplay').click();assert.equal(f.plays.length,muted);
+});
+
+test('leaving the stage gallery cancels its speech and a late close cannot silence the next encounter',async()=>{
+ const f=await harness();f.hooks.gallery(3);const stopped=f.calls.filter(c=>c.type==='stop').length;
+ f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,4);assert.equal(f.node('encounterDialog').open,true);assert.ok(f.calls.filter(c=>c.type==='stop').length>stopped);assert.equal(f.plays.at(-1).text,f.hooks.state().encounter.lines[0]);
+ const count=f.calls.filter(c=>c.type==='stop').length;f.node('stageGalleryDialog').dispatch('close');assert.equal(f.calls.filter(c=>c.type==='stop').length,count);assert.equal(f.controller.state().speaking,true);
 });

@@ -1,4 +1,13 @@
 // Original adult characters. Uploaded administration images always take priority.
+const STAGE_REWARD_LINES = [
+  '3局トータルでは、私の負けだね！ 勝ったあなたへのご褒美です。ゆっくり見ていってね。',
+  '3局の合計点は、あなたが上。私の負けね。勝利したあなたへのご褒美を用意したわ。',
+  '合計点では、私の負けですね。勝ったあなたへのご褒美です。どうぞ、ゆっくり楽しんでください。',
+  '3局トータル、私の負けだ！ 勝ったあなたへのご褒美だよ。次の景色へ行く前に、楽しんでいって！',
+  '3局を結ぶ結末は、あなたの勝利でした。負けた私から、勝利したあなたへのご褒美です。',
+  'トータルでは、うちの負けやね！ 勝ったあなたへのご褒美やで。次のセッションの前に、楽しんでってな。',
+  '3局の合計点、私の負けでございます。勝利されたあなたへのご褒美です。どうぞ心ゆくまでお楽しみください。'
+];
 export const CAST = Object.freeze([
   {
     id: 1, slug: 'hinata', name: '春野ひなた', age: 24, role: 'カフェ店主', personality: '明るく、人なつこい', tableTitle: '陽だまりの卓',
@@ -56,7 +65,7 @@ export const CAST = Object.freeze([
     retry: ['再びお迎えできて光栄です。お席は、いつでもご用意しております。', '挑み続ける方の一手には、輝きがございます。改めて、お相手いたしましょう。'],
     rewards: ['お見事です。最初の勝利に、心からの拍手を。', '揺るがない一手でした。あと一局、その先の景色を楽しみにしております。', '七つの卓、すべての勝利をあなたに。完全制覇、おめでとうございます。']
   }
-].map(profile => Object.freeze(profile)));
+].map(profile => Object.freeze({...profile,stageReward:STAGE_REWARD_LINES[profile.id-1]})));
 
 export function getCast(stageId) {
   return Number.isInteger(Number(stageId)) ? CAST[Number(stageId) - 1] || null : null;

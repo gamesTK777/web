@@ -1,6 +1,6 @@
 import {getVoiceProfile,spokenText} from './voice-lines.mjs?v=20261108-voice';
 import {RecordedCharacterVoice,findRecordedVoice} from './recorded-voice.mjs?v=20261108-natural';
-import {VOICE_ASSETS} from './assets/voices/manifest.mjs?v=20261108-natural';
+import {VOICE_ASSETS} from './assets/voices/manifest.mjs?v=20261108-gallery';
 
 const japanese=voice=>/^ja(?:[-_]|$)/i.test(String(voice.lang||''));
 const maleName=/\b(?:otoya|ichiro|keita|takumi)\b|おとや|一郎|太郎/i;

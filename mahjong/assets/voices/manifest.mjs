@@ -230,5 +230,12 @@ export const VOICE_ASSETS=Object.freeze({
   "7\nご自身の最善の一手を。お待ちしております。": "./assets/voices/sara/697f8a7a01ce882e.mp3",
   "7\n落ち着いた進め方でいらっしゃいますね。": "./assets/voices/sara/b1c6984a36ee1038.mp3",
   "7\nご一緒できて、光栄でございます。": "./assets/voices/sara/0e6afbad8332b0c2.mp3",
-  "7\n一手を大切にされる姿勢、すてきですね。": "./assets/voices/sara/7431245b127690ac.mp3"
+  "7\n一手を大切にされる姿勢、すてきですね。": "./assets/voices/sara/7431245b127690ac.mp3",
+  "1\n3局トータルでは、私の負けだね！ 勝ったあなたへのご褒美です。ゆっくり見ていってね。": "./assets/voices/hinata/02bf16995779e7c0.mp3",
+  "2\n3局の合計点は、あなたが上。私の負けね。勝利したあなたへのご褒美を用意したわ。": "./assets/voices/mio/6ff4cd1d3dfeefc4.mp3",
+  "3\n合計点では、私の負けですね。勝ったあなたへのご褒美です。どうぞ、ゆっくり楽しんでください。": "./assets/voices/koharu/01fe455c487fb5d1.mp3",
+  "4\n3局トータル、私の負けだ！ 勝ったあなたへのご褒美だよ。次の景色へ行く前に、楽しんでいって！": "./assets/voices/akane/7dc0be54b7e7f35d.mp3",
+  "5\n3局を結ぶ結末は、あなたの勝利でした。負けた私から、勝利したあなたへのご褒美です。": "./assets/voices/shion/f9b2a311c5d94eda.mp3",
+  "6\nトータルでは、うちの負けやね！ 勝ったあなたへのご褒美やで。次のセッションの前に、楽しんでってな。": "./assets/voices/nagi/6cf2965c9b00c520.mp3",
+  "7\n3局の合計点、私の負けでございます。勝利されたあなたへのご褒美です。どうぞ心ゆくまでお楽しみください。": "./assets/voices/sara/35aee376e026925a.mp3"
 });
