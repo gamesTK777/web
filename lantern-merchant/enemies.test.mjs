@@ -50,23 +50,43 @@ test('all fifteen species survive version-one save round trips without adding or
  for(const kind of ['__proto__','constructor','toString','unknown']){const state=fixture('moss');state.enemies[0].kind=kind;assert.throws(()=>validateSave(state));}
 });
 
-test('legacy creature combat values and final guardian rewards retain their old scale',()=>{
- for(let floor=1;floor<=5;floor++){
+test('B1-B6 creatures and legacy guardian values retain their old scale',()=>{
+ for(let floor=1;floor<=6;floor++){
   for(const kind of ['moss','moth'])assert.deepEqual(enemyStats(kind,floor),{hp:5+floor*3,attack:1+floor,defense:0,xp:5+floor*3});
   assert.deepEqual(enemyStats('golem',floor),{hp:10+floor*3,attack:2+floor,defense:1,xp:5+floor*3});
  }
  assert.deepEqual(enemyStats('boss',5),{hp:65,attack:11,defense:3,xp:100});
 });
 
-test('deeper creature stats increase gradually and the new final guardian remains within equipped-player scale',()=>{
+test('B7-B10 creatures gain a bounded deep-floor curve and better experience rewards',()=>{
  for(const type of ENEMY_TYPES.filter(type=>!type.boss)){
-  let prior=enemyStats(type.id,5);
-  for(let floor=6;floor<=10;floor++){
-   const current=enemyStats(type.id,floor);assert.equal(current.hp-prior.hp,type.hpPerFloor);assert.equal(current.attack-prior.attack,1);assert.equal(current.defense,prior.defense);assert.equal(current.xp-prior.xp,3);prior=current;
+  let prior=enemyStats(type.id,6);
+  for(let floor=7;floor<=10;floor++){
+   const rank=floor-6,current=enemyStats(type.id,floor);
+   assert.deepEqual(current,{hp:type.baseHp+type.hpPerFloor*floor+rank*8,attack:type.baseAttack+floor+rank*3,defense:type.defense+rank,xp:type.baseXp+floor*3+rank*5});
+   assert.equal(current.hp-prior.hp,type.hpPerFloor+8);assert.equal(current.attack-prior.attack,4);assert.equal(current.defense-prior.defense,1);assert.equal(current.xp-prior.xp,8);prior=current;
   }
  }
- const boss=enemyStats('boss',10);assert.deepEqual(boss,{hp:115,attack:16,defense:4,xp:200});
+ const boss=enemyStats('boss',10);assert.deepEqual(boss,{hp:180,attack:30,defense:8,xp:300});
  assert.equal(ENEMY_BY_ID.boss.firstFloor,10);assert.equal(enemyStats('moss',999).hp,enemyStats('moss',10).hp);
+});
+
+test('deep-floor legacy saves retain their enemies combat values when loaded',()=>{
+ let state=perform(newGame(73),{type:'enter'});
+ for(let floor=1;floor<=10;floor++){
+  if(floor>=7){
+   const legacy=copy(state);
+   for(const enemy of legacy.enemies){
+    const type=ENEMY_BY_ID[enemy.kind];
+    const stats=type.boss?{hp:115,attack:16,defense:4,xp:200}:{hp:type.baseHp+type.hpPerFloor*floor,attack:type.baseAttack+floor,defense:type.defense,xp:type.baseXp+floor*3};
+    Object.assign(enemy,stats,{maxHp:stats.hp,hp:stats.hp-1});
+   }
+   const savedEnemies=copy(legacy.enemies),restored=validateSave(legacy);
+   assert.deepEqual(restored.enemies,savedEnemies,`B${floor} saved combat values must remain intact`);
+   assert.deepEqual(validateSave(JSON.stringify(restored)).enemies,savedEnemies);
+  }
+  if(floor<10){const y=state.map.tiles.findIndex(row=>row.includes(2));state.player={x:state.map.tiles[y].indexOf(2),y};state=perform(state,{type:'stairs'});}
+ }
 });
 
 test('slow creatures move once in two turns, while an undisturbed mimic waits outside its ambush radius',()=>{
@@ -99,6 +119,8 @@ test('every species remains on walkable unoccupied squares and acts at most once
  for(const type of ENEMY_TYPES){
   let state=fixture(type.id);
   for(let turn=0;turn<20;turn++){
+   // Keep this movement/cadence fixture alive across repeated boss attacks.
+   state.hp=state.maxHp;
    const before=copy(state.enemies[0]),hp=state.hp;state=perform(state,{type:'wait'});const after=state.enemies[0];
    assert.ok(state.map.tiles[after.y][after.x]>0,type.id);assert.ok(distance(after,state.player)>=1,type.id);
    assert.ok(distance(before,after)<=2,type.id);assert.ok(hp-state.hp<=Math.max(1,before.attack-state.defense+1),type.id);

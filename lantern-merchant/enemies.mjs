@@ -23,8 +23,9 @@ export function enemiesForFloor(floor){return ENEMY_TYPES.filter(type=>!type.bos
 export function enemyStats(kind,floor){
   const type=ENEMY_BY_ID[kind];if(!type)throw new Error('Unknown creature kind');
   const f=Math.max(1,Math.min(MAX_FLOOR,Math.trunc(floor)||1));
-  // Existing saved creatures keep their serialized stats. Only newly generated
-  // final guardians use the deeper expedition's stronger encounter values.
-  if(type.boss&&f===MAX_FLOOR)return{hp:115,attack:16,defense:4,xp:200};
-  return{hp:type.baseHp+type.hpPerFloor*f,attack:type.baseAttack+(type.boss?0:f),defense:type.defense,xp:type.baseXp+(type.boss?0:f*3)};
+  // Apply the deep-floor curve only when creatures are generated. Loading an
+  // expedition retains each saved enemy's serialized combat values.
+  if(type.boss&&f===MAX_FLOOR)return{hp:180,attack:30,defense:8,xp:300};
+  const depthRank=type.boss?0:Math.max(0,f-6);
+  return{hp:type.baseHp+type.hpPerFloor*f+depthRank*8,attack:type.baseAttack+(type.boss?0:f)+depthRank*3,defense:type.defense+depthRank,xp:type.baseXp+(type.boss?0:f*3)+depthRank*5};
 }

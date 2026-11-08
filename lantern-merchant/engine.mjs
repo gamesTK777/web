@@ -1,6 +1,8 @@
 // Original turn-based adventure and town economy. No network or real-money transactions.
-import {ENEMY_BY_ID,enemiesForFloor,enemyStats,MAX_FLOOR} from './enemies.mjs?v=20261108-anime10';
+import {ENEMY_BY_ID,enemiesForFloor,enemyStats,MAX_FLOOR} from './enemies.mjs?v=20261108-equipment';
 export {MAX_FLOOR};
+import {BUILDINGS,DAY_TURNS,DAY_WAIT_COST,landCost,rentTotal,landIncome,dividendTotal,dailyIncome,upgradeCost} from './economy.mjs?v=20261108-equipment';
+export {BUILDINGS,DAY_TURNS,DAY_WAIT_COST,landCost,rentTotal,landIncome,dividendTotal,dailyIncome,upgradeCost};
 export const RETURN_FLOORS = Object.freeze([3,6,9]);
 export const BAG_UPGRADES = Object.freeze([
   {id:'satchel',name:'旅人の拡張袋',capacity:40,cost:200},
@@ -24,21 +26,31 @@ export const ITEMS = Object.freeze([
 export const WEAPONS = Object.freeze([
   {id:'starter',name:'採集ナイフ',price:0,attack:0,description:'旅の始まりを支える小さな刃。'},
   {id:'copper',name:'燐鉄の短剣',price:180,attack:3,description:'攻撃力 +3。浅い階層の探索が楽に。'},
+  {id:'steel',name:'鋼輪の剣',price:360,attack:5,description:'攻撃力 +5。浅層から中層へ進むための堅実な一振り。'},
   {id:'moon',name:'月紋の長剣',price:650,attack:7,description:'攻撃力 +7。中層へ進むための確かな力。'},
+  {id:'gale',name:'疾風の刃',price:1000,attack:9,description:'攻撃力 +9。中層の硬い魔物にも鋭く切り込む。'},
   {id:'solar',name:'暁光の槍',price:1600,attack:12,description:'攻撃力 +12。深層の番人にも届く一撃。'},
+  {id:'crystal',name:'灯晶の大剣',price:2800,attack:17,description:'攻撃力 +17。地下7階以降の強敵に備える重厚な剣。'},
+  {id:'comet',name:'星渡りの剣',price:4600,attack:23,description:'攻撃力 +23。深層の分厚い守りを打ち破る星の刃。'},
+  {id:'dawn',name:'黎明の聖剣',price:7200,attack:30,description:'攻撃力 +30。最深部へ挑む採集商のための最高級武器。'},
   {id:'unarmed',name:'素手',price:0,attack:0,description:'武器を失った状態。街で新しい武器を購入できます。'}
+]);
+export const SHIELDS = Object.freeze([
+  {id:'none',name:'盾なし',price:0,defense:0,description:'盾を装備していない状態。'},
+  {id:'wood',name:'若木の盾',price:140,defense:2,description:'防御力 +2。最初の探索を支える軽い木の盾。'},
+  {id:'iron',name:'燐鉄の盾',price:420,defense:4,description:'防御力 +4。中層の攻撃を受け止める金属の盾。'},
+  {id:'moon',name:'月紋の盾',price:1000,defense:7,description:'防御力 +7。月の紋様を刻んだ丈夫な盾。'},
+  {id:'crystal',name:'灯晶の大盾',price:2400,defense:10,description:'防御力 +10。地下7階以降の強敵に備える大盾。'},
+  {id:'aurora',name:'暁光の守護盾',price:4800,defense:14,description:'防御力 +14。最深部の強烈な一撃から身を守る最高級の盾。'}
 ]);
 export const STOCKS = Object.freeze([
   {id:'loom',name:'風織工房',ticker:'KAZE',base:32,description:'織物を届ける穏やかな商会。'},
   {id:'guild',name:'燐鉱運輸',ticker:'RINK',base:65,description:'迷宮の鉱石を運ぶ成長株。'},
   {id:'beacon',name:'灯晶研究所',ticker:'LAMP',base:110,description:'値動きの大きな光の研究所。'}
 ]);
-export const BUILDINGS = Object.freeze([
-  {id:'cottage',name:'庭付き貸家',cost:160,rent:24,description:'1日24Gの家賃。増築で最大72G。'},
-  {id:'workshop',name:'職人の工房',cost:340,rent:48,description:'1日48Gの家賃。増築で最大144G。'}
-]);
 const itemById = Object.assign(Object.create(null),Object.fromEntries(ITEMS.map(v=>[v.id,v])));
 const weaponById = Object.assign(Object.create(null),Object.fromEntries(WEAPONS.map(v=>[v.id,v])));
+const shieldById = Object.assign(Object.create(null),Object.fromEntries(SHIELDS.map(v=>[v.id,v])));
 const buildingById = Object.assign(Object.create(null),Object.fromEntries(BUILDINGS.map(v=>[v.id,v])));
 const stockById = Object.assign(Object.create(null),Object.fromEntries(STOCKS.map(v=>[v.id,v])));
 const W=31,H=23,MAXSTACK=999,MAXGOLD=999999999;
@@ -46,9 +58,6 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const dist = (a,b) => Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 export const xpNeeded = level => 12+level*10;
-export const landCost = state => 120+80*state.plots.length;
-export const rentTotal = state => state.plots.reduce((total,p)=>total+(buildingById[p.building]?.rent??0)*p.level,0);
-export const upgradeCost = (state,index) => { const p=state.plots[index]; return p?.building ? Math.round(buildingById[p.building].cost*.8*p.level) : 0; };
 function rand(s) { s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0; return s.rng/4294967296; }
 function between(s,a,b) { return a+Math.floor(rand(s)*(b-a+1)); }
 function log(s,text) { s.log.push(text); if(s.log.length>40)s.log.shift(); return text; }
@@ -57,7 +66,7 @@ function add(list,id,qty) { const e=list.find(v=>v.id===id); if(e)e.qty=Math.min
 function remove(list,id,qty) { const e=list.find(v=>v.id===id); if(!e||e.qty<qty)return false; e.qty-=qty; if(!e.qty)list.splice(list.indexOf(e),1); return true; }
 function consume(s,id) { return remove(s.runLoot,id,1)||remove(s.inventory,id,1); }
 function awardGold(s,n) { s.gold=Math.min(MAXGOLD,s.gold+n); s.stats.earned=Math.min(MAXGOLD,s.stats.earned+n); }
-function recalc(s) { s.maxHp=36+(s.level-1)*5; s.attack=5+(s.level-1)+weaponById[s.weaponId].attack; s.defense=Math.floor((s.level-1)/4); }
+function recalc(s) { s.maxHp=36+(s.level-1)*5; s.attack=5+(s.level-1)+weaponById[s.weaponId].attack; s.defense=Math.floor((s.level-1)/4)+shieldById[s.shieldId??'none'].defense; }
 function gainXp(s,n) { s.xp+=n; while(s.level<30&&s.xp>=xpNeeded(s.level)){s.xp-=xpNeeded(s.level); s.level++; recalc(s); s.hp=Math.min(s.maxHp,s.hp+12);log(s,`レベル${s.level}！ 最大HPと攻撃力が上がった。`);} if(s.level===30)s.xp=Math.min(s.xp,xpNeeded(30)); }
 function walkable(s,x,y) {return x>=0&&x<W&&y>=0&&y<H&&s.map.tiles[y][x]!==0;}
 function occupied(s,x,y) {return s.enemies.some(e=>e.x===x&&e.y===y&&e.hp>0);}
@@ -151,8 +160,9 @@ function collect(s) {
 }
 function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,s.floor===MAX_FLOOR?'暁の種を手に入れた！ 階段から帰還しよう。':'暁の種を守り抜いた。さらに下層へ進めます。帰灯石で街に戻ることもできます。');}clearSwarm(s);}
 function advanceDay(s){
-  s.day++;const rent=rentTotal(s);let dividend=0;for(const spec of STOCKS){const shares=s.stocks[spec.id];dividend+=Math.floor(shares/5);const volatility={loom:.10,guild:.17,beacon:.25}[spec.id];const drift=(spec.base-s.prices[spec.id])*.04;s.prices[spec.id]=clamp(Math.round(s.prices[spec.id]*(1+(rand(s)*2-1)*volatility)+drift),Math.ceil(spec.base*.35),spec.base*4);s.priceHistory[spec.id].push(s.prices[spec.id]);if(s.priceHistory[spec.id].length>24)s.priceHistory[spec.id].shift();}awardGold(s,rent+dividend);log(s,`${s.day}日目。家賃 ${rent}G・配当 ${dividend}G を受け取った。`);
+  s.day++;const income=dailyIncome(s);for(const spec of STOCKS){const volatility={loom:.10,guild:.17,beacon:.25}[spec.id];const drift=(spec.base-s.prices[spec.id])*.04;s.prices[spec.id]=clamp(Math.round(s.prices[spec.id]*(1+(rand(s)*2-1)*volatility)+drift),Math.ceil(spec.base*.35),spec.base*4);s.priceHistory[spec.id].push(s.prices[spec.id]);if(s.priceHistory[spec.id].length>24)s.priceHistory[spec.id].shift();}awardGold(s,income.total);log(s,`${s.day}日目。家賃 ${income.rent}G・空き地利用料 ${income.land}G・配当 ${income.dividend}G（計${income.total}G）を受け取った。`);
 }
+function advanceClock(s){s.dayTurns=(s.dayTurns??0)+1;if(s.dayTurns>=DAY_TURNS){s.dayTurns=0;advanceDay(s);}}
 function endRun(s,defeat=false){
   const clear=s.runRelic&&s.floor===MAX_FLOOR&&!s.enemies.some(enemy=>enemy.kind==='boss')&&!defeat,earned=defeat?Math.floor(s.runGold/2):s.runGold;
   if(!defeat)for(const i of s.runLoot){
@@ -164,11 +174,10 @@ function endRun(s,defeat=false){
   s.mode='town';if(clear)s.stats.clears++;
   if(defeat){
     // A fallen explorer starts over personally; the town economy remains theirs.
-    s.level=1;s.xp=0;s.inventory=[];s.weaponId='unarmed';recalc(s);
+    s.level=1;s.xp=0;s.inventory=[];s.weaponId='unarmed';s.shieldId='none';recalc(s);
     s.hp=Math.ceil(s.maxHp*.4);s.hunger=60;
-    log(s,`救助隊が街へ運んでくれた。レベル1に戻り、武器とすべての持ち物を失った。土地・建物・株と所持金は残り、探索金${earned}Gを持ち帰った。`);
+    log(s,`救助隊が街へ運んでくれた。レベル1に戻り、武器・盾とすべての持ち物を失った。土地・建物・株と所持金は残り、探索金${earned}Gを持ち帰った。`);
   }else log(s,clear?'暁の種を持ち帰った！ 街の謝礼500Gを獲得。':`無事に帰還！ ${earned}Gと探索品を持ち帰った。`);
-  if(s.runTurns>=12)advanceDay(s);else log(s,'短い探索のため、まだ日は進まない（12ターン以上で翌日）。');
   s.runLoot=[];s.runGold=0;s.runRelic=false;s.enemies=[];s.loot=[];s.map=null;s.player={x:0,y:0};
   return defeat?'defeat':clear?'victory':'return';
 }
@@ -208,10 +217,10 @@ function enemyTurn(s,{justAwakened=false}={}){
   }
   return null;
 }
-function tick(s){s.turn++;s.runTurns++;s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);if(s.hunger===0){s.hp-=2;if(s.hp<=0)return endRun(s,true);}else if(s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);const justAwakened=activateSwarm(s),event=enemyTurn(s,{justAwakened});if(s.mode==='dungeon')reveal(s);return event||(justAwakened?'swarm-start':null);}
+function tick(s){s.turn++;s.runTurns++;advanceClock(s);s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);if(s.hunger===0){s.hp-=2;if(s.hp<=0)return endRun(s,true);}else if(s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);const justAwakened=activateSwarm(s),event=enemyTurn(s,{justAwakened});if(s.mode==='dungeon')reveal(s);return event||(justAwakened?'swarm-start':null);}
 export function newGame(seed=Date.now()){
   const n=(Number(seed)>>>0)||1;
-  const s={version:1,seed:n,rng:n,day:1,gold:180,level:1,xp:0,hp:36,maxHp:36,hunger:100,attack:5,defense:0,weaponId:'starter',bagTier:0,inventory:[{id:'potion',qty:3},{id:'ration',qty:2},{id:'recall',qty:1}],stocks:Object.fromEntries(STOCKS.map(v=>[v.id,0])),prices:Object.fromEntries(STOCKS.map(v=>[v.id,v.base])),priceHistory:Object.fromEntries(STOCKS.map(v=>[v.id,[v.base]])),plots:[{building:null,level:1}],mode:'town',floor:1,maxFloor:0,turn:0,player:{x:0,y:0},map:null,enemies:[],loot:[],runLoot:[],runGold:0,runTurns:0,runRelic:false,log:['灯都へようこそ。迷宮の品を持ち帰り、あなたの街を育てよう。'],stats:{runs:0,clears:0,kills:0,earned:0}};
+  const s={version:1,seed:n,rng:n,day:1,dayTurns:0,gold:180,level:1,xp:0,hp:36,maxHp:36,hunger:100,attack:5,defense:0,weaponId:'starter',shieldId:'none',bagTier:0,inventory:[{id:'potion',qty:3},{id:'ration',qty:2},{id:'recall',qty:1}],stocks:Object.fromEntries(STOCKS.map(v=>[v.id,0])),prices:Object.fromEntries(STOCKS.map(v=>[v.id,v.base])),priceHistory:Object.fromEntries(STOCKS.map(v=>[v.id,[v.base]])),plots:[{building:null,level:1}],mode:'town',floor:1,maxFloor:0,turn:0,player:{x:0,y:0},map:null,enemies:[],loot:[],runLoot:[],runGold:0,runTurns:0,runRelic:false,log:['灯都へようこそ。迷宮の品を持ち帰り、あなたの街を育てよう。'],stats:{runs:0,clears:0,kills:0,earned:0}};
   return s;
 }
 export function act(state,action){
@@ -240,7 +249,7 @@ export function act(state,action){
   if(action.type==='stairs'){
     if(s.map.tiles[s.player.y][s.player.x]!==2)return fail('光る階段の上で使ってください。');
     if(s.floor===MAX_FLOOR){if(!s.runRelic||s.enemies.some(enemy=>enemy.kind==='boss'))return fail('地下10階の灯晶の番人を倒し、暁の種を手に入れよう。');event=endRun(s);return finish();}
-    s.floor++;s.turn++;s.runTurns++;generateFloor(s);message=`B${s.floor}へ降りた。${RETURN_FLOORS.includes(s.floor)?'下り階段の隣に街へ戻る出口があります。':'入口の帰還門か帰灯石で街へ戻れます。'}`;event='stairs';return finish();
+    s.floor++;s.turn++;s.runTurns++;advanceClock(s);generateFloor(s);message=`B${s.floor}へ降りた。${RETURN_FLOORS.includes(s.floor)?'下り階段の隣に街へ戻る出口があります。':'入口の帰還門か帰灯石で街へ戻れます。'}`;event='stairs';return finish();
   }
   if(action.type==='return'){
     if(![3,4].includes(s.map.tiles[s.player.y][s.player.x])&&!consume(s,'recall'))return fail('帰還口へ戻るか、帰灯石を使ってください。');event=endRun(s);return finish();
@@ -258,6 +267,10 @@ export function act(state,action){
     event=s.mode==='dungeon'?(tick(s)||'use'):'use';return finish();
   }
   if(s.mode!=='town')return fail('取引や建築は帰還後に行えます。');
+  if(action.type==='nextDay'){
+    if(s.gold<DAY_WAIT_COST)return fail(`翌日まで過ごすには生活費${DAY_WAIT_COST}Gが必要です。探索中は費用なしで日が進みます。`);
+    s.gold-=DAY_WAIT_COST;s.dayTurns=0;advanceDay(s);message=`街で翌日まで過ごした。生活費${DAY_WAIT_COST}G。HP・満腹度は変わりません。`;event='day';return finish();
+  }
   if(action.type==='sell'){
     const item=itemById[action.id];if(!item||quantity(s.inventory,item.id)<qty)return fail('売却する品物が足りません。');remove(s.inventory,item.id,qty);awardGold(s,item.sell*qty);message=`${item.name}を${qty}個売却。${item.sell*qty}Gを受け取った。`;event='sale';return finish();
   }
@@ -274,6 +287,13 @@ export function act(state,action){
   if(action.type==='buyWeapon'){
     const weapon=weaponById[action.id];if(!weapon)return fail('装備を選んでください。');if(weapon.attack<=weaponById[s.weaponId].attack)return fail('すでに同等以上の装備を持っています。');if(s.gold<weapon.price)return fail('所持金が足りません。');s.gold-=weapon.price;s.weaponId=weapon.id;recalc(s);message=`${weapon.name}を購入・装備した。`;event='equip';return finish();
   }
+  if(action.type==='buyShield'){
+    const shield=typeof action.id==='string'?shieldById[action.id]:null;
+    if(!shield||qty!==1)return fail('購入する盾を1つ選んでください。');
+    if(shield.defense<=shieldById[s.shieldId??'none'].defense)return fail('すでに同等以上の盾を装備しています。');
+    if(s.gold<shield.price)return fail('所持金が足りません。');
+    s.gold-=shield.price;s.shieldId=shield.id;recalc(s);message=`${shield.name}を購入・装備した。防御力が${s.defense}になった。`;event='equip';return finish();
+  }
   if(action.type==='buyStock'||action.type==='sellStock'){
     const stock=stockById[action.id];if(!stock)return fail('銘柄を選んでください。');const value=s.prices[stock.id]*qty;
     if(action.type==='buyStock'){if(s.gold<value)return fail('所持金が足りません。');if(s.stocks[stock.id]+qty>99999)return fail('保有上限です。');s.gold-=value;s.stocks[stock.id]+=qty;message=`${stock.name}を${qty}株購入。`;}else{if(s.stocks[stock.id]<qty)return fail('保有株数が足りません。');s.stocks[stock.id]-=qty;awardGold(s,value);message=`${stock.name}を${qty}株売却。${value}Gを受け取った。`;}event='trade';return finish();
@@ -281,7 +301,7 @@ export function act(state,action){
   if(action.type==='buyLand'){if(s.plots.length>=12)return fail('敷地は最大12区画です。');const cost=landCost(s);if(s.gold<cost)return fail('所持金が足りません。');s.gold-=cost;s.plots.push({building:null,level:1});message='土地を1区画購入した。建物を建てて家賃を増やそう。';event='build';return finish();}
   if(action.type==='build'||action.type==='upgrade'){
     if(!Number.isInteger(action.index)||action.index<0||action.index>=s.plots.length)return fail('所有する区画を選んでください。');const p=s.plots[action.index];
-    if(action.type==='build'){const building=buildingById[action.id];if(!building)return fail('建物を選んでください。');if(p.building)return fail('すでに建物があります。');if(s.gold<building.cost)return fail('所持金が足りません。');s.gold-=building.cost;p.building=building.id;p.level=1;message=`${building.name}が完成！ 次の探索帰還から家賃が入ります。`;}
+    if(action.type==='build'){const building=buildingById[action.id];if(!building)return fail('建物を選んでください。');if(p.building)return fail('すでに建物があります。');if(s.gold<building.cost)return fail('所持金が足りません。');s.gold-=building.cost;p.building=building.id;p.level=1;message=`${building.name}が完成！ 次のゲーム内の日付更新から毎日家賃が入ります。`;}
     else{if(!p.building)return fail('先に建物を建ててください。');if(p.level>=3)return fail('これ以上の増築はできません。');const cost=upgradeCost(s,action.index);if(s.gold<cost)return fail('所持金が足りません。');s.gold-=cost;p.level++;message=`${buildingById[p.building].name}をレベル${p.level}に増築した。`;}
     event='build';return finish();
   }
@@ -303,7 +323,9 @@ export function validateSave(raw){
   for(const key of ['day','gold','level','xp','hp','hunger','floor','maxFloor','turn','runGold','runTurns']){
     const bounds={day:[1,1000000],gold:[0,MAXGOLD],level:[1,30],xp:[0,10000],hp:[1,181],hunger:[0,100],floor:[1,MAX_FLOOR],maxFloor:[0,MAX_FLOOR],turn:[0,100000000],runGold:[0,MAXGOLD],runTurns:[0,10000000]}[key];s[key]=num(source[key],...bounds,key!=='hunger');
   }
+  s.dayTurns=Object.hasOwn(source,'dayTurns')?num(source.dayTurns,0,DAY_TURNS-1):0;
   s.bagTier=Object.hasOwn(source,'bagTier')?num(source.bagTier,0,BAG_UPGRADES.length):0;
+  s.shieldId=Object.hasOwn(source,'shieldId')?source.shieldId:'none';if(typeof s.shieldId!=='string'||!Object.hasOwn(shieldById,s.shieldId))invalid();
   if(!['town','dungeon'].includes(source.mode)||!weaponById[source.weaponId])invalid();s.mode=source.mode;s.weaponId=source.weaponId;recalc(s);if(s.hp>s.maxHp)invalid();
   function inventory(v){const ids=new Set();return list(v,ITEMS.length).map(e=>{if(!obj(e)||!itemById[e.id]||ids.has(e.id))invalid();ids.add(e.id);return{id:e.id,qty:num(e.qty,1,MAXSTACK)};});}
   s.inventory=inventory(source.inventory);s.runLoot=inventory(source.runLoot);s.runRelic=bool(source.runRelic);

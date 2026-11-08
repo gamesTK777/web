@@ -153,13 +153,13 @@ test('rest heals without advancing the market or paying rent repeatedly', () => 
   assert.deepEqual(state.prices, oldPrices);
 });
 
-test('returning after exploration keeps found goods and pays one day of rent', () => {
+test('exploration pays daily rent at sixty turns and a safe return keeps found goods', () => {
   let state = newGame(55); state.gold = 600;
   state = perform(state, { type: 'build', index: 0, id: 'cottage' });
   state = perform(state, { type: 'enter' });
   state.enemies = [];
   const oldDay = state.day, oldGold = state.gold, expectedRent = rentTotal(state);
-  for (let i = 0; i < 12; i++) state = perform(state, { type: 'wait' });
+  for (let i = 0; i < 60; i++) state = perform(state, { type: 'wait' });
   state.runLoot = [{ id: 'ore', qty: 2 }]; state.runGold = 37;
   state = perform(state, { type: 'return' });
   assert.equal(state.mode, 'town');
@@ -262,9 +262,9 @@ test('starvation has the same personal losses and still pays retained property r
   state=perform(state,{type:'upgrade',index:0});
   state=perform(state,{type:'buyStock',id:'loom',qty:10});
   state.level=6;state.xp=17;state=validateSave(state);
-  state=perform(state,{type:'enter'});state.enemies=[];state.hp=1;state.hunger=0;state.runTurns=11;
+  state=perform(state,{type:'enter'});state.enemies=[];state.hp=1;state.hunger=0;state.runTurns=59;state.dayTurns=59;
   state.runGold=23;state.runLoot=[{id:'ore',qty:4}];
-  const before=copy(state),rent=rentTotal(state),dividend=2;
+  const before=copy(state),rent=rentTotal(state),dividend=1;
   const result=act(state,{type:'wait'});assert.equal(result.ok,true);assert.equal(result.event,'defeat');state=result.state;
   assert.equal(state.level,1);assert.equal(state.xp,0);assert.equal(state.weaponId,'unarmed');assert.deepEqual(state.inventory,[]);
   assert.equal(state.hp,15);assert.equal(state.maxHp,36);assert.equal(state.attack,5);assert.equal(state.defense,0);

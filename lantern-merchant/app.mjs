@@ -1,4 +1,4 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,BAG_UPGRADES,bagCapacity,RETURN_FLOORS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-bag-exits';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,SHIELDS,DAY_TURNS,DAY_WAIT_COST,dailyIncome,BAG_UPGRADES,bagCapacity,RETURN_FLOORS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-equipment';
 import {drawScene} from './renderer.mjs?v=20261108-bag-exits';
 import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-defeat';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261108-anime10';
@@ -9,7 +9,7 @@ import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261107-swarm';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
 import {preloadEnvironment,getEnvironmentAssetStatus} from './anime-environment.mjs?v=20261108-anime10';
 import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-defeat';
-import {ENEMY_TYPES} from './enemies.mjs?v=20261108-anime10';
+import {ENEMY_TYPES} from './enemies.mjs?v=20261108-equipment';
 import {initGameFullscreen} from '../shared/fullscreen.mjs?v=20261108-fullscreen';
 
 const $=id=>document.getElementById(id), KEY='tk777-lantern-merchant-v1';
@@ -110,32 +110,33 @@ function dispatch(action){
   state=result.state;visualEvent(previous,action,result);save();render();
   if(previous.mode!==state.mode||previous.floor!==state.floor){held.clear();resetTownView();}
   if(!['move','wait','attack'].includes(result.event))toast(result.message);
+  if(state.mode==='dungeon'&&state.day>previous.day){const income=dailyIncome(state);toast(`${state.day}日目 · 資産収入 +${income.total}G（家賃${income.rent}・空き地${income.land}・配当${income.dividend}）`);}
   if(previous.mode==='dungeon'&&state.mode==='town'){
     const earned=state.gold-previous.gold;
     const title=result.event==='victory'?'暁の種を、街へ。':result.event==='defeat'?'救助隊が迎えに来た。':'おかえりなさい、採集商。';
-    const text=result.event==='defeat'?'レベル1・経験値0に戻り、武器と持ち物をすべて失いました。所持金・株・土地・建物は残っています。宿と道具店で再出発の準備を。':`今回の帰還で ${money(earned)} G が所持金に加わりました。持ち帰った素材を売って、街と装備を育てましょう。`;
+    const text=result.event==='defeat'?'レベル1・経験値0に戻り、武器・盾と持ち物をすべて失いました。所持金・株・土地・建物は残っています。宿と道具店で再出発の準備を。':`今回の帰還で ${money(earned)} G が所持金に加わりました。持ち帰った素材を売って、街と装備を育てましょう。`;
     $('sceneHint').textContent=title;toast(`${title} ${text}`);
   }
 }
 function render(){
   sound.setScene(state);updateSound();
   renderSwarm();
-  const dungeon=state.mode==='dungeon', weapon=WEAPONS.find(w=>w.id===state.weaponId);
+  const dungeon=state.mode==='dungeon', weapon=WEAPONS.find(w=>w.id===state.weaponId),shield=SHIELDS.find(v=>v.id===state.shieldId),income=dailyIncome(state);
   document.body.dataset.mode=state.mode;
   $('worldHud').innerHTML=`<div class="hud-stat"><small>LEVEL</small><b>${state.level}</b></div><div class="hud-stat health ${state.hp/state.maxHp<.3?'low':''}"><small>HP</small><b>${state.hp} / ${state.maxHp}</b><div class="hud-meter"><i style="width:${state.hp/state.maxHp*100}%"></i></div></div><div class="hud-stat"><small>満腹度</small><b>${Math.floor(state.hunger)}%</b></div><div class="hud-stat gold"><small>GOLD</small><b>${money(state.gold)} G</b></div>`;
   $('dayLabel').textContent=`DAY ${String(state.day).padStart(2,'0')}`;
-  $('levelBadge').textContent=`LV. ${state.level}`;$('weaponName').textContent=weapon.name;
+  $('levelBadge').textContent=`LV. ${state.level}`;$('weaponName').textContent=weapon.name;$('shieldName').textContent=shield.name;
   $('hpText').textContent=`${state.hp} / ${state.maxHp}`;$('hpBar').style.width=`${state.hp/state.maxHp*100}%`;
   $('hpBar').style.background=state.hp/state.maxHp<.3?'#ee9a87':'#91b99f';
   $('hungerText').textContent=`${Math.floor(state.hunger)} / 100`;$('hungerBar').style.width=`${state.hunger}%`;
   $('attackText').textContent=`攻撃 ${state.attack} · 守備 ${state.defense}`;$('xpText').textContent=`EXP ${state.xp}/${xpNeeded(state.level)}`;
-  $('goldValue').textContent=money(state.gold);$('rentValue').textContent=`+${money(rentTotal(state))} G`;
+  $('goldValue').textContent=money(state.gold);$('rentValue').textContent=`+${money(income.total)} G`;$('incomeBreakdown').textContent=`家賃 ${income.rent} · 空き地 ${income.land} · 配当 ${income.dividend} G`;$('calendarStatus').textContent=`翌日まで ${DAY_TURNS-state.dayTurns}ターン · 探索中も自動で入金`;$('nextDayButton').disabled=dungeon||state.gold<DAY_WAIT_COST;$('nextDayButton').title=dungeon?'探索中は60ターンごとに日が進みます。':`生活費${DAY_WAIT_COST}Gで翌日へ。HPと満腹度は変わりません。`;
   $('locationTitle').textContent=dungeon?`翠灯の迷宮 ― 地下${state.floor}階`:'水灯りの街';
   $('locationEyebrow').textContent=dungeon?'THE LANTERN DEPTHS':'YOUR HOMETOWN';
-  $('locationBadge').textContent=dungeon?`TURN ${state.runTurns}`:'安全な拠点';
+  $('locationBadge').textContent=dungeon?`DAY ${state.day} · あと${DAY_TURNS-state.dayTurns}ターン`:`DAY ${state.day} · 安全な拠点`;
   $('sceneCaption').textContent=dungeon?`探索袋 ${state.runLoot.reduce((s,i)=>s+i.qty,0)}/${bagCapacity(state)} · 拾得金 ${state.runGold} G`:`所有地 ${state.plots.length} 区画 · 建物 ${state.plots.filter(p=>p.building).length} 棟 · 袋 ${bagCapacity(state)}個`;
   const checkpointFloor=dungeon&&RETURN_FLOORS.includes(state.floor)&&state.map.tiles.some(row=>row.includes(4)),onReturn=dungeon&&[3,4].includes(state.map.tiles[state.player.y][state.player.x]);
-  $('sceneHint').textContent=dungeon?(onReturn?'ここから無料で街に戻れます。「街へ戻る」を選ぼう。':checkpointFloor?'下り階段の隣に「街へ」の出口。帰灯石なしで帰還できます。':'一歩ずつ、灯りの届く先へ。'):'施設・区画をタップして選択。WASD / 矢印で街を散歩。';
+  $('sceneHint').textContent=dungeon?(onReturn?'ここから無料で街に戻れます。「街へ戻る」を選ぼう。':checkpointFloor?'下り階段の隣に「街へ」の出口。帰灯石なしで帰還できます。':state.floor>=7?'深層の魔物は強敵。上位武器と盾を整えて慎重に。':'一歩ずつ、灯りの届く先へ。'):'施設・区画をタップして選択。WASD / 矢印で街を散歩。';
   $('returnButton').textContent=onReturn?'街へ戻る · 無料':'街に帰還';
   $('primaryAction').innerHTML=dungeon?'足元を調べる <span>↓</span>':'迷宮へ出発 <span>↗</span>';
   $('dungeonControls').hidden=false;$('townTools').hidden=dungeon;
@@ -171,21 +172,24 @@ function renderWorkspace(){
     html=`<div class="workspace-header"><div><h3>${locked?'冒険のかばん':'持ち帰った宝物'}</h3><p>${locked?'探索品は無事に帰還すると持ち物になります。':'素材を売って、次の冒険と街づくりの資金に。'}</p></div>${!locked?'<button data-sell-all>素材をまとめて売る</button>':''}</div>`;
     const items=locked?[...state.inventory.map(i=>({...i,run:false})),...state.runLoot.map(i=>({...i,run:true}))]:state.inventory;
     html+=items.length?`<div class="item-grid">${items.map(i=>itemRow(ITEMS.find(s=>s.id===i.id),i.qty,i.run)).join('')}</div>`:'<div class="empty-note">持ち物はありません。宿で回復し、道具店で準備してから迷宮へ向かおう。</div>';
-    html+=`<p class="workspace-note">探索袋の上限は${bagCapacity(state)}個。道具店で最大60個まで拡張できます。素材の一括売却では、回復薬・食料などの道具は残ります。迷宮で倒れると、武器と持ち物はすべて失い、レベル1に戻ります。袋の拡張段階は維持します。</p>`;
+    html+=`<p class="workspace-note">探索袋の上限は${bagCapacity(state)}個。道具店で最大60個まで拡張できます。素材の一括売却では、回復薬・食料などの道具は残ります。迷宮で倒れると、武器・盾と持ち物はすべて失い、レベル1に戻ります。袋の拡張段階は維持します。</p>`;
   } else if(tab==='shop'){
-    html=lock+'<div class="workspace-header"><div><h3>旅支度の道具店</h3><p>購入した武器は自動で装備されます。</p></div><button data-action="rest" '+disabled+'>宿で休む · 20G</button></div>';
+    html=lock+`<div class="workspace-header"><div><h3>旅支度の道具店</h3><p>装備中：${WEAPONS.find(v=>v.id===state.weaponId).name} / ${SHIELDS.find(v=>v.id===state.shieldId).name} · 攻撃 ${state.attack} / 防御 ${state.defense}。購入すると自動で装備されます。</p></div>`+'<button data-action="rest" '+disabled+'>宿で休む · 20G</button></div>';
     html+=`<section class="bag-upgrades" aria-labelledby="bagUpgradeTitle"><div class="workspace-header"><div><h3 id="bagUpgradeTitle">探索袋を拡張</h3><p>現在 ${bagCapacity(state)}個まで · ${state.bagTier} / 3段階。順番に購入でき、拡張した容量は倒れても残ります。</p></div></div><div class="item-grid">${BAG_UPGRADES.map((upgrade,index)=>{const owned=state.bagTier>index,next=state.bagTier===index;return `<div class="item-row bag-upgrade ${next?'is-next':''}"><span class="item-symbol" aria-hidden="true">▣</span><div class="item-info"><b>${upgrade.name}</b><small>第${index+1}段階 · 上限${upgrade.capacity}個${next?' · 次の拡張':''}</small></div><button data-bag="${upgrade.id}" aria-label="${upgrade.name}：上限${upgrade.capacity}個、${money(upgrade.cost)}G${owned?'、購入済み':''}" ${locked||owned||!next||state.gold<upgrade.cost?'disabled':''}>${owned?'拡張済み':!next?'前段階が必要':money(upgrade.cost)+' G'}</button></div>`;}).join('')}</div></section><div class="item-grid">`;
     html+=ITEMS.filter(i=>i.buy!==null).map(i=>`<div class="item-row"><span class="item-symbol">${i.icon}</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-buy="${i.id}" ${disabled||state.gold<i.buy?'disabled':''}>${i.buy} G</button></div>`).join('');
-    html+=WEAPONS.filter(i=>i.price).map(i=>{const owned=i.attack<=WEAPONS.find(w=>w.id===state.weaponId).attack;return `<div class="item-row"><span class="item-symbol">⚔</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-weapon="${i.id}" ${locked||owned||state.gold<i.price?'disabled':''}>${owned?'入手済み':money(i.price)+' G'}</button></div>`;}).join('');
-    html+='</div><p class="workspace-note">宿で休むとHPと満腹度が回復します。日は進みません。資金が20G未満なら救護所で一部回復できます。</p>';
+    html+='</div><section class="equipment-section" aria-labelledby="shieldShopTitle"><h3 id="shieldShopTitle">盾 · 防御力を強化</h3><p class="workspace-note">盾で受けるダメージを軽減。倒れると武器と同じく失います。</p><div class="item-grid">';
+    html+=SHIELDS.filter(i=>i.price).map(i=>{const current=SHIELDS.find(v=>v.id===state.shieldId),owned=i.defense<=current.defense;return `<div class="item-row"><span class="item-symbol" aria-hidden="true">⛨</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-shield="${i.id}" aria-label="${i.name}：防御力プラス${i.defense}、${money(i.price)}G" ${locked||owned||state.gold<i.price?'disabled':''}>${i.id===current.id?'装備中':owned?'下位装備':money(i.price)+' G'}</button></div>`;}).join('');
+    html+='</div></section><section class="equipment-section" aria-labelledby="weaponShopTitle"><h3 id="weaponShopTitle">武器 · 攻撃力を強化</h3><div class="item-grid">';
+    html+=WEAPONS.filter(i=>i.price).map(i=>{const current=WEAPONS.find(w=>w.id===state.weaponId),owned=i.attack<=current.attack;return `<div class="item-row"><span class="item-symbol" aria-hidden="true">⚔</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-weapon="${i.id}" aria-label="${i.name}：攻撃力プラス${i.attack}、${money(i.price)}G" ${locked||owned||state.gold<i.price?'disabled':''}>${i.id===current.id?'装備中':owned?'下位装備':money(i.price)+' G'}</button></div>`;}).join('');
+    html+='</div></section><p class="workspace-note">宿で休むとHPと満腹度が回復します。日は進みません。資金が20G未満なら救護所で一部回復できます。</p>';
   } else if(tab==='estate'){
-    html=lock+`<div class="workspace-header"><div><h3>あなたの土地と建物</h3><p>${state.plots.length} / 12区画 · 翌日の家賃 ${rentTotal(state)} G</p></div><button data-action="buyLand" ${locked||state.gold<landCost(state)||state.plots.length>=12?'disabled':''}>土地を買う ${money(landCost(state))}G</button></div><div class="estate-grid">`;
-    html+=state.plots.map((p,index)=>{const b=BUILDINGS.find(v=>v.id===p.building);return `<div class="plot"><h4>${b?'⌂':'▧'} 第${index+1}区画 · ${b?b.name:'空き地'}</h4><p>${b?`建物 Lv.${p.level} · 家賃 ${b.rent*p.level} G / 日`:'ここに商いの種をまこう。'}</p>${b?`<button data-upgrade="${index}" ${locked||p.level>=3||state.gold<upgradeCost(state,index)?'disabled':''}>${p.level>=3?'増築済み':`増築 ${upgradeCost(state,index)} G`}</button>`:BUILDINGS.map(v=>`<button data-build="${v.id}" data-index="${index}" ${locked||state.gold<v.cost?'disabled':''}>${v.name} ${v.cost}G</button>`).join('')}</div>`;}).join('');
-    html+='</div><p class="workspace-note">貸家は24G、工房は48Gから。増築で最大3倍に。12ターン以上探索して帰還すると1日分の家賃が入ります。</p>';
+    html=lock+`<div class="workspace-header"><div><h3>あなたの土地と建物</h3><p>${state.plots.length} / 12区画 · 日収 ${dailyIncome(state).total} G（資産合計）</p></div><button data-action="buyLand" ${locked||state.gold<landCost(state)||state.plots.length>=12?'disabled':''}>土地を買う ${money(landCost(state))}G</button></div><div class="estate-grid">`;
+    html+=state.plots.map((p,index)=>{const b=BUILDINGS.find(v=>v.id===p.building);return `<div class="plot"><h4>${b?'⌂':'▧'} 第${index+1}区画 · ${b?b.name:'空き地'}</h4><p>${b?`建物 Lv.${p.level} · 家賃 ${b.rent*p.level} G / 日`:index===0?'建物を建てると家賃が発生。':'空き地利用料 1 G / 日。建築後は家賃に切り替わります。'}</p>${b?`<button data-upgrade="${index}" ${locked||p.level>=3||state.gold<upgradeCost(state,index)?'disabled':''}>${p.level>=3?'増築済み':`増築 ${upgradeCost(state,index)} G`}</button>`:BUILDINGS.map(v=>`<button data-build="${v.id}" data-index="${index}" ${locked||state.gold<v.cost?'disabled':''}>${v.name} ${v.cost}G</button>`).join('')}</div>`;}).join('');
+    html+='</div><p class="workspace-note">貸家は6G、工房は12G / 日。増築で最大3倍。購入した空き地は1G / 日（最初の無料区画を除く）。探索60ターンごとに翌日となり、帰還前でも自動で受け取れます。街では生活費20Gで翌日まで過ごせます。</p>';
   } else {
-    html=lock+'<div class="workspace-header"><div><h3>灯都の株式市場</h3><p>架空企業に投資。価格は探索帰還後の翌日に変動。</p></div><span class="coin">G</span></div>';
+    html=lock+'<div class="workspace-header"><div><h3>灯都の株式市場</h3><p>架空企業に投資。価格はゲーム内で日付が変わるたびに更新。</p></div><span class="coin">G</span></div>';
     html+=STOCKS.map(i=>{const h=state.priceHistory[i.id],min=Math.min(...h)*.9,max=Math.max(...h)*1.1;const points=h.length<2?`0,18 80,18`:h.map((v,n)=>`${n/(h.length-1)*80},${32-(v-min)/(max-min)*28}`).join(' ');return `<div class="stock"><div><b>${i.name} <small>${i.ticker} · 保有 ${state.stocks[i.id]} 株</small></b><span class="stock-price">${state.prices[i.id]} <small style="display:inline">G / 株</small></span></div><svg viewBox="0 0 80 36" aria-label="株価の推移"><polyline points="${points}" fill="none" stroke="#a9c9a1" stroke-width="2"/></svg><div class="stock-actions"><button data-stock-buy="${i.id}" ${locked||state.gold<state.prices[i.id]?'disabled':''}>1株買う</button><button data-stock-sell="${i.id}" ${locked||!state.stocks[i.id]?'disabled':''}>1株売る</button></div></div>`;}).join('');
-    html+='<p class="workspace-note">1銘柄につき5株ごとに、翌日1Gの配当。価格は上下します。ゲーム内通貨のみを使用します。</p>';
+    html+='<p class="workspace-note">1銘柄につき10株ごとに、毎日1Gの配当。探索60ターンごとに翌日へ進み、自動で入金されます。価格は上下します。ゲーム内通貨のみを使用します。</p>';
   }
   $('workspaceContent').innerHTML=html;
 }
@@ -206,10 +210,10 @@ function selectTown(type,value){
     const owned=state.plots[selectedPlot],building=BUILDINGS.find(b=>b.id===owned?.building);
     title=`第${selectedPlot+1}区画 · ${building?building.name:owned?'建築できる空き地':'未購入の土地'}`;
     if(building){
-      description=`Lv.${owned.level} · 翌日の家賃 ${building.rent*owned.level} G。屋根や窓も増築に合わせて育ちます。`;
+      description=`Lv.${owned.level} · 毎日の家賃 ${building.rent*owned.level} G。屋根や窓も増築に合わせて育ちます。`;
       buttons=`<button data-town-upgrade="${selectedPlot}" ${owned.level>=3||state.gold<upgradeCost(state,selectedPlot)?'disabled':''}>${owned.level>=3?'最大まで増築済み':`増築する · ${upgradeCost(state,selectedPlot)} G`}</button>`;
     }else if(owned){
-      description='この区画に建物を建てると、探索から帰った翌日に家賃が入ります。';
+      description='建物を建てるとゲーム内の日付更新で毎日家賃が入ります。購入した空き地のままなら利用料1G / 日です（最初の無料区画を除く）。';
       buttons=BUILDINGS.map(b=>`<button data-town-build="${b.id}" data-index="${selectedPlot}" ${state.gold<b.cost?'disabled':''}>${b.name} · ${b.cost} G<small>家賃 ${b.rent} G / 日</small></button>`).join('');
     }else{
       description=selectedPlot===state.plots.length?'敷地を広げて、新しい灯りをともしましょう。':'土地は第'+(state.plots.length+1)+'区画から順に購入できます。';
@@ -246,12 +250,13 @@ document.addEventListener('click',e=>{
   if(b.dataset.tab){tab=b.dataset.tab;renderWorkspace();sound.play('ui');return;}
   if(b.dataset.close){$(b.dataset.close).close();return;}
   if(b.dataset.move){if(e.detail===0){const [dx,dy]=b.dataset.move.split(',').map(Number);moveDirection(dx,dy);}return;}
-  if(b.dataset.action){dispatch({type:b.dataset.action});return;}
+  if(b.dataset.action){if(b.dataset.action==='nextDay'){const income=dailyIncome(state);confirm('街で翌日まで過ごしますか？',`生活費${DAY_WAIT_COST}Gを支払い、日収${income.total}Gを受け取ります。HP・満腹度は変わりません。`,()=>dispatch({type:'nextDay'}));}else dispatch({type:b.dataset.action});return;}
   if(b.dataset.use){if(b.dataset.use==='recall')returnHome();else dispatch({type:'use',id:b.dataset.use});return;}
   if(b.dataset.sell){const i=ITEMS.find(i=>i.id===b.dataset.sell);const action={type:'sell',id:i.id,qty:Number(b.dataset.qty)};if(i.kind==='consumable')confirm('道具を売却しますか？',`${i.name} ${action.qty}個を売却します。冒険で使う分が不要か確認してください。`,()=>dispatch(action));else dispatch(action);return;}
   if(b.hasAttribute('data-sell-all')){const loot=state.inventory.filter(i=>ITEMS.find(s=>s.id===i.id).kind==='loot');if(!loot.length){toast('売却できる素材はまだありません。');return;}const value=loot.reduce((s,i)=>s+ITEMS.find(v=>v.id===i.id).sell*i.qty,0);for(const i of loot){const r=act(state,{type:'sell',id:i.id,qty:i.qty});if(r.ok)state=r.state;}save();render();sound.play('sale');toast(`素材をまとめて売却し、${money(value)} G を受け取りました。`);return;}
   if(b.dataset.buy)dispatch({type:'buyItem',id:b.dataset.buy,qty:1});
   if(b.dataset.bag)dispatch({type:'buyBag',id:b.dataset.bag});
+  if(b.dataset.shield)dispatch({type:'buyShield',id:b.dataset.shield});
   if(b.dataset.weapon)dispatch({type:'buyWeapon',id:b.dataset.weapon});
   if(b.dataset.stockBuy)dispatch({type:'buyStock',id:b.dataset.stockBuy,qty:1});
   if(b.dataset.stockSell)dispatch({type:'sellStock',id:b.dataset.stockSell,qty:1});
