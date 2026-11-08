@@ -18,7 +18,8 @@ export const WEAPONS = Object.freeze([
   {id:'starter',name:'採集ナイフ',price:0,attack:0,description:'旅の始まりを支える小さな刃。'},
   {id:'copper',name:'燐鉄の短剣',price:180,attack:3,description:'攻撃力 +3。浅い階層の探索が楽に。'},
   {id:'moon',name:'月紋の長剣',price:650,attack:7,description:'攻撃力 +7。中層へ進むための確かな力。'},
-  {id:'solar',name:'暁光の槍',price:1600,attack:12,description:'攻撃力 +12。深層の番人にも届く一撃。'}
+  {id:'solar',name:'暁光の槍',price:1600,attack:12,description:'攻撃力 +12。深層の番人にも届く一撃。'},
+  {id:'unarmed',name:'素手',price:0,attack:0,description:'武器を失った状態。街で新しい武器を購入できます。'}
 ]);
 export const STOCKS = Object.freeze([
   {id:'loom',name:'風織工房',ticker:'KAZE',base:32,description:'織物を届ける穏やかな商会。'},
@@ -152,7 +153,12 @@ function endRun(s,defeat=false){
   }
   awardGold(s,earned+(clear?500:0));
   s.mode='town';if(clear)s.stats.clears++;
-  if(defeat){s.hp=Math.ceil(s.maxHp*.4);s.hunger=60;log(s,`救助隊が街へ運んでくれた。探索袋は失ったが、${earned}Gを守った。`);}else log(s,clear?'暁の種を持ち帰った！ 街の謝礼500Gを獲得。':`無事に帰還！ ${earned}Gと探索品を持ち帰った。`);
+  if(defeat){
+    // A fallen explorer starts over personally; the town economy remains theirs.
+    s.level=1;s.xp=0;s.inventory=[];s.weaponId='unarmed';recalc(s);
+    s.hp=Math.ceil(s.maxHp*.4);s.hunger=60;
+    log(s,`救助隊が街へ運んでくれた。レベル1に戻り、武器とすべての持ち物を失った。土地・建物・株と所持金は残り、探索金${earned}Gを持ち帰った。`);
+  }else log(s,clear?'暁の種を持ち帰った！ 街の謝礼500Gを獲得。':`無事に帰還！ ${earned}Gと探索品を持ち帰った。`);
   if(s.runTurns>=12)advanceDay(s);else log(s,'短い探索のため、まだ日は進まない（12ターン以上で翌日）。');
   s.runLoot=[];s.runGold=0;s.runRelic=false;s.enemies=[];s.loot=[];s.map=null;s.player={x:0,y:0};
   return defeat?'defeat':clear?'victory':'return';

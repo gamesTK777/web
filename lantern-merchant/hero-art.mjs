@@ -77,7 +77,7 @@ function hood(c,back=false,blink=false){
     R(c,0,-27,2,2,P.skin);R(c,0,-23,3,1,P.skinD);R(c,-5,-25,2,1,'#e8ad83');
   }
 }
-function frontBack(c,direction,step,bob,sway,blink,attack,bright){
+function frontBack(c,direction,step,bob,sway,blink,attack,bright,unarmed=false){
   const back=direction==='up',legL=Math.round(step*3),legR=-legL,armL=-Math.round(step*2),armR=Math.round(step*2);
   // Grounded boots stay below the torso's breathing offset.
   boot(c,-8,2+legL,!back);boot(c,2,2+legR,!back);
@@ -87,7 +87,7 @@ function frontBack(c,direction,step,bob,sway,blink,attack,bright){
   S(c,[[-8,-20],[-3,-22],[0,4],[-8+sway,5]],P.teal);
   R(c,-10+sway,4,7,1,P.gold);R(c,3+sway,5,7,1,P.goldD);R(c,-8,-18,2,14,P.tealM);
   // Visible far equipment makes silhouettes different from all four directions.
-  sword(c,-12,-2+armL,attack,direction);
+  if(!unarmed)sword(c,-12,-2+armL,attack,direction);
   S(c,[[-8,-23],[7,-23],[10,-16],[9,0],[-9,0],[-10,-15]],P.ink);
   S(c,[[-6,-21],[5,-21],[7,-15],[7,-1],[-7,-1],[-7,-15]],back?P.teal:P.cloth);
   S(c,[[-6,-20],[-2,-20],[-1,-2],[-7,-2]],back?P.tealM:P.clothM);
@@ -96,6 +96,7 @@ function frontBack(c,direction,step,bob,sway,blink,attack,bright){
   // Sleeves, cuffs and fingers read clearly at the overview's smallest size.
   R(c,-12,-18+armL,5,10,P.ink);R(c,-11,-17+armL,4,7,P.teal);R(c,-11,-17+armL,2,5,P.tealM);
   R(c,-11,-10+armL,4,2,P.clothM);R(c,-11,-8+armL,4,4,P.skin);R(c,-10,-8+armL,2,3,P.skinL);
+  if(unarmed&&attack){const reach=[0,3,7,2][attack-1]||0,dy=back?-reach:reach;R(c,-11,-8,4,Math.abs(dy)+4,P.skin);R(c,-12,-7+dy,6,5,P.skin);R(c,-11,-7+dy,4,2,P.skinL);}
   R(c,8,-18+armR,5,10,P.ink);R(c,9,-17+armR,3,7,P.tealD);R(c,9,-17+armR,1,6,P.tealM);
   R(c,9,-10+armR,4,2,P.cloth);R(c,10,-8+armR,4,4,P.skinD);R(c,10,-8+armR,2,3,P.skinL);
   if(back){
@@ -115,7 +116,7 @@ function frontBack(c,direction,step,bob,sway,blink,attack,bright){
   R(c,5,-19,3,2,P.gold);R(c,6,-19,1,1,P.goldL);
   lantern(c,12,-3+armR,bright);c.restore();
 }
-function profile(c,direction,step,bob,sway,blink,attack,bright){
+function profile(c,direction,step,bob,sway,blink,attack,bright,unarmed=false){
   const left=direction==='left',d=left?-1:1,leg=Math.round(step*4),arm=-Math.round(step*3);
   // Profiles are drawn independently of final-canvas mirroring: highlights stay upper-left.
   boot(c,-5-leg,2,false);boot(c,-3+leg,3,true);
@@ -124,7 +125,7 @@ function profile(c,direction,step,bob,sway,blink,attack,bright){
   S(c,[[-d*6,-22],[-d*10,-18],[-d*(12+sway),4],[-d*5,6],[d*3,2],[d*3,-17]],P.tealD);
   S(c,[[-d*7,-21],[-d*9,-16],[-d*(10+sway),3],[-d*5,4],[-d*3,-16]],left?P.tealD:P.teal);
   R(c,-8,-17,2,15,P.tealM);R(c,-d*(10+sway),4,6,1,P.goldD);
-  sword(c,-d*11,-3+arm,attack,direction);
+  if(!unarmed)sword(c,-d*11,-3+arm,attack,direction);
   S(c,[[-7,-23],[5,-23],[9,-17],[7,1],[-7,1],[-9,-15]],P.ink);
   R(c,-5,-21,10,20,P.cloth);R(c,-4,-20,4,15,P.clothM);R(c,-4,-19,2,10,P.clothL);R(c,4,-17,3,17,P.clothD);
   R(c,-7,0,14,3,P.leatherD);R(c,-6,0,11,1,P.leatherM);R(c,left?-6:4,0,3,3,P.gold);
@@ -132,6 +133,7 @@ function profile(c,direction,step,bob,sway,blink,attack,bright){
   // Near shoulder and swinging forearm cross the bag strap.
   R(c,-3,-20+arm,7,12,P.ink);R(c,-2,-19+arm,5,9,P.teal);R(c,-2,-19+arm,2,7,P.tealM);
   R(c,-1,-10+arm,5,2,P.clothM);R(c,-1,-8+arm,5,4,P.skin);R(c,-1,-8+arm,3,3,P.skinL);
+  if(unarmed&&attack){const reach=[0,4,8,3][attack-1]||0;R(c,Math.min(0,d*reach),-8,Math.abs(reach)+4,4,P.skin);R(c,d*reach-1,-9,6,5,P.skin);R(c,d*reach,-9,4,2,P.skinL);}
   S(c,[[-9,-29],[-9,-37],[-5,-42],[3,-43],[8,-39],[11,-32],[9,-24],[3,-21],[-6,-23]],P.ink);
   S(c,[[-7,-30],[-7,-36],[-4,-40],[3,-41],[7,-37],[9,-31],[7,-25],[2,-23],[-5,-25]],P.tealD);
   S(c,[[-7,-31],[-5,-37],[-2,-40],[3,-40],[5,-38],[-1,-36],[-4,-29]],P.tealM);
@@ -147,21 +149,21 @@ function profile(c,direction,step,bob,sway,blink,attack,bright){
   R(c,-d*6,-19,4,6,P.tealD);R(c,left?-5:5,-20,3,2,P.gold);
   lantern(c,d*6-3,-3+arm,bright);c.restore();
 }
-function frameArtwork(c,direction,kind,frame){
+function frameArtwork(c,direction,kind,frame,unarmed=false){
   const walk=kind==='walk',step=walk?[0,.7,1,.7,0,-.7,-1,-.7][frame]:0;
   const bob=walk?(frame%4===2?-1:0):kind==='idle'&&(frame===1||frame===2)?-1:0;
   const sway=walk?Math.round(step*2):kind==='idle'&&frame===2?1:0;
   const blink=kind==='idle'&&frame===3,attack=kind==='attack'?frame+1:0,bright=frame%2===0;
   c.save();c.translate(32,49);
-  if(direction==='left'||direction==='right')profile(c,direction,step,bob,sway,blink,attack,bright);
-  else frontBack(c,direction,step,bob,sway,blink,attack,bright);
+  if(direction==='left'||direction==='right')profile(c,direction,step,bob,sway,blink,attack,bright,unarmed);
+  else frontBack(c,direction,step,bob,sway,blink,attack,bright,unarmed);
   c.restore();
 }
-function sprite(direction,kind,frame){
-  const key=`${direction}:${kind}:${frame}`;if(cache.has(key))return cache.get(key);
+function sprite(direction,kind,frame,unarmed=false){
+  const key=`${direction}:${kind}:${frame}:${unarmed?'unarmed':'armed'}`;if(cache.has(key))return cache.get(key);
   const canvas=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(64,72):typeof document!=='undefined'?document.createElement('canvas'):null;
   if(!canvas)return null;canvas.width=64;canvas.height=72;
-  const c=canvas.getContext('2d');if(!c)return null;c.imageSmoothingEnabled=false;frameArtwork(c,direction,kind,frame);cache.set(key,canvas);return canvas;
+  const c=canvas.getContext('2d');if(!c)return null;c.imageSmoothingEnabled=false;frameArtwork(c,direction,kind,frame,unarmed);cache.set(key,canvas);return canvas;
 }
 
 /** Same ground anchor as the original renderer: boots end approximately y + 12.
@@ -173,12 +175,12 @@ export function drawExplorer(c,x,y,size=40,time=0,motion={}){
   const kind=walking?'walk':attacking?'attack':'idle';
   const cycle=((time%6000)+6000)%6000;
   const frame=walking?Math.min(7,Math.floor(progress*8)):attacking?Math.min(3,Math.floor(progress*4)):cycle>5770?3:Math.floor(cycle/900)%3;
-  const scale=size/40,px=Math.round(x),py=Math.round(y),art=sprite(facing,kind,frame);
+  const scale=size/40,px=Math.round(x),py=Math.round(y),unarmed=!!motion.unarmed,art=sprite(facing,kind,frame,unarmed);
   c.save();c.imageSmoothingEnabled=false;
   // A short lower-right cast shadow shares the town's upper-left light direction.
   c.fillStyle='#142a3266';c.beginPath();c.ellipse(px+4*scale,py+11*scale,14*scale,4*scale,.12,0,Math.PI*2);c.fill();
   c.fillStyle='#0b1b3545';c.beginPath();c.ellipse(px,py+10*scale,8*scale,2.5*scale,0,0,Math.PI*2);c.fill();
   if(art)c.drawImage(art,Math.round(px-32*scale),Math.round(py-49*scale),64*scale,72*scale);
-  else{c.translate(px-32*scale,py-49*scale);c.scale(scale,scale);frameArtwork(c,facing,kind,frame);}
+  else{c.translate(px-32*scale,py-49*scale);c.scale(scale,scale);frameArtwork(c,facing,kind,frame,unarmed);}
   c.restore();
 }

@@ -94,3 +94,14 @@ test('all fifteen monster kinds request their own illustration and retain distin
   }
   assert.equal(silhouettes.size,11);assert.equal(drawExtraMonsterFallback(context(),'unknown'),false);
 });
+
+test('unarmed illustrated heroes keep their image anchor and walking legs while masking the knife in idle and combat',async()=>{
+  const r=setup();await r.preloadCharacters({views:['up','left','right']});
+  for(const facing of ['up','down','left','right'])for(const kind of ['idle','move','attack'])for(const reducedMotion of [false,true]){
+    const motion=Object.freeze({unarmed:true,facing,kind,progress:.48,reducedMotion}),before=JSON.stringify(motion),c=context();
+    assert.equal(r.drawAnimeExplorer(c,80,100,56,1000,motion),true);assert.equal(JSON.stringify(motion),before);
+    assert.ok(c.calls.some(v=>v.key==='clip'&&v.args[0]==='evenodd'),'the held knife is excluded in every pose');
+    assert.equal(c.calls.filter(v=>v.key==='drawImage').length,kind==='move'&&!reducedMotion?3:1);
+    assert.equal(c.imageSmoothingEnabled,false);assert.equal(c.imageSmoothingQuality,'low');
+  }
+});

@@ -19,7 +19,7 @@ const VIEWS={
   up:{shoulder:[.22,.34],mask:[[.14,.29],[.30,.32],[.31,.49],[.30,.65],[.15,.78],[.02,.72],[.10,.50]],raise:[-.13,-.29],hit:[-.12,-.04],angles:[-2.05,-1.54]}
 };
 /** Hide only the resting sword arm and replace it with a jointed moving arm. */
-export function drawSwordExplorer(c,image,g,facing,size,progress){
+export function drawSwordExplorer(c,image,g,facing,size,progress,options={}){
   const v=VIEWS[facing]||VIEWS.down,pose=swordPose(progress),left=-g.width/2,top=-g.height*g.anchor;
   const point=([x,y])=>[left+x*g.width,top+y*g.height],mask=v.mask.map(point),shoulder=point(v.shoulder);
   // Cloth behind the arm closes the small sleeve gap, while the original head,
@@ -27,11 +27,16 @@ export function drawSwordExplorer(c,image,g,facing,size,progress){
   poly(c,v.mask.filter(([,y])=>y<.54).map(point),'#284e49');
   c.save();c.beginPath();c.rect(left,top,g.width,g.height);
   mask.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.clip('evenodd');
-  c.drawImage(image,left,top,g.width,g.height);c.restore();
+  if(options.paintImage)options.paintImage();else c.drawImage(image,left,top,g.width,g.height);c.restore();
   const raise=pose.raise,cut=pose.cut,recover=pose.recover;
   const resting=[-.04,.32],held=v.raise,hit=v.hit;
   const offset=[0,1].map(i=>lerp(lerp(resting[i],held[i],raise),hit[i],cut));
-  const hand=[shoulder[0]+lerp(offset[0],resting[0],recover*.65)*size,shoulder[1]+lerp(offset[1],resting[1],recover*.65)*size];
+  let hand=[shoulder[0]+lerp(offset[0],resting[0],recover*.65)*size,shoulder[1]+lerp(offset[1],resting[1],recover*.65)*size];
+  if(options.unarmed){
+    const p=clamp(progress),reach=!options.attacking?0:p<.25?smooth(p/.25)*-.12:p<.49?lerp(-.12,1,smooth((p-.25)/.24)):p<.62?1:1-smooth((p-.62)/.38);
+    const target={down:[.10,.42],up:[-.06,-.15],left:[-.40,.08],right:[.40,.08]}[facing]||[.10,.42];
+    hand=[shoulder[0]+lerp(resting[0],target[0],reach)*size,shoulder[1]+(lerp(resting[1],target[1],reach)+(options.step||0)*.018)*size];
+  }
   const elbow=[lerp(shoulder[0],hand[0],.52)+(facing==='left'?1:-1)*size*.09,lerp(shoulder[1],hand[1],.52)+size*.035];
   c.save();c.lineCap='round';c.lineJoin='round';
   for(const [a,b,width,color]of [[shoulder,elbow,.17,'#122e32'],[elbow,hand,.135,'#122e32'],[shoulder,elbow,.125,'#386c61'],[elbow,hand,.09,'#e0c394']]){
@@ -39,6 +44,10 @@ export function drawSwordExplorer(c,image,g,facing,size,progress){
   }
   const cuffAngle=Math.atan2(hand[1]-elbow[1],hand[0]-elbow[0])+Math.PI/2;
   c.strokeStyle='#d4a75c';c.lineWidth=size*.042;c.beginPath();c.moveTo(elbow[0]-Math.cos(cuffAngle)*size*.065,elbow[1]-Math.sin(cuffAngle)*size*.065);c.lineTo(elbow[0]+Math.cos(cuffAngle)*size*.065,elbow[1]+Math.sin(cuffAngle)*size*.065);c.stroke();
+  if(options.unarmed){
+    circle(c,hand[0],hand[1],size*.071,'#8e614e');circle(c,hand[0]-size*.012,hand[1]-size*.009,size*.055,'#e5c39a');
+    circle(c,hand[0]+size*.035,hand[1]+size*.013,size*.026,'#c79b78');c.restore();return;
+  }
   const angle=lerp(lerp(1.8,v.angles[0],raise),v.angles[1],cut);
   c.translate(...hand);c.rotate(angle+recover*.16);c.globalAlpha*=1-clamp((recover-.65)/.35)*.4;
   // Long blade, two differently lit steel planes, brass guard and wrapped grip.
@@ -48,6 +57,23 @@ export function drawSwordExplorer(c,image,g,facing,size,progress){
   poly(c,[[size*.08,0],[size*1.08,0],[size*.97,size*.024],[size*.06,size*.031]],'#89c5c5');
   poly(c,[[-size*.014,-size*.115],[size*.05,-size*.115],[size*.06,size*.115],[-size*.014,size*.115]],'#d6ad65');
   circle(c,-size*.095,0,size*.046,'#e1bc8e');c.restore();
+}
+
+// The same small image mask removes the original knife while leaving the head,
+// lantern, backpack and ground anchor intact. Walking may paint its split legs
+// inside this clip; the replacement hand itself is always code-drawn.
+export function drawUnarmedExplorer(c,image,g,facing,size,progress,{attacking=false,step=0,paintImage}={}){
+  drawSwordExplorer(c,image,g,facing,size,progress,{unarmed:true,attacking,step,paintImage});
+}
+
+export function drawUnarmedImpact(c,{x,y,size=72,progress=0,damage=0,reducedMotion=false}){
+  const p=clamp(progress);if(p<.38||p>=1)return;
+  const fade=1-clamp((p-.59)/.41),radius=size*(reducedMotion?.10:.07+.07*clamp((p-.38)/.3));
+  c.save();c.translate(x,y);c.globalAlpha=fade;
+  circle(c,0,0,radius*1.7,'#f3c88255');circle(c,0,0,radius,'#ffe4a0');
+  if(!reducedMotion){c.strokeStyle='#eab77b';c.lineWidth=Math.max(1,size*.025);for(let i=0;i<4;i++){const a=i*Math.PI/2+.35,r=radius*2.5;c.beginPath();c.moveTo(Math.cos(a)*r,Math.sin(a)*r);c.lineTo(Math.cos(a)*(r+size*.07),Math.sin(a)*(r+size*.07));c.stroke();}}
+  c.restore();
+  if(damage){c.save();c.globalAlpha=fade;c.textAlign='center';c.font=`800 ${Math.max(13,size*.24)}px sans-serif`;c.strokeStyle='#17343c';c.lineWidth=3;c.fillStyle='#fff3bf';const yy=y-size*(.46+p*.22);c.strokeText(`−${damage}`,x,yy);c.fillText(`−${damage}`,x,yy);c.restore();}
 }
 
 export function drawSwordImpact(c,{x,y,size=72,progress=0,facing='down',damage=0,reducedMotion=false}){

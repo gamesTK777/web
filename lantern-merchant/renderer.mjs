@@ -1,8 +1,8 @@
 import {drawTown} from './town-art.mjs?v=20261108-anime10';
-import {drawExplorer as pixelPlayer} from './hero-art.mjs?v=20261106-art';
-import {drawAnimeExplorer,drawAnimeMonster,MONSTER_ART} from './anime-characters.mjs?v=20261108-anime10';
+import {drawExplorer as pixelPlayer} from './hero-art.mjs?v=20261108-defeat';
+import {drawAnimeExplorer,drawAnimeMonster,MONSTER_ART} from './anime-characters.mjs?v=20261108-defeat';
 import {drawAnimeDungeonTile} from './anime-environment.mjs?v=20261108-anime10';
-import {drawSwordImpact} from './combat-art.mjs?v=20261108-anime10';
+import {drawSwordImpact,drawUnarmedImpact} from './combat-art.mjs?v=20261108-defeat';
 import {drawExtraMonsterFallback} from './monster-art.mjs?v=20261107-enemies15';
 import {drawSwarmRoom,drawSwarmSleep,drawSwarmActive} from './swarm-art.mjs?v=20261107-swarm';
 /* Original pixel environments with the approved anime character illustrations. */
@@ -181,11 +181,11 @@ function minimap(c,w,h,state,cameraX,cameraY,viewCols,viewRows){
   const px=x+(state.player.x+.5)*s,py=y+(state.player.y+.5)*s;rect(c,px-2,py-2,4,4,'#fff2b1');
   c.save();c.beginPath();c.rect(x,y,mw,mh);c.clip();c.strokeStyle='#e9c58070';c.strokeRect(x+cameraX*s,y+cameraY*s,viewCols*s,viewRows*s);c.restore();
 }
-function drawEffect(c,e,px,py,tile,time){
+function drawEffect(c,e,px,py,tile,time,unarmed=false){
   const life=clamp((time-e.startedAt)/(e.duration||650),0,1);if(life>=1)return;
   const x=px(e.x)+tile*.5,y=py(e.y)+tile*.55;c.save();c.globalAlpha=1-life;
   if(e.kind==='attack'){
-    drawSwordImpact(c,{x,y:y-tile*.22,size:tile,progress:life,facing:e.facing,damage:e.damage,reducedMotion:!!e.reducedMotion});
+    (unarmed?drawUnarmedImpact:drawSwordImpact)(c,{x,y:y-tile*.22,size:tile,progress:life,facing:e.facing,damage:e.damage,reducedMotion:!!e.reducedMotion});
   }else if(e.kind==='hurt'){
     for(let i=0;i<8;i++){const a=i*Math.PI/4,r=tile*(.1+life*.5);rect(c,x+Math.cos(a)*r,y+Math.sin(a)*r,3,3,'#ee9779');}
   }else if(e.kind==='swarm-start'||e.kind==='swarm-clear'){
@@ -246,7 +246,7 @@ function dungeon(c,w,h,state,time,options){
   const ghosts=hits.filter(e=>e.killed&&!state.enemies.some(m=>m.id===e.enemy.id)).map(e=>e.enemy);
   const actors=[...(state.enemies||[]),...ghosts].filter(e=>visible(e.x,e.y)).map(e=>({y:e.y,enemy:e}));actors.push({y:playerWorld.y,hero:true});actors.sort((a,b)=>a.y-b.y);
   const eventMembers=['dormant','active'].includes(map.swarm?.status)?new Set(map.swarm.enemyIds):null;
-  for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress,reducedMotion:!!options.reducedMotion});else{
+  for(const actor of actors){if(actor.hero)player(c,playerScreen.x,playerScreen.y,tile*.78,time,{...motion,progress,reducedMotion:!!options.reducedMotion,unarmed:state.weaponId==='unarmed'});else{
     const e=actor.enemy,x=px(e.x)+tile*.5,y=py(e.y)+tile*.66,size=tile*(e.kind==='boss'?.98:.78);
     const hit=hits.findLast(h=>h.enemy.id===e.id),p=hit?clamp((time-hit.startedAt)/hit.duration,0,1):0;
     const recoil=hit&&!options.reducedMotion&&p>.38?Math.sin(clamp((p-.38)/.6)*Math.PI):0;
@@ -262,7 +262,7 @@ function dungeon(c,w,h,state,time,options){
       (map.swarm.status==='active'?drawSwarmActive:drawSwarmSleep)(c,x+size*.34,barTop-radius-4,tile);
     }
   }}
-  for(const e of options.effects||[])if(e.kind!=='enemy-hit'&&(!['swarm-start','swarm-clear','attack'].includes(e.kind)||visible(e.x,e.y)))drawEffect(c,e,px,py,tile,options.reducedMotion&&e.kind==='attack'?e.startedAt+e.duration*.48:time);
+  for(const e of options.effects||[])if(e.kind!=='enemy-hit'&&(!['swarm-start','swarm-clear','attack'].includes(e.kind)||visible(e.x,e.y)))drawEffect(c,e,px,py,tile,options.reducedMotion&&e.kind==='attack'?e.startedAt+e.duration*.48:time,state.weaponId==='unarmed');
   c.restore();
   const edge=c.createRadialGradient(playerScreen.x,playerScreen.y,Math.min(w,h)*.18,playerScreen.x,playerScreen.y,Math.max(w,h)*.8);edge.addColorStop(0,'rgba(2,10,22,0)');edge.addColorStop(1,'rgba(3,8,22,.34)');c.fillStyle=edge;c.fillRect(0,0,w,h);
   minimap(c,w,h,state,cameraX,cameraY,viewCols,viewRows);
@@ -277,5 +277,5 @@ export function drawScene(canvas,state,options={}){
   if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
   const c=canvas.getContext('2d');if(!c)return null;c.setTransform(dpr,0,0,dpr,0,0);c.imageSmoothingEnabled=false;
   if(state.mode==='dungeon')return dungeon(c,w,h,state,time,options);
-  return drawTown(c,w,h,state,time,options,(ctx,x,y,size,clock,motion)=>player(ctx,x,y,size,clock,{...motion,reducedMotion:!!options.reducedMotion}),drawIcon);
+  return drawTown(c,w,h,state,time,options,(ctx,x,y,size,clock,motion)=>player(ctx,x,y,size,clock,{...motion,reducedMotion:!!options.reducedMotion,unarmed:state.weaponId==='unarmed'}),drawIcon);
 }

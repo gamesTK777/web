@@ -1,4 +1,4 @@
-import {drawSwordExplorer,swordPose} from './combat-art.mjs?v=20261108-anime10';
+import {drawSwordExplorer,drawUnarmedExplorer,swordPose} from './combat-art.mjs?v=20261108-defeat';
 /* Approved anime illustrations are loaded once and drawn in presentation space.
  * These functions never change saved coordinates, combat, collision or inventory. */
 export const MONSTER_ART=Object.freeze({
@@ -89,7 +89,8 @@ export function createAnimeCharacterRenderer({loadImage=browserLoadImage,baseUrl
     c.save();shadow(c,x,foot,size);c.translate(x+dir*attack*size*.28,foot+(facing==='up'?-1:facing==='down'?1:0)*attack*size*.30);
     c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
     c.rotate((walking?step*.012:0)+dir*attack*.10);c.scale(1,1+breath);
-    if(attacking)drawSwordExplorer(c,image,g,facing,size,progress);else if(walking)walkingImage(c,image,g,step);else fullImage(c,image,g);
+    if(motion.unarmed)drawUnarmedExplorer(c,image,g,facing,size,progress,{attacking,step,paintImage:walking?()=>walkingImage(c,image,g,step):undefined});
+    else if(attacking)drawSwordExplorer(c,image,g,facing,size,progress);else if(walking)walkingImage(c,image,g,step);else fullImage(c,image,g);
     c.restore();return true;
   }
 

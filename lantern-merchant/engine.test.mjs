@@ -205,7 +205,7 @@ test('weapons are durable upgrades and duplicate purchases do not waste gold', (
   assert.equal(duplicate.state.gold, state.gold);
 });
 
-test('bumping a creature attacks, awards experience, and increases permanent level', () => {
+test('bumping a creature attacks, awards experience, and keeps the gained level on a safe return', () => {
   let state = perform(newGame(59), { type: 'enter' });
   const playerBefore = copy(state.player), levelBefore = state.level;
   state.enemies = [{ id: 'combat-fixture', kind: 'moss', name: '苔玉', x: state.player.x + 1, y: state.player.y, hp: 1, maxHp: 8, attack: 2, defense: 0, xp: 22 }];
@@ -220,15 +220,22 @@ test('bumping a creature attacks, awards experience, and increases permanent lev
   assert.equal(state.level, levelBefore + 1);
 });
 
-test('defeat discards expedition finds while protecting town equipment and assets', () => {
-  let state = newGame(60); state.gold = 3000;
-  state = perform(state, { type: 'buyWeapon', id: 'copper' });
+test('monster defeat resets level, equipment and every item while protecting purchased town assets', () => {
+  let state = newGame(60); state.gold = 8000;
+  state = perform(state, { type: 'buyWeapon', id: 'solar' });
   state = perform(state, { type: 'build', id: 'cottage', index: 0 });
-  state = perform(state, { type: 'buyStock', id: STOCKS[0].id, qty: 5 });
+  state = perform(state, { type: 'upgrade', index: 0 });
+  state = perform(state, { type: 'buyLand' });
+  state = perform(state, { type: 'build', id: 'workshop', index: 1 });
+  state = perform(state, { type: 'buyStock', id: STOCKS[0].id, qty: 10 });
+  state = perform(state, { type: 'buyStock', id: STOCKS[1].id, qty: 5 });
+  state.level=8;state.xp=19;state.maxFloor=7;state.stats.clears=2;state.stats.kills=42;
+  state.inventory=ITEMS.map(item=>({id:item.id,qty:2}));state=validateSave(state);
   const permanent = copy(state);
   state = perform(state, { type: 'enter' });
-  state.hp = 1; state.runLoot = [{ id: 'prism', qty: 3 }]; state.runGold = 31;
+  state.hp = 1; state.runLoot = [{ id: 'prism', qty: 3 },{id:'relic',qty:1}]; state.runRelic=true;state.runGold = 31;
   state.enemies = [{ id: 'defeat-fixture', kind: 'golem', name: '鉱殻', x: state.player.x + 1, y: state.player.y, hp: 20, maxHp: 20, attack: 99, defense: 0, xp: 20 }];
+  const expedition=state,before=copy(state);
   const result = act(state, { type: 'wait' });
   assert.equal(result.ok, true);
   assert.equal(result.event, 'defeat');
@@ -238,13 +245,51 @@ test('defeat discards expedition finds while protecting town equipment and asset
   assert.equal(count(state, 'prism'), 0);
   assert.deepEqual(state.stocks, permanent.stocks);
   assert.deepEqual(state.plots, permanent.plots);
-  assert.equal(state.weaponId, permanent.weaponId);
-  assert(state.hp > 0);
+  assert.deepEqual(state.prices,permanent.prices);assert.deepEqual(state.priceHistory,permanent.priceHistory);
+  assert.equal(state.level,1);assert.equal(state.xp,0);assert.equal(state.weaponId,'unarmed');
+  assert.deepEqual(state.inventory,[]);assert.deepEqual(state.runLoot,[]);assert.equal(state.runRelic,false);
+  assert.equal(state.maxHp,36);assert.equal(state.attack,5);assert.equal(state.defense,0);assert.equal(state.hp,15);assert.equal(state.hunger,60);
+  assert.equal(state.maxFloor,permanent.maxFloor);assert.equal(state.stats.clears,permanent.stats.clears);assert.equal(state.stats.kills,permanent.stats.kills);
+  assert.equal(state.stats.runs,permanent.stats.runs+1);assert.equal(state.day,permanent.day);assert.equal(state.map,null);assert.deepEqual(state.enemies,[]);
+  assert.deepEqual(expedition,before,'defeat does not mutate the caller or its owned assets');
   assert.deepEqual(validateSave(copy(state)), state);
 });
 
-test('ten floors lead to a guarded finale and the recovered relic completes the expedition', () => {
-  let state = perform(newGame(61), { type: 'enter' });
+test('starvation has the same personal losses and still pays retained property rent and stock dividends',()=>{
+  let state=newGame(74);state.gold=5000;
+  state=perform(state,{type:'buyWeapon',id:'moon'});
+  state=perform(state,{type:'build',index:0,id:'cottage'});
+  state=perform(state,{type:'upgrade',index:0});
+  state=perform(state,{type:'buyStock',id:'loom',qty:10});
+  state.level=6;state.xp=17;state=validateSave(state);
+  state=perform(state,{type:'enter'});state.enemies=[];state.hp=1;state.hunger=0;state.runTurns=11;
+  state.runGold=23;state.runLoot=[{id:'ore',qty:4}];
+  const before=copy(state),rent=rentTotal(state),dividend=2;
+  const result=act(state,{type:'wait'});assert.equal(result.ok,true);assert.equal(result.event,'defeat');state=result.state;
+  assert.equal(state.level,1);assert.equal(state.xp,0);assert.equal(state.weaponId,'unarmed');assert.deepEqual(state.inventory,[]);
+  assert.equal(state.hp,15);assert.equal(state.maxHp,36);assert.equal(state.attack,5);assert.equal(state.defense,0);
+  assert.equal(state.day,before.day+1);assert.equal(state.gold,before.gold+Math.floor(23/2)+rent+dividend);
+  assert.deepEqual(state.plots,before.plots);assert.deepEqual(state.stocks,before.stocks);assert.equal(rentTotal(state),rent);
+  assert.equal(state.runGold,0);assert.deepEqual(state.runLoot,[]);assert.deepEqual(validateSave(JSON.stringify(state)),state);
+  state=perform(state,{type:'buyWeapon',id:'copper'});assert.equal(state.weaponId,'copper');assert.equal(state.attack,8);
+  const cost=ITEMS.find(item=>item.id==='potion').buy;const gold=state.gold;
+  state=perform(state,{type:'buyItem',id:'potion'});assert.equal(count(state,'potion'),1);assert.equal(state.gold,gold-cost);
+});
+
+test('safe return preserves level, equipment and stored supplies while collecting expedition goods',()=>{
+  let state=newGame(75);state.gold=3000;state=perform(state,{type:'buyWeapon',id:'moon'});
+  state.level=7;state.xp=23;state=validateSave(state);const carried=copy(state.inventory),weapon=state.weaponId;
+  state=perform(state,{type:'enter'});state.runLoot=[{id:'ore',qty:2}];state.runGold=29;
+  const result=act(state,{type:'return'});assert.equal(result.ok,true);assert.equal(result.event,'return');state=result.state;
+  assert.equal(state.level,7);assert.equal(state.xp,23);assert.equal(state.weaponId,weapon);
+  for(const item of carried)assert.equal(count(state,item.id),item.qty);assert.equal(count(state,'ore'),2);
+  assert.deepEqual(validateSave(copy(state)),state);
+});
+
+test('ten floors lead to a guarded finale and victory retains the recovered explorer and belongings', () => {
+  let state=newGame(61);state.gold=5000;state=perform(state,{type:'buyWeapon',id:'moon'});
+  state.level=4;state.xp=7;state=validateSave(state);const carried=copy(state.inventory);
+  state = perform(state, { type: 'enter' });
   for (let floor = 1; floor <= 10; floor++) {
     assert.equal(state.floor, floor);
     assert.equal(state.maxFloor, floor);
@@ -261,6 +306,7 @@ test('ten floors lead to a guarded finale and the recovered relic completes the 
   state = perform(state, { type: 'move', dx: 0, dy: -1 });
   assert.equal(state.runRelic, true);
   assert.equal(count(state, 'relic', 'runLoot'), 1);
+  const explorer={level:state.level,xp:state.xp,weaponId:state.weaponId};
   const result = act(state, { type: 'stairs' });
   assert.equal(result.ok, true);
   assert.equal(result.event, 'victory');
@@ -268,6 +314,8 @@ test('ten floors lead to a guarded finale and the recovered relic completes the 
   assert.equal(state.mode, 'town');
   assert.equal(state.stats.clears, 1);
   assert.equal(count(state, 'relic'), 1);
+  assert.equal(state.level,explorer.level);assert.equal(state.xp,explorer.xp);assert.equal(state.weaponId,explorer.weaponId);
+  for(const item of carried)assert.equal(count(state,item.id),item.qty);
   assert(state.gold >= 680);
   assert.deepEqual(validateSave(copy(state)), state);
 });

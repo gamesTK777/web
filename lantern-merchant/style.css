@@ -94,4 +94,5 @@ body[data-mode="town"] .dungeon-controls>p{display:block;max-width:440px;color:#
 .music-track-list li.is-current{border-color:#e6be7d45;background:#e6be7d0d;color:var(--gold)}
 .music-track-list li.is-current>span{color:var(--gold)}
 #soundDialog .music-help{margin:0 0 18px;font-size:10px}
+body[data-mode="town"] .dpad .wait{font-size:10px;letter-spacing:-.05em;padding:0;line-height:1.2;white-space:nowrap}
 @media(max-width:760px){.current-music{padding:12px;gap:11px}.current-music strong{font-size:18px}.music-track-list li{grid-template-columns:102px minmax(0,1fr);gap:5px;padding:8px}.music-track-list li>span{font-size:9px}.music-track-list li>strong{font-size:10px}}

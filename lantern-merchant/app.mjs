@@ -1,6 +1,6 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-anime10';
-import {drawScene} from './renderer.mjs?v=20261108-anime10';
-import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-anime10';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-defeat';
+import {drawScene} from './renderer.mjs?v=20261108-defeat';
+import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-defeat';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261108-anime10';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
 import {createAudioManager} from './audio.mjs?v=20261108-music7';
@@ -8,7 +8,7 @@ import {TRACKS} from './music-score.mjs?v=20261108-music7';
 import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261107-swarm';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
 import {preloadEnvironment,getEnvironmentAssetStatus} from './anime-environment.mjs?v=20261108-anime10';
-import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-anime10';
+import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-defeat';
 import {ENEMY_TYPES} from './enemies.mjs?v=20261108-anime10';
 import {initGameFullscreen} from '../shared/fullscreen.mjs?v=20261108-fullscreen';
 
@@ -113,7 +113,7 @@ function dispatch(action){
   if(previous.mode==='dungeon'&&state.mode==='town'){
     const earned=state.gold-previous.gold;
     const title=result.event==='victory'?'暁の種を、街へ。':result.event==='defeat'?'救助隊が迎えに来た。':'おかえりなさい、採集商。';
-    const text=result.event==='defeat'?'今回の探索品は失いましたが、街の財産・装備・レベルは守られています。宿で体力を整えて、次の冒険へ。':`今回の帰還で ${money(earned)} G が所持金に加わりました。持ち帰った素材を売って、街と装備を育てましょう。`;
+    const text=result.event==='defeat'?'レベル1・経験値0に戻り、武器と持ち物をすべて失いました。所持金・株・土地・建物は残っています。宿と道具店で再出発の準備を。':`今回の帰還で ${money(earned)} G が所持金に加わりました。持ち帰った素材を売って、街と装備を育てましょう。`;
     $('sceneHint').textContent=title;toast(`${title} ${text}`);
   }
 }
@@ -138,11 +138,11 @@ function render(){
   $('primaryAction').innerHTML=dungeon?'足元を調べる <span>↓</span>':'迷宮へ出発 <span>↗</span>';
   $('dungeonControls').hidden=false;$('townTools').hidden=dungeon;
   $('dungeonControls').querySelector('.quick-actions').hidden=!dungeon;
-  $('movementHelp').textContent=dungeon?'矢印 / WASD 長押しで移動・攻撃。タップ・スワイプにも対応。':'矢印 / WASD 長押しで散歩。画面スワイプで移動、施設や区画をタップして選択。';
-  $('waitButton').setAttribute('aria-label',dungeon?'1ターン待つ':'近くの施設を調べる');$('waitButton').textContent=dungeon?'・':'調';
+  $('movementHelp').textContent=dungeon?'矢印 / WASD 長押しで移動・攻撃。タップ・スワイプにも対応。':'矢印 / WASD 長押しで散歩。画面スワイプで移動。「調べる」で近くの施設・区画を開く。';
+  $('waitButton').setAttribute('aria-label',dungeon?'1ターン待つ':'近くの施設・区画を調べる');$('waitButton').textContent=dungeon?'・':'調べる';$('waitButton').title=dungeon?'1ターン待つ（敵も行動します）':'最も近い施設・区画のメニューを開く（時間は進みません）';
   $('potionButton').innerHTML=`回復薬 <b>${count('potion')}</b>`;$('potionButton').disabled=!count('potion');
   $('foodButton').innerHTML=`食料 <b>${count('ration')}</b>`;$('foodButton').disabled=!count('ration');
-  const progress=[state.stats.runs>0,state.stats.earned>0,rentTotal(state)>0,state.weaponId!=='starter',state.stats.clears>0];
+  const progress=[state.stats.runs>0,state.stats.earned>0,rentTotal(state)>0,weapon.attack>0,state.stats.clears>0];
   const quest=state.stats.clears>0&&state.maxFloor>=MAX_FLOOR?['街の灯りを増やそう','暁の種を持ち帰りました。土地を広げ、家賃と商いで豊かな街を育てよう。']:rentTotal(state)>0?['最深部の「暁の種」を探そう','家賃を装備に変えて、地下10階の番人へ。食料と帰灯石の準備を忘れずに。']:state.stats.earned>0?['最初の貸家を建てよう','土地と建物から「庭付き貸家」を建てると、翌日から家賃が届きます。']:['最初の宝物を持ち帰ろう','迷宮で素材を拾い、帰還して売却。まずは入口の近くから探索しよう。'];
   $('questTitle').textContent=quest[0];$('questDescription').textContent=quest[1];$('milestones').innerHTML=progress.map(done=>`<i class="${done?'done':''}"></i>`).join('');
   $('eventLog').replaceChildren(...state.log.slice(-7).reverse().map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));
@@ -168,8 +168,8 @@ function renderWorkspace(){
   if(tab==='bag'){
     html=`<div class="workspace-header"><div><h3>${locked?'冒険のかばん':'持ち帰った宝物'}</h3><p>${locked?'探索品は無事に帰還すると持ち物になります。':'素材を売って、次の冒険と街づくりの資金に。'}</p></div>${!locked?'<button data-sell-all>素材をまとめて売る</button>':''}</div>`;
     const items=locked?[...state.inventory.map(i=>({...i,run:false})),...state.runLoot.map(i=>({...i,run:true}))]:state.inventory;
-    html+=items.length?`<div class="item-grid">${items.map(i=>itemRow(ITEMS.find(s=>s.id===i.id),i.qty,i.run)).join('')}</div>`:'<div class="empty-note">まだ宝物はありません。迷宮に出発してみよう。</div>';
-    html+='<p class="workspace-note">装備は失われません。素材の一括売却では、回復薬・食料などの道具は残ります。</p>';
+    html+=items.length?`<div class="item-grid">${items.map(i=>itemRow(ITEMS.find(s=>s.id===i.id),i.qty,i.run)).join('')}</div>`:'<div class="empty-note">持ち物はありません。宿で回復し、道具店で準備してから迷宮へ向かおう。</div>';
+    html+='<p class="workspace-note">素材の一括売却では、回復薬・食料などの道具は残ります。迷宮で倒れると、武器と持ち物はすべて失い、レベル1に戻ります。</p>';
   } else if(tab==='shop'){
     html=lock+'<div class="workspace-header"><div><h3>旅支度の道具店</h3><p>購入した武器は自動で装備されます。</p></div><button data-action="rest" '+disabled+'>宿で休む · 20G</button></div><div class="item-grid">';
     html+=ITEMS.filter(i=>i.buy!==null).map(i=>`<div class="item-row"><span class="item-symbol">${i.icon}</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-buy="${i.id}" ${disabled||state.gold<i.buy?'disabled':''}>${i.buy} G</button></div>`).join('');

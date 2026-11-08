@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newGame,act,validateSave} from './engine.mjs';
 import {drawScene} from './renderer.mjs';
-import {preloadCharacters} from './anime-characters.mjs?v=20261108-anime10';
-import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-anime10';
+import {preloadCharacters} from './anime-characters.mjs?v=20261108-defeat';
+import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-defeat';
 
 function canvas(width=640,height=480){
   const surface={clientWidth:width,clientHeight:height,width,height,paints:[]},stack=[];
@@ -14,7 +14,7 @@ function canvas(width=640,height=480){
     if(key==='restore')return()=>Object.assign(target,stack.pop());
     if(key==='createLinearGradient'||key==='createRadialGradient')return()=>({addColorStop(){}});
     if(key==='measureText')return text=>({width:String(text).length*7});
-    return(...args)=>{for(const v of args)if(typeof v==='number')assert.ok(Number.isFinite(v),String(key));surface.paints.push({method:key,color:target.fillStyle,alpha:target.globalAlpha,filter:target.filter,args});};
+    return(...args)=>{for(const v of args)if(typeof v==='number')assert.ok(Number.isFinite(v),String(key));surface.paints.push({method:key,color:target.fillStyle,strokeColor:target.strokeStyle,alpha:target.globalAlpha,filter:target.filter,args});};
   },set(target,key,value){target[key]=value;return true;}});
   surface.getContext=()=>c;return surface;
 }
@@ -48,4 +48,18 @@ test('loaded illustrations use the same transient kill lifecycle and restore alp
   assert.ok(enemyDraw);assert.ok(enemyDraw.alpha>0&&enemyDraw.alpha<1);assert.match(enemyDraw.filter,/brightness/);
   const late=renderFixture(state,effect,1.1);assert.ok(!late.paints.some(p=>p.method==='drawImage'&&p.args[0]?.url?.endsWith('/moss.webp')));
   assert.equal(impact.getContext().globalAlpha,1);assert.equal(impact.getContext().filter,'none');assert.equal(JSON.stringify(state),before);
+});
+
+test('a saved unarmed explorer renders a fist contact while equipped explorers retain their blade effect',()=>{
+  const base=killedEnemy().state,at={...base.player};base.map.visible[at.y][at.x]=true;
+  const effect=Object.freeze({kind:'attack',...at,facing:'right',damage:5,startedAt:1000,duration:ATTACK_DURATION});
+  for(const weaponId of ['starter','solar','unarmed']){
+    const state=validateSave({...base,weaponId}),before=JSON.stringify(state),cv=renderFixture(state,effect,.5);
+    assert.equal(JSON.stringify(state),before);
+    // Probe geometry itself: a sword uses a long quadratic cut, while a fist
+    // uses only circular contact and short radial marks.
+    assert.equal(cv.paints.some(p=>p.method==='stroke'&&p.strokeColor==='#50bdb8'),weaponId!=='unarmed');
+    assert.ok(cv.paints.some(p=>p.method==='fillText'&&p.args[0]==='−5'));
+    assert.equal(cv.getContext().globalAlpha,1);assert.equal(cv.getContext().filter,'none');
+  }
 });
