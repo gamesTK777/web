@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#203c44">
+  <meta name="description" content="小さな島々で、大きな一手を。占領・生産・地形を使いこなす、オリジナルのターン制戦略シミュレーション。">
+  <title>フロンティア・コマンド | TK777 ARCADE</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="style.css?v=20261108-frontier">
+</head>
+<body>
+  <header class="site-header">
+    <a class="portal-link tk-portal-return tk-portal-return--inline" href="../index.html"><span aria-hidden="true">←</span> ゲーム一覧</a>
+    <span class="site-brand">TK777 <span>/</span> FIELD NOTES <i aria-hidden="true"></i></span>
+    <div class="header-actions">
+      <button type="button" class="icon-button" id="soundButton" aria-label="サウンドを切り替える" aria-pressed="false">♪ <span>音 OFF</span></button>
+      <button type="button" class="icon-button" id="helpButton"><span aria-hidden="true">?</span> 遊び方</button>
+      <button type="button" class="icon-button fullscreen-button" data-game-fullscreen data-fullscreen-target="#gameViewport" data-fullscreen-focus="#boardCanvas" aria-pressed="false">⛶ 全画面</button>
+    </div>
+  </header>
+
+  <main class="command-center" id="gameViewport">
+    <section class="title-row" aria-label="フロンティア・コマンド">
+      <div class="game-title">
+        <p class="eyebrow"><span class="title-emblem" aria-hidden="true">✦</span> THINK AHEAD. MAKE YOUR MOVE.</p>
+        <h1>FRONTIER <span>COMMAND</span><b aria-hidden="true">.</b></h1>
+        <p class="japanese-title">フロンティア・コマンド <span>小さな島々で、大きな一手を。</span></p>
+      </div>
+      <button type="button" class="outline-button mission-menu-button" id="menuButton"><span aria-hidden="true">▤</span> 作戦を選ぶ <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="operations-bar" aria-label="作戦の状況">
+      <div class="mission-status"><span class="micro-label">CURRENT OPERATION</span><strong id="missionLabel">はじまりの島</strong></div>
+      <div class="hud-stat"><span class="micro-label">DAY</span><strong id="dayLabel">01</strong></div>
+      <div class="hud-stat team-stat"><span class="micro-label">TURN</span><strong id="turnLabel">あなたの番</strong></div>
+      <div class="hud-stat funds-stat"><span class="micro-label">FUNDS</span><strong id="fundsLabel">0 <small>G</small></strong></div>
+      <div class="hud-stat income-stat"><span class="micro-label">INCOME / TURN</span><strong id="incomeLabel">+0 <small>G</small></strong></div>
+    </section>
+
+    <div class="battle-layout">
+      <section class="battle-column" aria-label="戦術マップと操作">
+        <div class="map-toolbar">
+          <p class="objective"><span aria-hidden="true">⚑</span> <span id="objectiveText">敵の本部を占領して、島の指揮権を確保しよう。</span></p>
+          <div class="zoom-controls" role="group" aria-label="マップの拡大縮小">
+            <button type="button" id="zoomOutButton" aria-label="マップを縮小">−</button>
+            <span id="zoomLabel" aria-live="polite">100%</span>
+            <button type="button" id="zoomInButton" aria-label="マップを拡大">＋</button>
+          </div>
+        </div>
+
+        <div class="map-frame">
+          <div class="map-ruler" aria-hidden="true"><span>TACTICAL VIEW</span><span>ARCHIPELAGO / SECTOR 07</span><span class="north-indicator">N ↑</span></div>
+          <div class="board-scroll" id="boardScroll">
+            <canvas id="boardCanvas" width="1152" height="864" tabindex="0" role="application" aria-label="戦術マップ。矢印キーでマスを選び、Enterで部隊の選択と移動。Escapeで選択解除。">マップの描画にはCanvasに対応したブラウザーが必要です。</canvas>
+          </div>
+          <div class="map-caption"><div class="team-key"><span><i class="friendly-dot"></i> あなた</span><span><i class="enemy-dot"></i> CPU</span><span><i class="neutral-dot"></i> 中立拠点</span></div><span class="map-caption-note">選択 → 移動 → 行動</span></div>
+          <p class="boot-message" id="bootMessage" role="status">作戦マップを準備しています…</p>
+        </div>
+
+        <div class="command-status"><span class="signal-dot" aria-hidden="true"></span><p id="statusText" role="status" aria-live="polite" aria-atomic="true">味方の部隊を選んで、最初の一手を考えよう。</p></div>
+        <div class="turn-controls">
+          <button class="subtle-button" id="undoButton" type="button" disabled><span aria-hidden="true">↶</span> 移動を戻す</button>
+          <p>全部隊を動かさなくても<br><strong>ターンを終了できます。</strong></p>
+          <button class="primary-button end-turn-button" id="endTurnButton" type="button">ターン終了 <span aria-hidden="true">→</span></button>
+        </div>
+        <p class="touch-guide"><span aria-hidden="true">◎</span> 味方 → 光るマスへ移動 → 敵を選んで予測を確認 → 「攻撃する」。拡大したマップは指でスクロールできます。</p>
+      </section>
+
+      <aside class="command-sidebar" aria-label="指揮パネル">
+        <section class="selection-panel panel" aria-labelledby="selectionTitle">
+          <div class="panel-topline"><span class="micro-label">FIELD INTELLIGENCE</span><span class="panel-index" aria-hidden="true">01</span></div>
+          <h2 id="selectionTitle">部隊を選択</h2>
+          <p class="selection-meta" id="selectionMeta">あなたの一手から、作戦が動き出す。</p>
+          <div class="selection-body" id="selectionBody"><div class="selection-placeholder"><span aria-hidden="true">⌖</span><p>マップの部隊や拠点を選ぶと、<br>地形・戦力・行動を確認できます。</p></div></div>
+          <div class="action-panel" id="actionPanel" aria-label="選択した部隊または拠点の行動"></div>
+        </section>
+
+        <section class="panel campaign-panel" aria-labelledby="campaignTitle">
+          <div class="panel-topline"><span class="micro-label">CAMPAIGN</span><span class="panel-index" aria-hidden="true">02</span></div>
+          <h2 id="campaignTitle">島々をめぐる5つの作戦</h2>
+          <div class="mission-list" id="missionList"><p class="muted">作戦を読み込み中…</p></div>
+        </section>
+
+        <section class="panel log-panel" aria-labelledby="logTitle">
+          <div class="panel-topline"><span class="micro-label">RADIO LOG</span><span class="live-label"><i aria-hidden="true"></i> LIVE</span></div>
+          <h2 id="logTitle">作戦記録</h2>
+          <ol id="eventLog" class="event-log" aria-live="off"><li>作戦の開始を待っています。</li></ol>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="game-footer">
+      <p><strong>一手の先を、想像しよう。</strong><span>ORIGINAL TURN-BASED STRATEGY / TK777</span></p>
+      <div class="save-controls"><button type="button" id="saveButton">↓ 保存</button><button type="button" id="loadButton">↑ 続きから</button><button type="button" id="restartButton">↻ 作戦をやり直す</button></div>
+      <small>セーブデータはこの端末・ブラウザーに保存されます。</small>
+    </footer>
+  </main>
+
+  <dialog id="newGameDialog" class="game-dialog setup-dialog" aria-labelledby="setupTitle">
+    <div class="dialog-inner">
+      <button type="button" class="dialog-close" id="closeSetupButton" aria-label="作戦選択を閉じる">×</button>
+      <div class="setup-heading"><span class="setup-badge" aria-hidden="true">⚑</span><p class="eyebrow">YOUR NEXT OPERATION</p><h2 id="setupTitle">指揮官、作戦を選ぼう。</h2><p>地形を味方に。拠点を力に。<br>部隊の組み合わせが、勝利への道をひらく。</p></div>
+      <div class="setup-fields">
+        <label for="missionSelect"><span>作戦エリア</span><select id="missionSelect"><option value="1">作戦を読み込み中…</option></select></label>
+        <label for="difficultySelect"><span>CPUの強さ</span><select id="difficultySelect"><option value="easy">やさしい / はじめての指揮</option><option value="normal" selected>ふつう / 地形と戦力を読む</option><option value="hard">むずかしい / 一手先の攻防</option></select></label>
+      </div>
+      <div class="mission-brief" id="missionBrief"><p>部隊を動かし、敵の本部を目指しましょう。</p></div>
+      <div class="setup-facts"><span><b>01</b> CPU対戦</span><span><b>05</b> 作戦エリア</span><span><b>15–30</b> 分 / 1戦の目安</span></div>
+      <button type="button" class="primary-button start-button" id="startButton">この作戦を始める <span aria-hidden="true">→</span></button>
+      <button type="button" class="outline-button continue-button" id="continueButton" hidden>保存した作戦の続きから</button>
+      <p class="setup-footnote">進行はこの端末に自動保存されます。初めてなら、最初の作戦から。</p>
+    </div>
+  </dialog>
+
+  <dialog id="helpDialog" class="game-dialog help-dialog" aria-labelledby="helpTitle">
+    <div class="dialog-inner">
+      <button type="button" class="dialog-close" id="closeHelpButton" aria-label="遊び方を閉じる">×</button>
+      <p class="eyebrow">COMMANDER'S HANDBOOK</p><h2 id="helpTitle">一手ずつ、島を味方に。</h2>
+      <p class="help-lead">あなたとCPUが交互に部隊を動かす、ターン制の戦略ゲームです。急いで操作する必要はありません。</p>
+      <div class="help-steps">
+        <section><b>01</b><div><h3>味方を選んで、移動する</h3><p>味方の部隊を選ぶと、行けるマスが光ります。移動先を選び、そのあと攻撃・占領・待機を決めましょう。動き終わった部隊は色が落ち着きます。確定前の直前の移動は「移動を戻す」で取り消せます。</p></div></section>
+        <section><b>02</b><div><h3>得意な相手と、地形を選ぶ</h3><p>戦車は地上戦、対空車両は航空機、歩兵は占領が得意です。森や山では守りが強くなります。敵を選び、予測ダメージと反撃を確認してから「攻撃する」で確定します。</p></div></section>
+        <section><b>03</b><div><h3>占領して、収入と生産を増やす</h3><p>歩兵を拠点へ移動させて「占領」。完了まで続けて占領すると味方の拠点になります。空いている味方の工場や飛行場を選べば、新しい部隊を生産できます。</p></div></section>
+        <section><b>04</b><div><h3>準備ができたら、ターン終了</h3><p>味方拠点から収入を得て、次のターンに備えます。敵の本部を占領するか、敵の部隊と生産力を制圧すれば勝利です。</p></div></section>
+      </div>
+      <div class="help-note"><strong>砲兵の大切なルール</strong><p>砲兵は離れた敵を攻撃できますが、移動したターンには砲撃できません。敵に接近されない場所で、前のターンから準備しましょう。</p></div>
+      <section class="help-controls"><h3>操作方法</h3><dl><div><dt>マウス / iPhone</dt><dd>部隊やマスをクリック・タップ。拡大時はマップの中をスクロール。</dd></div><div><dt>キーボード</dt><dd>矢印キーでマスを選択、Enter / Spaceで決定、Escapeで解除。画面のボタンはTabでも選べます。</dd></div><div><dt>保存 / 続きから</dt><dd>進行はこの端末に自動保存。画面下の「保存」で手動保存、「続きから」で保存時点に戻ります。</dd></div></dl></section>
+    </div>
+  </dialog>
+
+  <dialog id="resultDialog" class="game-dialog result-dialog" aria-labelledby="resultTitle">
+    <div class="dialog-inner">
+      <div class="result-emblem" aria-hidden="true">✦</div><p class="eyebrow">OPERATION REPORT</p><h2 id="resultTitle">作戦完了</h2>
+      <div class="result-summary" id="resultSummary"></div>
+      <div class="result-actions"><button type="button" class="primary-button" id="nextMissionButton">次の作戦へ <span aria-hidden="true">→</span></button><button type="button" class="outline-button" id="retryButton">もう一度挑戦</button><button type="button" class="subtle-button" id="resultMenuButton">作戦を選び直す</button></div>
+    </div>
+  </dialog>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
+  <script type="module" src="app.mjs?v=20261108-frontier"></script>
+</body>
+</html>
