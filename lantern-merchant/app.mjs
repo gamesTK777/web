@@ -1,5 +1,5 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-defeat';
-import {drawScene} from './renderer.mjs?v=20261108-defeat';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,BAG_UPGRADES,bagCapacity,RETURN_FLOORS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-bag-exits';
+import {drawScene} from './renderer.mjs?v=20261108-bag-exits';
 import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-defeat';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261108-anime10';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
@@ -133,8 +133,10 @@ function render(){
   $('locationTitle').textContent=dungeon?`翠灯の迷宮 ― 地下${state.floor}階`:'水灯りの街';
   $('locationEyebrow').textContent=dungeon?'THE LANTERN DEPTHS':'YOUR HOMETOWN';
   $('locationBadge').textContent=dungeon?`TURN ${state.runTurns}`:'安全な拠点';
-  $('sceneCaption').textContent=dungeon?`探索袋 ${state.runLoot.reduce((s,i)=>s+i.qty,0)}/30 · 拾得金 ${state.runGold} G`:`所有地 ${state.plots.length} 区画 · 建物 ${state.plots.filter(p=>p.building).length} 棟`;
-  $('sceneHint').textContent=dungeon?'一歩ずつ、灯りの届く先へ。':'施設・区画をタップして選択。WASD / 矢印で街を散歩。';
+  $('sceneCaption').textContent=dungeon?`探索袋 ${state.runLoot.reduce((s,i)=>s+i.qty,0)}/${bagCapacity(state)} · 拾得金 ${state.runGold} G`:`所有地 ${state.plots.length} 区画 · 建物 ${state.plots.filter(p=>p.building).length} 棟 · 袋 ${bagCapacity(state)}個`;
+  const checkpointFloor=dungeon&&RETURN_FLOORS.includes(state.floor)&&state.map.tiles.some(row=>row.includes(4)),onReturn=dungeon&&[3,4].includes(state.map.tiles[state.player.y][state.player.x]);
+  $('sceneHint').textContent=dungeon?(onReturn?'ここから無料で街に戻れます。「街へ戻る」を選ぼう。':checkpointFloor?'下り階段の隣に「街へ」の出口。帰灯石なしで帰還できます。':'一歩ずつ、灯りの届く先へ。'):'施設・区画をタップして選択。WASD / 矢印で街を散歩。';
+  $('returnButton').textContent=onReturn?'街へ戻る · 無料':'街に帰還';
   $('primaryAction').innerHTML=dungeon?'足元を調べる <span>↓</span>':'迷宮へ出発 <span>↗</span>';
   $('dungeonControls').hidden=false;$('townTools').hidden=dungeon;
   $('dungeonControls').querySelector('.quick-actions').hidden=!dungeon;
@@ -169,9 +171,10 @@ function renderWorkspace(){
     html=`<div class="workspace-header"><div><h3>${locked?'冒険のかばん':'持ち帰った宝物'}</h3><p>${locked?'探索品は無事に帰還すると持ち物になります。':'素材を売って、次の冒険と街づくりの資金に。'}</p></div>${!locked?'<button data-sell-all>素材をまとめて売る</button>':''}</div>`;
     const items=locked?[...state.inventory.map(i=>({...i,run:false})),...state.runLoot.map(i=>({...i,run:true}))]:state.inventory;
     html+=items.length?`<div class="item-grid">${items.map(i=>itemRow(ITEMS.find(s=>s.id===i.id),i.qty,i.run)).join('')}</div>`:'<div class="empty-note">持ち物はありません。宿で回復し、道具店で準備してから迷宮へ向かおう。</div>';
-    html+='<p class="workspace-note">素材の一括売却では、回復薬・食料などの道具は残ります。迷宮で倒れると、武器と持ち物はすべて失い、レベル1に戻ります。</p>';
+    html+=`<p class="workspace-note">探索袋の上限は${bagCapacity(state)}個。道具店で最大60個まで拡張できます。素材の一括売却では、回復薬・食料などの道具は残ります。迷宮で倒れると、武器と持ち物はすべて失い、レベル1に戻ります。袋の拡張段階は維持します。</p>`;
   } else if(tab==='shop'){
-    html=lock+'<div class="workspace-header"><div><h3>旅支度の道具店</h3><p>購入した武器は自動で装備されます。</p></div><button data-action="rest" '+disabled+'>宿で休む · 20G</button></div><div class="item-grid">';
+    html=lock+'<div class="workspace-header"><div><h3>旅支度の道具店</h3><p>購入した武器は自動で装備されます。</p></div><button data-action="rest" '+disabled+'>宿で休む · 20G</button></div>';
+    html+=`<section class="bag-upgrades" aria-labelledby="bagUpgradeTitle"><div class="workspace-header"><div><h3 id="bagUpgradeTitle">探索袋を拡張</h3><p>現在 ${bagCapacity(state)}個まで · ${state.bagTier} / 3段階。順番に購入でき、拡張した容量は倒れても残ります。</p></div></div><div class="item-grid">${BAG_UPGRADES.map((upgrade,index)=>{const owned=state.bagTier>index,next=state.bagTier===index;return `<div class="item-row bag-upgrade ${next?'is-next':''}"><span class="item-symbol" aria-hidden="true">▣</span><div class="item-info"><b>${upgrade.name}</b><small>第${index+1}段階 · 上限${upgrade.capacity}個${next?' · 次の拡張':''}</small></div><button data-bag="${upgrade.id}" aria-label="${upgrade.name}：上限${upgrade.capacity}個、${money(upgrade.cost)}G${owned?'、購入済み':''}" ${locked||owned||!next||state.gold<upgrade.cost?'disabled':''}>${owned?'拡張済み':!next?'前段階が必要':money(upgrade.cost)+' G'}</button></div>`;}).join('')}</div></section><div class="item-grid">`;
     html+=ITEMS.filter(i=>i.buy!==null).map(i=>`<div class="item-row"><span class="item-symbol">${i.icon}</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-buy="${i.id}" ${disabled||state.gold<i.buy?'disabled':''}>${i.buy} G</button></div>`).join('');
     html+=WEAPONS.filter(i=>i.price).map(i=>{const owned=i.attack<=WEAPONS.find(w=>w.id===state.weaponId).attack;return `<div class="item-row"><span class="item-symbol">⚔</span><div class="item-info"><b>${i.name}</b><small>${i.description}</small></div><button data-weapon="${i.id}" ${locked||owned||state.gold<i.price?'disabled':''}>${owned?'入手済み':money(i.price)+' G'}</button></div>`;}).join('');
     html+='</div><p class="workspace-note">宿で休むとHPと満腹度が回復します。日は進みません。資金が20G未満なら救護所で一部回復できます。</p>';
@@ -186,8 +189,8 @@ function renderWorkspace(){
   }
   $('workspaceContent').innerHTML=html;
 }
-function returnHome(){if(state.mode!=='dungeon')return;const free=state.map.tiles[state.player.y][state.player.x]===3; if(free)dispatch({type:'return'});else if(!count('recall'))toast('帰灯石がありません。青い帰還門へ戻りましょう。');else confirm('帰灯石を使って帰還？','帰灯石を1つ使い、拾った品を持って街へ戻ります。',()=>dispatch({type:'return'}));}
-function inspectFloor(){if(state.mode==='town'){dispatch({type:'enter'});return;} const tile=state.map.tiles[state.player.y][state.player.x];if(tile===2)dispatch({type:'stairs'});else if(tile===3)returnHome();else toast('階段か青い帰還門の上で使えます。敵には移動で攻撃できます。');}
+function returnHome(){if(state.mode!=='dungeon')return;const free=[3,4].includes(state.map.tiles[state.player.y][state.player.x]); if(free)dispatch({type:'return'});else if(!count('recall'))toast('帰灯石がありません。入口の帰還門か、地下3・6・9階の「街へ」出口へ向かいましょう。');else confirm('帰灯石を使って帰還？','帰灯石を1つ使い、拾った品を持って街へ戻ります。',()=>dispatch({type:'return'}));}
+function inspectFloor(){if(state.mode==='town'){dispatch({type:'enter'});return;} const tile=state.map.tiles[state.player.y][state.player.x];if(tile===2)dispatch({type:'stairs'});else if([3,4].includes(tile))returnHome();else toast('階段・帰還門・「街へ」の出口の上で使えます。敵には移動で攻撃できます。');}
 
 function openWorkspace(value){
   if($('townDialog').open)$('townDialog').close();setFocus(false);tab=value;renderWorkspace();
@@ -248,6 +251,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.sell){const i=ITEMS.find(i=>i.id===b.dataset.sell);const action={type:'sell',id:i.id,qty:Number(b.dataset.qty)};if(i.kind==='consumable')confirm('道具を売却しますか？',`${i.name} ${action.qty}個を売却します。冒険で使う分が不要か確認してください。`,()=>dispatch(action));else dispatch(action);return;}
   if(b.hasAttribute('data-sell-all')){const loot=state.inventory.filter(i=>ITEMS.find(s=>s.id===i.id).kind==='loot');if(!loot.length){toast('売却できる素材はまだありません。');return;}const value=loot.reduce((s,i)=>s+ITEMS.find(v=>v.id===i.id).sell*i.qty,0);for(const i of loot){const r=act(state,{type:'sell',id:i.id,qty:i.qty});if(r.ok)state=r.state;}save();render();sound.play('sale');toast(`素材をまとめて売却し、${money(value)} G を受け取りました。`);return;}
   if(b.dataset.buy)dispatch({type:'buyItem',id:b.dataset.buy,qty:1});
+  if(b.dataset.bag)dispatch({type:'buyBag',id:b.dataset.bag});
   if(b.dataset.weapon)dispatch({type:'buyWeapon',id:b.dataset.weapon});
   if(b.dataset.stockBuy)dispatch({type:'buyStock',id:b.dataset.stockBuy,qty:1});
   if(b.dataset.stockSell)dispatch({type:'sellStock',id:b.dataset.stockSell,qty:1});

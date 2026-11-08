@@ -96,3 +96,6 @@ body[data-mode="town"] .dungeon-controls>p{display:block;max-width:440px;color:#
 #soundDialog .music-help{margin:0 0 18px;font-size:10px}
 body[data-mode="town"] .dpad .wait{font-size:10px;letter-spacing:-.05em;padding:0;line-height:1.2;white-space:nowrap}
 @media(max-width:760px){.current-music{padding:12px;gap:11px}.current-music strong{font-size:18px}.music-track-list li{grid-template-columns:102px minmax(0,1fr);gap:5px;padding:8px}.music-track-list li>span{font-size:9px}.music-track-list li>strong{font-size:10px}}
+
+/* Permanent exploration-bag upgrades */
+.bag-upgrades{margin-bottom:22px;padding:16px;border:1px solid #c3c18c40;border-radius:12px;background:#e6be7d08}.bag-upgrades .workspace-header{margin-bottom:12px}.bag-upgrade.is-next{border-color:#bdc58e88;background:#b3c88c0a}.bag-upgrade .item-info{min-width:0}.bag-upgrade button{flex-shrink:0;white-space:nowrap;min-height:44px}.bag-upgrades h3{color:var(--gold)}@media(max-width:760px){.bag-upgrades{padding:10px}.bag-upgrades .item-row{padding:10px;gap:9px}.bag-upgrade .item-symbol{display:none}.bag-upgrade button{padding:8px 10px}}

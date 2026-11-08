@@ -1,6 +1,13 @@
 // Original turn-based adventure and town economy. No network or real-money transactions.
 import {ENEMY_BY_ID,enemiesForFloor,enemyStats,MAX_FLOOR} from './enemies.mjs?v=20261108-anime10';
 export {MAX_FLOOR};
+export const RETURN_FLOORS = Object.freeze([3,6,9]);
+export const BAG_UPGRADES = Object.freeze([
+  {id:'satchel',name:'旅人の拡張袋',capacity:40,cost:200},
+  {id:'rucksack',name:'採集家の拡張袋',capacity:50,cost:500},
+  {id:'caravan',name:'大商人の拡張袋',capacity:60,cost:1000}
+]);
+export const bagCapacity = state => BAG_UPGRADES[(state.bagTier??0)-1]?.capacity??30;
 export const normalEnemyCount=floor=>Math.min(12,3+floor);
 export const swarmEnemyCount=floor=>floor>=2&&floor<=4?floor+4:floor>=6&&floor<=9?8:0;
 export const ITEMS = Object.freeze([
@@ -116,6 +123,8 @@ function generateFloor(s) {
   s.player={x:rooms[0].cx,y:rooms[0].cy};s.enemies=[];s.loot=[];
   tiles[s.player.y][s.player.x]=3;
   tiles[rooms[5].cy][rooms[5].cx]=2;
+  // Milestone exits sit beside the onward stairs; the original entrance stays usable.
+  if(RETURN_FLOORS.includes(s.floor))tiles[rooms[5].cy][rooms[5].cx-1]=4;
   const f=s.floor;
   // Show the newly introduced species first, then vary familiar creatures.
   // The count of creatures is unchanged; extra species do not crowd the map.
@@ -138,7 +147,7 @@ function generateFloor(s) {
 }
 function collect(s) {
   const here=s.loot.filter(l=>l.x===s.player.x&&l.y===s.player.y);
-  for(const l of here){if(s.runLoot.reduce((n,v)=>n+v.qty,0)>=30){log(s,'探索袋がいっぱい（30個）。帰還して品物を整理しよう。');break;}add(s.runLoot,l.id,1);s.loot.splice(s.loot.indexOf(l),1);log(s,`${itemById[l.id].name}を見つけた。`);}
+  for(const l of here){if(s.runLoot.reduce((n,v)=>n+v.qty,0)>=bagCapacity(s)){log(s,`探索袋がいっぱい（${bagCapacity(s)}個）。帰還して品物を整理しよう。`);break;}add(s.runLoot,l.id,1);s.loot.splice(s.loot.indexOf(l),1);log(s,`${itemById[l.id].name}を見つけた。`);}
 }
 function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,s.floor===MAX_FLOOR?'暁の種を手に入れた！ 階段から帰還しよう。':'暁の種を守り抜いた。さらに下層へ進めます。帰灯石で街に戻ることもできます。');}clearSwarm(s);}
 function advanceDay(s){
@@ -202,7 +211,7 @@ function enemyTurn(s,{justAwakened=false}={}){
 function tick(s){s.turn++;s.runTurns++;s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);if(s.hunger===0){s.hp-=2;if(s.hp<=0)return endRun(s,true);}else if(s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);const justAwakened=activateSwarm(s),event=enemyTurn(s,{justAwakened});if(s.mode==='dungeon')reveal(s);return event||(justAwakened?'swarm-start':null);}
 export function newGame(seed=Date.now()){
   const n=(Number(seed)>>>0)||1;
-  const s={version:1,seed:n,rng:n,day:1,gold:180,level:1,xp:0,hp:36,maxHp:36,hunger:100,attack:5,defense:0,weaponId:'starter',inventory:[{id:'potion',qty:3},{id:'ration',qty:2},{id:'recall',qty:1}],stocks:Object.fromEntries(STOCKS.map(v=>[v.id,0])),prices:Object.fromEntries(STOCKS.map(v=>[v.id,v.base])),priceHistory:Object.fromEntries(STOCKS.map(v=>[v.id,[v.base]])),plots:[{building:null,level:1}],mode:'town',floor:1,maxFloor:0,turn:0,player:{x:0,y:0},map:null,enemies:[],loot:[],runLoot:[],runGold:0,runTurns:0,runRelic:false,log:['灯都へようこそ。迷宮の品を持ち帰り、あなたの街を育てよう。'],stats:{runs:0,clears:0,kills:0,earned:0}};
+  const s={version:1,seed:n,rng:n,day:1,gold:180,level:1,xp:0,hp:36,maxHp:36,hunger:100,attack:5,defense:0,weaponId:'starter',bagTier:0,inventory:[{id:'potion',qty:3},{id:'ration',qty:2},{id:'recall',qty:1}],stocks:Object.fromEntries(STOCKS.map(v=>[v.id,0])),prices:Object.fromEntries(STOCKS.map(v=>[v.id,v.base])),priceHistory:Object.fromEntries(STOCKS.map(v=>[v.id,[v.base]])),plots:[{building:null,level:1}],mode:'town',floor:1,maxFloor:0,turn:0,player:{x:0,y:0},map:null,enemies:[],loot:[],runLoot:[],runGold:0,runTurns:0,runRelic:false,log:['灯都へようこそ。迷宮の品を持ち帰り、あなたの街を育てよう。'],stats:{runs:0,clears:0,kills:0,earned:0}};
   return s;
 }
 export function act(state,action){
@@ -231,10 +240,10 @@ export function act(state,action){
   if(action.type==='stairs'){
     if(s.map.tiles[s.player.y][s.player.x]!==2)return fail('光る階段の上で使ってください。');
     if(s.floor===MAX_FLOOR){if(!s.runRelic||s.enemies.some(enemy=>enemy.kind==='boss'))return fail('地下10階の灯晶の番人を倒し、暁の種を手に入れよう。');event=endRun(s);return finish();}
-    s.floor++;s.turn++;s.runTurns++;generateFloor(s);message=`B${s.floor}へ降りた。帰還口からはいつでも街へ戻れます。`;event='stairs';return finish();
+    s.floor++;s.turn++;s.runTurns++;generateFloor(s);message=`B${s.floor}へ降りた。${RETURN_FLOORS.includes(s.floor)?'下り階段の隣に街へ戻る出口があります。':'入口の帰還門か帰灯石で街へ戻れます。'}`;event='stairs';return finish();
   }
   if(action.type==='return'){
-    if(s.map.tiles[s.player.y][s.player.x]!==3&&!consume(s,'recall'))return fail('帰還口へ戻るか、帰灯石を使ってください。');event=endRun(s);return finish();
+    if(![3,4].includes(s.map.tiles[s.player.y][s.player.x])&&!consume(s,'recall'))return fail('帰還口へ戻るか、帰灯石を使ってください。');event=endRun(s);return finish();
   }
   if(action.type==='use'){
     const item=itemById[action.id];if(!item||item.kind!=='consumable')return fail('使える道具を選んでください。');
@@ -254,6 +263,13 @@ export function act(state,action){
   }
   if(action.type==='buyItem'){
     const item=itemById[action.id];if(!item||!item.buy)return fail('その品物はお店にありません。');const cost=item.buy*qty;if(s.gold<cost)return fail('所持金が足りません。');if(quantity(s.inventory,item.id)+qty>MAXSTACK)return fail('これ以上は持てません。');s.gold-=cost;add(s.inventory,item.id,qty);message=`${item.name}を${qty}個購入した。`;return finish();
+  }
+  if(action.type==='buyBag'){
+    const tier=s.bagTier??0,next=BAG_UPGRADES[tier];
+    if(!next)return fail('探索袋は最大まで拡張されています。');
+    if(action.id!==next.id||qty!==1)return fail('袋は1段階ずつ拡張できます。');
+    if(s.gold<next.cost)return fail('所持金が足りません。');
+    s.gold-=next.cost;s.bagTier=tier+1;message=`${next.name}を購入。探索袋の上限が${next.capacity}個になった。拡張した容量は倒れても失いません。`;event='equip';return finish();
   }
   if(action.type==='buyWeapon'){
     const weapon=weaponById[action.id];if(!weapon)return fail('装備を選んでください。');if(weapon.attack<=weaponById[s.weaponId].attack)return fail('すでに同等以上の装備を持っています。');if(s.gold<weapon.price)return fail('所持金が足りません。');s.gold-=weapon.price;s.weaponId=weapon.id;recalc(s);message=`${weapon.name}を購入・装備した。`;event='equip';return finish();
@@ -287,6 +303,7 @@ export function validateSave(raw){
   for(const key of ['day','gold','level','xp','hp','hunger','floor','maxFloor','turn','runGold','runTurns']){
     const bounds={day:[1,1000000],gold:[0,MAXGOLD],level:[1,30],xp:[0,10000],hp:[1,181],hunger:[0,100],floor:[1,MAX_FLOOR],maxFloor:[0,MAX_FLOOR],turn:[0,100000000],runGold:[0,MAXGOLD],runTurns:[0,10000000]}[key];s[key]=num(source[key],...bounds,key!=='hunger');
   }
+  s.bagTier=Object.hasOwn(source,'bagTier')?num(source.bagTier,0,BAG_UPGRADES.length):0;
   if(!['town','dungeon'].includes(source.mode)||!weaponById[source.weaponId])invalid();s.mode=source.mode;s.weaponId=source.weaponId;recalc(s);if(s.hp>s.maxHp)invalid();
   function inventory(v){const ids=new Set();return list(v,ITEMS.length).map(e=>{if(!obj(e)||!itemById[e.id]||ids.has(e.id))invalid();ids.add(e.id);return{id:e.id,qty:num(e.qty,1,MAXSTACK)};});}
   s.inventory=inventory(source.inventory);s.runLoot=inventory(source.runLoot);s.runRelic=bool(source.runRelic);
@@ -298,7 +315,7 @@ export function validateSave(raw){
   if(s.mode==='town'){if(source.map!==null||s.runLoot.length||s.runGold||s.runRelic)invalid();s.map=null;s.player={x:0,y:0};s.enemies=[];s.loot=[];return s;}
   const m=source.map;if(!obj(m)||m.width!==W||m.height!==H||!obj(source.player))invalid();
   const grid=(value,parse)=>{if(!Array.isArray(value)||value.length!==H)invalid();return value.map(row=>{if(!Array.isArray(row)||row.length!==W)invalid();return row.map(parse);});};
-  s.map={width:W,height:H,tiles:grid(m.tiles,n=>num(n,0,3)),seen:grid(m.seen,bool),visible:grid(m.visible,bool),rooms:list(m.rooms,12).map(r=>{if(!obj(r))invalid();return{x:num(r.x,1,W-2),y:num(r.y,1,H-2),width:num(r.width,1,W-2),height:num(r.height,1,H-2),cx:num(r.cx,1,W-2),cy:num(r.cy,1,H-2)};})};
+  s.map={width:W,height:H,tiles:grid(m.tiles,n=>num(n,0,4)),seen:grid(m.seen,bool),visible:grid(m.visible,bool),rooms:list(m.rooms,12).map(r=>{if(!obj(r))invalid();return{x:num(r.x,1,W-2),y:num(r.y,1,H-2),width:num(r.width,1,W-2),height:num(r.height,1,H-2),cx:num(r.cx,1,W-2),cy:num(r.cy,1,H-2)};})};
   const point=v=>{if(!obj(v))invalid();const p={x:num(v.x,0,W-1),y:num(v.y,0,H-1)};if(!walkable(s,p.x,p.y))invalid();return p;};
   s.player=point(source.player);const occupiedPositions=new Set([`${s.player.x},${s.player.y}`]),enemyIds=new Set();
   s.enemies=list(source.enemies,40).map(e=>{const p=point(e);if(typeof e.kind!=='string'||!Object.hasOwn(ENEMY_BY_ID,e.kind))invalid();const key=`${p.x},${p.y}`;if(occupiedPositions.has(key)||enemyIds.has(e.id))invalid();occupiedPositions.add(key);enemyIds.add(e.id);const maxHp=num(e.maxHp,1,1000),hp=num(e.hp,1,maxHp);return{id:str(e.id,80),kind:e.kind,name:str(e.name,40),...p,hp,maxHp,attack:num(e.attack,1,100),defense:num(e.defense,0,100),xp:num(e.xp,1,1000)};});
@@ -320,7 +337,7 @@ export function validateSave(raw){
     if(s.enemies.some(e=>e.id.startsWith('swarm-')&&!ids.includes(e.id)))invalid();
     s.map.swarm={roomIndex,status:swarm.status,enemyIds:[...ids]};
   }
-  let exits=0,stairs=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){if((x===0||x===W-1||y===0||y===H-1)&&s.map.tiles[y][x]!==0)invalid();if(s.map.tiles[y][x]===2)stairs++;if(s.map.tiles[y][x]===3)exits++;}if(stairs!==1||exits!==1)invalid();
+  let exits=0,stairs=0,checkpoints=0;for(let y=0;y<H;y++)for(let x=0;x<W;x++){if((x===0||x===W-1||y===0||y===H-1)&&s.map.tiles[y][x]!==0)invalid();if(s.map.tiles[y][x]===2)stairs++;if(s.map.tiles[y][x]===3)exits++;if(s.map.tiles[y][x]===4)checkpoints++;}if(stairs!==1||exits!==1||checkpoints>1||(checkpoints&&!RETURN_FLOORS.includes(s.floor)))invalid();
   // Reject disconnected imported floors, so a valid save cannot strand the player.
   const queue=[s.player],reached=new Set([`${s.player.x},${s.player.y}`]);for(let i=0;i<queue.length;i++){const p=queue[i];for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!reached.has(key)){reached.add(key);queue.push({x,y});}}}
   for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(s.map.tiles[y][x]!==0&&!reached.has(`${x},${y}`))invalid();reveal(s);return s;

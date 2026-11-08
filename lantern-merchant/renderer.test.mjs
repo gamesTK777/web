@@ -59,6 +59,22 @@ test('zoomed mobile cameras keep the hero tap anchor finite and on screen near f
   }
 });
 
+test('town checkpoints show a labeled doorway and a distinct minimap marker without revealing unseen gates',()=>{
+  for(const [width,height] of [[355,560],[1280,720]]){
+    const base=act(newGame(508),{type:'enter'}).state,{x,y}=base.player;
+    base.map.tiles[y][x]=4;
+    const before=JSON.stringify(base),canvas=makeCanvas(width,height);
+    drawScene(canvas,deepFreeze(base),{time:1000,zoom:3});
+    assert.ok(canvas.text.includes('街へ'),'the new gate states its destination directly');
+    assert.ok(canvas.paints.some(p=>p.color==='#75ead5'),'the minimap distinguishes town checkpoints from stairs');
+    assert.equal(JSON.stringify(base),before);
+    const hidden=JSON.parse(before);hidden.map.seen[y][x]=false;hidden.map.visible[y][x]=false;
+    const hiddenCanvas=makeCanvas(width,height);drawScene(hiddenCanvas,hidden,{time:1000,zoom:3});
+    assert.ok(!hiddenCanvas.text.includes('街へ'),'unseen checkpoint labels stay hidden');
+    assert.ok(!hiddenCanvas.paints.some(p=>p.color==='#75ead5'));
+  }
+});
+
 test('walking, combat effects, and reduced motion render safely through a turn boundary',()=>{
   const state=act(newGame(77),{type:'enter'}).state,canvas=makeCanvas(390,560);
   const to={...state.player},from={x:to.x+1,y:to.y};

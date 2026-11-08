@@ -153,6 +153,9 @@ function tileArtwork(c,value,variant,p){
   }
 }
 function drawTile(c,x,y,size,value,variant,paletteIndex){
+  // Checkpoint gates are layered over ordinary paving, keeping their animated
+  // light separate from the cached terrain and the original entrance portal.
+  if(value===4)value=1;
   if(drawAnimeDungeonTile(c,x,y,size,value,variant,paletteIndex))return;
   const key=`${paletteIndex}:${value}:${variant}`;let tile=tileCache.get(key);
   if(tile===undefined){
@@ -171,12 +174,34 @@ function torch(c,x,y,size,time,paletteIndex){
   poly(c,[[-3,-7],[-3,-15],[1+sway,-21],[2,-13],[4,-10],[2,-6]],flame);rect(c,-1,-13,3,6,'#fff1bf');
   rect(c,-5,8,10,3,'#394a45');c.restore();
 }
+function returnCheckpoint(c,x,y,size,time){
+  const pulse=.72+Math.sin(time/720)*.12,cx=x+size*.5;
+  c.save();
+  glow(c,cx,y+size*.55,size*.78,`rgba(112,232,211,${pulse*.24})`);
+  // A warm stone arch and a mint opening read as a doorway, rather than the
+  // downward staircase or the diamond-shaped gate at each floor's entrance.
+  c.fillStyle='#102f3a';c.beginPath();c.ellipse(cx,y+size*.77,size*.35,size*.13,0,0,Math.PI*2);c.fill();
+  c.strokeStyle='#e9c984';c.lineWidth=Math.max(1.5,size*.035);c.beginPath();c.ellipse(cx,y+size*.77,size*.32,size*.105,0,0,Math.PI*2);c.stroke();
+  const light=c.createLinearGradient(cx,y+size*.28,cx,y+size*.78);light.addColorStop(0,'#c7fff0');light.addColorStop(.55,'#63cbbd');light.addColorStop(1,'#326f7888');
+  c.beginPath();c.moveTo(x+size*.31,y+size*.76);c.lineTo(x+size*.31,y+size*.44);c.quadraticCurveTo(cx,y+size*.17,x+size*.69,y+size*.44);c.lineTo(x+size*.69,y+size*.76);c.closePath();c.fillStyle=light;c.fill();
+  c.strokeStyle='#344955';c.lineWidth=size*.105;c.beginPath();c.moveTo(x+size*.25,y+size*.76);c.lineTo(x+size*.25,y+size*.43);c.quadraticCurveTo(cx,y+size*.03,x+size*.75,y+size*.43);c.lineTo(x+size*.75,y+size*.76);c.stroke();
+  c.strokeStyle='#dfbd78';c.lineWidth=size*.047;c.stroke();
+  for(const side of [-1,1]){const xx=cx+side*size*.25;rect(c,xx-size*.065,y+size*.72,size*.13,size*.075,'#f4db9a');rect(c,xx-size*.055,y+size*.40,size*.11,size*.045,'#ffe9b5');}
+  const shimmer=(time/1700)%1;
+  c.globalAlpha=.25+Math.sin(shimmer*Math.PI)*.45;
+  rect(c,cx-size*.012,y+size*(.65-shimmer*.25),size*.025,size*.11,'#eaffdf');c.globalAlpha=1;
+  rect(c,cx-size*.29,y+size*.82,size*.58,size*.16,'#102e37');
+  c.strokeStyle='#e9c984';c.lineWidth=1;c.strokeRect(cx-size*.29,y+size*.82,size*.58,size*.16);
+  label(c,'街へ',cx,y+size*.90,Math.max(9,size*.14),'#f9e5ae');
+  c.restore();
+}
 function minimap(c,w,h,state,cameraX,cameraY,viewCols,viewRows){
   const map=state.map,s=w<550?2.4:3.5,mw=map.width*s,mh=map.height*s,x=w-mw-22,y=23;
   c.fillStyle='#07141be6';c.fillRect(x-9,y-16,mw+18,mh+28);c.strokeStyle='#b8ac785e';c.lineWidth=1;c.strokeRect(x-9.5,y-16.5,mw+19,mh+29);
   label(c,`B${state.floor} · 探索図`,x+mw/2,y-7,8,'#cfcaab');
   for(let yy=0;yy<map.height;yy++)for(let xx=0;xx<map.width;xx++)if(map.seen[yy][xx]){
-    const v=map.tiles[yy][xx];if(v===0){if(map.visible[yy][xx])rect(c,x+xx*s,y+yy*s,s,s,'#3e5d5d');}else rect(c,x+xx*s,y+yy*s,s,s,v===3?'#92e2d4':v===2?'#e9bd78':map.visible[yy][xx]?'#849a87':'#3e5856');
+    const v=map.tiles[yy][xx];if(v===0){if(map.visible[yy][xx])rect(c,x+xx*s,y+yy*s,s,s,'#3e5d5d');}else rect(c,x+xx*s,y+yy*s,s,s,v===4?'#75ead5':v===3?'#92e2d4':v===2?'#e9bd78':map.visible[yy][xx]?'#849a87':'#3e5856');
+    if(v===4){c.strokeStyle='#ffe2a1';c.lineWidth=1;c.strokeRect(x+xx*s-.5,y+yy*s-.5,s+1,s+1);}
   }
   const px=x+(state.player.x+.5)*s,py=y+(state.player.y+.5)*s;rect(c,px-2,py-2,4,4,'#fff2b1');
   c.save();c.beginPath();c.rect(x,y,mw,mh);c.clip();c.strokeStyle='#e9c58070';c.strokeRect(x+cameraX*s,y+cameraY*s,viewCols*s,viewRows*s);c.restore();
@@ -228,6 +253,7 @@ function dungeon(c,w,h,state,time,options){
       if(tiles[y-1]?.[x]===0){c.fillStyle='#06151d55';c.fillRect(xx,yy,tile,tile*.16);}
       if(tiles[y]?.[x-1]===0){c.fillStyle='#06151d33';c.fillRect(xx,yy,tile*.1,tile);}
       if(v===3&&vis)glow(c,xx+tile*.5,yy+tile*.5,tile*.8,'rgba(104,220,201,.18)');
+      if(v===4)returnCheckpoint(c,xx,yy,tile,time);
       if(vis&&v===1&&variant===15&&tiles[y-1]?.[x]===0){drawIcon(c,'prism',xx+tile*.8,yy+tile*.19,tile*.3);}
     }else if(vis&&tiles[y+1]?.[x]&&((x+2*y)%5===0))torchPoints.push({x:xx+tile*.5,y:yy+tile*.65});
     if(!vis){c.fillStyle='rgba(5,15,23,.67)';c.fillRect(xx,yy,tile+1,tile+1);}
