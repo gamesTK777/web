@@ -8,19 +8,22 @@
   <title>PRISM BREAK | TK777 ARCADE</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-arcade.css?v=20261108-fullscreen">
 </head>
-<body class="is-solo">
+<body class="is-solo" data-game="arkanoid">
   <div class="ambient" aria-hidden="true"></div>
   <header class="topbar">
     <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
     <div class="brand"><span class="brand-symbol" aria-hidden="true">✦</span><span>TK777 <small>/ ARCADE</small></span></div>
     <div class="top-actions">
+      <button type="button" data-game-fullscreen data-fullscreen-target="#gameViewport" data-fullscreen-focus="#board" aria-pressed="false">⛶ 全画面</button>
       <button id="soundBtn" type="button" aria-label="サウンドをオンにする" aria-pressed="false">♪ <span>OFF</span></button>
       <button id="rankBtn" type="button">🏆 <span>TOP 10</span></button>
     </div>
   </header>
 
-  <main class="page">
+  <main class="page" id="gameViewport">
     <div class="heading">
       <div>
         <p class="eyebrow">THE NEXT BREAKOUT EXPERIENCE <span>01 / ARCADE</span></p>
@@ -117,6 +120,7 @@
   </main>
 
   <script src="../shared/leaderboard.js"></script>
-  <script src="game.js"></script>
+  <script src="game.js?v=20261108-fullscreen"></script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

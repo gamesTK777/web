@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
 <title>TETRIS</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -11,8 +11,11 @@ body { background:#000; display:flex; align-items:center; justify-content:center
 canvas { display:block; image-rendering:pixelated; }
 </style>
 <link rel="stylesheet" href="../shared/portal-return.css">
+<link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+<link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="tetris-classic">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="body" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
 <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 <canvas id="c"></canvas>
 <script>
@@ -24,7 +27,12 @@ const ctx    = canvas.getContext('2d');
 const CW = 900, CH = 660;
 canvas.width = CW; canvas.height = CH;
 function resize() {
-  const s = Math.min(window.innerWidth/CW, window.innerHeight/CH);
+  const full=document.body.classList.contains('game-fullscreen');
+  const style=full?getComputedStyle(document.body):null;
+  const padX=style?parseFloat(style.paddingLeft)+parseFloat(style.paddingRight):0;
+  const padY=style?parseFloat(style.paddingTop)+parseFloat(style.paddingBottom):0;
+  const height=window.visualViewport?.height||window.innerHeight;
+  const s = Math.max(.1,Math.min((window.innerWidth-padX)/CW, (height-padY)/CH));
   canvas.style.width  = CW*s+'px';
   canvas.style.height = CH*s+'px';
 }
@@ -1117,5 +1125,17 @@ function loop(ts) {
 layouts=makeLayout(1); buildTouchZones(1);
 requestAnimationFrame(loop);
 </script>
+<script>
+// Full-display transitions cancel presses and gesture tracks, while the board,
+// score and fixed 900 x 660 logical coordinate space remain untouched.
+function resetClassicInput(){
+  for(const state of [keys,prev,dasMap,TB,prevTB,tDas,swipeTracks])for(const key of Object.keys(state))delete state[key];
+}
+window.addEventListener('gamefullscreenchange',()=>{resetClassicInput();resize();});
+window.addEventListener('blur',resetClassicInput);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)resetClassicInput();});
+canvas.addEventListener('touchcancel',resetClassicInput,{passive:true});
+</script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

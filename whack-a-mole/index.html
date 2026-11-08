@@ -7,18 +7,21 @@
   <title>BURROW BEAT | TK777 ARCADE</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-arcade.css?v=20261108-fullscreen">
 </head>
-<body class="state-menu">
+<body class="state-menu" data-game="whack-a-mole">
   <header class="topbar">
     <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
     <div class="brand"><span class="brand-mark" aria-hidden="true">✿</span><strong>TK777 <small>/ ARCADE</small></strong></div>
     <div class="top-actions">
+      <button type="button" data-game-fullscreen data-fullscreen-target="#gameViewport" data-fullscreen-focus=".hole.selected" aria-pressed="false">⛶ 全画面</button>
       <button id="soundBtn" type="button" aria-label="サウンドをオンにする" aria-pressed="false">♫ <span>OFF</span></button>
       <button id="rankBtn" type="button" aria-label="トップ10ランキングを表示">🏆 <span>TOP 10</span></button>
     </div>
   </header>
 
-  <main class="page">
+  <main class="page" id="gameViewport">
     <section class="heading">
       <div class="heading-copy">
         <p class="eyebrow">A LITTLE CHAOS. A LOT OF JOY. <span>／ 03</span></p>
@@ -117,6 +120,7 @@
     </div>
   </main>
   <script src="../shared/leaderboard.js"></script>
-  <script src="game.js"></script>
+  <script src="game.js?v=20261108-fullscreen"></script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

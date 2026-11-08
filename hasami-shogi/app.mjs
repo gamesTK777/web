@@ -173,7 +173,8 @@ function renderLog() {
 }
 
 function render() {
-  ui.body.className = `state-${phase}`;
+  ui.body.classList.remove('state-setup','state-playing','state-thinking','state-over');
+  ui.body.classList.add(`state-${phase}`);
   ui.blackName.textContent = mode === 'cpu' ? 'あなた' : 'プレイヤー1';
   ui.whiteName.textContent = mode === 'cpu' ? 'CPU' : 'プレイヤー2';
   ui.blackCard.querySelector('small').textContent = `先手 / ${mode === 'cpu' ? 'あなた' : 'P1'}`;

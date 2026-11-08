@@ -1,0 +1,210 @@
+/* Full-display layouts for the five games with bespoke screen composition. */
+body.game-fullscreen .tk-portal-return,body.game-fullscreen>.topbar,body.game-fullscreen footer{display:none!important}
+body.game-fullscreen>#toast,body.game-fullscreen>.toast{z-index:10020!important}
+.board-view-tools{display:flex;align-items:center;gap:9px}
+body[data-game=tetris] .board-top{min-height:44px;height:auto;margin-bottom:5px}
+body[data-game=tetris] .board-view-tools [data-game-fullscreen]{font-size:10px;padding:4px 8px}
+body[data-game=uno] .game-toolbar{min-height:44px;height:auto}
+body[data-game=uno] .game-toolbar-tools [data-game-fullscreen]{font-size:10px;min-height:36px;padding:4px 6px}
+
+/* Pal keeps its existing camera, terrain scaling, and touch controls. */
+body.game-fullscreen[data-game=lantern-merchant] .shell.game-fullscreen-target{padding:calc(52px + env(safe-area-inset-top,0px)) 0 max(0px,env(safe-area-inset-bottom,0px));overflow:hidden}
+body.game-fullscreen[data-game=lantern-merchant] .world-panel{min-height:0}
+body.game-fullscreen[data-game=lantern-merchant] .field-tools{display:none}
+body.game-fullscreen[data-game=lantern-merchant] #focusButton{display:none}
+body.game-fullscreen[data-game=lantern-merchant] .toast{z-index:10020!important}
+
+/* UNO: the table and hand share the entire available height. */
+body.game-fullscreen[data-game=uno] main.game-fullscreen-target{padding-bottom:max(4px,env(safe-area-inset-bottom,0px));overflow:auto}
+body.game-fullscreen[data-game=uno].in-game main.game-fullscreen-target{overflow:hidden}
+body.game-fullscreen[data-game=uno] .game-screen{height:calc(var(--game-fullscreen-height,100dvh) - 60px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));max-width:1500px;margin:auto;padding-top:0;padding-bottom:4px;min-height:0}
+body.game-fullscreen[data-game=uno] #unoFullscreen{display:none}
+body.game-fullscreen[data-game=uno] .home{margin-top:10px}
+body.game-fullscreen[data-game=uno] .lobby{margin-top:12px}
+body.game-fullscreen[data-game=uno] .uno-motion-layer{z-index:10000}
+
+/* Seven Mahjong: preserve the rival, voice captions, river, and every action. */
+body.game-fullscreen[data-game=mahjong] .game-shell.game-fullscreen-target{display:flex;flex-direction:column;gap:6px;overflow:auto}
+body.game-fullscreen[data-game=mahjong] .page-heading,body.game-fullscreen[data-game=mahjong] .short-guide,body.game-fullscreen[data-game=mahjong] .log-panel,body.game-fullscreen[data-game=mahjong] .round-notice{display:none}
+body.game-fullscreen[data-game=mahjong] .voice-toolbar{margin:0;padding:3px 8px;min-height:38px;flex:none;flex-direction:row;align-items:center}
+body.game-fullscreen[data-game=mahjong] .voice-toolbar p{margin:0;font-size:10px}
+body.game-fullscreen[data-game=mahjong] .voice-toolbar button{min-height:32px;padding:5px 9px;font-size:11px}
+body.game-fullscreen[data-game=mahjong] #mahjongFullscreen{display:none}
+body.game-fullscreen[data-game=mahjong] .stage-map{margin:0;min-height:28px;flex:none}
+body.game-fullscreen[data-game=mahjong] .stage-node{gap:5px}
+body.game-fullscreen[data-game=mahjong] .stage-node b{width:24px;height:24px;font-size:11px}
+body.game-fullscreen[data-game=mahjong] .stage-node small{font-size:7px}
+body.game-fullscreen[data-game=mahjong] .game-layout{flex:1;min-height:0;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:14px;align-items:stretch}
+body.game-fullscreen[data-game=mahjong] .rival-column{min-height:0;overflow:auto}
+body.game-fullscreen[data-game=mahjong] .rival-art{max-height:35vh;aspect-ratio:4/5}
+body.game-fullscreen[data-game=mahjong] .rival-details{padding:10px}
+body.game-fullscreen[data-game=mahjong] .rival-details h2{font-size:19px}
+body.game-fullscreen[data-game=mahjong] .stage-card{padding:10px;margin-top:7px}
+body.game-fullscreen[data-game=mahjong] .rival-commentary{margin-top:7px;padding:10px}
+body.game-fullscreen[data-game=mahjong] .play-column{min-height:0;display:flex;flex-direction:column;gap:4px}
+body.game-fullscreen[data-game=mahjong] .mahjong-table{flex:1;min-height:0;display:flex;flex-direction:column}
+body.game-fullscreen[data-game=mahjong] .table-top{padding:6px 14px 3px;min-height:27px;flex:none}
+body.game-fullscreen[data-game=mahjong] .cpu-hand{min-height:28px;gap:2px;padding:0 10px 3px;flex:none}
+body.game-fullscreen[data-game=mahjong] .cpu-hand .tile{width:17px;height:24px}
+body.game-fullscreen[data-game=mahjong] .table-meta{margin:0 14px;padding:1px 0 4px;flex:none;font-size:9px}
+body.game-fullscreen[data-game=mahjong] .dora-panel .tile{width:21px;height:29px}
+body.game-fullscreen[data-game=mahjong] .table-field{flex:1;min-height:120px;gap:4px;margin:0 12px;padding:4px 0;justify-content:space-evenly}
+body.game-fullscreen[data-game=mahjong] .table-compass{width:auto;min-width:190px;gap:2px;padding:4px 10px}
+body.game-fullscreen[data-game=mahjong] .table-compass>div{display:none}
+body.game-fullscreen[data-game=mahjong] .table-compass p{font-size:11px}
+body.game-fullscreen[data-game=mahjong] .river{max-height:74px;min-height:32px}
+body.game-fullscreen[data-game=mahjong] .river-caption{font-size:7px}
+body.game-fullscreen[data-game=mahjong] .hand-rail{padding:5px 8px 3px;flex:none}
+body.game-fullscreen[data-game=mahjong] .player-seat{margin-bottom:2px}
+body.game-fullscreen[data-game=mahjong] .player-hand{min-height:57px;padding:5px 2px;gap:3px;justify-content:center}
+body.game-fullscreen[data-game=mahjong] .player-hand .tile{width:clamp(24px,3.3vw,56px);height:clamp(36px,4.6vw,78px)}
+body.game-fullscreen[data-game=mahjong] .tile-hint{margin:0;font-size:8px}
+body.game-fullscreen[data-game=mahjong] .table-actions{padding:6px 8px;gap:8px;flex:none}
+body.game-fullscreen[data-game=mahjong] .table-actions button{min-height:40px;font-size:11px;padding:6px 10px}
+body.game-fullscreen[data-game=mahjong] .session-controls{margin:0;flex:none}
+body.game-fullscreen[data-game=mahjong] .session-controls button{padding:1px 5px;font-size:9px}
+
+/* Tetris keeps a true 1:2 board; height determines width, not a page zoom. */
+body.game-fullscreen[data-game=tetris]{--tetris-controls-space:0px}
+body.game-fullscreen.show-button-controls[data-game=tetris]{--tetris-controls-space:112px}
+body.game-fullscreen[data-game=tetris] .shell.game-fullscreen-target{overflow:hidden;overflow:clip}
+body.game-fullscreen[data-game=tetris] .heading,body.game-fullscreen[data-game=tetris] .mission,body.game-fullscreen[data-game=tetris] .desktop-hint,body.game-fullscreen[data-game=tetris] .board-bottom,body.game-fullscreen[data-game=tetris] .gesture-pad{display:none}
+body.game-fullscreen[data-game=tetris] .game-layout{height:100%;max-width:1300px;display:grid;grid-template-columns:minmax(135px,210px) minmax(0,440px) minmax(160px,230px);justify-content:center;gap:18px}
+body.game-fullscreen[data-game=tetris] .play-column{grid-row:auto;grid-column:2;width:min(100%,calc((var(--game-fullscreen-height,100dvh) - 128px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tetris-controls-space)) / 2));justify-self:center}
+body.game-fullscreen[data-game=tetris] .board-frame{aspect-ratio:1/2;width:100%}
+body.game-fullscreen[data-game=tetris] #board{display:block;width:100%;height:100%}
+body.game-fullscreen[data-game=tetris] .board-top{min-height:36px;height:36px;margin-bottom:4px;font-size:9px}
+body.game-fullscreen[data-game=tetris] #tetrisFullscreen{display:none}
+body.game-fullscreen[data-game=tetris] .left-panel{display:flex;flex-direction:column;gap:10px}
+body.game-fullscreen[data-game=tetris] .right-panel{display:flex;flex-direction:column;gap:10px;grid-column:3;padding:0}
+body.game-fullscreen[data-game=tetris] .next-panel{margin:0;padding:10px}
+body.game-fullscreen[data-game=tetris] #next{width:90px;height:141px;margin:auto;display:block}
+body.game-fullscreen[data-game=tetris] .energy-panel{padding:10px}
+body.game-fullscreen[data-game=tetris] .energy-panel p{font-size:8px}
+body.game-fullscreen[data-game=tetris] .energy-number{margin:4px 0}
+body.game-fullscreen[data-game=tetris] .energy-number strong{font-size:26px}
+body.game-fullscreen[data-game=tetris] .skill-list{display:grid;gap:6px;grid-template-columns:1fr;margin:0}
+body.game-fullscreen[data-game=tetris] .skill{min-height:45px;padding:6px;gap:6px;flex-direction:row;text-align:left}
+body.game-fullscreen[data-game=tetris] .skill-text strong{font-size:12px}
+body.game-fullscreen[data-game=tetris] .skill-text small{font-size:8px;min-height:0}
+body.game-fullscreen[data-game=tetris] .skill-icon{font-size:19px}
+body.game-fullscreen[data-game=tetris] .skill-cost b{font-size:9px}
+body.game-fullscreen[data-game=tetris] .skill-hint{display:none}
+
+/* Solitaire sizes cards and stack offsets together; drag uses the same values. */
+body.game-fullscreen[data-game=solitaire]{--fullscreen-background:#dce9f5;display:flex;flex-direction:column;overflow:hidden!important}
+body.game-fullscreen[data-game=solitaire] header{padding:0 0 6px;flex:none}
+body.game-fullscreen[data-game=solitaire] header h1{font-size:21px;line-height:1.2;letter-spacing:0;color:#394b6c;text-shadow:none}
+body.game-fullscreen[data-game=solitaire] .score-bar{margin-top:4px;gap:7px}
+body.game-fullscreen[data-game=solitaire] .score-badge{padding:2px 10px;font-size:11px}
+body.game-fullscreen[data-game=solitaire] .btn-row{margin-top:5px;gap:6px}
+body.game-fullscreen[data-game=solitaire] .btn-row>.btn{font-size:11px;padding:7px 10px;min-height:33px}
+body.game-fullscreen[data-game=solitaire] #solitaireFullscreen{display:none}
+body.game-fullscreen[data-game=solitaire] #game{flex:1;min-height:0;overflow:auto;width:calc(var(--solitaire-card-width,80px) * 7 + 36px);max-width:100%;padding:0 0 4px;margin:0 auto}
+body.game-fullscreen[data-game=solitaire] .play-help{display:none}
+body.game-fullscreen[data-game=solitaire] .top-row{flex-wrap:nowrap;gap:6px;margin-bottom:6px}
+body.game-fullscreen[data-game=solitaire] .stock-waste,body.game-fullscreen[data-game=solitaire] .foundations{gap:6px}
+body.game-fullscreen[data-game=solitaire] .stock-waste .pile{width:var(--solitaire-card-width,80px)}
+body.game-fullscreen[data-game=solitaire] .top-row .slot{width:var(--solitaire-card-width,80px);min-width:0;height:auto;aspect-ratio:5/7}
+body.game-fullscreen[data-game=solitaire] .pile-heading{font-size:10px;margin-bottom:3px}
+body.game-fullscreen[data-game=solitaire] .pile-caption{font-size:9px;min-height:14px}
+body.game-fullscreen[data-game=solitaire] .tableau{gap:6px}
+body.game-fullscreen[data-game=solitaire] .tableau-col{min-width:0;flex:none;width:var(--solitaire-card-width,80px)}
+body.game-fullscreen[data-game=solitaire] .tableau .slot{width:100%;aspect-ratio:5/7}
+body.game-fullscreen[data-game=solitaire] .card-corner{font-size:clamp(9px,1.5vw,18px)}
+body.game-fullscreen[data-game=solitaire] .stock-action{font-size:9px}
+
+@media(max-width:760px){
+ body.game-fullscreen[data-game=mahjong] .voice-toolbar p{display:none}
+ body.game-fullscreen[data-game=mahjong] .game-layout{display:flex;flex-direction:column;gap:6px}
+ body.game-fullscreen[data-game=mahjong] .rival-column{display:flex;gap:7px;flex:none;max-height:90px;overflow:hidden;width:100%}
+ body.game-fullscreen[data-game=mahjong] .rival-card{display:flex;flex:1;min-width:0}
+ body.game-fullscreen[data-game=mahjong] .rival-art{width:60px;min-width:60px;min-height:76px;max-height:80px;aspect-ratio:auto}
+ body.game-fullscreen[data-game=mahjong] .rival-details{padding:6px}
+ body.game-fullscreen[data-game=mahjong] .rival-details h2{font-size:14px}
+ body.game-fullscreen[data-game=mahjong] .rival-details>.eyebrow,body.game-fullscreen[data-game=mahjong] .rival-personality,body.game-fullscreen[data-game=mahjong] .rival-tags,body.game-fullscreen[data-game=mahjong] .stage-card{display:none}
+ body.game-fullscreen[data-game=mahjong] .rival-commentary{width:44%;margin:0;padding:6px;overflow:auto;font-size:9px}
+ body.game-fullscreen[data-game=mahjong] .rival-commentary p{font-size:10px;margin:3px 0}
+ body.game-fullscreen[data-game=mahjong] .rival-commentary button{font-size:9px;padding:3px 5px}
+ body.game-fullscreen[data-game=mahjong] .play-column{flex:1;min-height:420px}
+ body.game-fullscreen[data-game=mahjong] .player-hand{gap:2px;min-height:44px;padding-top:4px}
+ body.game-fullscreen[data-game=mahjong] .player-hand .tile{width:clamp(20px,calc((100vw - 80px) / 14),35px);height:clamp(30px,calc((100vw - 80px) / 10),49px);border-bottom-width:3px;border-radius:3px}
+ body.game-fullscreen[data-game=mahjong] .player-hand .tile .tile-symbol{font-size:17px}
+ body.game-fullscreen[data-game=mahjong] .table-actions{flex-direction:column;gap:4px;padding:5px}
+ body.game-fullscreen[data-game=mahjong] .table-actions button{min-height:36px;padding:4px 9px}
+ body.game-fullscreen[data-game=mahjong] .call-actions{gap:5px}
+ body.game-fullscreen[data-game=mahjong] .table-field{min-height:115px}
+ body.game-fullscreen[data-game=tetris] .game-layout{max-width:600px;grid-template-columns:minmax(0,1fr) 84px;grid-template-rows:62px minmax(0,1fr) 32px 54px;gap:6px 9px}
+ body.game-fullscreen[data-game=tetris] .left-panel,body.game-fullscreen[data-game=tetris] .right-panel{display:contents}
+ body.game-fullscreen[data-game=tetris] .score-panel{grid-column:1/-1;grid-row:1;padding:5px 10px;gap:0 8px}
+ body.game-fullscreen[data-game=tetris] .score{font-size:26px;margin:0}
+ body.game-fullscreen[data-game=tetris] .best{font-size:7px}
+ body.game-fullscreen[data-game=tetris] .stats{gap:5px;padding-left:9px}
+ body.game-fullscreen[data-game=tetris] .stats strong{font-size:16px}
+ body.game-fullscreen[data-game=tetris] .play-column{grid-column:1;grid-row:2;width:min(100%,calc((var(--game-fullscreen-height,100dvh) - 273px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tetris-controls-space)) / 2))}
+ body.game-fullscreen[data-game=tetris] .hold-panel{grid-column:2;grid-row:2;margin:0;padding:7px 4px;align-self:start}
+ body.game-fullscreen[data-game=tetris] .hold-panel p{font-size:7px}
+ body.game-fullscreen[data-game=tetris] #hold{width:72px;height:40px}
+ body.game-fullscreen[data-game=tetris] .next-panel{grid-column:2;grid-row:2;margin-top:91px;padding:7px 3px;align-self:start}
+ body.game-fullscreen[data-game=tetris] #next{width:72px;height:113px}
+ body.game-fullscreen[data-game=tetris] .energy-panel{grid-column:1/-1;grid-row:3;padding:3px 8px;display:flex;align-items:center;gap:9px}
+ body.game-fullscreen[data-game=tetris] .energy-panel>.panel-label,body.game-fullscreen[data-game=tetris] .energy-panel p,body.game-fullscreen[data-game=tetris] #energy-state{display:none}
+ body.game-fullscreen[data-game=tetris] .energy-number{margin:0;gap:4px}
+ body.game-fullscreen[data-game=tetris] .energy-number strong{font-size:22px}
+ body.game-fullscreen[data-game=tetris] .energy-track{flex:1;margin:0}
+ body.game-fullscreen[data-game=tetris] .skill-list{grid-column:1/-1;grid-row:4;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ body.game-fullscreen[data-game=tetris] .skill{flex-direction:column;padding:4px 2px;gap:1px;text-align:center;min-height:50px}
+ body.game-fullscreen[data-game=tetris] .skill-text strong{font-size:10px}
+ body.game-fullscreen[data-game=tetris] .skill-text small{display:none}
+ body.game-fullscreen[data-game=tetris] .skill-icon{display:none}
+ body.game-fullscreen[data-game=tetris] .skill-cost{display:flex;gap:4px}
+ body.game-fullscreen[data-game=uno] .game-screen{padding-inline:0}
+}
+@media(max-height:500px) and (orientation:landscape){
+ body.game-fullscreen[data-game=mahjong] .voice-toolbar,body.game-fullscreen[data-game=mahjong] .stage-map{display:none}
+ body.game-fullscreen[data-game=mahjong] .game-layout{display:grid;grid-template-columns:140px minmax(0,1fr)}
+ body.game-fullscreen[data-game=mahjong] .rival-column{display:block;max-height:none;overflow:auto}
+ body.game-fullscreen[data-game=mahjong] .rival-commentary{width:100%}
+ body.game-fullscreen[data-game=mahjong] .play-column{min-height:0}
+ body.game-fullscreen[data-game=mahjong] .session-controls{display:none}
+ body.game-fullscreen[data-game=mahjong] .table-field{min-height:80px;gap:1px;margin:0 8px}
+ body.game-fullscreen[data-game=mahjong] .river{max-height:32px;grid-auto-rows:25px;min-height:25px}
+ body.game-fullscreen[data-game=mahjong] .river .tile{width:18px;height:25px}
+ body.game-fullscreen[data-game=mahjong] .river-caption,body.game-fullscreen[data-game=mahjong] .tile-hint,body.game-fullscreen[data-game=mahjong] .cpu-hand{display:none}
+ body.game-fullscreen[data-game=mahjong] .table-actions{flex-direction:row;padding:3px;gap:4px}
+ body.game-fullscreen[data-game=mahjong] .table-actions button{min-height:32px;padding:3px 6px;font-size:10px}
+ body.game-fullscreen[data-game=mahjong] .hand-rail{padding:3px 5px}
+ body.game-fullscreen[data-game=mahjong] .player-hand{min-height:39px}
+ body.game-fullscreen[data-game=mahjong] .player-hand .tile{width:25px;height:37px}
+ body.game-fullscreen[data-game=tetris] .game-layout{grid-template-columns:160px minmax(0,220px) 190px;grid-template-rows:1fr;gap:12px}
+ body.game-fullscreen[data-game=tetris] .left-panel,body.game-fullscreen[data-game=tetris] .right-panel{display:flex}
+ body.game-fullscreen[data-game=tetris] .play-column{grid-column:2;grid-row:1;width:min(100%,calc((var(--game-fullscreen-height,100dvh) - 110px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - var(--tetris-controls-space)) / 2))}
+ body.game-fullscreen[data-game=tetris] .score-panel{display:block;padding:8px}
+ body.game-fullscreen[data-game=tetris] .score-panel>.panel-label{font-size:8px}
+ body.game-fullscreen[data-game=tetris] .stats{margin-top:7px;padding:5px 0 0;border-left:0}
+ body.game-fullscreen[data-game=tetris] .hold-panel{padding:5px}
+ body.game-fullscreen[data-game=tetris] .next-panel{display:none}
+ body.game-fullscreen[data-game=tetris] .energy-panel{display:flex;padding:5px;flex-wrap:wrap}
+ body.game-fullscreen[data-game=tetris] .skill-list{display:grid;grid-template-columns:1fr;gap:4px}
+ body.game-fullscreen[data-game=tetris] .skill{min-height:39px;flex-direction:row}
+ body.game-fullscreen[data-game=tetris] .skill-text small{display:none}
+ body.game-fullscreen[data-game=tetris] .skill-text strong{font-size:10px}
+ body.game-fullscreen[data-game=solitaire] header h1{display:none}
+ body.game-fullscreen[data-game=solitaire] .btn-row>.btn{font-size:10px;padding:5px 9px;min-height:28px}
+ body.game-fullscreen[data-game=solitaire] .score-badge{font-size:10px}
+ body[data-game=uno] .game-screen{grid-template-rows:44px 43px minmax(0,1fr)}
+ body.game-fullscreen[data-game=uno] .game-screen{height:calc(var(--game-fullscreen-height,100dvh) - 57px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));grid-template-rows:44px 40px minmax(0,1fr)}
+}
+@media(max-height:500px) and (orientation:landscape){
+ body.game-fullscreen[data-game=tetris] .score{font-size:32px}
+ body.game-fullscreen[data-game=tetris] .hold-panel p{display:none}
+ body.game-fullscreen[data-game=tetris] #hold{width:100px;height:55px}
+ body.game-fullscreen[data-game=tetris] .overlay{padding:9px}
+ body.game-fullscreen[data-game=tetris] .intro-symbol,body.game-fullscreen[data-game=tetris] .overlay-copy,body.game-fullscreen[data-game=tetris] .start-hint{display:none}
+ body.game-fullscreen[data-game=tetris] .overlay h2{font-size:16px;line-height:1.35;margin:5px 0}
+ body.game-fullscreen[data-game=tetris] .overlay .eyebrow{font-size:7px;margin-bottom:5px}
+ body.game-fullscreen[data-game=tetris] .mode-picker{margin:7px 0}
+ body.game-fullscreen[data-game=tetris] .mode-picker button{padding:5px;font-size:9px}
+ body.game-fullscreen[data-game=tetris] .overlay .primary-button{min-height:34px;padding:7px;font-size:10px}
+ body.game-fullscreen[data-game=tetris] .result-score{font-size:28px}
+}

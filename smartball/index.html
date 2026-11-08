@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>スマートボール</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,8 +18,11 @@
     canvas { display: block; touch-action: none; cursor: default; }
   </style>
   <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="smartball">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="body" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
 <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 <canvas id="c"></canvas>
 <script>
@@ -27,11 +30,21 @@
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
 const BW = 560, BH = 820;
-const scale = Math.min(window.innerWidth/BW, window.innerHeight/BH, 1.4);
 canvas.width  = BW;
 canvas.height = BH;
-canvas.style.width  = (BW * scale) + 'px';
-canvas.style.height = (BH * scale) + 'px';
+function fitSmartballDisplay() {
+  const full = document.body.classList.contains('game-fullscreen');
+  const height = window.visualViewport?.height || window.innerHeight;
+  const scale = Math.max(.1, Math.min((window.innerWidth - (full ? 24 : 0))/BW, (height - (full ? 76 : 0))/BH, full ? 3 : 1.4));
+  canvas.style.width = (BW * scale) + 'px';
+  canvas.style.height = (BH * scale) + 'px';
+}
+fitSmartballDisplay();
+window.addEventListener('resize', fitSmartballDisplay);
+window.addEventListener('gamefullscreenchange', () => {
+  if (gs.phase === 'CHARGING') { gs.phase = 'READY'; gs.power = 0; }
+  fitSmartballDisplay();
+});
 
 // ─── LAYOUT ────────────────────────────────────────────────
 // Main playfield (ball falls through here)
@@ -805,5 +818,6 @@ function draw() {
 function loop() { update(); draw(); requestAnimationFrame(loop); }
 loop();
 </script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

@@ -173,6 +173,7 @@ document.querySelectorAll('[data-action]').forEach(button=>{
 document.querySelectorAll('[data-skill]').forEach(button=>button.onclick=()=>{resetInput();action(button.dataset.skill);if(game?.state==='playing')canvas.focus({preventScroll:true});});
 $('pause').onclick=()=>game?.state==='paused'?resume():pause();
 window.addEventListener('blur',()=>{resetInput();pause();});
+window.addEventListener('gamefullscreenchange',()=>{resetInput();if(game?.state==='playing')canvas.focus({preventScroll:true});});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){resetInput();pause();}});
 function openHelp(){pause();dialog.showModal();}
 $('ranking-open').onclick=()=>{pause();showRanking(mode);};

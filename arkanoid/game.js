@@ -204,7 +204,7 @@
   function sync(){ui.score.textContent=String(score).padStart(6,'0');ui.wave.textContent=String(wave).padStart(2,'0');
     ui.lives.textContent=lives>0?Array.from({length:lives},()=> '♥').join(' '):'—';
     ui.combo.textContent=combo?'×'+Math.min(5,1+Math.floor((combo-1)/4)):'×1';
-    ui.energy.textContent=energy+' / 100';ui.bar.style.width=energy+'%';
+    ui.energy.textContent=energy+' / 100';ui.bar.style.width=energy+'%';ui.surge.dataset.energy=Math.round(energy)+'%';
     ui.meter.setAttribute('aria-valuenow',String(energy));
     const powered=clock<surgeUntil;
     ui.surge.disabled=state!=='playing'||energy<100||powered;
@@ -346,6 +346,7 @@
   document.addEventListener('keydown',keyDown,{passive:false});
   document.addEventListener('keyup',e=>keys.delete(e.code));
   window.addEventListener('blur',()=>{keys.clear();activePointers.clear();});
+  window.addEventListener('gamefullscreenchange',()=>{keys.clear();activePointers.clear();for(const paddle of paddles)paddle.target=paddle.x;});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();activePointers.clear();pause();}});
   makePaddles();makeWave();attachBall();sync();requestAnimationFrame(loop);
 })();

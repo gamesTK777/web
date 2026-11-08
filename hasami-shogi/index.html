@@ -7,18 +7,21 @@
   <title>HAZAMA | はさみ将棋 | TK777 ARCADE</title>
   <link rel="stylesheet" href="../shared/portal-return.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-arcade.css?v=20261108-fullscreen">
 </head>
-<body class="state-setup">
+<body class="state-setup" data-game="hasami-shogi">
   <header class="topbar">
     <a class="tk-portal-return tk-portal-return--inline" href="../index.html">← ゲーム一覧へ</a>
     <span class="brand"><span class="brand-mark" aria-hidden="true">◇</span> TK777 <small>/ ARCADE</small></span>
     <div class="top-actions">
+      <button type="button" data-game-fullscreen data-fullscreen-target="#gameViewport" data-fullscreen-focus=".cell[tabindex='0']" aria-pressed="false">⛶ 全画面</button>
       <button id="rulesTop" type="button" aria-label="ルールを見る">？ <span>ルール</span></button>
       <button id="soundBtn" type="button" aria-label="効果音をオンにする" aria-pressed="false">♪ <span>OFF</span></button>
     </div>
   </header>
 
-  <main class="page">
+  <main class="page" id="gameViewport">
     <section class="intro" aria-label="ゲームの紹介">
       <div>
         <p class="eyebrow">STRATEGY IN A SINGLE MOVE / 04</p>
@@ -118,6 +121,7 @@
     <div class="result-actions"><button id="againBtn" type="button">もう一局 <span aria-hidden="true">↗</span></button><button id="resultModeBtn" type="button">モード選択</button></div>
   </dialog>
 
-  <script type="module" src="app.mjs"></script>
+  <script type="module" src="app.mjs?v=20261108-fullscreen"></script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

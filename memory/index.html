@@ -9,8 +9,11 @@
   <link rel="preload" href="sanrio_sheet_1.webp" as="image" type="image/webp">
   <link rel="preload" href="sanrio_sheet_2.webp" as="image" type="image/webp">
   <link rel="stylesheet" href="./style.css?v=20261104-rebuild">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="memory">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="#game" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
   <div class="game-shell" id="game">
     <header class="topbar">
       <a class="portal-link" href="../index.html" aria-label="ゲーム一覧に戻る"><span aria-hidden="true">←</span><span>ゲーム一覧</span></a>
@@ -78,6 +81,7 @@
     <div class="result-flower" aria-hidden="true">✿</div><p class="eyebrow">A LOVELY GAME.</p><h2 id="winnerTitle">おみごと！</h2><p class="dialog-copy" id="resultSummary"></p><div class="result-scores" id="resultScores"></div><button class="primary-button" id="playAgain" type="button">もう一度あそぶ <span aria-hidden="true">↗</span></button><button class="text-button" id="closeResult" type="button">できあがった盤面を見る</button>
   </dialog>
 
-  <script type="module" src="./app.mjs?v=20261104-rebuild"></script>
+  <script type="module" src="./app.mjs?v=20261108-fullscreen"></script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

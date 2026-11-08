@@ -7,8 +7,10 @@
   <meta name="description" content="ひとりでCPUと、友だちとはそれぞれの端末で。2〜6人で遊べるオンラインUNO。">
   <title>UNO — COLOR CIRCUIT | TK777 ARCADE</title>
   <link rel="stylesheet" href="style.css?v=20261108-fx">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-games.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="uno">
   <header class="topbar">
     <a class="portal-link" href="../index.html">← <span>ゲーム一覧</span></a>
     <a class="wordmark" href="./index.html" aria-label="UNO トップ"><span class="brand-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span> COLOR CIRCUIT</a>
@@ -33,6 +35,7 @@
           <div id="joinSetup" hidden><label for="roomCodeInput">ルームの合言葉</label><input id="roomCodeInput" class="code-input" maxlength="8" placeholder="8文字のコード" autocapitalize="characters" autocomplete="off" spellcheck="false"><button class="primary-button start-button" id="joinRoom" type="button">ルームに参加 <span aria-hidden="true">↗</span></button></div>
           <p class="setup-footnote">1人につき1台の端末を用意。合言葉を知っている人が参加できます。</p>
         </div>
+        <button type="button" id="unoHomeFullscreen" class="text-button audio-settings-link" data-game-fullscreen data-fullscreen-target="main" aria-pressed="false">⛶ 全画面</button>
         <button class="text-button audio-settings-link" id="audioSettingsButton" type="button">♪ 効果音・声の設定</button>
         <p id="setupStatus" class="form-status" role="status" aria-live="polite"></p>
       </section>
@@ -44,7 +47,7 @@
     </section>
 
     <section class="game-screen" id="gameScreen" hidden aria-label="UNOの対戦">
-      <div class="game-toolbar"><div><span class="session-label" id="sessionLabel">SOLO TABLE</span><span id="gameRoomCode" class="small-room-code"></span></div><div class="game-toolbar-tools"><button class="text-button" id="gameAudioSettings" type="button">音の設定</button><button class="text-button" id="leaveGame" type="button">退出</button></div></div>
+      <div class="game-toolbar"><div><span class="session-label" id="sessionLabel">SOLO TABLE</span><span id="gameRoomCode" class="small-room-code"></span></div><div class="game-toolbar-tools"><button type="button" id="unoFullscreen" class="text-button" data-game-fullscreen data-fullscreen-target="main" aria-pressed="false">⛶ 全画面</button><button class="text-button" id="gameAudioSettings" type="button">音の設定</button><button class="text-button" id="leaveGame" type="button">退出</button></div></div>
       <div class="connection-banner" id="connectionBanner" hidden role="status"><span id="connectionText"></span><button id="retryConnection" type="button">再接続</button></div>
       <div class="opponents" id="opponents" aria-label="参加プレイヤー"></div>
       <div class="table-zone">
@@ -67,5 +70,6 @@
   <dialog id="rulesDialog" aria-labelledby="rulesTitle"><div class="dialog-head"><div><p class="eyebrow">HOW TO PLAY</p><h2 id="rulesTitle">1枚から、始まる逆転。</h2></div><button class="icon-button" id="closeRules" type="button" aria-label="遊び方を閉じる">×</button></div><div class="rules-content"><p>場のカードと<strong>同じ色・数字・記号</strong>のカードを出し、最初に手札をなくした人が勝ち。最初の手札は7枚です。</p><div class="rule-grid"><div><b>⊘ スキップ</b><p>次の人の番を飛ばします。</p></div><div><b>⇄ リバース</b><p>順番の向きを反転。2人対戦ではもう一度自分の番です。</p></div><div><b>＋2 / ＋4</b><p>次の人がカードを引き、その番はお休み。重ね出しはできません。</p></div><div><b>✦ ワイルド</b><p>好きな色へ変更。＋4は場と同じ色を持っていないときだけ出せます。</p></div></div><p><strong>引いたカードが出せるときは、その1枚を出すかパス。</strong>出せないカードなら自動で次の人の番になります。</p><div class="uno-rule"><strong>残り1枚になる前に「UNO!」</strong><p>宣言ボタンをオンにしてからカードを出しましょう。このゲームでは宣言を忘れると、その場で2枚追加されます。</p></div><p>オンラインでは各自1台の端末を使います。手札を端末同士で渡す必要はありません。自分の端末だけに、自分の手札が届きます。</p><p class="muted">接続が切れた場合は同じブラウザーで開き直すと復帰できます。操作がないまま一定時間が経過すると、サーバーが自動で番を進めます。</p><p class="keyboard-help">キーボード：← → 手札を選択 ／ Enter 出す ／ D 引く ／ P パス ／ U UNO宣言</p></div></dialog>
   <dialog id="leaveDialog" class="leave-dialog" aria-labelledby="leaveTitle"><div class="dialog-head"><h2 id="leaveTitle">テーブルを離れますか？</h2><button class="icon-button" id="cancelLeave" type="button" aria-label="戻る">×</button></div><p id="leaveExplanation"></p><div class="dialog-actions"><button class="secondary-button" id="stayButton" type="button">対戦に戻る</button><button class="danger-button" id="confirmLeave" type="button">退出する</button></div></dialog>
   <script type="module" src="app.mjs?v=20261108-fx"></script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

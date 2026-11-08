@@ -3,7 +3,7 @@ import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
 import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-cast';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
-import {CharacterVoice} from './voice.mjs?v=20261108-voice';
+import {CharacterVoice} from './voice.mjs?v=20261108-natural';
 import {chooseVoiceLine,getVoiceProfile} from './voice-lines.mjs?v=20261108-voice';
 const $=id=>document.getElementById(id),API='https://tk777-neonshift-scores.takesuke.chatgpt.site',MODE='mahjong:arcade';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,7 +16,7 @@ let audio=null,encounter=null,encounterRetryStage=null;
 let voiceState=null,currentSpokenLine=null,idleVoiceTimer=null,lastCharacterLineAt=0,activeSpeechOwner='';
 const voiceEventCounts=new Map(),VOICE_KEY='tk777-seven-mahjong-voice';
 function voicePreferences(){try{const p=JSON.parse(localStorage.getItem(VOICE_KEY));return{enabled:p?.enabled!==false,volume:Number.isFinite(p?.volume)?Math.max(0,Math.min(1,p.volume)):.8};}catch{return{enabled:true,volume:.8};}}
-const characterVoice=new CharacterVoice({...voicePreferences(),synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,onChange:state=>{voiceState=state;renderVoiceControls(state);}});
+const characterVoice=new CharacterVoice({...voicePreferences(),Context:window.AudioContext||window.webkitAudioContext,synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,onChange:state=>{voiceState=state;renderVoiceControls(state);}});
 voiceState=characterVoice.state();
 function saveVoicePreferences(){try{localStorage.setItem(VOICE_KEY,JSON.stringify({enabled:voiceState.enabled,volume:voiceState.volume}));}catch{}}
 function renderVoiceControls(state){
@@ -24,9 +24,9 @@ function renderVoiceControls(state){
  for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle']){const button=$(id);button.textContent='♪ '+label;button.setAttribute('aria-pressed',String(state.enabled));button.disabled=!state.supported;}
  $('voiceEnabled').checked=state.enabled;$('voiceEnabled').disabled=!state.supported;
  $('voiceVolume').value=String(Math.round(state.volume*100));$('voiceVolume').disabled=!state.supported;$('voiceVolumeValue').textContent=Math.round(state.volume*100)+'%';
- const status=!state.supported?'このブラウザーは音声に対応していません。':!state.enabled?'声はオフです。台詞は文字で表示します。':state.volume===0?'音量は0%です。':state.availability==='unavailable'?'日本語の読み上げ音声が見つかりません。':state.blocked?'「もう一度聞く」か「声を聞く」を押してください。':state.error?'音声を再生できませんでした。「もう一度聞く」で再試行できます。':state.speaking?'キャラクターが話しています…':state.availability==='loading'?'日本語の音声を準備しています。':'会話・対局中・勝利時に話しかけます。';
+ const status=!state.supported?'このブラウザーは音声に対応していません。':!state.enabled?'声はオフです。台詞は文字で表示します。':state.volume===0?'音量は0%です。':state.availability==='unavailable'?'日本語の読み上げ音声が見つかりません。':state.blocked?'「もう一度聞く」か「声を聞く」を押してください。':state.error?'音声を再生できませんでした。「もう一度聞く」で再試行できます。':state.loading?'自然な音声を準備しています…':state.speaking?'キャラクターが話しています…':state.availability==='loading'?'日本語の音声を準備しています。':'会話・対局中・勝利時に話しかけます。';
  $('voiceStatus').textContent=status;$('voiceHelp').textContent=status;
- for(const id of ['encounterVoiceStatus','rewardVoiceStatus']){$(id).textContent=status;$(id).hidden=!state.enabled||!!state.supported&&state.availability!=='unavailable'&&!state.blocked&&!state.error;}
+ for(const id of ['encounterVoiceStatus','rewardVoiceStatus']){$(id).textContent=status;$(id).hidden=!state.enabled||!!state.supported&&state.availability!=='unavailable'&&!state.blocked&&!state.error&&!state.loading;}
  for(const id of ['voiceReplay','encounterReplay','rewardReplay'])$(id).disabled=!state.supported||!state.enabled||state.volume===0||!currentSpokenLine;
  $('voiceTest').disabled=!state.supported||!state.enabled||state.volume===0;
  $('cpuPortrait').dataset.speaking=String(state.speaking);$('encounterPortrait').dataset.speaking=String(state.speaking);

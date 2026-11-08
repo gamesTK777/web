@@ -1,4 +1,6 @@
 import {getVoiceProfile,spokenText} from './voice-lines.mjs?v=20261108-voice';
+import {RecordedCharacterVoice,findRecordedVoice} from './recorded-voice.mjs?v=20261108-natural';
+import {VOICE_ASSETS} from './assets/voices/manifest.mjs?v=20261108-natural';
 
 const japanese=voice=>/^ja(?:[-_]|$)/i.test(String(voice.lang||''));
 const maleName=/\b(?:otoya|ichiro|keita|takumi)\b|おとや|一郎|太郎/i;
@@ -8,7 +10,7 @@ const quietErrors=new Set(['canceled','interrupted']);
 
 // This controller never owns game timers or progression. Unsupported or blocked
 // speech remains an optional presentation layer, with at most one queued line.
-export class CharacterVoice {
+class SystemCharacterVoice {
   constructor({synth=globalThis.speechSynthesis,Utterance=globalThis.SpeechSynthesisUtterance,onChange=()=>{},enabled=true,volume=.8,now=Date.now,setTimer=(...args)=>globalThis.setTimeout(...args),clearTimer=(...args)=>globalThis.clearTimeout(...args)}={}) {
     this.synth=synth;this.Utterance=Utterance;this.onChange=onChange;
     // Browser timer bindings must not receive this controller as their receiver.
@@ -153,4 +155,46 @@ export class CharacterVoice {
     return this.volume;
   }
   dispose(){if(this._disposed)return;this.stop();this._disposed=true;this.synth?.removeEventListener?.('voiceschanged',this._voicesChanged);}
+}
+
+// Bundled character dialogue always uses the same natural recording on every
+// device. Only unrecorded administrator-customized text uses device speech.
+export class CharacterVoice extends SystemCharacterVoice {
+  constructor(options={}){
+    const notify=options.onChange||(()=>{});
+    super({...options,onChange:()=>{}});
+    this._voiceBackend='recorded';this._globalVoiceKey='';this._globalVoiceTime=-Infinity;
+    this._recordedAssets=options.assets??VOICE_ASSETS;
+    this.recorded=new RecordedCharacterVoice({...options,assets:this._recordedAssets,onChange:()=>this._emit()});
+    this.onChange=notify;this._emit();
+  }
+  state(){
+    if(!this.recorded?.supported)return super.state();
+    if(this._voiceBackend==='system')return{...super.state(),supported:true,engine:'device'};
+    return this.recorded.state();
+  }
+  unlock(){
+    if(!this.recorded?.supported)return super.unlock();
+    const recorded=this.recorded.unlock();
+    return this._voiceBackend==='system'?super.unlock()||recorded:recorded;
+  }
+  speak(stageId,text,options={}){
+    if(!this.recorded?.supported)return super.speak(stageId,text,options);
+    const profile=getVoiceProfile(stageId);if(!profile||typeof text!=='string'||!text.trim()||!this.enabled||this.volume<=0||this._disposed)return false;
+    const identity=profile.id+':'+(options.key||text);
+    if(!options.force&&identity===this._globalVoiceKey)return false;
+    if(!options.force&&options.priority==='ambient'&&(this.recorded.pending||this.recorded.speaking||this._utterance||this.synth?.speaking||this.synth?.pending||this.now()-this._globalVoiceTime<12000))return false;
+    let accepted;
+    if(findRecordedVoice(this._recordedAssets,stageId,text)){
+      this._cancel();this._voiceBackend='recorded';accepted=this.recorded.speak(stageId,text,options);
+    }else{
+      this.recorded.stop();this._voiceBackend='system';accepted=super.speak(stageId,text,options);
+    }
+    if(accepted){this._globalVoiceKey=identity;this._globalVoiceTime=this.now();}
+    return accepted;
+  }
+  stop(){this.recorded?.stop();super.stop();}
+  setEnabled(enabled){this.enabled=!!enabled;this.recorded?.setEnabled(enabled);return super.setEnabled(enabled);}
+  setVolume(volume){this.recorded?.setVolume(volume);return super.setVolume(volume);}
+  dispose(){this.recorded?.dispose();super.dispose();}
 }

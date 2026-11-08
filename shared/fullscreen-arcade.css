@@ -1,0 +1,119 @@
+/* Keep each board's logical aspect ratio and fit its playable controls around
+   it. Setup controls remain available before a session; unrelated guides hide. */
+body[data-game=whack-a-mole]{--fullscreen-background:var(--cream,#f4f0df)}
+body:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole]) .top-actions [data-game-fullscreen]{min-height:44px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole])>.topbar{visibility:hidden}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole]) .tk-portal-return{display:none!important}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole]) #gameViewport{display:flex;flex-direction:column;align-items:center;gap:5px;padding-top:calc(54px + env(safe-area-inset-top,0px));padding-bottom:max(9px,env(safe-area-inset-bottom,0px));overflow:hidden}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]){--arcade-menu:48px;--arcade-touch:0px;--arcade-reserve:94px}
+body.game-fullscreen.session-active:is([data-game=arkanoid],[data-game=invaders]),body.game-fullscreen:is(.state-active,.state-paused,.state-over)[data-game=whack-a-mole]{--arcade-menu:0px;--arcade-reserve:184px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .heading{flex:none;justify-content:center;align-items:center;width:100%;margin:0;min-height:0}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .heading-copy,body.game-fullscreen[data-game=arkanoid] .heading>div:first-child{display:none}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.mode-picker,.difficulty-picker){width:min(100%,580px);max-width:none;margin:0 auto;padding:3px;justify-content:center;gap:3px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.mode,.difficulty){min-width:0;flex:1;min-height:38px;padding:4px 9px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.mode,.difficulty) strong{font-size:12px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.mode,.difficulty) small{font-size:9px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .game-layout{display:block;min-width:0;min-height:0;width:100%}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.play-column,.arena-column,.arena){width:100%;max-width:none;margin:0;display:flex;flex-direction:column;align-items:center;min-height:0}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.side-column,.touch-help){display:none!important}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .hud{width:min(100%,760px);gap:5px;margin:0 0 4px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .hud-item{min-height:43px;padding:5px 9px;border-radius:9px;box-shadow:none}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .hud-item small{font-size:7px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .hud-item strong{font-size:19px;line-height:1.1;margin-top:2px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .hud-item:nth-child(3) strong{font-size:13px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .arena-heading{width:min(100%,760px);min-height:17px;margin:0 0 4px;font-size:9px}
+body.game-fullscreen[data-game=arkanoid] .arena-frame{width:min(100%,calc((var(--game-fullscreen-height,100dvh) - var(--arcade-reserve) - var(--arcade-menu) - var(--arcade-touch) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*560/660));max-width:none;flex:none;border-radius:12px}
+body.game-fullscreen[data-game=invaders] .arena-frame{width:min(100%,calc((var(--game-fullscreen-height,100dvh) - var(--arcade-reserve) - var(--arcade-menu) - var(--arcade-touch) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*800/760));max-width:none;flex:none;border-radius:12px}
+body.game-fullscreen[data-game=whack-a-mole] .board-frame{width:min(100%,calc(var(--game-fullscreen-height,100dvh) - var(--arcade-reserve) - var(--arcade-menu) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));max-width:none;flex:none;border-radius:15px;box-shadow:0 5px 0 #b8d4b9;border-width:5px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .action-row{width:min(100%,760px);grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-top:6px}
+body.game-fullscreen[data-game=whack-a-mole] .action-row{grid-template-columns:1.25fr 1fr 1fr}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .action{min-width:0;min-height:44px;padding:5px 6px;font-size:12px;border-radius:9px;white-space:normal}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .action span{font-size:10px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.surge-action,.action-nova,.action-fever)::after{content:attr(data-energy);display:block;font-size:9px;line-height:1.2;opacity:.9}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders]) .touch-controls{width:min(100%,760px);gap:5px;margin-top:6px;display:none}
+body.game-fullscreen[data-game=arkanoid] .touch-player{padding:4px;gap:4px;border-radius:9px}
+body.game-fullscreen[data-game=arkanoid] .touch-player button{min-width:44px;width:44px;height:44px}
+body.game-fullscreen[data-game=invaders] .touch-player{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:11px 44px;gap:3px 5px;padding:4px;border-radius:9px}
+body.game-fullscreen[data-game=invaders] .touch-player>span{grid-column:1/-1;margin:0;font-size:8px}
+body.game-fullscreen[data-game=invaders] .touch-buttons{grid-column:1;grid-row:2;gap:3px}
+body.game-fullscreen[data-game=invaders] .touch-buttons button{height:44px;min-height:44px;font-size:15px}
+body.game-fullscreen[data-game=invaders] .touch-buttons button[data-fire]{font-size:9px}
+body.game-fullscreen[data-game=invaders] .touch-nova{grid-column:2;grid-row:2;width:44px;height:44px;min-height:44px;margin:0;padding:2px;font-size:8px;line-height:1.2;white-space:normal}
+body.game-fullscreen[data-game=invaders].mode-single .p2-touch{display:none}
+body.game-fullscreen:not(.session-active):is([data-game=arkanoid],[data-game=invaders]) :is(.hud,.touch-controls,.action-row),body.game-fullscreen.state-menu[data-game=whack-a-mole] :is(.hud,.action-row){display:none!important}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay{justify-content:center;padding:14px 18px;overflow:auto}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .overlay-kicker{font-size:8px}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .overlay-emblem{width:42px;height:42px;margin:6px 0;font-size:27px;flex:none}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay h2{font-size:clamp(20px,3.5vmin,32px);flex:none}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay p{margin:8px 0 11px;font-size:10px;line-height:1.5;flex:none}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay small{margin-top:7px;font-size:8px;flex:none}
+body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay :is(.primary,.secondary){min-height:44px;padding:7px 11px;font-size:12px;flex:none}
+
+body.game-fullscreen[data-game=hasami-shogi] :is(.sidebar,.mobile-guide){display:none!important}
+body.game-fullscreen[data-game=hasami-shogi] .layout{display:block;width:100%}
+body.game-fullscreen[data-game=hasami-shogi] .intro{width:100%;margin:0 0 8px;justify-content:center}
+body.game-fullscreen[data-game=hasami-shogi] .intro>div:first-child{display:none}
+body.game-fullscreen[data-game=hasami-shogi] .setup{display:flex;justify-content:center;align-items:center;gap:7px;width:min(100%,680px)}
+body.game-fullscreen[data-game=hasami-shogi] :is(.mode-picker,.start-btn){min-width:0}
+body.game-fullscreen[data-game=hasami-shogi] .mode{min-width:0;padding:6px 9px}
+body.game-fullscreen[data-game=hasami-shogi] .start-btn{min-height:44px;padding:7px 12px;font-size:11px}
+body.game-fullscreen[data-game=hasami-shogi] .game-column{width:100%}
+body.game-fullscreen[data-game=hasami-shogi] :is(.scoreboard,.status-line,.actions){width:min(100%,900px)}
+body.game-fullscreen[data-game=hasami-shogi] .scoreboard{margin-bottom:5px}
+body.game-fullscreen[data-game=hasami-shogi] .player-card{min-height:51px;padding:5px 8px;gap:5px}
+body.game-fullscreen[data-game=hasami-shogi] .player-card strong{font-size:13px}
+body.game-fullscreen[data-game=hasami-shogi] .player-card small{font-size:8px}
+body.game-fullscreen[data-game=hasami-shogi] .status-line{min-height:23px;margin-bottom:5px;font-size:10px}
+body.game-fullscreen[data-game=hasami-shogi] .board-shell{width:min(100%,900px,calc(var(--game-fullscreen-height,100dvh) - 230px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));padding:6px;border-radius:12px;box-shadow:0 5px 0 #0a2529}
+body.game-fullscreen[data-game=hasami-shogi] .actions{margin-top:10px;gap:5px}
+body.game-fullscreen[data-game=hasami-shogi] .actions button{min-height:44px;padding:5px;font-size:10px}
+body.game-fullscreen[data-game=hasami-shogi].state-setup :is(.scoreboard,.status-line,.actions){display:none}
+body.game-fullscreen[data-game=hasami-shogi].state-setup .board-shell{width:min(100%,900px,calc(var(--game-fullscreen-height,100dvh) - 180px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)))}
+
+@media(pointer:coarse),(max-width:760px){
+  body.game-fullscreen.session-active[data-game=arkanoid]{--arcade-touch:60px}
+  body.game-fullscreen.session-active[data-game=invaders]{--arcade-touch:80px}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders]) .touch-controls{display:flex}
+}
+@media(max-width:760px){
+  body:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole]) .topbar .brand{display:none}
+  body:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole]) .top-actions{margin-left:auto}
+  body:is([data-game=arkanoid],[data-game=invaders],[data-game=hasami-shogi],[data-game=whack-a-mole]) .top-actions [data-game-fullscreen]{padding:7px 9px;font-size:11px}
+  body.game-fullscreen[data-game=arkanoid] .touch-player>span{font-size:7px;margin-left:1px}
+  body.game-fullscreen[data-game=hasami-shogi] .setup{flex-wrap:wrap}
+  body.game-fullscreen[data-game=hasami-shogi] .setup .mode-picker{flex:1}
+}
+@media(max-height:500px) and (min-width:560px){
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]){--arcade-landscape-touch:0px}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) #gameViewport{display:grid;grid-template-columns:auto minmax(210px,350px);grid-template-rows:auto auto auto auto;justify-content:center;align-content:center;align-items:center;gap:6px 14px;padding-top:calc(52px + env(safe-area-inset-top,0px))}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) :is(.game-layout,.play-column,.arena-column,.arena){display:contents}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .heading{grid-column:2;grid-row:1}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .hud{grid-column:2;grid-row:1;grid-template-columns:1.4fr 1fr;margin:0}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .arena-heading{grid-column:2;grid-row:2;margin:0}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .action-row{grid-column:2;grid-row:3;grid-template-columns:1fr 1fr;margin:0;align-self:start}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders]) .touch-controls{grid-column:1/-1;grid-row:4;margin:0}
+  body.game-fullscreen[data-game=arkanoid] .arena-frame{grid-column:1;grid-row:1/4;width:calc((var(--game-fullscreen-height,100dvh) - 74px - var(--arcade-landscape-touch) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*560/660)}
+  body.game-fullscreen[data-game=invaders] .arena-frame{grid-column:1;grid-row:1/4;width:calc((var(--game-fullscreen-height,100dvh) - 74px - var(--arcade-landscape-touch) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))*800/760)}
+  body.game-fullscreen[data-game=whack-a-mole] .board-frame{grid-column:1;grid-row:1/4;width:calc(var(--game-fullscreen-height,100dvh) - 76px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+  body.game-fullscreen[data-game=whack-a-mole] .action-row{grid-template-columns:1fr 1fr}
+  body.game-fullscreen[data-game=whack-a-mole] .action-fever{grid-column:1/-1}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay{padding:9px 12px}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay .overlay-emblem{display:none}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay h2{font-size:20px}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay p{font-size:9px;margin:6px 0 8px}
+  body.game-fullscreen:is([data-game=arkanoid],[data-game=invaders],[data-game=whack-a-mole]) .board-overlay small{display:none}
+  body.game-fullscreen[data-game=hasami-shogi] #gameViewport{display:grid;grid-template-columns:auto minmax(210px,360px);grid-template-rows:auto auto auto;align-content:center;justify-content:center;gap:8px 15px}
+  body.game-fullscreen[data-game=hasami-shogi] :is(.layout,.game-column){display:contents}
+  body.game-fullscreen[data-game=hasami-shogi] .intro{grid-column:2;grid-row:1;margin:0}
+  body.game-fullscreen[data-game=hasami-shogi] .setup{flex-direction:column;gap:8px}
+  body.game-fullscreen[data-game=hasami-shogi] .setup .mode-picker{width:100%;flex:none}
+  body.game-fullscreen[data-game=hasami-shogi] .scoreboard{grid-column:2;grid-row:1;grid-template-columns:1fr;gap:4px}
+  body.game-fullscreen[data-game=hasami-shogi] .turn-marker{display:none}
+  body.game-fullscreen[data-game=hasami-shogi] .status-line{grid-column:2;grid-row:2}
+  body.game-fullscreen[data-game=hasami-shogi] .actions{grid-column:2;grid-row:3;grid-template-columns:1fr 1fr;margin:0}
+  body.game-fullscreen[data-game=hasami-shogi] .board-shell,body.game-fullscreen[data-game=hasami-shogi].state-setup .board-shell{grid-column:1;grid-row:1/4;width:calc(var(--game-fullscreen-height,100dvh) - 91px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+}
+@media(pointer:coarse) and (max-height:500px) and (min-width:560px){
+  body.game-fullscreen.session-active[data-game=arkanoid]{--arcade-landscape-touch:60px}
+  body.game-fullscreen.session-active[data-game=invaders]{--arcade-landscape-touch:80px}
+}

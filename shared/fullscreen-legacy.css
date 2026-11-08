@@ -1,0 +1,104 @@
+/* Full-display layouts for the original DOM/canvas games. Game visibility and
+   logical board coordinates remain under each game's existing controller. */
+.legacy-fullscreen{position:fixed;top:max(9px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:9000;border:1px solid #ffffff4d;border-radius:10px;background:#14202feF;color:#fff;padding:8px 13px;font:700 12px/1.4 system-ui,-apple-system,sans-serif;box-shadow:0 3px 14px #0003;cursor:pointer}
+.game-fullscreen .legacy-fullscreen{visibility:hidden;pointer-events:none}
+body[data-game="minesweeper"]>header{padding-right:125px}
+body[data-game="memory"]:not(.game-fullscreen) .game-shell{padding-top:58px}
+body[data-game="minesweeper"].game-fullscreen .game-fullscreen-target{display:grid;grid-template-columns:minmax(235px,300px) minmax(0,1fr);gap:16px;align-items:center;overflow:hidden}
+body[data-game="minesweeper"].game-fullscreen .game-controls{max-height:100%;overflow:auto;min-height:0;scrollbar-width:thin}
+body[data-game="minesweeper"].game-fullscreen #board-wrap{height:100%;min-height:0;align-items:flex-start;justify-content:flex-start;padding:5px;overflow:auto}
+body[data-game="minesweeper"].game-fullscreen #board{margin:auto}
+body[data-game="minesweeper"].game-fullscreen .overlay{z-index:10000}
+body[data-game="memory"].game-fullscreen #game{gap:7px;overflow:hidden;background:#f5f7ee}
+body[data-game="memory"].game-fullscreen .play-area{min-height:0}
+body[data-game="memory"].game-fullscreen .toast{z-index:10000}
+body[data-game="othello"].game-fullscreen{justify-content:center;overflow:hidden!important;background:#fff0f7}
+body[data-game="othello"].game-fullscreen #game-screen{width:min(100%,calc(var(--game-fullscreen-height,100dvh) - 258px));max-width:none;padding:0;min-height:0}
+body[data-game="othello"].game-fullscreen .game-header{flex:none;margin-bottom:8px}
+body[data-game="othello"].game-fullscreen .score-row{flex:none;margin-bottom:8px}
+body[data-game="othello"].game-fullscreen .status-bar{flex:none;margin-top:8px}
+body[data-game="othello"].game-fullscreen #game-screen>.tk-portal-return{display:none}
+body[data-game="othello"].game-fullscreen #gameover-overlay{z-index:10000}
+body[data-game="gomoku"].game-fullscreen{overflow:hidden!important}
+body[data-game="gomoku"].game-fullscreen .screen{top:calc(52px + env(safe-area-inset-top));bottom:env(safe-area-inset-bottom);overflow:auto}
+body[data-game="gomoku"].game-fullscreen .board-wrap{min-height:0;padding:6px;flex:1;display:flex;align-items:center;justify-content:center}
+body[data-game="gomoku"].game-fullscreen .game-hdr{flex:none;padding-top:5px;padding-bottom:5px}
+body[data-game="gomoku"].game-fullscreen .game-btns{flex:none;padding-top:6px;padding-bottom:6px}
+body[data-game="foosball"].game-fullscreen{justify-content:center;overflow:hidden!important}
+body[data-game="foosball"].game-fullscreen #game-screen{height:100%;max-width:none;padding:0;justify-content:center;gap:3px;min-height:0}
+body[data-game="foosball"].game-fullscreen #canvas-wrap{flex:none;width:min(100%,calc((var(--game-fullscreen-height,100dvh) - 295px)*720/440));aspect-ratio:720/440;max-height:calc(var(--game-fullscreen-height,100dvh) - 295px);border-radius:10px}
+body[data-game="foosball"].game-fullscreen #cv{width:100%;height:100%;aspect-ratio:720/440}
+body[data-game="foosball"].game-fullscreen .game-hud{flex:none;margin:0}
+body[data-game="foosball"].game-fullscreen .hud-score .s-num{font-size:1.7rem}
+body[data-game="foosball"].game-fullscreen .rod-controls,body[data-game="foosball"].game-fullscreen .touch-controls,body[data-game="foosball"].game-fullscreen .kick-row{max-width:900px;flex:none;margin-top:2px}
+body[data-game="foosball"].game-fullscreen .touch-pad{height:78px}
+body[data-game="foosball"].game-fullscreen .rb{padding:7px;min-width:38px}
+body[data-game="foosball"].game-fullscreen .ctrl-help{font-size:10px;margin-top:2px}
+body[data-game="foosball"].game-fullscreen #gameover{z-index:10000}
+body[data-game="shougi"].game-fullscreen{justify-content:center;overflow:hidden!important}
+body[data-game="shougi"].game-fullscreen>h1{display:none}
+body[data-game="shougi"].game-fullscreen #game{padding:0;gap:4px;min-height:0;max-height:100%}
+body[data-game="shougi"].game-fullscreen #menu-btn{min-height:38px;padding:7px 16px}
+body[data-game="shougi"].game-fullscreen #overlay{z-index:10000}
+body[data-game="shougi"].game-fullscreen #promote-dialog,body[data-game="shougi"].game-fullscreen #result-dialog{z-index:10001}
+body[data-game="boccya"].game-fullscreen #app{overflow:hidden}
+body[data-game="boccya"] #game{display:none}
+body[data-game="boccya"].game-fullscreen h1{font-size:17px;margin:0 0 5px}
+body[data-game="boccya"].game-fullscreen #game{padding:0;gap:9px;min-height:0}
+body[data-game="boccya"].game-fullscreen #game-left{min-width:0;min-height:0}
+body[data-game="boccya"].game-fullscreen #game-right{max-height:100%;min-height:0;overflow:auto;scrollbar-width:thin}
+body[data-game="boccya"].game-fullscreen #gc{flex:none;max-width:100%}
+body[data-game="boccya"].game-fullscreen #overlay{z-index:10000}
+body[data-game="boccya"].game-fullscreen #final-dialog{z-index:10001}
+body[data-game="smartball"].game-fullscreen{justify-content:center;overflow:hidden!important;background:#080503}
+body[data-game="smartball"].game-fullscreen #c{flex:none;max-width:100%;object-fit:contain}
+body[data-game="tetris-classic"].game-fullscreen{justify-content:center;align-items:center;overflow:hidden!important;background:#000}
+body[data-game="tetris-classic"].game-fullscreen #c{flex:none;max-width:100%;max-height:100%;object-fit:contain;touch-action:none}
+@media(max-width:700px) and (min-height:501px){
+ body[data-game="minesweeper"].game-fullscreen .game-fullscreen-target{display:flex;flex-direction:column;gap:7px;align-items:stretch}
+ body[data-game="minesweeper"].game-fullscreen .game-controls{flex:none;max-height:46%;overflow:auto}
+ body[data-game="minesweeper"].game-fullscreen #board-wrap{flex:1;height:auto;min-height:90px}
+ body[data-game="minesweeper"].game-fullscreen .control-panel,body[data-game="minesweeper"].game-fullscreen .feature-panel{padding:10px}
+ body[data-game="minesweeper"].game-fullscreen .section-label,body[data-game="minesweeper"].game-fullscreen .howto{display:none}
+ body[data-game="minesweeper"].game-fullscreen .hud{margin:7px 0}
+ body[data-game="minesweeper"].game-fullscreen .hud-badge{padding:7px}
+ body[data-game="minesweeper"].game-fullscreen .diff-btn{padding:8px 6px;min-height:40px}
+ body[data-game="minesweeper"].game-fullscreen .action-row{margin-top:8px}
+ body[data-game="minesweeper"].game-fullscreen #hint-btn,body[data-game="minesweeper"].game-fullscreen #flag-toggle{min-height:41px;padding:7px 5px}
+ .legacy-fullscreen{font-size:11px;padding:8px 10px}
+}
+@media(max-height:500px) and (min-width:560px){
+ body[data-game="minesweeper"].game-fullscreen .game-fullscreen-target{grid-template-columns:225px minmax(0,1fr);gap:9px}
+ body[data-game="minesweeper"].game-fullscreen .howto{display:none}
+ body[data-game="othello"].game-fullscreen #game-screen[style*="flex"]{display:grid!important;grid-template-columns:175px minmax(0,1fr);grid-template-rows:auto 1fr auto;gap:5px 12px;width:100%;height:100%;align-items:center}
+ body[data-game="othello"].game-fullscreen #board{grid-column:2;grid-row:1/4;width:min(100%,calc(var(--game-fullscreen-height,100dvh) - 82px));justify-self:center}
+ body[data-game="othello"].game-fullscreen .game-header{grid-column:1;grid-row:1;flex-wrap:wrap;gap:5px}
+ body[data-game="othello"].game-fullscreen .score-row{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:5px;width:100%;margin:0}
+ body[data-game="othello"].game-fullscreen .player-panel{padding:7px;width:100%}
+ body[data-game="othello"].game-fullscreen .status-bar{grid-column:1;grid-row:3;font-size:11px}
+ body[data-game="gomoku"].game-fullscreen #sGame.active{display:grid;grid-template-columns:190px minmax(0,1fr);grid-template-rows:1fr auto;gap:5px;align-items:center}
+ body[data-game="gomoku"].game-fullscreen .game-hdr{grid-column:1;grid-row:1;flex-wrap:wrap;height:auto;align-self:start;gap:12px;padding:14px 8px}
+ body[data-game="gomoku"].game-fullscreen .board-wrap{grid-column:2;grid-row:1/3;justify-self:center}
+ body[data-game="gomoku"].game-fullscreen .game-btns{grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:6px;padding:5px 8px}
+ body[data-game="foosball"].game-fullscreen #game-screen[style*="flex"]{display:grid!important;grid-template-columns:minmax(0,1fr) 180px;grid-template-rows:43px minmax(0,1fr) 40px;gap:4px 10px;align-items:center}
+ body[data-game="foosball"].game-fullscreen .game-hud{grid-column:1;grid-row:1}
+ body[data-game="foosball"].game-fullscreen #canvas-wrap{grid-column:1;grid-row:2;width:min(100%,calc((var(--game-fullscreen-height,100dvh) - 152px)*720/440));max-height:calc(var(--game-fullscreen-height,100dvh) - 152px);justify-self:center}
+ body[data-game="foosball"].game-fullscreen .rod-controls{grid-column:2;grid-row:1;gap:3px;flex-wrap:wrap}
+ body[data-game="foosball"].game-fullscreen .rb{min-width:30px;padding:5px;font-size:9px}
+ body[data-game="foosball"].game-fullscreen .touch-controls{grid-column:2;grid-row:2;align-self:stretch;flex-direction:column;gap:4px}
+ body[data-game="foosball"].game-fullscreen .touch-pad{height:50%;width:100%;min-height:60px}
+ body[data-game="foosball"].game-fullscreen .touch-pad .pad-arrows{font-size:10px;line-height:1.1}
+ body[data-game="foosball"].game-fullscreen .kick-row{grid-column:1/3;grid-row:3;gap:5px}
+ body[data-game="foosball"].game-fullscreen .kick-btn{padding:6px 12px;font-size:11px;margin:0}
+ body[data-game="foosball"].game-fullscreen .ctrl-help{display:none}
+ body[data-game="shougi"].game-fullscreen #game[style*="flex"]{display:grid!important;grid-template-columns:190px minmax(0,1fr);grid-template-rows:auto auto auto auto auto;gap:4px 12px;height:100%;align-items:center}
+ body[data-game="shougi"].game-fullscreen .board-outer{grid-column:2;grid-row:1/6;justify-self:center}
+ body[data-game="shougi"].game-fullscreen .player-area{grid-column:1;width:100%;gap:5px}
+ body[data-game="shougi"].game-fullscreen .player-label{min-width:34px;font-size:11px}
+ body[data-game="shougi"].game-fullscreen #status,body[data-game="shougi"].game-fullscreen #thinking,body[data-game="shougi"].game-fullscreen #menu-btn{grid-column:1;margin:0;width:100%}
+ body[data-game="boccya"].game-fullscreen h1{display:none}
+ body[data-game="boccya"].game-fullscreen #game{flex-direction:row!important;align-items:center;justify-content:center;gap:10px}
+ body[data-game="boccya"].game-fullscreen #game-right{width:200px;flex:none;font-size:11px}
+ body[data-game="boccya"].game-fullscreen .btn{min-height:34px;padding:6px 0;font-size:11px}
+ body[data-game="boccya"].game-fullscreen #status-bar{padding:5px;font-size:11px}
+}

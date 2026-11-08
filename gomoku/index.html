@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>五目並べ</title>
@@ -156,8 +156,11 @@
     .fade-up{animation:fadeUp .35s ease both;}
   </style>
   <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="gomoku">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="body" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
 
 <!-- ====== HOME ====== -->
 <div id="sHome" class="screen active">
@@ -397,11 +400,13 @@ function setupCanvas(){
   const wrap=document.getElementById('board-wrap')||document.querySelector('.board-wrap');
   const gc=document.getElementById('gc'), ec=document.getElementById('ec');
   const ww=window.innerWidth, wh=window.innerHeight;
-  // Header ~70px, footer ~72px, padding 16px
-  const avW=ww-24;
-  const avH=wh-70-72-16;
-  const sz=Math.min(avW,avH,420);
-  CS=Math.floor((sz-40)/(BS-1));
+  const full=document.body.classList.contains('game-fullscreen'),wide=full&&wh<500&&ww>=560;
+  // Recompute the logical grid together with the canvas; pointer coordinates
+  // remain in the same CSS-pixel space after a full-display transition.
+  const avW=ww-(wide?230:24);
+  const avH=wh-(wide?82:full?215:158);
+  const sz=Math.max(124,Math.min(avW,avH,full?900:420));
+  CS=Math.max(5,full?Math.floor(sz/(BS+.5)):Math.floor((sz-40)/(BS-1)));
   PAD=Math.floor(CS*.75);
   CW=CS*(BS-1)+PAD*2;
   [gc,ec].forEach(c=>{c.width=CW;c.height=CW;c.style.width=CW+'px';c.style.height=CW+'px';});
@@ -1107,5 +1112,6 @@ window.addEventListener('resize',()=>{
   }
 });
 </script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

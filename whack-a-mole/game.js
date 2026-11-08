@@ -153,6 +153,7 @@
     ui.level.textContent = String(level).padStart(2, '0');
     ui.combo.textContent = '×' + Math.min(5, 1 + Math.floor((Math.max(combo, 1) - 1) / 4));
     ui.energy.textContent = energy + ' / 100';
+    ui.fever.dataset.energy = Math.round(energy) + '%';
     ui.energyBar.style.width = energy + '%';
     ui.energyTrack.setAttribute('aria-valuenow', String(energy));
     ui.best.textContent = readBest().toLocaleString('ja-JP') + ' PTS';

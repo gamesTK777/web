@@ -1,0 +1,12 @@
+/* The game-specific adapters own board/canvas sizing; this shared frame keeps
+   full-display and its exit control usable on native fullscreen and iPhone. */
+[data-game-fullscreen]{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;min-width:44px;touch-action:manipulation;white-space:nowrap}
+body.game-fullscreen{overflow:hidden!important;overscroll-behavior:none;background:#10151c}
+.game-fullscreen.game-fullscreen-target,.game-fullscreen .game-fullscreen-target{position:fixed!important;inset:0!important;z-index:9990!important;box-sizing:border-box!important;width:var(--game-fullscreen-width,100vw)!important;height:var(--game-fullscreen-height,100dvh)!important;min-height:0!important;max-height:none!important;max-width:none!important;margin:0!important;padding:calc(52px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));overflow:auto;overscroll-behavior:contain;background:var(--fullscreen-background,var(--bg,#10151c))}
+body.game-fullscreen.game-fullscreen-target{overflow:auto!important}
+.game-fullscreen-exit{position:fixed!important;top:calc(8px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));z-index:10010!important;display:inline-flex;align-items:center;justify-content:center;min-width:112px;min-height:44px;padding:8px 14px;border:1px solid #ffffff5c;border-radius:10px;background:#14202ff2;box-shadow:0 3px 16px #0005;color:#fff;font:700 12px/1.4 system-ui,-apple-system,'Noto Sans JP',sans-serif;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.game-fullscreen-exit[hidden]{display:none!important}
+.game-fullscreen-exit:hover{background:#25374a}
+.game-fullscreen-exit:focus-visible{outline:3px solid #f3d68c;outline-offset:3px}
+.game-fullscreen-announcement{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-height:500px) and (orientation:landscape){.game-fullscreen-exit{top:calc(5px + env(safe-area-inset-top,0px));min-height:40px;padding:6px 11px}.game-fullscreen.game-fullscreen-target,.game-fullscreen .game-fullscreen-target{padding-top:calc(48px + env(safe-area-inset-top,0px))}}

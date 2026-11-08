@@ -375,8 +375,10 @@
   }
 </style>
 <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-games.css?v=20261108-fullscreen">
 </head>
-<body class="portal-solitaire">
+<body class="portal-solitaire" data-game="solitaire">
 <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 
 <header>
@@ -387,6 +389,7 @@
     <div class="score-badge">🃏 移動: <span id="moves">0</span></div>
   </div>
   <div class="btn-row">
+    <button type="button" id="solitaireFullscreen" class="btn btn-secondary" data-game-fullscreen data-fullscreen-target="body" aria-pressed="false">⛶ 全画面</button>
     <button class="btn btn-primary" onclick="newGame()">🎮 新しいゲーム</button>
     <button class="btn btn-secondary" onclick="undoMove()">↩️ もどす</button>
     <button class="btn btn-secondary" onclick="autoComplete()">✨ オートクリア</button>
@@ -660,13 +663,24 @@ function renderFoundations() {
   }
 }
 
+let solitaireCardLayout = {up:30,down:18,width:80,full:false};
+function fitSolitaireLayout() {
+  if(!document.body.classList.contains('game-fullscreen')) {document.body.style.removeProperty('--solitaire-card-width');solitaireCardLayout={up:30,down:18,width:80,full:false};return;}
+  const area=document.getElementById('game'),height=(window.visualViewport?.height||window.innerHeight)-area.getBoundingClientRect().top-62;
+  const width=Math.max(36,Math.min(180,(document.body.clientWidth-60)/7));
+  const measures=w=>{const down=Math.min(18,Math.max(7,w*.2)),up=Math.min(30,Math.max(12,w*.3));return{width:w,up,down,height:w*2.8+Math.max(0,...tableau.map(cards=>cards.slice(0,-1).reduce((sum,card)=>sum+(card.faceUp?up:down),0)))};};
+  let low=36,high=width;for(let i=0;i<16;i++){const mid=(low+high)/2;if(measures(mid).height<=height)low=mid;else high=mid;}
+  solitaireCardLayout={...measures(Math.max(36,Math.floor(low))),full:true};
+  document.body.style.setProperty('--solitaire-card-width',solitaireCardLayout.width+'px');
+}
 function renderTableau() {
+  fitSolitaireLayout();
   const container = document.getElementById('tableau');
   container.innerHTML = '';
 
   const CARD_HEIGHT_RATIO = 1.4; // aspect ratio h/w
-  const FACE_DOWN_OFFSET = 18;
-  const FACE_UP_OFFSET = 30;
+  const FACE_DOWN_OFFSET = solitaireCardLayout.down;
+  const FACE_UP_OFFSET = solitaireCardLayout.up;
 
   for(let ci = 0; ci < 7; ci++) {
     const col = document.createElement('div');
@@ -720,7 +734,7 @@ function renderTableau() {
     });
 
     // Adjust col min height
-    col.style.minHeight = Math.max(100, offsetY + 100) + 'px';
+    col.style.minHeight = (solitaireCardLayout.full ? Math.max(solitaireCardLayout.width*1.4,offsetY-(cards.at(-1)?.faceUp?FACE_UP_OFFSET:FACE_DOWN_OFFSET)+solitaireCardLayout.width*1.4) : Math.max(100, offsetY + 100)) + 'px';
 
     container.appendChild(col);
   }
@@ -773,14 +787,15 @@ function beginDrag(cardEl, source, args, clientX, clientY) {
   const rect = cardEl.getBoundingClientRect();
   dragEl = document.createElement('div');
   dragEl.style.cssText = `position:fixed;z-index:9999;pointer-events:none;width:${rect.width}px;`;
+  dragEl.style.height = (rect.height + Math.max(0,cards.length-1)*solitaireCardLayout.up) + 'px';
   cards.forEach((card, i) => {
     const ce = cardElement(card);
-    ce.style.position = 'relative';
-    ce.style.top = (i * 30) + 'px';
+    ce.style.position = 'absolute';
+    ce.style.top = (i * solitaireCardLayout.up) + 'px';
+    ce.style.left = '0';ce.style.zIndex = String(i+1);
     ce.style.width = rect.width + 'px';
     ce.style.aspectRatio = '2.5/3.5';
     ce.classList.add('dragging');
-    if(i > 0) ce.style.marginTop = '-' + (rect.width * 1.4 - 30) + 'px';
     dragEl.appendChild(ce);
   });
   document.body.appendChild(dragEl);
@@ -1157,7 +1172,16 @@ function updateMoves() {
 // ==============================
 //  START
 // ==============================
+let solitaireResizeFrame = null;
+function refreshSolitaireDisplay(){
+  mousePending=null;touchPending=null;dragState=null;lastTapInfo=null;if(dragEl){dragEl.remove();dragEl=null;}
+  if(solitaireResizeFrame!==null)cancelAnimationFrame(solitaireResizeFrame);
+  solitaireResizeFrame=requestAnimationFrame(()=>{solitaireResizeFrame=null;render();});
+}
+window.addEventListener('gamefullscreenchange',refreshSolitaireDisplay);
+window.addEventListener('resize',refreshSolitaireDisplay);
 newGame();
 </script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

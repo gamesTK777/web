@@ -8,8 +8,10 @@
   <title>NEON SHIFT / TETRIS — TK777 ARCADE</title>
   <link rel="stylesheet" href="v2/style.css?v=touch-2">
   <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-games.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="tetris">
   <div class="ambient" aria-hidden="true"></div>
   <header class="topbar">
     <a class="brand" href="../index.html"><span class="brand-icon">▦</span> TK777 <span class="muted">/ ARCADE</span></a>
@@ -20,7 +22,7 @@
   <main class="shell">
     <section class="heading">
       <div><p class="eyebrow"><span>01</span> REIMAGINED BLOCK PUZZLE</p><h1>NEON<span>SHIFT</span><span class="title-dot">.</span></h1><p class="tagline">積む。消す。スキルで、突破する。</p></div>
-      <div class="edition"><span>TETRIS / SKILL EDITION</span><a href="classic.html">旧版・2人対戦 ↗</a></div>
+      <div class="edition"><span>TETRIS / SKILL EDITION</span><a href="classic.html?v=20261108-fullscreen">旧版・2人対戦 ↗</a></div>
     </section>
 
     <div class="game-layout">
@@ -32,7 +34,7 @@
       </aside>
 
       <section class="play-column" aria-label="ゲーム画面">
-        <div class="board-top"><span><i></i> <span id="status">READY TO SHIFT</span></span><button id="pause" aria-label="一時停止" disabled>Ⅱ <span>PAUSE</span></button></div>
+        <div class="board-top"><span><i></i> <span id="status">READY TO SHIFT</span></span><div class="board-view-tools"><button type="button" id="tetrisFullscreen" class="" data-game-fullscreen data-fullscreen-target=".shell" aria-pressed="false">⛶ 全画面</button><button id="pause" aria-label="一時停止" disabled>Ⅱ <span>PAUSE</span></button></div></div>
         <div class="board-frame" id="board-frame">
           <canvas id="board" width="600" height="1200" tabindex="0" aria-label="ゲーム盤面。タップで回転、左右スワイプで移動、下フリックで落下、上フリックでホールド。キーボード操作にも対応。"></canvas>
           <div class="board-grain" aria-hidden="true"></div>
@@ -80,6 +82,7 @@
     <div class="ranking-table-wrap"><table class="ranking-table"><thead><tr><th>#</th><th>PLAYER</th><th id="ranking-value-label">SCORE</th><th>LINES</th></tr></thead><tbody id="ranking-rows"></tbody></table></div>
     <div class="ranking-bottom"><p id="ranking-status" role="status"></p><button id="ranking-refresh" class="secondary-button">更新 ↻</button></div><p class="ranking-notice">AVALANCHE SEASON · ARCADEは得点順、40 LINESはクリアタイム順。<br>同記録は副記録、登録順で決定。通信できないときもゲームは遊べます。</p>
   </dialog>
-  <script type="module" src="v2/app.mjs?v=touch-2"></script>
+  <script type="module" src="v2/app.mjs?v=20261108-screen"></script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

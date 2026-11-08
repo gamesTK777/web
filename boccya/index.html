@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>ボッチャ</title>
 <style>
@@ -150,8 +150,11 @@ h1{ flex-shrink:0; margin:8px 0 4px; font-size:clamp(1.1rem,4vw,1.6rem); color:v
 #final-dialog .btn{ display:block; margin:8px auto 0; }
 </style>
 <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="boccya">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="#app" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
 <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 <div id="app">
 <h1>🎯 ボッチャ</h1>
@@ -279,6 +282,23 @@ function initCanvas() {
   }
   canvas.width  = W;
   canvas.height = H;
+  fitBoccyaDisplay();
+}
+
+// Viewport changes affect CSS display dimensions only. W/H, ball positions,
+// velocities and scoring distances stay in their original court coordinates.
+function fitBoccyaDisplay() {
+  if (!canvas || !W || !H) return;
+  const game = document.getElementById('game'), right = document.getElementById('game-right');
+  const full = document.body.classList.contains('game-fullscreen');
+  const desktop = window.innerWidth >= 640 || full && window.innerWidth >= 560 && window.innerHeight < 500;
+  const style = getComputedStyle(game), horizontal = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight), vertical = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  const width = Math.max(90, game.clientWidth - horizontal - (desktop ? right.offsetWidth + 18 : 0));
+  const legend = document.getElementById('legend').offsetHeight + 8;
+  const height = Math.max(90, game.clientHeight - vertical - legend - (desktop ? 0 : right.offsetHeight + 10));
+  const scale = Math.max(.1, Math.min(width / W, height / H, full ? 3 : 1));
+  canvas.style.width = Math.floor(W * scale) + 'px';
+  canvas.style.height = Math.floor(H * scale) + 'px';
 }
 
 // ===== DRAW =====
@@ -712,11 +732,13 @@ function cpuThrow() {
 
 // ===== RESIZE =====
 function onResize(){
-  if(document.getElementById('game').style.display==='none') return;
-  initCanvas(); render();
+  if(!canvas || !ctx || document.getElementById('game').style.display!=='flex') return;
+  fitBoccyaDisplay(); render();
 }
+window.addEventListener('gamefullscreenchange',()=>{powerDragging=false;angleDragging=false;onResize();});
 window.addEventListener('resize', onResize);
 window.addEventListener('orientationchange', ()=>setTimeout(onResize,200));
 </script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

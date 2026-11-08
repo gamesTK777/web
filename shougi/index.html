@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>将棋</title>
@@ -139,8 +139,11 @@ h1 { margin: 12px 0 6px; font-size: clamp(1.2rem, 5vw, 1.8rem); color: #f0c040; 
 #thinking { display: none; font-size: .85rem; color: #f0c040; margin-top: 2px; }
 </style>
 <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="shougi">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="body" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
 <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 <h1>将棋</h1>
 
@@ -192,7 +195,11 @@ h1 { margin: 12px 0 6px; font-size: clamp(1.2rem, 5vw, 1.8rem); color: #f0c040; 
 function updateCellSize() {
   const LABEL_W = 24; // row labels
   const PADDING = 16; // body padding both sides
-  const available = Math.min(window.innerWidth - LABEL_W - PADDING, 504);
+  const full = document.body.classList.contains('game-fullscreen');
+  const wide = full && window.innerHeight < 500 && window.innerWidth >= 560;
+  const available = full
+    ? Math.max(144, Math.min(window.innerWidth - (wide ? 235 : LABEL_W + PADDING), window.innerHeight - (wide ? 90 : 290), 810))
+    : Math.min(window.innerWidth - LABEL_W - PADDING, 504);
   const cs = Math.floor(available / 9);
   document.documentElement.style.setProperty('--cs', cs + 'px');
   // 駒フォントサイズ
@@ -622,5 +629,6 @@ function buildLabels() {
   for(let i=0;i<9;i++){const d=document.createElement('div');d.className='row-label';d.textContent=rn[i];rows.appendChild(d);}
 }
 </script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

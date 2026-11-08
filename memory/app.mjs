@@ -86,9 +86,21 @@ function fitBoard(){
   const w=area.clientWidth-parseFloat(box.paddingLeft)-parseFloat(box.paddingRight),h=area.clientHeight-parseFloat(box.paddingTop)-parseFloat(box.paddingBottom);if(w<=0||h<=0||!session.state)return;
   const landscape=window.innerHeight<500&&w>560&&w/h>1.6,pairs=session.state.pairs;
   columns=landscape?{6:6,10:10,18:12}[pairs]:pairs===18&&w>800?9:{6:4,10:5,18:6}[pairs];
-  const rows=Math.ceil(pairs*2/columns),gap=w<400?4:8;
-  const maxWidth=pairs===6?144:pairs===10?120:108;
-  const width=Math.max(20,Math.floor(Math.min(maxWidth,(w-gap*(columns-1))/columns,(h-gap*(rows-1)-4)/(rows*1.25))));
+  const fullscreen=document.body.classList.contains('game-fullscreen'),gap=w<400?4:8;
+  if(fullscreen){
+    // Pick the regular grid with the largest cards for the available play area.
+    // A tall phone can use 3 x 4 instead of leaving space below a 4 x 3 grid.
+    const total=pairs*2;let bestWidth=-1,bestShape=Infinity;
+    for(let cols=1;cols<=total;cols++){
+      if(total%cols)continue;const rows=total/cols;
+      const width=Math.floor(Math.min((w-gap*(cols-1))/cols,(h-gap*(rows-1)-4)/(rows*1.25)));
+      const shape=Math.abs((cols/rows/1.25)-(w/h));
+      if(width>bestWidth||width===bestWidth&&shape<bestShape){columns=cols;bestWidth=width;bestShape=shape;}
+    }
+  }
+  const rows=Math.ceil(pairs*2/columns);
+  const maxWidth=fullscreen?Infinity:pairs===6?144:pairs===10?120:108;
+  const width=Math.max(fullscreen?1:20,Math.floor(Math.min(maxWidth,(w-gap*(columns-1))/columns,(h-gap*(rows-1)-4)/(rows*1.25))));
   const board=$('board');board.style.setProperty('--cols',columns);board.style.setProperty('--gap',gap+'px');board.style.setProperty('--card-w',width+'px');board.style.setProperty('--card-h',Math.floor(width*1.25)+'px');
 }
 function viewportChanged(){const v=window.visualViewport;document.documentElement.style.setProperty('--app-height',(v&&v.height?v.height:window.innerHeight)+'px');fitBoard();}

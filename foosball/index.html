@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>⚽ テーブルサッカー</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
@@ -91,8 +91,11 @@ canvas{display:block;width:100%;height:auto;touch-action:none}
 }
 </style>
 <link rel="stylesheet" href="../shared/portal-return.css">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-legacy.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="foosball">
+<button class="legacy-fullscreen" type="button" data-game-fullscreen data-fullscreen-target="body" aria-pressed="false" aria-label="ゲームを全画面で表示">⛶ 全画面</button>
 
 <!-- TITLE -->
 <div id="title-screen">
@@ -238,6 +241,15 @@ let canvasDrag = {
 
 // Flick / inertia velocity per rod (px/frame)
 let rodFlickVy = [];
+window.addEventListener('gamefullscreenchange', () => {
+  keys = {};
+  rodFlickVy.fill(0);
+  for (const player of ['p1', 'p2']) {
+    padState[player].active = false; padState[player].isMouse = false; padState[player].touchId = null;
+    canvasDrag[player].active = false; canvasDrag[player].isMouse = false; canvasDrag[player].touchId = null;
+    resetPadIndicator(player);
+  }
+});
 const FLICK_FRICTION = 0.82;       // deceleration per frame
 const FLICK_MIN_SPEED = 3.0;       // swipe speed threshold to trigger flick
 const FLICK_SCALE = 4.0;           // multiplier from swipe speed → rod velocity
@@ -1269,5 +1281,6 @@ function gameLoop() {
 // ================================================
 window.addEventListener('DOMContentLoaded', init);
 </script>
+<script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

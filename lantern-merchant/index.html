@@ -7,9 +7,11 @@
   <meta name="description" content="迷宮で拾った小さな宝物から、自分だけの街を。探索・商い・投資・不動産がつながるオリジナル冒険ゲーム。">
   <title>パル商人日記 — PAL MERCHANT DIARY | TK777</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=20261108-music7">
+  <link rel="stylesheet" href="style.css?v=20261108-screen">
+  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
+  <link rel="stylesheet" href="../shared/fullscreen-games.css?v=20261108-fullscreen">
 </head>
-<body>
+<body data-game="lantern-merchant">
   <header class="topbar">
     <a class="back" href="../index.html" aria-label="ゲーム一覧に戻る">← <span>ゲーム一覧</span></a>
     <a class="brand" href="#"><img src="icon.svg" width="38" height="38" alt=""><div>パル商人日記<small>PAL MERCHANT DIARY</small></div></a>
@@ -24,7 +26,7 @@
         <section class="quest panel"><span class="section-label">旅の道しるべ</span><h3 id="questTitle">最初の宝物を持ち帰ろう</h3><p id="questDescription"></p><div class="milestones" id="milestones"></div></section>
       </aside>
       <section class="center-column">
-        <section class="world-panel"><div class="world-top"><div><span id="locationEyebrow" class="eyebrow">YOUR HOMETOWN</span><h2 id="locationTitle">水灯りの街</h2></div><div id="worldHud" class="world-hud"></div><div class="view-tools"><button id="stageSoundButton" aria-label="サウンド設定を開く">♪</button><button id="zoomOut" aria-label="表示倍率を下げる">−</button><span id="zoomLabel">3×</span><button id="zoomIn" aria-label="表示倍率を上げる">＋</button><button id="overviewButton" aria-label="街の全景を表示">全景</button><button id="focusButton" aria-label="ゲーム画面を拡大表示" aria-pressed="false">⛶ 拡大</button></div><span id="locationBadge" class="location-badge">安全な拠点</span></div><div class="canvas-wrap" id="canvasWrap"><canvas id="world" aria-label="街と迷宮のゲーム画面" tabindex="0"></canvas><div id="sceneCaption" class="scene-caption"></div><div class="canvas-vignette"></div></div><div class="world-bottom"><span id="sceneHint">街で準備を整えて、迷宮へ。</span><button id="primaryAction" class="primary">迷宮へ出発 <span>↗</span></button></div></section>
+        <section class="world-panel"><div class="world-top"><div><span id="locationEyebrow" class="eyebrow">YOUR HOMETOWN</span><h2 id="locationTitle">水灯りの街</h2></div><div id="worldHud" class="world-hud"></div><div class="view-tools"><button id="stageSoundButton" aria-label="サウンド設定を開く">♪</button><button id="zoomOut" aria-label="表示倍率を下げる">−</button><span id="zoomLabel">3×</span><button id="zoomIn" aria-label="表示倍率を上げる">＋</button><button id="overviewButton" aria-label="街の全景を表示">全景</button><button id="focusButton" data-game-fullscreen data-fullscreen-target=".shell" aria-label="ゲーム画面を拡大表示" aria-pressed="false">⛶ 拡大</button></div><span id="locationBadge" class="location-badge">安全な拠点</span></div><div class="canvas-wrap" id="canvasWrap"><canvas id="world" aria-label="街と迷宮のゲーム画面" tabindex="0"></canvas><div id="sceneCaption" class="scene-caption"></div><div class="canvas-vignette"></div></div><div class="world-bottom"><span id="sceneHint">街で準備を整えて、迷宮へ。</span><button id="primaryAction" class="primary">迷宮へ出発 <span>↗</span></button></div></section>
         <section id="swarmPanel" class="swarm-panel" role="status" aria-live="polite" hidden><span class="swarm-symbol" aria-hidden="true">✦</span><div class="swarm-copy"><p class="eyebrow">THE GATHERING OF CREATURES</p><h3 id="swarmTitle"></h3><p id="swarmDescription"></p></div><button id="swarmBombButton">閃光の実を使う</button></section>
         <div class="field-tools"><span>迷宮の住人を知ろう</span><button id="bestiaryButton" class="text-button">魔物図鑑 · 全15種類 ↗</button></div>
         <nav id="townTools" class="town-tools" aria-label="街の施設を選ぶ"><span>水灯りの街を歩こう</span><button data-town-facility="trade">交易所</button><button data-town-facility="inn">旅人の宿</button><button data-town-facility="dungeon">迷宮入口</button><button data-town-estate>土地と建物</button></nav>
@@ -44,6 +46,7 @@
   <dialog id="confirmDialog"><div class="dialog-heading"><h2 id="confirmTitle">確認</h2></div><p id="confirmText"></p><div class="confirm-actions"><button id="confirmCancel">やめる</button><button id="confirmOk" class="primary">実行する</button></div></dialog>
   <dialog id="bestiaryDialog" aria-labelledby="bestiaryTitle"><div class="dialog-heading"><div><p class="eyebrow">CREATURES OF THE LANTERN DEPTHS</p><h2 id="bestiaryTitle">翠灯の迷宮・魔物図鑑</h2></div><button data-close="bestiaryDialog" class="icon-button" aria-label="魔物図鑑を閉じる">×</button></div><p class="bestiary-intro">迷宮に暮らす15種類の魔物たち。下層へ進むほど、新しい姿や動きに出会えます。今いる階の敵はそのまま、新しく入る階から新しい種類が出現します。</p><div id="bestiaryGrid" class="bestiary-grid"></div><button data-close="bestiaryDialog" class="primary full">冒険に戻る</button></dialog>
   <dialog id="soundDialog"><div class="dialog-heading"><div><p class="eyebrow">ORIGINAL SOUNDTRACK / 7 TRACKS</p><h2>音の設定</h2></div><button data-close="soundDialog" class="icon-button" aria-label="音の設定を閉じる">×</button></div><p>町、2階ごとの迷宮、魔物だまり。それぞれの場所で、全7曲の冒険音楽が自動で切り替わります。</p><div class="current-music"><span class="music-note" aria-hidden="true">♪</span><div><small id="currentTrackState">冒険を始めると流れる曲</small><strong id="currentTrackTitle"></strong><span id="currentTrackArea"></span></div></div><details class="soundtrack-details"><summary>場所ごとのBGM · 全7曲</summary><ol id="musicTrackList" class="music-track-list"></ol></details><label class="audio-toggle"><input id="muteAudio" type="checkbox"> 音楽と効果音をミュート</label><label class="volume-label" for="audioVolume">音量 <output id="volumeValue">35%</output></label><input id="audioVolume" type="range" min="0" max="100" step="5" value="35"><p id="audioStatus" class="small-note">ゲーム開始後に再生されます。</p><p class="small-note music-help">魔物だまりを制圧すると、その階層の曲に戻ります。ゲーム開始前と別タブを見ている間は流れません。</p><button data-close="soundDialog" class="primary full">ゲームへ戻る</button></dialog>
-  <script type="module" src="app.mjs?v=20261108-music7"></script>
+  <script type="module" src="app.mjs?v=20261108-screen"></script>
+  <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body>
 </html>

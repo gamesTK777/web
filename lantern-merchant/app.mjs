@@ -10,6 +10,7 @@ import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
 import {preloadEnvironment,getEnvironmentAssetStatus} from './anime-environment.mjs?v=20261108-anime10';
 import {ATTACK_DURATION} from './combat-art.mjs?v=20261108-anime10';
 import {ENEMY_TYPES} from './enemies.mjs?v=20261108-anime10';
+import {initGameFullscreen} from '../shared/fullscreen.mjs?v=20261108-fullscreen';
 
 const $=id=>document.getElementById(id), KEY='tk777-lantern-merchant-v1';
 const money=n=>Number(n).toLocaleString('ja-JP'), esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -269,8 +270,8 @@ function updateZoom(){const active=state.mode==='dungeon';$('zoomLabel').textCon
 function setZoom(value){if(state.mode==='dungeon')zoom=Math.max(2,Math.min(4,value));else townZoom=Math.max(1,Math.min(2,value));updateZoom();draw();}
 $('zoomOut').addEventListener('click',()=>setZoom(state.mode==='dungeon'?zoom-1:townZoom-.5));$('zoomIn').addEventListener('click',()=>setZoom(state.mode==='dungeon'?zoom+1:townZoom+.5));
 $('overviewButton').addEventListener('click',()=>{townCamera=null;setZoom(1);});
-function setFocus(value){document.body.classList.toggle('focus-mode',value);$('focusButton').textContent=value?'✕ 戻す':'⛶ 拡大';$('focusButton').setAttribute('aria-label',value?'拡大表示を閉じる':'ゲーム画面を拡大表示');$('focusButton').setAttribute('aria-pressed',String(value));requestAnimationFrame(()=>draw());}
-$('focusButton').addEventListener('click',()=>setFocus(!document.body.classList.contains('focus-mode')));
+function setFocus(value){const display=initGameFullscreen();if(value)void display?.enter($('focusButton'));else void display?.exit();}
+window.addEventListener('gamefullscreenchange',event=>{held.clear();document.body.classList.toggle('focus-mode',!!event.detail.active);requestAnimationFrame(()=>draw());});
 $('bestiaryButton').addEventListener('click',showBestiary);
 $('swarmBombButton').addEventListener('click',()=>{held.clear();dispatch({type:'use',id:'bomb'});});
 $('saveButton').addEventListener('click',()=>{$('saveDetails').textContent=savedAt?`最終保存：${new Date(savedAt).toLocaleString('ja-JP')}`:'まだ保存されていません。';$('saveDialog').showModal();});
