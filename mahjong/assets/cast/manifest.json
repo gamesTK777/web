@@ -1,0 +1,321 @@
+{
+  "title": "セブン麻雀",
+  "created": "2026-11-08",
+  "generation": "Built-in image generation; original fictional adult characters.",
+  "count": 28,
+  "totalBytes": 1931434,
+  "prompts": [
+    "group-a.json",
+    "group-b.json"
+  ],
+  "images": [
+    {
+      "stage": 1,
+      "character": "春野ひなた",
+      "slug": "hinata",
+      "slot": "portrait",
+      "path": "assets/cast/hinata/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 61964,
+      "sha256": "cc4f14aba38120d8cc6a693120a4dad0c2e7225a24cd1ce5e1ffaa047a515f3e"
+    },
+    {
+      "stage": 1,
+      "character": "春野ひなた",
+      "slug": "hinata",
+      "slot": "win-1",
+      "path": "assets/cast/hinata/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 69786,
+      "sha256": "9f3ff7558cc4255a60b50ded3116508cd90f3d65b9c3f2289dc31e26e3f7108a"
+    },
+    {
+      "stage": 1,
+      "character": "春野ひなた",
+      "slug": "hinata",
+      "slot": "win-2",
+      "path": "assets/cast/hinata/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 91564,
+      "sha256": "b76af3700d08fd06caadc6997c722848138c18b7cea265dbcc1d41d2abdced91"
+    },
+    {
+      "stage": 1,
+      "character": "春野ひなた",
+      "slug": "hinata",
+      "slot": "win-3",
+      "path": "assets/cast/hinata/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 86698,
+      "sha256": "e89aef42631822876cac970e4fe74a8628c83b5bd02293ea5757a6608b3caa32"
+    },
+    {
+      "stage": 2,
+      "character": "水瀬澪",
+      "slug": "mio",
+      "slot": "portrait",
+      "path": "assets/cast/mio/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 38226,
+      "sha256": "b8b46adf4b280c6525da417d6f6e3d64ce45bec67cf25e1fa94eeb15f02f0b52"
+    },
+    {
+      "stage": 2,
+      "character": "水瀬澪",
+      "slug": "mio",
+      "slot": "win-1",
+      "path": "assets/cast/mio/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 60714,
+      "sha256": "482dda1c00b80e26fafacda8d3e52a70fe0c7015a5507654344d65deea4b5c7d"
+    },
+    {
+      "stage": 2,
+      "character": "水瀬澪",
+      "slug": "mio",
+      "slot": "win-2",
+      "path": "assets/cast/mio/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 65308,
+      "sha256": "522a10d5ccc47eb798835b715b103256a2427732b4117136f6576d2001b6ed9b"
+    },
+    {
+      "stage": 2,
+      "character": "水瀬澪",
+      "slug": "mio",
+      "slot": "win-3",
+      "path": "assets/cast/mio/win-3.webp",
+      "width": 958,
+      "height": 720,
+      "bytes": 54568,
+      "sha256": "cc0492fa1dcd19363c6c22df2d757118db64be8ffcc2acb48e79bb139fb30c58"
+    },
+    {
+      "stage": 3,
+      "character": "小森こはる",
+      "slug": "koharu",
+      "slot": "portrait",
+      "path": "assets/cast/koharu/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 75414,
+      "sha256": "7d2f4e0140933ad1fafb8931cbdd22d3189d0dba45646c09f4d47617e7394422"
+    },
+    {
+      "stage": 3,
+      "character": "小森こはる",
+      "slug": "koharu",
+      "slot": "win-1",
+      "path": "assets/cast/koharu/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 112282,
+      "sha256": "19bd137381d5327e4fd2fc604b9f82d7e83264e813942ecc19b17e20c8113599"
+    },
+    {
+      "stage": 3,
+      "character": "小森こはる",
+      "slug": "koharu",
+      "slot": "win-2",
+      "path": "assets/cast/koharu/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 111646,
+      "sha256": "0aa26224831e0190e5f3bcf6a004d9fd445242edb217ea5dc4cf432157f50177"
+    },
+    {
+      "stage": 3,
+      "character": "小森こはる",
+      "slug": "koharu",
+      "slot": "win-3",
+      "path": "assets/cast/koharu/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 129914,
+      "sha256": "3c9b997f19283e0c62fdee178fef7b9df5146ed2150efb0d66431a128bd9680f"
+    },
+    {
+      "stage": 4,
+      "character": "橘朱音",
+      "slug": "akane",
+      "slot": "portrait",
+      "path": "assets/cast/akane/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 53718,
+      "sha256": "3fd4f0c71bfe11c49c4d73600f8e22c04ce7803a63fbd4df478e4b03cbf65ac3"
+    },
+    {
+      "stage": 4,
+      "character": "橘朱音",
+      "slug": "akane",
+      "slot": "win-1",
+      "path": "assets/cast/akane/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 69250,
+      "sha256": "1ade91af4098709f3b3aa8cd783fcba6df2f4db24cae3a1fc7d17b3f7660b1b6"
+    },
+    {
+      "stage": 4,
+      "character": "橘朱音",
+      "slug": "akane",
+      "slot": "win-2",
+      "path": "assets/cast/akane/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 93532,
+      "sha256": "ab9ee0e674d787889f5f410dfd53a61f594069353d85c81e28ff5e79a2c69bba"
+    },
+    {
+      "stage": 4,
+      "character": "橘朱音",
+      "slug": "akane",
+      "slot": "win-3",
+      "path": "assets/cast/akane/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 68838,
+      "sha256": "11c4cf3696bcf69c8394a638504a5e0103a75d1859a1442cb2b49156ad550208"
+    },
+    {
+      "stage": 5,
+      "character": "月城紫苑",
+      "slug": "shion",
+      "slot": "portrait",
+      "path": "assets/cast/shion/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 40038,
+      "sha256": "55c3b7c5446a2efc5a491eb1d1f0f1a39e39a3dd7016b43ec94fbfdc7a94e01a"
+    },
+    {
+      "stage": 5,
+      "character": "月城紫苑",
+      "slug": "shion",
+      "slot": "win-1",
+      "path": "assets/cast/shion/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 64424,
+      "sha256": "f885d0fd5bc9b6fd99aabbe5dc8025285846d73e63afcdcf875c38cb92cf2271"
+    },
+    {
+      "stage": 5,
+      "character": "月城紫苑",
+      "slug": "shion",
+      "slot": "win-2",
+      "path": "assets/cast/shion/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 59510,
+      "sha256": "eaba5fb079701f36b75ae0aa269d03832bd9f0847f8aca089c8f7189d2627d23"
+    },
+    {
+      "stage": 5,
+      "character": "月城紫苑",
+      "slug": "shion",
+      "slot": "win-3",
+      "path": "assets/cast/shion/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 67926,
+      "sha256": "fcfc57610c3002030186bf40378844412a97d9148bfde8bbf2efb33079a328f0"
+    },
+    {
+      "stage": 6,
+      "character": "朝比奈凪",
+      "slug": "nagi",
+      "slot": "portrait",
+      "path": "assets/cast/nagi/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 44402,
+      "sha256": "7de07d83e11827a4f37a101b94231a8ae8d2ebd5ce833facbf1674544c2b6c3b"
+    },
+    {
+      "stage": 6,
+      "character": "朝比奈凪",
+      "slug": "nagi",
+      "slot": "win-1",
+      "path": "assets/cast/nagi/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 56352,
+      "sha256": "7e304e78043d812a5e6fd4801bcce062de7375960894e1c390880f8babd92f13"
+    },
+    {
+      "stage": 6,
+      "character": "朝比奈凪",
+      "slug": "nagi",
+      "slot": "win-2",
+      "path": "assets/cast/nagi/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 61938,
+      "sha256": "f2beac20bf936bd421c7078f911154305f40c22476c4f9513626b8c165985571"
+    },
+    {
+      "stage": 6,
+      "character": "朝比奈凪",
+      "slug": "nagi",
+      "slot": "win-3",
+      "path": "assets/cast/nagi/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 55314,
+      "sha256": "1a0d57b98d36233f2943bcb0f64f83d71eb03799af00169105f3ced99efc5013"
+    },
+    {
+      "stage": 7,
+      "character": "九条沙羅",
+      "slug": "sara",
+      "slot": "portrait",
+      "path": "assets/cast/sara/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 43304,
+      "sha256": "5484ee3f8327bdd7323d66f76fee6e536589c006b671d82968b2bae039c33edc"
+    },
+    {
+      "stage": 7,
+      "character": "九条沙羅",
+      "slug": "sara",
+      "slot": "win-1",
+      "path": "assets/cast/sara/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 62010,
+      "sha256": "7d2946ab20ad6e879fb430472dac92d4b19096d5b2d106a69f29356156962b3a"
+    },
+    {
+      "stage": 7,
+      "character": "九条沙羅",
+      "slug": "sara",
+      "slot": "win-2",
+      "path": "assets/cast/sara/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 65432,
+      "sha256": "ff1e195785a50831927149ea057c86bc782e528343e6fab873130e259d50eeba"
+    },
+    {
+      "stage": 7,
+      "character": "九条沙羅",
+      "slug": "sara",
+      "slot": "win-3",
+      "path": "assets/cast/sara/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 67362,
+      "sha256": "16927cbe37417def60d9cd05af1fe15fb27f22738e173330808f6a6b822e4cf1"
+    }
+  ]
+}

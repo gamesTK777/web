@@ -1,0 +1,182 @@
+{
+  "mode": "built-in image_gen",
+  "created": "2026-11-08",
+  "entries": [
+    {
+      "slug": "akane",
+      "kind": "portrait",
+      "prompt": "Use case: photorealistic-natural. Asset type: original character portrait for a web mahjong game, akane. Create ONE polished photographic image, vertical 3:4 portrait composition. Subject: a fictional Japanese adult woman age 30, energetic outdoor photographer, short textured auburn hair, warm lively brown eyes, wearing a burnt-orange overshirt over a plain white crewneck shirt. She is seated at a green felt mahjong table, looking directly at the viewer, waist-up, both shoulders and top of head entirely inside the image with comfortable margins. Expression: a confident lively friendly grin, approachable and spirited. Scene: a welcoming mahjong lounge with terracotta walls, green felt table, warm wood and softly blurred golden lamps. A few ordinary mahjong tiles at the bottom edge provide game context, no complicated hand actions. Medium: natural editorial portrait photography, realistic skin texture, subtle natural makeup, believable hands and anatomy, 50mm portrait lens, soft diffused key light and restrained teal/gold color grading shared across a coherent seven-character cast. She is a fully clothed adult, tasteful everyday style. Only one woman. No resemblance to real people or celebrities. No printed text, no lettering, no logos, no watermark, no UI, no borders or collage. Image is a fictional photographic-style scene, not illustration or anime.",
+      "asset": "mahjong/assets/cast/akane/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 53718,
+      "sourceBasename": "exec-96245017-bf08-4b16-b6c2-e667da6f0f5f.png",
+      "referenceBasename": null
+    },
+    {
+      "slug": "shion",
+      "kind": "portrait",
+      "prompt": "Use case: photorealistic-natural. Asset type: original character portrait for a web mahjong game, shion. Create ONE polished photographic image, vertical 3:4 portrait composition. Subject: a fictional Japanese adult woman age 32, calm thoughtful novelist, long black softly wavy hair, thoughtful dark brown eyes, wearing a plum high-neck blouse and a delicate small silver crescent pendant. She is seated at a green felt mahjong table, looking directly at the viewer, waist-up, both shoulders and top of head entirely inside the image with comfortable margins. Expression: a subtle knowing smile, mysterious but warm and composed. Scene: an atmospheric book-lined mahjong lounge, green felt table, dark teal and walnut interiors with softly glowing gold lamps. A few ordinary mahjong tiles at the bottom edge provide game context, no complicated hand actions. Medium: natural editorial portrait photography, realistic skin texture, subtle natural makeup, believable hands and anatomy, 50mm portrait lens, soft diffused key light and restrained teal/gold color grading shared across a coherent seven-character cast. She is a fully clothed adult, tasteful everyday style. Only one woman. No resemblance to real people or celebrities. No printed text, no lettering, no logos, no watermark, no UI, no borders or collage. Image is a fictional photographic-style scene, not illustration or anime.",
+      "asset": "mahjong/assets/cast/shion/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 40038,
+      "sourceBasename": "exec-6f493eb5-d133-452e-9fc6-87ee8ebdfd25.png",
+      "referenceBasename": null
+    },
+    {
+      "slug": "nagi",
+      "kind": "portrait",
+      "prompt": "Use case: photorealistic-natural. Asset type: original character portrait for a web mahjong game, nagi. Create ONE polished photographic image, vertical 3:4 portrait composition. Subject: a fictional Japanese adult woman age 27, playful jazz pianist, dark-brown hair in a relaxed messy updo, cheerful expressive brown eyes, wearing a teal button-up blouse and small brass earrings. She is seated at a green felt mahjong table, looking directly at the viewer, waist-up, both shoulders and top of head entirely inside the image with comfortable margins. Expression: an engaging playful smile, witty and friendly. Scene: an intimate jazz mahjong lounge, green felt table with a softly blurred acoustic piano and warm golden lighting behind her. A few ordinary mahjong tiles at the bottom edge provide game context, no complicated hand actions. Medium: natural editorial portrait photography, realistic skin texture, subtle natural makeup, believable hands and anatomy, 50mm portrait lens, soft diffused key light and restrained teal/gold color grading shared across a coherent seven-character cast. She is a fully clothed adult, tasteful everyday style. Only one woman. No resemblance to real people or celebrities. No printed text, no lettering, no logos, no watermark, no UI, no borders or collage. Image is a fictional photographic-style scene, not illustration or anime.",
+      "asset": "mahjong/assets/cast/nagi/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 44402,
+      "sourceBasename": "exec-818616aa-855a-48d5-8a84-5fffbb5c5453.png",
+      "referenceBasename": null
+    },
+    {
+      "slug": "sara",
+      "kind": "portrait",
+      "prompt": "Use case: photorealistic-natural. Asset type: original character portrait for a web mahjong game, sara. Create ONE polished photographic image, vertical 3:4 portrait composition. Subject: a fictional Japanese adult woman age 36, elegant confident boutique hotel hostess, neat dark-brown hair in a low bun, poised dark brown eyes, wearing a refined ivory tailored jacket over a modest blouse and a small gold brooch. She is seated at a green felt mahjong table, looking directly at the viewer, waist-up, both shoulders and top of head entirely inside the image with comfortable margins. Expression: a graceful welcoming smile, serene mature confidence. Scene: a premium private mahjong lounge, green felt table, tasteful dark teal upholstery and softly glowing gold lamps. A few ordinary mahjong tiles at the bottom edge provide game context, no complicated hand actions. Medium: natural editorial portrait photography, realistic skin texture, subtle natural makeup, believable hands and anatomy, 50mm portrait lens, soft diffused key light and restrained teal/gold color grading shared across a coherent seven-character cast. She is a fully clothed adult, tasteful everyday style. Only one woman. No resemblance to real people or celebrities. No printed text, no lettering, no logos, no watermark, no UI, no borders or collage. Image is a fictional photographic-style scene, not illustration or anime.",
+      "asset": "mahjong/assets/cast/sara/portrait.webp",
+      "width": 630,
+      "height": 840,
+      "bytes": 43304,
+      "sourceBasename": "exec-d8b2290b-4808-4112-8c5f-fa96f67f3724.png",
+      "referenceBasename": null
+    },
+    {
+      "slug": "akane",
+      "kind": "win-1",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, akane. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 30, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change the pose and composition from the portrait: she sits upright across the green mahjong table, no hand against cheek, shoulders relaxed, both hands naturally resting on the table, looking at the viewer with a small genuinely pleased smile acknowledging the player's first victory. Keep the same lounge setting as Image1, mahjong tiles softly visible in foreground. A new expression and widercamera position, not the sameportraitcrop.",
+      "asset": "mahjong/assets/cast/akane/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 69250,
+      "sourceBasename": "exec-d1e3291b-f7c1-466d-99ac-a817c26c54df.png",
+      "referenceBasename": "exec-96245017-bf08-4b16-b6c2-e667da6f0f5f.png"
+    },
+    {
+      "slug": "akane",
+      "kind": "win-2",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, akane. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 30, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change location and pose substantially to a friendly second-victory scene: beside a sunlit terrace window in the lounge, warmly showing a small unbranded camera held at waist level, laughing lightly as she recalls a beautiful landscape photograph, a subtle potted fern and mountains blurred outside. Preserve exactly the same recognizable face, hair and fully clothed outfit. This is a quiet personal moment after playing mahjong, not a fashion advertisement.",
+      "asset": "mahjong/assets/cast/akane/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 93532,
+      "sourceBasename": "exec-1d2eaa6d-2790-47a9-98a1-1ffb3cb063ec.png",
+      "referenceBasename": "exec-96245017-bf08-4b16-b6c2-e667da6f0f5f.png"
+    },
+    {
+      "slug": "akane",
+      "kind": "win-3",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, akane. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 30, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Create a celebratory third-victory/stage-clear scene with a clearly different pose from the reference: she is standing near the green mahjongtable holding a small simple wooden champion trophy at waistheight, smiling broadly with a spiritedcelebratory expression, one subtle goldenconfetti sparkle in distantbackground. Keep celebration tasteful, warm and individual, no otherpeople. SAME face and outfit as reference, no clothingchanges. Do not writeanything on trophy or background.",
+      "asset": "mahjong/assets/cast/akane/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 68838,
+      "sourceBasename": "exec-986380b0-48d6-4be1-a4af-65b154afd7c0.png",
+      "referenceBasename": "exec-96245017-bf08-4b16-b6c2-e667da6f0f5f.png"
+    },
+    {
+      "slug": "shion",
+      "kind": "win-1",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, shion. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 32, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change the pose and composition from the portrait: she sits upright across the green mahjong table, no hand against cheek, shoulders relaxed, both hands naturally resting on the table, looking at the viewer with a small genuinely pleased smile acknowledging the player's first victory. Keep the same lounge setting as Image1, mahjong tiles softly visible in foreground. A new expression and widercamera position, not the sameportraitcrop.",
+      "asset": "mahjong/assets/cast/shion/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 64424,
+      "sourceBasename": "exec-edda0a4c-e711-4be9-90f0-eecd596e32b2.png",
+      "referenceBasename": "exec-6f493eb5-d133-452e-9fc6-87ee8ebdfd25.png"
+    },
+    {
+      "slug": "shion",
+      "kind": "win-2",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, shion. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 32, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change location and pose substantially to a friendly second-victory scene: at a cozy walnut writing desk beside the lounge library, a closed unlettered notebook and pen on the desk, she rests one hand lightly on the notebook and gives the viewer a warm thoughtful smile, books with no readable titles softly blurred behind. Preserve exactly the same recognizable face, hair and fully clothed outfit. This is a quiet personal moment after playing mahjong, not a fashion advertisement.",
+      "asset": "mahjong/assets/cast/shion/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 59510,
+      "sourceBasename": "exec-712d3bf7-179f-4153-80b6-038712ac3e25.png",
+      "referenceBasename": "exec-6f493eb5-d133-452e-9fc6-87ee8ebdfd25.png"
+    },
+    {
+      "slug": "shion",
+      "kind": "win-3",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, shion. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 32, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Create a celebratory third-victory/stage-clear scene with a clearly different pose from the reference: she is seated near the green mahjongtable holding a small elegant bouquet of purple and cream flowers, smiling openly with sincere admiration, cozylibrarylamps softlyglowing behind. Keep celebration tasteful, warm and individual, no otherpeople. SAME face and outfit as reference, no clothingchanges. Do not writeanything on trophy or background.",
+      "asset": "mahjong/assets/cast/shion/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 67926,
+      "sourceBasename": "exec-966f35b2-21e6-436d-a828-58bcedb1dcf3.png",
+      "referenceBasename": "exec-6f493eb5-d133-452e-9fc6-87ee8ebdfd25.png"
+    },
+    {
+      "slug": "nagi",
+      "kind": "win-1",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, nagi. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 27, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change the pose and composition from the portrait: she sits upright across the green mahjong table, no hand against cheek, shoulders relaxed, both hands naturally resting on the table, looking at the viewer with a small genuinely pleased smile acknowledging the player's first victory. Keep the same lounge setting as Image1, mahjong tiles softly visible in foreground. A new expression and widercamera position, not the sameportraitcrop.",
+      "asset": "mahjong/assets/cast/nagi/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 56352,
+      "sourceBasename": "exec-09cb68fc-71fb-4b8e-9a10-cab4b6116c4a.png",
+      "referenceBasename": "exec-818616aa-855a-48d5-8a84-5fffbb5c5453.png"
+    },
+    {
+      "slug": "nagi",
+      "kind": "win-2",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, nagi. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 27, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change location and pose substantially to a friendly second-victory scene: seated sideways on a piano bench beside a beautiful acoustic piano in the jazz lounge, her body turned naturally toward the viewer and her hands resting comfortably on her lap, she gives a playful friendly smile, warm stage lights blurred behind. Preserve exactly the same recognizable face, hair and fully clothed outfit. This is a quiet personal moment after playing mahjong, not a fashion advertisement.",
+      "asset": "mahjong/assets/cast/nagi/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 61938,
+      "sourceBasename": "exec-2d0fe5c7-d13b-460f-b306-9eda52b623a0.png",
+      "referenceBasename": "exec-818616aa-855a-48d5-8a84-5fffbb5c5453.png"
+    },
+    {
+      "slug": "nagi",
+      "kind": "win-3",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, nagi. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 27, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Create a celebratory third-victory/stage-clear scene with a clearly different pose from the reference: she is seated by the green mahjongtable with the piano softlyvisible behind, holding a small simple wooden trophy and making a relaxed friendly peacegesture with the freehand, beaming warmly. Keep celebration tasteful, warm and individual, no otherpeople. SAME face and outfit as reference, no clothingchanges. Do not writeanything on trophy or background.",
+      "asset": "mahjong/assets/cast/nagi/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 55314,
+      "sourceBasename": "exec-3c5bbce2-4b21-4e7f-b162-d1470d942361.png",
+      "referenceBasename": "exec-818616aa-855a-48d5-8a84-5fffbb5c5453.png"
+    },
+    {
+      "slug": "sara",
+      "kind": "win-1",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, sara. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 36, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change the pose and composition from the portrait: she sits upright across the green mahjong table, no hand against cheek, shoulders relaxed, both hands naturally resting on the table, looking at the viewer with a small genuinely pleased smile acknowledging the player's first victory. Keep the same lounge setting as Image1, mahjong tiles softly visible in foreground. A new expression and widercamera position, not the sameportraitcrop.",
+      "asset": "mahjong/assets/cast/sara/win-1.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 62010,
+      "sourceBasename": "exec-6413d64a-85ac-4054-addf-a2283ac3dd8f.png",
+      "referenceBasename": "exec-d8b2290b-4808-4112-8c5f-fa96f67f3724.png"
+    },
+    {
+      "slug": "sara",
+      "kind": "win-2",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, sara. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 36, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Change location and pose substantially to a friendly second-victory scene: standing beside the lounge reception console with an arrangement of white flowers, comfortably holding a simple porcelain cup on its saucer at waist height and looking at the viewer with a warm inviting smile, premium hotel interior softly blurred behind. Preserve exactly the same recognizable face, hair and fully clothed outfit. This is a quiet personal moment after playing mahjong, not a fashion advertisement.",
+      "asset": "mahjong/assets/cast/sara/win-2.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 65432,
+      "sourceBasename": "exec-958248e5-30ab-4df3-9b95-f225372e2995.png",
+      "referenceBasename": "exec-d8b2290b-4808-4112-8c5f-fa96f67f3724.png"
+    },
+    {
+      "slug": "sara",
+      "kind": "win-3",
+      "prompt": "Use case: identity-preserve. Asset type: victory reward image for a mahjong game, sara. Input Image1 is the identity and wardrobe reference/edit target. Create one NEW photographic scene of the SAME fictional adult woman. Preserve exactly her facial identity, apparent adult age 36, hairstyle, hair color, skin tone and distinct outfit/accessories from Image1. Keep natural skin detail, realistic hands and high-end editorial photography, warm soft light with restrained teal/gold grading. Landscape4:3 composition, waist-up or medium view, whole head and shoulders in frame with comfortable margins; enough breathing room for responsive crop. Only one person, fully clothed, friendly ordinary demeanor. No real-person likeness, text, lettering, logos, watermark, collage, UI or borders. Create a celebratory third-victory/stage-clear scene with a clearly different pose from the reference: she is standing beside the green mahjongtable holding an elegant small bouquet of ivory and goldtoned flowers, giving the viewer a gracious congratulationssmile, premiumtealandgoldinterior behind. Keep celebration tasteful, warm and individual, no otherpeople. SAME face and outfit as reference, no clothingchanges. Do not writeanything on trophy or background.",
+      "asset": "mahjong/assets/cast/sara/win-3.webp",
+      "width": 960,
+      "height": 720,
+      "bytes": 67362,
+      "sourceBasename": "exec-812eac2f-6327-4cce-801e-af219393caaa.png",
+      "referenceBasename": "exec-d8b2290b-4808-4112-8c5f-fa96f67f3724.png"
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "mode": "built-in imagegen",
+  "generatedDate": "2026-11-08",
+  "description": "Original fictional adult characters; images generated independently per asset. WebP conversion only resizes/compresses the full generated image, without creative alterations.",
+  "assets": [
+    {
+      "character": "hinata",
+      "slot": "portrait",
+      "path": "mahjong/assets/cast/hinata/portrait.webp",
+      "sourceImage": "exec-4fe1463c-cb96-409a-b857-09c885e5ea7f.png",
+      "referenceImage": null,
+      "width": 630,
+      "height": 840,
+      "bytes": 61964,
+      "sha256": "cc4f14aba38120d8cc6a693120a4dad0c2e7225a24cd1ce5e1ffaa047a515f3e",
+      "prompt": "Use case: photorealistic-natural. Asset type: original adult female rival character portrait for an elegant Japanese mahjong web game. Create a single photorealistic editorial photograph of a completely fictional Japanese adult woman, not based on any real person or celebrity. Realistic skin texture, natural proportions, fully clothed tasteful everyday styling, premium boutique mahjong lounge atmosphere with green felt table, softly blurred teal shadows and warm gold practical lighting. Vertical 3:4 composition, waist-up seated at table, face fully visible in upper center with breathing room above hair, looking at player across the table. Photographic not illustration, not 3D, not anime. No text, lettering, logos, watermark, speech bubbles, collage, extra people or repeated faces. Subject: Haruno Hinata, age 24. Warm sunny approachable cafe owner, chestnut shoulder-length softly wavy hair with airy side bangs, friendly expressive brown eyes and rounded face. Cream long-sleeve blouse and muted coral cafe apron, tiny gold stud earrings. A welcoming open smile, both hands relaxed near neatly arranged mahjong tiles at lower frame. Cozy wood-and-brass cafe lounge with blurred coffee cups in background. She looks genuinely happy to meet the player."
+    },
+    {
+      "character": "mio",
+      "slot": "portrait",
+      "path": "mahjong/assets/cast/mio/portrait.webp",
+      "sourceImage": "exec-2d7ffd01-78a9-41ad-a355-12233f88cc8b.png",
+      "referenceImage": null,
+      "width": 630,
+      "height": 840,
+      "bytes": 38226,
+      "sha256": "b8b46adf4b280c6525da417d6f6e3d64ce45bec67cf25e1fa94eeb15f02f0b52",
+      "prompt": "Use case: photorealistic-natural. Asset type: original adult female rival character portrait for an elegant Japanese mahjong web game. Create a single photorealistic editorial photograph of a completely fictional Japanese adult woman, not based on any real person or celebrity. Realistic skin texture, natural proportions, fully clothed tasteful everyday styling, premium boutique mahjong lounge atmosphere with green felt table, softly blurred teal shadows and warm gold practical lighting. Vertical 3:4 composition, waist-up seated at table, face fully visible in upper center with breathing room above hair, looking at player across the table. Photographic not illustration, not 3D, not anime. No text, lettering, logos, watermark, speech bubbles, collage, extra people or repeated faces. Subject: Minase Mio, age 28. Cool and composed analytical architect. Sleek chin-length straight black bob tucked behind one ear, dark brown eyes, defined oval face and reserved soft expression. Tailored navy blazer over an ivory crewneck blouse, understated silver ear studs. Calm confident gaze with a slight polite smile, one hand resting near mahjong tiles at lower frame. Modern quiet library lounge with shelves and architectural miniatures softly out of focus. Refined intellectual presence."
+    },
+    {
+      "character": "koharu",
+      "slot": "portrait",
+      "path": "mahjong/assets/cast/koharu/portrait.webp",
+      "sourceImage": "exec-c98246fe-48b1-4bf9-b984-88e54ea9a758.png",
+      "referenceImage": null,
+      "width": 630,
+      "height": 840,
+      "bytes": 75414,
+      "sha256": "7d2f4e0140933ad1fafb8931cbdd22d3189d0dba45646c09f4d47617e7394422",
+      "prompt": "Use case: photorealistic-natural. Asset type: original adult female rival character portrait for an elegant Japanese mahjong web game. Create a single photorealistic editorial photograph of a completely fictional Japanese adult woman, not based on any real person or celebrity. Realistic skin texture, natural proportions, fully clothed tasteful everyday styling, premium boutique mahjong lounge atmosphere with green felt table, softly blurred teal shadows and warm gold practical lighting. Vertical 3:4 composition, waist-up seated at table, face fully visible in upper center with breathing room above hair, looking at player across the table. Photographic not illustration, not 3D, not anime. No text, lettering, logos, watermark, speech bubbles, collage, extra people or repeated faces. Subject: Komori Koharu, age 26. Gentle thoughtful florist. Long dark brown hair loosely braided over one shoulder, delicate wispy bangs, warm brown eyes, soft oval face. Sage-green long-sleeve linen blouse with subtle natural texture, small pearl earrings. Tender closed-mouth smile and relaxed posture, hands naturally resting near mahjong tiles at lower frame. Conservatory lounge with potted ferns and softly blurred cream and pastel flowers in background. Calm nature-loving warmth."
+    },
+    {
+      "character": "hinata",
+      "slot": "win-1",
+      "path": "mahjong/assets/cast/hinata/win-1.webp",
+      "sourceImage": "exec-d51f0fb3-7f57-486e-af03-565866c592df.png",
+      "referenceImage": "hinata-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 69786,
+      "sha256": "9f3ff7558cc4255a60b50ded3116508cd90f3d65b9c3f2289dc31e26e3f7108a",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: first victory reward. In the same cozy mahjong cafe lounge, this woman acknowledges the player's first win with a pleasantly surprised closed-mouth smile and a small friendly nod. Waist-up at the green mahjong table, one relaxed hand beside the tiles, other resting gently near her collarbone. Slight three-quarter camera angle so it is a distinct photograph from the portrait."
+    },
+    {
+      "character": "hinata",
+      "slot": "win-2",
+      "path": "mahjong/assets/cast/hinata/win-2.webp",
+      "sourceImage": "exec-3004a72d-d374-4531-9981-b4eb1439446d.png",
+      "referenceImage": "hinata-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 91564,
+      "sha256": "b76af3700d08fd06caadc6997c722848138c18b7cea265dbcc1d41d2abdced91",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: second victory reward. This same cafe owner stands beside a warm wood coffee counter in her boutique cafe after the mahjong round, offering a single white ceramic cappuccino cup with both hands at waist height, with a bright welcoming smile. A blurred green mahjong table remains in the distant lounge background. Eye-level waist-up photograph, friendly natural casual pose, no printed text or brand on cup."
+    },
+    {
+      "character": "hinata",
+      "slot": "win-3",
+      "path": "mahjong/assets/cast/hinata/win-3.webp",
+      "sourceImage": "exec-043ccedd-91a3-4fab-b1fa-167eeac01372.png",
+      "referenceImage": "hinata-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 86698,
+      "sha256": "e89aef42631822876cac970e4fe74a8628c83b5bd02293ea5757a6608b3caa32",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: third victory and stage-clear reward. This same cafe owner laughs with sincere delight beside the green mahjong table and holds a small tasteful bouquet of cream and soft coral flowers at waist level, celebrating the player's three wins. Warm cafe pendant lights and teal wall in background, relaxed three-quarter standing pose. A few subtle warm celebratory bokeh lights, not confetti covering face."
+    },
+    {
+      "character": "mio",
+      "slot": "win-1",
+      "path": "mahjong/assets/cast/mio/win-1.webp",
+      "sourceImage": "exec-021dac49-65be-4be8-aa65-1bdd5cedfa32.png",
+      "referenceImage": "mio-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 60714,
+      "sha256": "482dda1c00b80e26fafacda8d3e52a70fe0c7015a5507654344d65deea4b5c7d",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: first victory reward. In the same library mahjong lounge, this composed architect acknowledges the player's first win with a small genuine smile, a gently raised eyebrow and respectful slight nod. Three-quarter seated angle, hands loosely folded on the green table edge, neatly arranged tiles in foreground. Thoughtful, impressed rather than defeated expression."
+    },
+    {
+      "character": "mio",
+      "slot": "win-2",
+      "path": "mahjong/assets/cast/mio/win-2.webp",
+      "sourceImage": "exec-ce11be2b-57b8-4beb-9271-00817683222b.png",
+      "referenceImage": "mio-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 65308,
+      "sha256": "522a10d5ccc47eb798835b715b103256a2427732b4117136f6576d2001b6ed9b",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: second victory reward. This same architect stands at a light wood studio desk with an unmarked architectural scale model of a modern house and rolled blank drafting sheets, calmly smiling toward the player. She lightly rests one hand on the desk, other relaxed. The boutique library lounge and green accents remain softly visible. Eye-level waist-up photograph, navy blazer and ivory blouse unchanged, no written labels."
+    },
+    {
+      "character": "mio",
+      "slot": "win-3",
+      "path": "mahjong/assets/cast/mio/win-3.webp",
+      "sourceImage": "exec-1a219d17-4a3e-4915-9914-49bd3e46d318.png",
+      "referenceImage": "mio-portrait.png",
+      "width": 958,
+      "height": 720,
+      "bytes": 54568,
+      "sha256": "cc0492fa1dcd19363c6c22df2d757118db64be8ffcc2acb48e79bb139fb30c58",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: third victory and stage-clear reward. This same architect stands by the green mahjong table in the elegant library lounge, with an unusually warm confident smile acknowledging the player's perfect run. She holds a small simple geometric wooden award at waist height with natural hands. Soft gold brass lamps and dark teal shelves behind, cinematic but realistic celebration, no engraving or text."
+    },
+    {
+      "character": "koharu",
+      "slot": "win-1",
+      "path": "mahjong/assets/cast/koharu/win-1.webp",
+      "sourceImage": "exec-64bb478b-874b-419e-8d78-8c280170441a.png",
+      "referenceImage": "koharu-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 112282,
+      "sha256": "19bd137381d5327e4fd2fc604b9f82d7e83264e813942ecc19b17e20c8113599",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: first victory reward. In the same conservatory mahjong lounge, this gentle florist acknowledges the player's first win with a tender slightly shy smile and small head tilt. Seated waist-up at green table, loosely folded hands near the tile row and a tiny vase of cream flowers beside her. Three-quarter angle distinct from portrait, relaxed natural posture."
+    },
+    {
+      "character": "koharu",
+      "slot": "win-2",
+      "path": "mahjong/assets/cast/koharu/win-2.webp",
+      "sourceImage": "exec-40b1296a-09d3-4ed5-87bd-1d0d7ce827bf.png",
+      "referenceImage": "koharu-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 111646,
+      "sha256": "0aa26224831e0190e5f3bcf6a004d9fd445242edb217ea5dc4cf432157f50177",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: second victory reward. This same florist stands in her lush conservatory flower studio, holding a small terracotta pot containing delicate white flowers at waist level with both hands. A warm proud gentle smile toward the player, sage-green linen blouse and long dark-brown side braid unchanged. Sunlit foliage, soft teal shadows, botanical worktable softly blurred behind, no signs or lettering."
+    },
+    {
+      "character": "koharu",
+      "slot": "win-3",
+      "path": "mahjong/assets/cast/koharu/win-3.webp",
+      "sourceImage": "exec-2dab4ded-c1a4-41d4-a676-267ee05bdf79.png",
+      "referenceImage": "koharu-portrait.png",
+      "width": 960,
+      "height": 720,
+      "bytes": 129914,
+      "sha256": "3c9b997f19283e0c62fdee178fef7b9df5146ed2150efb0d66431a128bd9680f",
+      "prompt": "Use case: identity-preserve. Input image 1 is the identity reference and original character portrait. Create a NEW single landscape 4:3 photorealistic editorial game reward photograph of EXACTLY THE SAME fictional adult woman from that reference. Preserve her individual facial identity, age, eye shape, hair color/style, natural skin texture, blouse and accessories. Change pose, camera angle and background only as specified. Keep fully clothed ordinary tasteful styling and premium teal-shadow/warm-gold lighting consistent with the reference. Frame waist-up with complete head, breathing room around hair, and complete natural hands if visible. No other people, no celebrities, no anime/painting/3D, no collage, no labels, text, speech bubbles, watermark or logos. Scene change: third victory and stage-clear reward. This same florist stands beside the conservatory's green mahjong table, holding a generous natural bouquet of pastel wildflowers and cream blossoms at waist level. Joyful but gentle open smile congratulating the player's three wins. Warm evening fairy-light bokeh and lush leaves behind. Face, hair and outfit unchanged, bouquet does not cover her face."
+    }
+  ]
+}

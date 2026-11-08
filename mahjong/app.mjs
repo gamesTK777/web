@@ -1,15 +1,16 @@
 import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261107-mahjong';
 import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261107-mahjong';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
+import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-cast';
+import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
 const $=id=>document.getElementById(id),API='https://tk777-neonshift-scores.takesuke.chatgpt.site',MODE='mahjong:arcade';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('ja-JP');
-const titles=['はじまりの卓','風を読む卓','静かな駆け引き','月下の対局','揺るがぬ一手','頂を望む卓','最後の対戦相手'];
 const colors=['#315f6b','#396c5c','#725d80','#8a625b','#526d91','#8b7452','#6f5b81'];
-const defaults={version:0,stages:Array.from({length:7},(_,i)=>({id:i+1,name:`ステージ${i+1}の対戦相手`,portrait:null,rewards:[null,null,null],accent:colors[i]}))};
+const defaults={version:0,stages:CAST.map(profile=>({id:profile.id,name:profile.name,portrait:null,rewards:[null,null,null],accent:colors[profile.id-1]}))};
 let config=defaults,runConfig=defaults,run=createArcade(),round=null,selected=null,riichiPicking=false,started=false,ended=false,submitted=false;
 let generation=0,cpuTimer=null,startedAt=0,duration=0,sessionPromise=null,toastTimer=null,logs=[];
-let audio=null;
+let audio=null,encounter=null,encounterRetryStage=null;
 async function api(path,payload){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
  try{const response=await fetch(API+path,{method:payload?'POST':'GET',headers:payload?{'Content-Type':'application/json'}:{},body:payload?JSON.stringify(payload):undefined,cache:'no-store',signal:controller.signal});const result=await response.json();if(!response.ok)throw Error(result.error||'通信できませんでした。');return result;}
@@ -25,26 +26,57 @@ function appendLog(text){logs.push(text);logs=logs.slice(-7);}
 function show(id){clearTimeout(cpuTimer);cpuTimer=null;const d=$(id);if(!d.open)d.showModal();}
 function close(id){if($(id).open)$(id).close();scheduleCpu();}
 function stopTimers(){generation++;clearTimeout(cpuTimer);cpuTimer=null;}
-function startBattle(){
- stopTimers();selected=null;riichiPicking=false;round=createRound({stage:run.stage,dealer:run.totalBattles%2});
- logs=[];appendLog(`第${run.stage}ステージ・第${run.battle}戦。${runConfig.stages[run.stage-1].name}と対局開始。`);render();scheduleCpu();
+function currentStage(){return runConfig.stages[run.stage-1]||defaults.stages[run.stage-1];}
+function setPortrait(container,stage,className='registered-portrait'){
+ const src=stage.portrait?asset(stage.portrait):defaultPortraitURL(stage.id),key=stage.id+':'+src+':'+displayStageName(stage);
+ if(container.dataset.asset===key)return;
+ container.dataset.asset=key;container.innerHTML=`<img src="${esc(src)}" alt="${esc(displayStageName(stage))}" class="${className}" decoding="async">`;
+ const image=container.querySelector('img');let fallback=!stage.portrait;
+ image.onerror=()=>{if(!fallback){fallback=true;image.src=defaultPortraitURL(stage.id);}else{image.onerror=null;container.innerHTML=portraitPlaceholder(stage.id,'画像を読み込めません');}};
 }
+function startBattle(){
+ stopTimers();selected=null;riichiPicking=false;round=null;
+ const stage=currentStage();encounter=createEncounter(run.stage,run.battle,{retry:encounterRetryStage===run.stage&&run.battle===1,name:displayStageName(stage)});encounterRetryStage=null;
+ logs=[];appendLog(`第${run.stage}ステージ・第${run.battle}戦。まずは${displayStageName(stage)}とご挨拶。`);
+ render();renderEncounter();show('encounterDialog');
+}
+function renderEncounter(){
+ if(!encounter)return;const stage=currentStage(),profile=getCast(run.stage);
+ $('encounterKicker').textContent=`STAGE ${String(run.stage).padStart(2,'0')} / 7 · 第${run.battle}戦`;
+ $('encounterName').textContent=displayStageName(stage);$('encounterRole').textContent=profile.role;
+ $('encounterPersonality').textContent=profile.personality;
+ $('encounterSpeech').textContent=encounter.lines[encounter.index];
+ $('encounterProgress').textContent=`${encounter.index+1} / ${encounter.lines.length}`;
+ $('encounterNext').textContent=encounter.index+1===encounter.lines.length?'対局をはじめる →':'会話のつづき →';
+ setPortrait($('encounterPortrait'),stage,'encounter-photo');
+}
+function beginBattleRound(){
+ if(!encounter?.complete||!started||ended||run.phase!=='playing')return;
+ encounter=null;close('encounterDialog');stopTimers();
+ round=createRound({stage:run.stage,dealer:run.totalBattles%2});
+ appendLog(`${displayStageName(currentStage())}と対局開始。`);render();scheduleCpu();
+}
+function nextEncounter(){
+ if(!encounter||encounter.complete)return;encounter=advanceEncounter(encounter);
+ if(encounter.complete)beginBattleRound();else renderEncounter();
+}
+function skipConversation(){if(!encounter)return;encounter=skipEncounter(encounter);beginBattleRound();}
 async function startRun(){
  if($('startButton').disabled)return;
  try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio??=new Audio();void audio.resume();}}catch{}
  $('startButton').disabled=true;
- await configReady;runConfig=structuredClone(config);run=createArcade();started=true;ended=false;submitted=false;startedAt=Date.now();duration=0;
+ await configReady;runConfig=structuredClone(config);run=createArcade();encounterRetryStage=null;started=true;ended=false;submitted=false;startedAt=Date.now();duration=0;
  sessionPromise=api('/api/games/session',{mode:MODE}).then(r=>r.id).catch(()=>null);
  for(const d of document.querySelectorAll('dialog[open]'))d.close();$('startButton').disabled=false;
  startBattle();
 }
 function scheduleCpu(){
  clearTimeout(cpuTimer);cpuTimer=null;
- if(!started||ended||run.phase!=='playing'||!round||round.phase!=='cpu'||document.querySelector('dialog[open]')||document.hidden)return;
+ if(!started||ended||encounter||run.phase!=='playing'||!round||round.phase!=='cpu'||document.querySelector('dialog[open]')||document.hidden)return;
  const token=generation;cpuTimer=setTimeout(()=>{cpuTimer=null;if(token!==generation||ended||document.querySelector('dialog[open]'))return;step({type:'cpu'});},650);
 }
 function step(action){
- if(!started||ended||run.phase!=='playing'||!round)return;
+ if(!started||ended||encounter||run.phase!=='playing'||!round)return;
  const result=actRound(round,action);
  if(!result.ok){notify(result.message||'その操作はできません。');return;}
  round=result.state;selected=null;riichiPicking=false;
@@ -58,21 +90,17 @@ function discard(){
  step({type:'discard',index:selected,riichi:riichiPicking});
 }
 function render(){
- const stage=runConfig.stages[run.stage-1]||defaults.stages[run.stage-1],a=round?legalActions(round):{};
+ const stage=currentStage(),profile=getCast(run.stage),name=displayStageName(stage),a=round?legalActions(round):{};
  const view=round?publicView(round):null;
  document.documentElement.style.setProperty('--rival-accent',stage.accent||colors[run.stage-1]);
- $('stageNumber').textContent=run.stage;$('battleNumber').textContent=run.battle;$('stageName').textContent=titles[run.stage-1];$('cpuName').textContent=stage.name;$('opponentSeatName').textContent=stage.name;
+ $('stageNumber').textContent=run.stage;$('battleNumber').textContent=run.battle;$('stageName').textContent=profile.tableTitle;$('cpuName').textContent=name;$('opponentSeatName').textContent=name;
+ $('cpuRole').textContent=profile.role;$('cpuPersonality').textContent=profile.personality;
  $('cpuLevel').textContent=`CPU LEVEL ${run.stage}`;$('scoreValue').textContent=fmt(run.score);
  $('stageDescription').textContent=`第${run.battle}戦 / 3戦 · 3戦全勝でステージ突破`;
  $('stageMap').innerHTML=Array.from({length:7},(_,i)=>`<span class="stage-node ${i+1===run.stage?'current':''} ${i+1<=run.completedStages?'cleared':''}"><b>${String(i+1).padStart(2,'0')}</b><small>${i===6?'FINAL':'STAGE'}</small></span>`).join('');
  $('stageProgress').innerHTML=Array.from({length:3},(_,i)=>`<span class="${run.results[i]?(run.results[i].won?'won':'lost'):''}">${run.results[i]?(run.results[i].won?'✓ 勝利':run.results[i].draw?'― 流局':'× 敗北'):`第${i+1}戦`}</span>`).join('');
- const portraitId=stage.portrait||'';
- if($('cpuPortrait').dataset.asset!==portraitId||$('cpuPortrait').dataset.stage!==String(run.stage)){
-  $('cpuPortrait').dataset.asset=portraitId;$('cpuPortrait').dataset.stage=run.stage;
-  $('cpuPortrait').innerHTML=portraitId?`<img src="${asset(portraitId)}" alt="${esc(stage.name)}" class="registered-portrait">`:portraitPlaceholder(run.stage);
-  $('cpuPortrait').querySelector('img')?.addEventListener('error',()=>{$('cpuPortrait').innerHTML=portraitPlaceholder(run.stage,'画像を読み込めません');},{once:true});
- }
- const live=!!round&&!ended&&run.phase==='playing',hand=round?.hands?.[0]||[];
+ setPortrait($('cpuPortrait'),stage);
+ const live=!!round&&!encounter&&!ended&&run.phase==='playing',hand=round?.hands?.[0]||[];
  const legal=a.discardIndices||[],riichiLegal=a.riichiDiscards||[];
  $('cpuHand').innerHTML=view?view.hands[1].map(id=>tileHTML(id,{small:true,hidden:id===null})).join(''):Array.from({length:13},()=>tileHTML(null,{small:true,hidden:true})).join('');
  $('playerHand').innerHTML=hand.map((id,index)=>{
@@ -87,7 +115,7 @@ function render(){
  $('discardButton').disabled=!live||!legal.includes(selected)||(riichiPicking&&!riichiLegal.includes(selected));
  $('riichiButton').disabled=!live||!riichiLegal.length;$('riichiButton').classList.toggle('is-armed',riichiPicking);$('riichiButton').textContent=riichiPicking?'リーチを取り消す':'リーチ';
  $('tsumoButton').disabled=!live||!a.canTsumo;$('ronButton').disabled=!live||!a.canRon;$('passButton').disabled=!live||!a.canPass;
- const message=!started?'ゲーム開始を待っています':ended?'今回の挑戦は終了しました':!live?'対局が終了しました':round.phase==='cpu'?'対戦相手の思考中…':a.canRon?'ロンできます。和了するか見送りを選択。':a.canTsumo?'ツモ和了できます。':'あなたの手番。打牌する牌を選んでください。';
+ const message=!started?'ゲーム開始を待っています':encounter?'対戦相手と会話中です。会話が終わると対局が始まります。':ended?'今回の挑戦は終了しました':!live?'対局が終了しました':round.phase==='cpu'?'対戦相手の思考中…':a.canRon?'ロンできます。和了するか見送りを選択。':a.canTsumo?'ツモ和了できます。':'あなたの手番。打牌する牌を選んでください。';
  $('turnStatus').textContent=message;$('roundNotice').textContent=riichiPicking?'リーチを宣言します。待ちが残る牌を選んで打牌してください。':message;
  $('tileHint').textContent=riichiPicking?'リーチできる牌だけを選択できます。':round?.riichi?.[0]?'リーチ中は引いた牌のみ打牌できます。':'牌を選んで打牌。同じ牌をもう一度押しても打牌できます。';
  $('logList').replaceChildren(...logs.slice().reverse().map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));
@@ -95,12 +123,14 @@ function render(){
 function showBattleResult(){
  clearTimeout(cpuTimer);const result=round.result,won=result.winner===0,stage=runConfig.stages[run.stage-1];
  if(won){
-  sound('win');const image=stage.rewards[run.wins-1];
-  $('rewardTitle').textContent=`${stage.name}との第${run.battle}戦に勝利`;
+  sound('win');const image=stage.rewards[run.wins-1],profile=getCast(run.stage),name=displayStageName(stage),fallbackURL=defaultRewardURL(run.stage,run.wins);
+  $('rewardTitle').textContent=`${name}との第${run.battle}戦に勝利`;
   $('rewardKicker').textContent=`STAGE ${run.stage} · ${run.wins}つ目の勝利`;
-  $('rewardDescription').textContent=image?'この勝利のために登録された一枚です。':`この勝利の画像はまだ登録されていません。獲得スコア +${fmt(run.lastAward)} pt`;
-  $('rewardImage').hidden=!image;$('rewardPlaceholder').hidden=!!image;
-  if(image){$('rewardImage').src=asset(image);$('rewardImage').alt=`${stage.name}・${run.wins}勝目の画像`;$('rewardImage').onerror=()=>{$('rewardImage').hidden=true;$('rewardPlaceholder').hidden=false;};}
+  $('rewardDescription').textContent=`「${profile.rewards[run.wins-1]}」 獲得スコア +${fmt(run.lastAward)} pt`;
+  const reward=$('rewardImage');reward.hidden=false;$('rewardPlaceholder').hidden=true;
+  $('rewardDialog').dataset.bundled=String(!image);
+  reward.src=image?asset(image):fallbackURL;reward.alt=`${name}・${run.wins}勝目の記念画像`;
+  let fallback=!image;reward.onerror=()=>{if(!fallback){fallback=true;$('rewardDialog').dataset.bundled='true';reward.src=fallbackURL;}else{reward.onerror=null;reward.hidden=true;$('rewardPlaceholder').hidden=false;$('rewardDialog').dataset.bundled='false';}};
   show('rewardDialog');
  }else renderResult();
 }
@@ -119,7 +149,7 @@ function renderResult(){
  show('resultDialog');
 }
 function endRun(){
- if(!started||ended)return;ended=true;stopTimers();duration=Math.max(100,Date.now()-startedAt);
+ if(!started||ended)return;ended=true;encounter=null;stopTimers();duration=Math.max(100,Date.now()-startedAt);
  for(const d of document.querySelectorAll('dialog[open]'))d.close();
  $('finalTitle').textContent=run.phase==='complete'?'セブン麻雀、完全制覇。':'今回の挑戦、おつかれさまでした。';
  $('finalScore').innerHTML=`${fmt(run.score)} <small>pt</small>`;$('finalSummary').textContent=`${run.completedStages} / 7ステージ突破 · ${run.totalBattles}対戦 / ${run.totalWins}勝 · 再挑戦 ${run.retries}回`;
@@ -139,17 +169,19 @@ async function submitScore(event){
 document.addEventListener('click',event=>{const b=event.target.closest('button');if(!b)return;if(b.dataset.close)close(b.dataset.close);});
 $('playerHand').addEventListener('click',event=>{const b=event.target.closest('[data-tile-index]');if(!b||b.disabled)return;const index=Number(b.dataset.tileIndex);if(selected===index)discard();else{selected=index;sound();render();}});
 $('startButton').onclick=startRun;$('discardButton').onclick=discard;
+$('encounterNext').onclick=nextEncounter;$('encounterSkip').onclick=skipConversation;
+$('encounterDialog').addEventListener('keydown',event=>{if(event.key==='ArrowRight'||(['Enter',' '].includes(event.key)&&!event.target.closest('button'))){event.preventDefault();if(!event.repeat)nextEncounter();}});
 $('riichiButton').onclick=()=>{riichiPicking=!riichiPicking;selected=null;render();};$('tsumoButton').onclick=()=>step({type:'tsumo'});$('ronButton').onclick=()=>step({type:'ron'});$('passButton').onclick=()=>step({type:'pass'});
 for(const id of ['helpButton','welcomeHelpButton'])$(id).onclick=()=>show('helpDialog');
 for(const id of ['rankingButton','welcomeRankingButton'])$(id).onclick=()=>{show('rankingDialog');void loadRanking();};$('refreshRankingButton').onclick=()=>void loadRanking();
 $('rewardContinue').onclick=()=>{close('rewardDialog');renderResult();};
 $('nextRoundButton').onclick=$('nextStageButton').onclick=()=>{close('resultDialog');run=advanceArcade(run);startBattle();};
-$('retryStageButton').onclick=()=>{close('resultDialog');run=retryStage(run);startBattle();};
+$('retryStageButton').onclick=()=>{close('resultDialog');run=retryStage(run);encounterRetryStage=run.stage;startBattle();};
 $('endRunButton').onclick=endRun;$('finishButton').onclick=()=>{if(started&&!ended)show('quitDialog');};$('confirmFinishButton').onclick=endRun;
 $('finalRankForm').addEventListener('submit',submitScore);
 $('newRunButton').onclick=()=>{close('finalDialog');$('finalNickname').value='';void startRun();};
 $('adminLink').href=API+'/mahjong-admin/';
-for(const id of ['welcomeDialog','rewardDialog','resultDialog','finalDialog'])$(id).addEventListener('cancel',event=>event.preventDefault());
+for(const id of ['welcomeDialog','encounterDialog','rewardDialog','resultDialog','finalDialog'])$(id).addEventListener('cancel',event=>event.preventDefault());
 document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',scheduleCpu));
 document.addEventListener('keydown',event=>{
  if(/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)||event.ctrlKey||event.altKey||event.metaKey||document.querySelector('dialog[open]'))return;

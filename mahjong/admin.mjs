@@ -1,6 +1,9 @@
+import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-cast';
 const $=id=>document.getElementById(id),clone=value=>JSON.parse(JSON.stringify(value));
 let config=null,draft=null,stageId=1,busy=false,dirty=false,allowed=false;
 const endpoint='/api/mahjong/';
+const bundledBase='https://gamestk777.github.io/web/mahjong/assets/cast/';
+const draftConfig=value=>({...clone(value),stages:value.stages.map(stage=>({...clone(stage),name:displayStageName(stage)}))});
 function status(message,error=false){$('adminStatus').textContent=message;$('adminStatus').classList.toggle('error',error);}
 async function request(path,{method='GET',body,raw=false}={}){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
@@ -9,16 +12,30 @@ async function request(path,{method='GET',body,raw=false}={}){
 }
 function lock(value){busy=value;$('configFields').disabled=value||!allowed;$('stageSelect').disabled=value;document.querySelectorAll('[data-stage]').forEach(b=>b.disabled=value);}
 function changed(){dirty=true;$('saveState').textContent='未保存の変更があります。';}
-function preview(img,empty,id){$(img).hidden=!id;$(empty).hidden=!!id;if(id)$(img).src=endpoint+'assets/'+encodeURIComponent(id);else $(img).removeAttribute('src');}
+function preview(img,empty,id,fallback){
+ const node=$(img);node.hidden=false;$(empty).hidden=true;node.src=id?endpoint+'assets/'+encodeURIComponent(id):fallback;
+ node.onerror=()=>{node.hidden=true;$(empty).hidden=false;};
+}
+function renderInitialCast(){
+ const gallery=$('initialCastGallery');if(!gallery)return;
+ gallery.replaceChildren(...CAST.map(character=>{
+  const stage=character.id,card=document.createElement('article'),title=document.createElement('h3'),grid=document.createElement('div');card.className='builtin-cast-card';grid.className='builtin-cast-images';
+  title.textContent=`${String(stage).padStart(2,'0')} / ${character.name}`;card.append(title);
+  for(let win=0;win<=3;win++){const figure=document.createElement('figure'),image=new Image(),caption=document.createElement('figcaption');image.loading='lazy';image.decoding='async';image.alt=character.name+'・'+(win?win+'勝目':'対戦画像');image.src=win?defaultRewardURL(stage,win,bundledBase):defaultPortraitURL(stage,bundledBase);caption.textContent=win?win+'勝目':'対戦画像';figure.append(image,caption);grid.append(figure);}
+  card.append(grid);return card;
+ }));
+}
 function render(){
- const stage=draft.stages[stageId-1];$('stageSelect').value=String(stageId);$('adminStageNumber').textContent=String(stageId).padStart(2,'0');$('editorTitle').textContent=`ステージ${stageId}の対戦相手`;$('adminDifficulty').textContent=`CPU LEVEL ${stageId}`;
+ const stage=draft.stages[stageId-1];$('stageSelect').value=String(stageId);$('adminStageNumber').textContent=String(stageId).padStart(2,'0');$('editorTitle').textContent=displayStageName(stage);$('adminDifficulty').textContent=`CPU LEVEL ${stageId}`;
  $('characterName').value=stage.name;$('stageAccent').value=stage.accent;
  document.querySelectorAll('[data-stage]').forEach(b=>{b.classList.toggle('active',Number(b.dataset.stage)===stageId);b.setAttribute('aria-current',Number(b.dataset.stage)===stageId?'step':'false');});
- preview('portraitPreview','portraitEmpty',stage.portrait);$('removePortraitButton').disabled=!stage.portrait;
- for(let i=1;i<=3;i++){preview('rewardPreview'+i,'rewardEmpty'+i,stage.rewards[i-1]);$('removeReward'+i).disabled=!stage.rewards[i-1];}
+ preview('portraitPreview','portraitEmpty',stage.portrait,defaultPortraitURL(stageId,bundledBase));$('removePortraitButton').disabled=!stage.portrait;
+ $('portraitSource').textContent=stage.portrait?'登録した画像を使用中':'初期キャストの画像を使用中';
+ for(let i=1;i<=3;i++){preview('rewardPreview'+i,'rewardEmpty'+i,stage.rewards[i-1],defaultRewardURL(stageId,i,bundledBase));$('removeReward'+i).disabled=!stage.rewards[i-1];$('rewardSource'+i).textContent=stage.rewards[i-1]?'登録した画像を使用中':'初期キャストの画像を使用中';}
+ const character=getCast(stageId);$('initialCastName').textContent=character.name;
  document.querySelectorAll('input[type=file]').forEach(el=>el.value='');
 }
-async function load(){lock(true);try{config=await request('config');draft=clone(config);dirty=false;render();$('saveState').textContent=`保存済みの設定 · バージョン ${config.version}`;status('管理者として接続しました。変更して保存すると、新しく始める対局へ反映されます。');await inventory();}catch(error){status(error.message,true);}finally{lock(false);}}
+async function load(){lock(true);try{config=await request('config');draft=draftConfig(config);dirty=false;render();$('saveState').textContent=`保存済みの設定 · バージョン ${config.version}`;status('管理者として接続しました。初期キャストの画像は設定済みです。登録画像で差し替え、保存すると新しく始める対局へ反映されます。');await inventory();}catch(error){status(error.message,true);}finally{lock(false);}}
 async function prepareImage(file){
  if(!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('PNG・JPEG・WebPの静止画を選んでください。');
  if(file.size>20*1024*1024)throw Error('元画像は20MB以下にしてください。');
@@ -47,7 +64,7 @@ $('characterName').oninput=event=>{draft.stages[stageId-1].name=event.target.val
 $('portraitFile').onchange=event=>void upload(event.target.files[0],'portrait');$('removePortraitButton').onclick=()=>{draft.stages[stageId-1].portrait=null;changed();render();void inventory();};
 for(let i=1;i<=3;i++){$('rewardFile'+i).onchange=event=>void upload(event.target.files[0],i-1);$('removeReward'+i).onclick=()=>{draft.stages[stageId-1].rewards[i-1]=null;changed();render();void inventory();};}
 $('reloadConfigButton').onclick=()=>{if(!dirty||confirm('未保存の変更を破棄して、最新の設定を読み直しますか？'))void load();};
-$('configForm').onsubmit=async event=>{event.preventDefault();if(busy||!allowed)return;lock(true);try{const saved=await request('admin/config',{method:'PUT',body:draft});config=saved;draft=clone(saved);dirty=false;$('saveState').textContent=`保存済みの設定 · バージョン ${saved.version}`;status('設定を保存しました。ゲームを新しく始めると反映されます。');render();await inventory();}catch(error){status(error.status===409?error.message+' 未保存の内容は残しています。「読み直す」で最新設定を確認してください。':error.message,true);}finally{lock(false);render();}};
+$('configForm').onsubmit=async event=>{event.preventDefault();if(busy||!allowed)return;lock(true);try{const saved=await request('admin/config',{method:'PUT',body:draft});config=saved;draft=draftConfig(saved);dirty=false;$('saveState').textContent=`保存済みの設定 · バージョン ${saved.version}`;status('設定を保存しました。ゲームを新しく始めると反映されます。');render();await inventory();}catch(error){status(error.status===409?error.message+' 未保存の内容は残しています。「読み直す」で最新設定を確認してください。':error.message,true);}finally{lock(false);render();}};
 window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue='';}});
 async function init(){
  try{const auth=await request('admin');allowed=auth.canManage===true;$('loginPanel').hidden=allowed;$('adminEditor').hidden=!allowed;
@@ -55,4 +72,4 @@ async function init(){
   await load();
  }catch(error){status('管理画面に接続できませんでした。'+error.message,true);}
 }
-void init();
+renderInitialCast();void init();
