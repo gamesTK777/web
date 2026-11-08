@@ -113,3 +113,126 @@ body[data-turn="1"] .team-stat strong{color:#acd6e0}
   .zoom-controls button{min-width:44px;min-height:44px}
   .dialog-close{width:44px;height:44px;top:8px;right:8px}
 }
+
+/* Cel-illustrated command desk and the dedicated play presentation. The view
+   controller supplies actual proportional canvas pixels, never object-fit. */
+:root{--paper:#f5efdf;--paper-light:#fffcf0;--ink:#263e4d;--line:#cdd7bc;--teal:#2c8587;--teal-dark:#245f66;--coral:#e88161}
+.fullscreen-button{min-height:44px;background:#2b6970;border-color:#234e58;color:#fff9e9;box-shadow:0 3px 0 #1d424c;font-size:11px;letter-spacing:.01em}
+.fullscreen-button:hover{background:#37828a;color:#fff;border-color:#234e58}
+.map-frame,.panel{border-color:#b8c8a5;box-shadow:0 4px 0 #c0cfad4a,0 10px 28px #304c4910}
+.regular-start-button{width:100%;margin-top:12px;min-height:46px;text-align:center;font-size:11px;background:#f0f0df}
+.play-control{display:none}
+.zoom-controls .fit-board-button{min-width:46px;min-height:36px;padding:5px 8px;border-left:1px solid #d0d9c2;border-radius:0 4px 4px 0;font-size:10px;font-weight:800;color:#426d56}
+.zoom-controls .fit-board-button[aria-pressed=true]{background:#dfebd2;color:#34634b}
+.board-scroll canvas{max-width:none;max-height:none;object-fit:fill}
+.game-fullscreen .site-header .play-control{display:inline-flex;align-items:center;justify-content:center}
+.game-fullscreen .site-header{min-height:48px;background:var(--paper);max-width:calc(100vw - 145px)}
+.game-fullscreen .site-header .header-actions{gap:5px}
+.game-fullscreen .site-header .icon-button{min-height:44px;padding-inline:11px;font-size:10px;border:1px solid #b9cba9}
+.game-fullscreen .site-header .info-toggle-button[aria-expanded=true]{background:#dcebcf;border-color:#83a17a;color:#315c47}
+.game-fullscreen #gameViewport[data-presentation=ready]{display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;overflow:hidden;padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}
+.game-fullscreen #gameViewport[data-presentation=ready] .title-row,.game-fullscreen #gameViewport[data-presentation=ready] .game-footer,.game-fullscreen #gameViewport[data-presentation=ready] .touch-guide{display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .operations-bar{display:grid;grid-template-columns:minmax(140px,1.6fr) .5fr 1fr 1fr 1fr;min-height:44px;margin:0;padding:7px 16px;border-radius:8px;box-shadow:0 2px 0 #18323c24}
+.game-fullscreen #gameViewport[data-presentation=ready] .operations-bar .micro-label{font-size:7px;line-height:1.3}
+.game-fullscreen #gameViewport[data-presentation=ready] .operations-bar strong{font-size:15px;margin-top:2px;line-height:1.25}
+.game-fullscreen #gameViewport[data-presentation=ready] .operations-bar .mission-status strong,.game-fullscreen #gameViewport[data-presentation=ready] .operations-bar .team-stat strong{font-size:12px}
+.game-fullscreen #gameViewport[data-presentation=ready] .battle-layout{position:relative;display:grid;grid-template-columns:minmax(0,1fr);height:100%;min-height:0;gap:10px;align-items:stretch}
+.game-fullscreen #gameViewport[data-presentation=ready][data-info-open=true] .battle-layout{grid-template-columns:minmax(0,1fr) 256px}
+.game-fullscreen #gameViewport[data-presentation=ready] .battle-column{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0;min-width:0;gap:0}
+.game-fullscreen #gameViewport[data-presentation=ready] .map-toolbar{position:fixed;z-index:10000;top:calc(4px + env(safe-area-inset-top,0px));left:calc(50% - 86px);min-height:44px;max-width:190px;width:max-content;margin:0;gap:0}
+.game-fullscreen #gameViewport[data-presentation=ready] .objective{display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .zoom-controls{height:44px;padding:0;border:1px solid #b9cba9;box-shadow:0 2px 0 #c6d4b33b;background:var(--paper-light)}
+.game-fullscreen #gameViewport[data-presentation=ready] .zoom-controls button{min-width:44px;min-height:42px;padding:5px;font-size:19px}
+.game-fullscreen #gameViewport[data-presentation=ready] .zoom-controls>span{min-width:35px;font-size:8px}
+.game-fullscreen #gameViewport[data-presentation=ready] .zoom-controls .fit-board-button{font-size:10px;min-width:44px}
+.game-fullscreen #gameViewport[data-presentation=ready] .map-frame{display:grid;grid-template-rows:minmax(0,1fr);min-height:0;padding:5px;margin:0;border:2px solid #8aa58a;border-radius:10px;background:#e6edda;box-shadow:0 3px 0 #b9caa43d}
+.game-fullscreen #gameViewport[data-presentation=ready] .map-ruler,.game-fullscreen #gameViewport[data-presentation=ready] .map-caption{display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .board-scroll{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);justify-items:start;align-items:start;width:100%;height:100%;min-height:0;max-height:none;overflow:auto;overscroll-behavior:contain;border:0;border-radius:4px;scrollbar-color:#9aaf8b #e5edda;background:radial-gradient(ellipse at center,#edf2e0,#dfe9d3)}
+.game-fullscreen #gameViewport[data-presentation=ready] .board-scroll[data-overflow-x=false]{justify-items:center}
+.game-fullscreen #gameViewport[data-presentation=ready] .board-scroll[data-overflow-y=false]{align-items:center}
+.game-fullscreen #gameViewport[data-presentation=ready] #boardCanvas{margin:0;max-width:none!important;max-height:none!important;image-rendering:auto;touch-action:pan-x pan-y}
+.game-fullscreen #gameViewport[data-presentation=ready] .command-status{position:absolute;bottom:9px;left:195px;right:195px;z-index:2;display:flex;min-height:24px;max-height:36px;padding:1px 0;overflow:auto;font-size:10px;line-height:1.6;pointer-events:auto;align-items:center}
+.game-fullscreen #gameViewport[data-presentation=ready] .signal-dot{margin:0;flex:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .turn-controls{position:relative;display:flex;min-height:52px;margin:0;gap:8px;padding:7px 0 0;border:0;background:var(--paper);box-shadow:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .turn-controls>p{display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .turn-controls>button{min-height:44px;padding:8px 12px;font-size:11px;white-space:nowrap}
+.game-fullscreen #gameViewport[data-presentation=ready] .quick-save-button{display:inline-flex;align-items:center;justify-content:center;min-width:66px;background:#e1e9d5;border:1px solid #bdcdae}
+.game-fullscreen #gameViewport[data-presentation=ready] .end-turn-button{margin-left:auto;min-width:172px;gap:25px}
+.game-fullscreen #gameViewport[data-presentation=ready] .command-sidebar{display:none;height:100%;min-height:0;padding:0;overflow:auto;align-content:start;scrollbar-width:thin;scrollbar-color:#a3b995 #e8eeda}
+.game-fullscreen #gameViewport[data-presentation=ready][data-info-open=true] .command-sidebar{display:block}
+.game-fullscreen #gameViewport[data-presentation=ready] .campaign-panel,.game-fullscreen #gameViewport[data-presentation=ready] .log-panel{display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-panel{position:relative;min-height:0;margin:0;padding:13px;border:1px solid #9bb88a;box-shadow:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-panel .panel-topline{min-height:0;height:0;margin:0;padding:0}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-panel .panel-topline .micro-label,.game-fullscreen #gameViewport[data-presentation=ready] .selection-panel .panel-index{display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-panel h2{padding-right:39px;font-size:16px;min-height:23px;line-height:1.5}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-meta{font-size:10px;line-height:1.6;margin-top:5px;padding-right:25px}
+.game-fullscreen #gameViewport[data-presentation=ready] .panel-close-button{position:absolute;top:4px;right:4px;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:7px;background:#edf1e2;color:#55795b;font-size:25px;line-height:1}
+.game-fullscreen #gameViewport[data-presentation=ready] .panel-close-button:hover{background:#dbe9cf}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-body{font-size:10px;line-height:1.7}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-body>p:nth-child(2):not(.unit-specs):not(.damage-preview):not(.hint):not(.small-label){display:none}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-body .unit-specs{font-size:10px;padding:8px;margin-top:9px}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-body .damage-preview{font-size:11px;line-height:1.7;padding:9px;margin-top:9px}
+.game-fullscreen #gameViewport[data-presentation=ready] .selection-body canvas,.game-fullscreen #gameViewport[data-presentation=ready] .selection-body img{max-height:85px}
+.game-fullscreen #gameViewport[data-presentation=ready] .action-panel{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
+.game-fullscreen #gameViewport[data-presentation=ready] .action-panel button{min-height:44px;font-size:10px;padding:7px 8px;line-height:1.5}
+.game-fullscreen #gameViewport[data-presentation=ready] .action-panel .attack-button{grid-column:1/-1}
+.game-fullscreen #gameViewport[data-presentation=ready] .unit-shortcuts{grid-template-columns:1fr 1fr;gap:5px}
+.game-fullscreen #gameViewport[data-presentation=ready] .unit-shortcut{min-height:44px;font-size:9px;padding:7px}
+@media(max-width:900px),(max-height:500px){
+  .game-fullscreen .site-header .icon-button{min-width:44px;padding-inline:8px;font-size:10px}
+  .game-fullscreen .site-header #soundButton,.game-fullscreen .site-header #helpButton{width:44px;font-size:0;padding:0}
+  .game-fullscreen .site-header #soundButton::before{content:"♪";font-size:20px}
+  .game-fullscreen .site-header #helpButton::before{content:"?";font-size:19px;font-weight:800}
+  .game-fullscreen .site-header #helpButton>span{font-size:0;margin:0}
+  .game-fullscreen .site-header .info-toggle-button{min-width:65px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .operations-bar{grid-template-columns:minmax(120px,1.6fr) .6fr 1fr 1fr;min-height:42px;padding:7px 11px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .income-stat{display:none}
+  .game-fullscreen #gameViewport[data-presentation=ready] .operations-bar>div+div{padding-left:10px}
+}
+@media(max-width:900px) and (orientation:portrait){
+  .game-fullscreen #gameViewport[data-presentation=ready]{gap:7px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .operations-bar{grid-template-columns:minmax(90px,1.5fr) .6fr 1fr .9fr}
+  .game-fullscreen #gameViewport[data-presentation=ready] .operations-bar strong{font-size:13px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .operations-bar .mission-status strong,.game-fullscreen #gameViewport[data-presentation=ready] .operations-bar .team-stat strong{font-size:10px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .operations-bar .micro-label{font-size:6px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .battle-layout,.game-fullscreen #gameViewport[data-presentation=ready][data-info-open=true] .battle-layout{grid-template-columns:minmax(0,1fr);gap:0}
+  .game-fullscreen #gameViewport[data-presentation=ready] .battle-column{grid-template-rows:auto minmax(0,1fr) auto auto}
+  .game-fullscreen #gameViewport[data-presentation=ready] .map-toolbar{position:static;min-height:48px;width:100%;max-width:none;justify-content:center;grid-row:1;padding-bottom:4px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .zoom-controls{height:44px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .map-frame{grid-row:2}
+  .game-fullscreen #gameViewport[data-presentation=ready] .command-status{position:static;grid-row:3;min-height:31px;max-height:44px;padding:6px 2px 3px;font-size:10px;line-height:1.55}
+  .game-fullscreen #gameViewport[data-presentation=ready] .turn-controls{grid-row:4;min-height:50px;padding-top:5px;gap:7px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .turn-controls>button{padding-inline:9px;font-size:10px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .end-turn-button{min-width:139px;gap:13px;font-size:11px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .quick-save-button{min-width:56px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .command-sidebar{position:absolute;z-index:20;left:0;right:0;bottom:86px;width:auto;height:auto;max-height:min(44dvh,350px);overflow:auto;border:1px solid #8eac80;border-radius:10px;background:var(--paper-light);box-shadow:0 12px 45px #1c444b55}
+  .game-fullscreen #gameViewport[data-presentation=ready] .selection-panel{border:0;border-radius:10px;padding:12px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .selection-body>p:first-child{margin-top:6px;font-size:10px}
+}
+@media(max-width:900px) and (orientation:landscape){
+  .game-fullscreen #gameViewport[data-presentation=ready]{gap:6px}
+  .game-fullscreen #gameViewport[data-presentation=ready][data-info-open=true] .battle-layout{grid-template-columns:minmax(0,1fr) 218px;gap:8px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .map-toolbar{left:calc(50% - 65px)}
+  .game-fullscreen #gameViewport[data-presentation=ready] .command-status{left:176px;right:158px;font-size:9px;max-height:32px;bottom:9px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .turn-controls{min-height:49px;padding-top:5px;gap:6px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .turn-controls>button{padding-inline:9px;font-size:10px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .end-turn-button{min-width:146px;gap:16px;font-size:11px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .quick-save-button{min-width:58px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .selection-panel{padding:10px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .selection-panel h2{font-size:14px}
+}
+@media(max-width:600px){
+  .fullscreen-button{font-size:10px;padding-inline:10px}
+  .site-header .site-brand{display:none}
+  .zoom-controls .fit-board-button{min-height:44px;font-size:10px}
+  .game-fullscreen .site-header{max-width:calc(100vw - 135px)}
+  .game-fullscreen .site-header .header-actions{gap:3px}
+  .game-fullscreen .site-header .icon-button{padding-inline:6px}
+}
+@media(max-width:360px){
+  .game-fullscreen .site-header .info-toggle-button{min-width:54px;font-size:9px}
+  .game-fullscreen .site-header #playMenuButton{display:none}
+  .game-fullscreen #gameViewport[data-presentation=ready] .turn-controls>button{padding-inline:7px;font-size:9px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .end-turn-button{min-width:127px}
+  .game-fullscreen #gameViewport[data-presentation=ready] .command-status{font-size:9px}
+}

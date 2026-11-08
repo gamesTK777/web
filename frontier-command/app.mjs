@@ -1,6 +1,7 @@
 import {createGame,applyAction,getReachable,getAttackTargets,getProduction,planAIAction,serializeGame,deserializeGame,getIncome,defenseAt,canCapture,UNIT_TYPES,TERRAIN,MISSIONS} from './engine.mjs?v=20261108-frontier';
-import {renderBoard,cellFromPointer} from './renderer.mjs?v=20261108-frontier';
+import {renderBoard,cellFromPointer} from './renderer.mjs?v=20261108-anime-fullscreen';
 import {CommandAudio} from './audio.mjs?v=20261108-frontier';
+import {createBattlePresentation} from './presentation.mjs?v=20261108-anime-fullscreen';
 
 const $=id=>document.getElementById(id),canvas=$('boardCanvas'),audio=new CommandAudio();
 const KEYS={auto:'tk777.frontier.autosave.v1',manual:'tk777.frontier.manual.v1',progress:'tk777.frontier.progress.v1',sound:'tk777.frontier.sound.v1'};
@@ -13,7 +14,7 @@ const terrainName=type=>TERRAIN[type]?.name||({plain:'草原',grass:'草原',roa
 const buildingName=type=>({city:'都市',factory:'工場',hq:'本部',airfield:'飛行場'}[type]||'');
 const money=value=>Number(value||0).toLocaleString('ja-JP');
 let game=createGame({missionId:missionItems[0].id,difficulty:'normal'}),started=false,phase='setup';
-let selectedId=null,targetId=null,cursor={x:0,y:0},moveUndo=null,zoom=1,effect=null,aiTimer=null,aiEpoch=0,aiActions=0,lastDraw=0,viewMoves=[],viewTargets=[];
+let selectedId=null,targetId=null,cursor={x:0,y:0},moveUndo=null,effect=null,aiTimer=null,aiEpoch=0,aiActions=0,lastDraw=0,viewMoves=[],viewTargets=[],presentation=null;
 let soundOn=storage.get(KEYS.sound)!=='off',progress=[];
 try{const value=JSON.parse(storage.get(KEYS.progress)||'[]');if(Array.isArray(value))progress=value.filter(x=>missionItems.some(m=>m.id===x));}catch{}
 audio.setEnabled(false);
@@ -78,10 +79,11 @@ function selectCell(x,y){
   cursor={x,y};if(!started){status('「作戦開始」から対戦を始めましょう。');return;}
   const current=selected(),clicked=unitAt(x,y);
   if(canAct()&&current?.team===0&&!current.acted){
-    if(clicked?.team===1&&getAttackTargets(game,current.id).some(t=>t.id===clicked.id)){targetId=clicked.id;render();status('ダメージ予測を確認し、「攻撃する」で確定してください。');return;}
+    if(clicked?.team===1&&getAttackTargets(game,current.id).some(t=>t.id===clicked.id)){targetId=clicked.id;render();presentation?.setInfoOpen(true);status('ダメージ予測を確認し、「攻撃する」で確定してください。');return;}
     if(!clicked&&getReachable(game,current.id).some(p=>p.x===x&&p.y===y&&(p.x!==current.x||p.y!==current.y))){perform({type:'move',unitId:current.id,x,y});return;}
   }
   selectedId=clicked?.id??null;targetId=null;audio.sfx('select');render();
+  const clickedTile=tileAt(x,y);if(clicked?.team===1||(clicked?.team===0&&canCapture(game,clicked.id))||(!clicked&&clickedTile?.owner===0&&['factory','airfield'].includes(clickedTile.building)))presentation?.setInfoOpen(true);
   if(clicked?.team===0)status(clicked.acted?'この部隊は行動済みです。別の部隊を選んでください。':'光るマスへ移動。敵を選ぶと攻撃の予測が見られます。');
 }
 function eventText(action,before,after){
@@ -106,7 +108,7 @@ function perform(action,{ai=false}={}){
   effect={type:action.type,unitId:action.unitId,x:p.x,y:p.y,fromX:old?.x,fromY:old?.y,team:before.turn,startedAt:performance.now()};
   if(action.type==='endTurn'){selectedId=null;targetId=null;aiActions=0;}
   else {selectedId=!ai?moved?.id??null:null;targetId=null;}
-  audio.sfx(action.type==='endTurn'?'turn':action.type);render();status(eventText(action,before,game));saveAuto();
+  audio.sfx(action.type==='endTurn'?'turn':action.type);render();if(action.type==='move'&&!ai)presentation?.setInfoOpen(true);status(eventText(action,before,game));saveAuto();
   if(game.winner!==null){phase='ended';stopAI();showResult();}else queueAI();
   return true;
 }
@@ -157,7 +159,7 @@ function renderSelection(){
     if(!options.length)body.append(el('p','この拠点では現在、生産できる部隊がありません。'));
   } else if(!u){
     const units=game.units.filter(x=>x.team===0&&!x.acted);
-    if(units.length){body.append(el('p','未行動の味方','small-label'));const list=el('div',undefined,'unit-shortcuts');for(const friendly of units)list.append(button(`${unitName(friendly.type)} ${friendly.hp}`,()=>{selectedId=friendly.id;targetId=null;cursor={x:friendly.x,y:friendly.y};render();canvas.focus({preventScroll:true});},'unit-shortcut'));body.append(list);}
+    if(units.length){body.append(el('p','未行動の味方','small-label'));const list=el('div',undefined,'unit-shortcuts');for(const friendly of units)list.append(button(`${unitName(friendly.type)} ${friendly.hp}`,()=>{selectedId=friendly.id;targetId=null;cursor={x:friendly.x,y:friendly.y};render();presentation?.revealCell({...cursor,width:game.width,height:game.height});canvas.focus({preventScroll:true});},'unit-shortcut'));body.append(list);}
   }
 }
 function render(){
@@ -169,7 +171,7 @@ function render(){
   $('saveButton').disabled=!started;$('loadButton').disabled=!storage.get(KEYS.manual);$('restartButton').disabled=!started;
   $('eventLog').replaceChildren(...(game.log||[]).slice(-7).reverse().map(item=>el('li',typeof item==='string'?item:item.text||item.message||item.type||'部隊が行動しました。')));
   canvas.setAttribute('aria-label',`${m.name}。${game.width}×${game.height}マス。カーソル ${cursor.x+1},${cursor.y+1}。矢印で選びEnterで決定。`);
-  document.body.dataset.turn=game.turn;const u=selected(),show=started&&phase==='playing'&&game.turn===0&&u?.team===0&&!u.acted;viewMoves=show?getReachable(game,u.id):[];viewTargets=show?getAttackTargets(game,u.id):[];renderSelection();draw(performance.now());
+  document.body.dataset.turn=game.turn;const u=selected(),show=started&&phase==='playing'&&game.turn===0&&u?.team===0&&!u.acted;viewMoves=show?getReachable(game,u.id):[];viewTargets=show?getAttackTargets(game,u.id):[];renderSelection();draw(performance.now());presentation?.refresh();
 }
 function draw(time){
   renderBoard(canvas,game,{selectedId,moves:viewMoves,targets:viewTargets,cursor,time,effect:effect&&time-effect.startedAt<650?effect:null});
@@ -180,6 +182,7 @@ $('missionSelect').replaceChildren(...missionItems.map((m,i)=>{const node=el('op
 $('missionBrief').setAttribute('aria-live','polite');
 $('missionSelect').addEventListener('change',updateMissionBrief);
 $('startButton').addEventListener('click',startSelected);
+$('startFullscreenButton')?.addEventListener('click',()=>{startSelected();if(!document.body.classList.contains('game-fullscreen'))document.querySelector('[data-game-fullscreen]')?.click();});
 $('continueButton')?.addEventListener('click',()=>loadSaved('auto'));
 $('menuButton').addEventListener('click',()=>openSetup(game.missionId));
 $('closeSetupButton').addEventListener('click',()=>$('newGameDialog').close());
@@ -198,15 +201,13 @@ $('retryButton').addEventListener('click',()=>enterGame(createGame({missionId:ga
 $('nextMissionButton').addEventListener('click',()=>{const i=missionItems.findIndex(m=>m.id===game.missionId);if(missionItems[i+1])enterGame(createGame({missionId:missionItems[i+1].id,difficulty:game.difficulty||'normal'}));});
 $('resultMenuButton').addEventListener('click',()=>{$('resultDialog').close();openSetup(game.missionId);});
 $('resultDialog').addEventListener('close',refreshSound);
-function changeZoom(value){zoom=Math.max(1,Math.min(2.5,value));canvas.style.width=`${zoom*100}%`;$('zoomLabel').textContent=`${Math.round(zoom*100)}%`;$('zoomOutButton').disabled=zoom<=1;$('zoomInButton').disabled=zoom>=2.5;}
-$('zoomInButton').addEventListener('click',()=>changeZoom(zoom+.25));$('zoomOutButton').addEventListener('click',()=>changeZoom(zoom-.25));
 canvas.addEventListener('click',event=>{const cell=cellFromPointer(canvas,event,game);if(cell)selectCell(cell.x,cell.y);});
 canvas.addEventListener('keydown',event=>{
   if(isPaused())return;const key=event.key.toLowerCase(),directions={arrowleft:[-1,0],a:[-1,0],arrowright:[1,0],d:[1,0],arrowup:[0,-1],w:[0,-1],arrowdown:[0,1],s:[0,1]};
-  if(directions[key]){event.preventDefault();const [dx,dy]=directions[key];cursor={x:Math.max(0,Math.min(game.width-1,cursor.x+dx)),y:Math.max(0,Math.min(game.height-1,cursor.y+dy))};render();}
+  if(directions[key]){event.preventDefault();const [dx,dy]=directions[key];cursor={x:Math.max(0,Math.min(game.width-1,cursor.x+dx)),y:Math.max(0,Math.min(game.height-1,cursor.y+dy))};render();presentation?.revealCell({...cursor,width:game.width,height:game.height});}
   else if(key==='enter'||key===' '){event.preventDefault();if(!event.repeat)selectCell(cursor.x,cursor.y);}
   else if(key==='escape'){selectedId=null;targetId=null;render();}
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopAI();audio.pause();}else{refreshSound();queueAI();}});
 window.addEventListener('pagehide',()=>{stopAI();audio.pause();saveAuto();});
-$('bootMessage').hidden=true;changeZoom(1);renderMissions();render();setupContinue();openSetup();requestAnimationFrame(animate);
+$('bootMessage').hidden=true;presentation=createBattlePresentation({canvas,scrollContainer:$('boardScroll'),getGridSize:()=>({columns:game.width,rows:game.height}),onZoomChange:()=>presentation?.revealCell({...cursor,width:game.width,height:game.height})});renderMissions();render();setupContinue();openSetup();requestAnimationFrame(animate);

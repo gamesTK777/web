@@ -6,10 +6,10 @@
   <meta name="theme-color" content="#203c44">
   <meta name="description" content="小さな島々で、大きな一手を。占領・生産・地形を使いこなす、オリジナルのターン制戦略シミュレーション。">
   <title>フロンティア・コマンド | TK777 ARCADE</title>
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=20261108-anime-fullscreen">
   <link rel="stylesheet" href="../shared/portal-return.css">
   <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
-  <link rel="stylesheet" href="style.css?v=20261108-frontier">
+  <link rel="stylesheet" href="style.css?v=20261108-anime-fullscreen">
 </head>
 <body>
   <header class="site-header">
@@ -17,8 +17,10 @@
     <span class="site-brand">TK777 <span>/</span> FIELD NOTES <i aria-hidden="true"></i></span>
     <div class="header-actions">
       <button type="button" class="icon-button" id="soundButton" aria-label="サウンドを切り替える" aria-pressed="false">♪ <span>音 OFF</span></button>
-      <button type="button" class="icon-button" id="helpButton"><span aria-hidden="true">?</span> 遊び方</button>
-      <button type="button" class="icon-button fullscreen-button" data-game-fullscreen data-fullscreen-target="#gameViewport" data-fullscreen-focus="#boardCanvas" aria-pressed="false">⛶ 全画面</button>
+      <button type="button" class="icon-button" id="helpButton" aria-label="遊び方"><span aria-hidden="true">?</span> 遊び方</button>
+      <button type="button" class="icon-button play-control" id="playMenuButton" aria-label="作戦を選ぶ">作戦</button>
+      <button type="button" class="icon-button play-control info-toggle-button" id="unitInfoButton" aria-controls="unitInfoPanel" aria-expanded="false">部隊情報</button>
+      <button type="button" class="icon-button fullscreen-button" data-game-fullscreen data-fullscreen-target="#gameViewport" data-fullscreen-focus="#boardCanvas" data-fullscreen-label="⛶ 全画面でプレイ" aria-pressed="false">⛶ 全画面でプレイ</button>
     </div>
   </header>
 
@@ -48,6 +50,7 @@
             <button type="button" id="zoomOutButton" aria-label="マップを縮小">−</button>
             <span id="zoomLabel" aria-live="polite">100%</span>
             <button type="button" id="zoomInButton" aria-label="マップを拡大">＋</button>
+            <button type="button" id="fitBoardButton" class="fit-board-button" aria-label="マップ全体を表示する">全景</button>
           </div>
         </div>
 
@@ -63,15 +66,16 @@
         <div class="command-status"><span class="signal-dot" aria-hidden="true"></span><p id="statusText" role="status" aria-live="polite" aria-atomic="true">味方の部隊を選んで、最初の一手を考えよう。</p></div>
         <div class="turn-controls">
           <button class="subtle-button" id="undoButton" type="button" disabled><span aria-hidden="true">↶</span> 移動を戻す</button>
+          <button class="subtle-button play-control quick-save-button" id="quickSaveButton" type="button">↓ 保存</button>
           <p>全部隊を動かさなくても<br><strong>ターンを終了できます。</strong></p>
           <button class="primary-button end-turn-button" id="endTurnButton" type="button">ターン終了 <span aria-hidden="true">→</span></button>
         </div>
-        <p class="touch-guide"><span aria-hidden="true">◎</span> 味方 → 光るマスへ移動 → 敵を選んで予測を確認 → 「攻撃する」。拡大したマップは指でスクロールできます。</p>
+        <p class="touch-guide"><span aria-hidden="true">◎</span> 味方 → 光るマスへ移動 → 敵を選んで予測を確認 → 「攻撃する」。＋で拡大し指でマップをスクロール、全景で全体表示に戻ります。</p>
       </section>
 
-      <aside class="command-sidebar" aria-label="指揮パネル">
+      <aside class="command-sidebar" id="unitInfoPanel" aria-label="指揮パネル">
         <section class="selection-panel panel" aria-labelledby="selectionTitle">
-          <div class="panel-topline"><span class="micro-label">FIELD INTELLIGENCE</span><span class="panel-index" aria-hidden="true">01</span></div>
+          <div class="panel-topline"><span class="micro-label">FIELD INTELLIGENCE</span><span class="panel-index" aria-hidden="true">01</span><button type="button" class="play-control panel-close-button" id="closeUnitInfoButton" aria-label="部隊情報を閉じてマップを広く表示">×</button></div>
           <h2 id="selectionTitle">部隊を選択</h2>
           <p class="selection-meta" id="selectionMeta">あなたの一手から、作戦が動き出す。</p>
           <div class="selection-body" id="selectionBody"><div class="selection-placeholder"><span aria-hidden="true">⌖</span><p>マップの部隊や拠点を選ぶと、<br>地形・戦力・行動を確認できます。</p></div></div>
@@ -109,7 +113,8 @@
       </div>
       <div class="mission-brief" id="missionBrief"><p>部隊を動かし、敵の本部を目指しましょう。</p></div>
       <div class="setup-facts"><span><b>01</b> CPU対戦</span><span><b>05</b> 作戦エリア</span><span><b>15–30</b> 分 / 1戦の目安</span></div>
-      <button type="button" class="primary-button start-button" id="startButton">この作戦を始める <span aria-hidden="true">→</span></button>
+      <button type="button" class="primary-button start-button" id="startFullscreenButton">⛶ 全画面で作戦開始 <span aria-hidden="true">→</span></button>
+      <button type="button" class="outline-button regular-start-button" id="startButton">通常の画面で開始</button>
       <button type="button" class="outline-button continue-button" id="continueButton" hidden>保存した作戦の続きから</button>
       <p class="setup-footnote">進行はこの端末に自動保存されます。初めてなら、最初の作戦から。</p>
     </div>
@@ -127,7 +132,7 @@
         <section><b>04</b><div><h3>準備ができたら、ターン終了</h3><p>味方拠点から収入を得て、次のターンに備えます。敵の本部を占領するか、敵の部隊と生産力を制圧すれば勝利です。</p></div></section>
       </div>
       <div class="help-note"><strong>砲兵の大切なルール</strong><p>砲兵は離れた敵を攻撃できますが、移動したターンには砲撃できません。敵に接近されない場所で、前のターンから準備しましょう。</p></div>
-      <section class="help-controls"><h3>操作方法</h3><dl><div><dt>マウス / iPhone</dt><dd>部隊やマスをクリック・タップ。拡大時はマップの中をスクロール。</dd></div><div><dt>キーボード</dt><dd>矢印キーでマスを選択、Enter / Spaceで決定、Escapeで解除。画面のボタンはTabでも選べます。</dd></div><div><dt>保存 / 続きから</dt><dd>進行はこの端末に自動保存。画面下の「保存」で手動保存、「続きから」で保存時点に戻ります。</dd></div></dl></section>
+      <section class="help-controls"><h3>操作方法</h3><dl><div><dt>マウス / iPhone</dt><dd>部隊やマスをクリック・タップ。＋で拡大し、マップの中をスクロール。「全景」でマップ全体を表示。</dd></div><div><dt>全画面でプレイ</dt><dd>ヘッダの「全画面でプレイ」で作戦専用の画面へ。「部隊情報」で指揮パネルを開閉できます。攻撃・占領・生産時は必要な情報が開きます。</dd></div><div><dt>キーボード</dt><dd>矢印キーでマスを選択、Enter / Spaceで決定、Escapeで解除。画面のボタンはTabでも選べます。</dd></div><div><dt>保存 / 続きから</dt><dd>進行はこの端末に自動保存。画面下の「保存」で手動保存、「続きから」で保存時点に戻ります。</dd></div></dl></section>
     </div>
   </dialog>
 
@@ -139,6 +144,6 @@
     </div>
   </dialog>
   <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
-  <script type="module" src="app.mjs?v=20261108-frontier"></script>
+  <script type="module" src="app.mjs?v=20261108-anime-fullscreen"></script>
 </body>
 </html>
