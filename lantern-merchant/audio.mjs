@@ -1,27 +1,12 @@
-/* Original synthesized scores for Lantern & Ledger.
- * Town: "Lanterns along the Quay", 8 bars in D major, 98 BPM.
- * Dungeon: "Below the Green Flame", 8 bars in E minor, 124 BPM.
+/* Original synthesized soundtrack for Pal Merchant Diary.
+ * Seven location scores live in music-score.mjs; game state selects the score.
  * All melodies, harmonies and sounds are authored here; no recordings or samples.
  * AudioContext is deliberately created ONLY by start(), called from a user gesture.
  */
+import {getTrack,scheduleMusicStep} from './music-score.mjs?v=20261108-music7';
+import {resolveMusicTrack} from './music-scene.mjs?v=20261108-music7';
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const hz=midi=>440*2**((midi-69)/12);
-const TOWN={bpm:98,
-  chords:[[50,57,62,66],[47,54,59,62],[43,50,55,59],[45,52,57,61],[50,57,62,66],[54,57,61,66],[43,50,55,59],[45,52,57,61]],
-  melody:[
-    [74,78,81,78,76,74,69,73], [74,78,81,83,81,78,76,74],
-    [71,74,78,76,74,71,67,69], [73,76,81,78,76,73,69,71],
-    [74,78,81,86,85,81,78,76], [78,81,85,83,81,78,76,73],
-    [74,78,79,78,74,71,69,67], [69,73,76,81,78,76,73,null]
-  ]};
-const DUNGEON={bpm:124,
-  chords:[[40,47,52,55],[36,43,48,52],[43,50,55,59],[38,45,50,54],[40,47,52,55],[36,43,48,52],[45,52,57,60],[35,42,47,51]],
-  melody:[
-    [76,null,79,83,81,79,76,74], [76,79,84,null,83,79,76,72],
-    [74,79,83,86,83,null,81,79], [78,81,86,null,84,81,78,74],
-    [83,79,76,79,83,86,88,null], [84,83,79,76,79,null,76,72],
-    [81,84,88,86,84,81,79,76], [78,75,71,75,78,83,81,75]
-  ]};
 
 export function createAudioManager(dependencies={}){
   const Context=dependencies.AudioContext??globalThis.AudioContext??globalThis.webkitAudioContext;
@@ -54,14 +39,13 @@ export function createAudioManager(dependencies={}){
       context=null;return false;
     }
   }
-  function remember(source,nodes){
-    const voice={source,nodes};voices.add(voice);
+  function remember(source,nodes,bus){
+    const voice={source,nodes,bus};voices.add(voice);
     source.onended=()=>{voices.delete(voice);for(const node of nodes)try{node.disconnect();}catch{}};
     return source;
   }
-  function stopVoices(){
-    for(const {source,nodes} of voices){try{source.stop();}catch{}for(const node of nodes)try{node.disconnect();}catch{}}
-    voices.clear();
+  function stopVoices(onlyMusic=false){
+    for(const voice of [...voices]){if(onlyMusic&&voice.bus!==musicBus)continue;const {source,nodes}=voice;try{source.stop();}catch{}for(const node of nodes)try{node.disconnect();}catch{}voices.delete(voice);}
   }
   function tone(midi,when,duration,level=.08,instrument='harp',bus=musicBus,slide=0){
     if(!context||voices.size>120||!Number.isFinite(midi))return;
@@ -73,36 +57,23 @@ export function createAudioManager(dependencies={}){
     gain.gain.setValueAtTime(0,when);gain.gain.linearRampToValueAtTime(level,when+attack);
     gain.gain.exponentialRampToValueAtTime(Math.max(.0001,level*.23),when+Math.max(attack+.005,duration*.65));
     gain.gain.linearRampToValueAtTime(0,when+duration+release);
-    osc.connect(gain);gain.connect(bus);remember(osc,[osc,gain]);osc.start(when);osc.stop(when+duration+release+.01);
+    osc.connect(gain);gain.connect(bus);remember(osc,[osc,gain],bus);osc.start(when);osc.stop(when+duration+release+.01);
   }
   function percussion(when,kind,amount=1,bus=musicBus){
     if(kind==='kick'){
       const o=context.createOscillator(),g=context.createGain();o.type='sine';
       o.frequency.setValueAtTime(130,when);o.frequency.exponentialRampToValueAtTime(43,when+.16);
       g.gain.setValueAtTime(.18*amount,when);g.gain.exponentialRampToValueAtTime(.0001,when+.22);
-      o.connect(g);g.connect(bus);remember(o,[o,g]);o.start(when);o.stop(when+.24);return;
+      o.connect(g);g.connect(bus);remember(o,[o,g],bus);o.start(when);o.stop(when+.24);return;
     }
     const s=context.createBufferSource(),f=context.createBiquadFilter(),g=context.createGain();
     const hat=kind==='hat',duration=hat?.045:.13;s.buffer=noise;f.type=hat?'highpass':'bandpass';f.frequency.value=hat?6500:1800;f.Q.value=.65;
     g.gain.setValueAtTime((hat?.025:.065)*amount,when);g.gain.exponentialRampToValueAtTime(.0001,when+duration);
-    s.connect(f);f.connect(g);g.connect(bus);remember(s,[s,f,g]);s.start(when);s.stop(when+duration+.01);
+    s.connect(f);f.connect(g);g.connect(bus);remember(s,[s,f,g],bus);s.start(when);s.stop(when+duration+.01);
     if(!hat)tone(50,when,.055,.028*amount,'triangle',bus,-3);
   }
   function scoreStep(n,time){
-    const score=scene==='dungeon'?DUNGEON:TOWN,bar=Math.floor(n/16)%8,beat=n%16,unit=60/score.bpm/4;
-    const chord=score.chords[bar],melody=score.melody[bar],intense=scene==='dungeon';
-    // Sustained upper harmony, voiced sparsely to leave space for the melody.
-    if(beat===0){for(const note of chord.slice(1))tone(note+12,time,unit*14,intense?.023:.029,'flute');}
-    // Bass alternates root and fifth with a light pickup at the end of each bar.
-    if(beat%4===0)tone(chord[beat===8?1:0],time,unit*(intense?2.3:3.1),intense?.11:.075,'triangle');
-    if(intense&&beat===14)tone(chord[1],time,unit*1.4,.065,'triangle');
-    // A bright plucked accompaniment and breathy lead evoke a 16-bit soundtrack.
-    if(beat%2===1){const arp=chord[[0,2,1,3][Math.floor(beat/2)%4]]+(intense?24:12);tone(arp,time,unit*2.7,intense?.038:.045,'harp');}
-    if(beat%2===0){const note=melody[beat/2];if(note!==null){tone(note,time,unit*1.7,intense?.065:.073,intense?'reed':'flute');if(bar>=4)tone(note-12,time+.015,unit*1.3,.017,'harp');}}
-    if(intense){if(beat===0||beat===8||beat===11)percussion(time,'kick',.72);if(beat===4||beat===12)percussion(time,'snare',.8);if(beat%2===0)percussion(time,'hat',beat%4===0?.65:.4);}
-    else{if(beat===0||beat===8)percussion(time,'kick',.4);if(beat===4||beat===12)percussion(time,'snare',.3);if(beat%4===2)percussion(time,'hat',.45);}
-    // A chime marks every second harmonic change rather than looping a short jingle.
-    if(beat===15&&bar%2===1)tone(chord[3]+24,time,unit*2.8,.021,'bell');
+    scheduleMusicStep(scene,n,time,{tone,percussion});
   }
   function stopScheduler(){if(timer!==null){cancel(timer);timer=null;}generation++;}
   function pump(token){
@@ -111,15 +82,15 @@ export function createAudioManager(dependencies={}){
     try{
       // Never catch up an old score after a background tab or interrupted context.
       if(nextNote<context.currentTime-.1)nextNote=context.currentTime+.025;
-      const unit=60/(scene==='dungeon'?DUNGEON.bpm:TOWN.bpm)/4;
+      const unit=60/getTrack(scene).bpm/4;
       let scheduled=0;while(nextNote<context.currentTime+.16&&scheduled++<4){scoreStep(step++,nextNote);nextNote+=unit;}
       timer=later(()=>pump(token),30);
     }catch{stopScheduler();stopVoices();}
   }
   function beginScheduler(){if(silent()||timer!==null)return;nextNote=Math.max(nextNote,context.currentTime+.025);pump(generation);}
   function setScene(value){
-    const next=value==='dungeon'?'dungeon':'town';if(scene===next)return;
-    scene=next;step=0;stopScheduler();stopVoices();nextNote=context?context.currentTime+.035:0;beginScheduler();
+    const next=resolveMusicTrack(value);if(scene===next)return;
+    scene=next;step=0;stopScheduler();stopVoices(true);nextNote=context?context.currentTime+.035:0;beginScheduler();
   }
   async function wake(){
     if(disposed||!started||paused||!context)return false;
@@ -185,7 +156,7 @@ export function createAudioManager(dependencies={}){
       }
     }catch{ /* Sound must never block a game action. */ }
   }
-  function getStatus(){return{started,muted,volume,available:!!Context&&!disposed,playing:!silent()&&timer!==null};}
+  function getStatus(){const track=getTrack(scene);return{started,muted,volume,available:!!Context&&!disposed,playing:!silent()&&timer!==null,trackId:track.id,trackTitle:track.title,trackArea:track.area};}
   function dispose(){disposed=true;started=false;paused=true;stopScheduler();stopVoices();lastEffect.clear();try{context?.close()?.catch?.(()=>{});}catch{}context=null;}
   return{start,setScene,play,setMuted,setVolume,pause,resume,dispose,getStatus};
 }

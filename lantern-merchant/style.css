@@ -77,3 +77,21 @@ body[data-mode="town"] .dungeon-controls>p{display:block;max-width:440px;color:#
 .bestiary-card p{font-size:11px;line-height:1.8;color:#bacbbd;margin:0}
 @media(max-width:760px){.bestiary-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bestiary-art{height:112px}.bestiary-art img{height:105px;width:110px}.bestiary-card{padding:9px 11px 12px}#bestiaryDialog h2{font-size:19px}}
 @media(max-width:760px){.welcome-art.anime-welcome{height:125px;gap:15px;padding:0 12px}.anime-welcome .welcome-explorer{width:125px;height:194px}.anime-welcome span{font-size:8px;max-width:140px}}
+
+.current-music{display:flex;align-items:center;gap:14px;margin:18px 0 12px;padding:16px;border:1px solid #e6be7d45;border-radius:13px;background:linear-gradient(120deg,#e6be7d12,#99cdb00a)}
+.music-note{display:grid;place-items:center;flex:none;width:43px;height:43px;border:1px solid #e6be7d45;border-radius:50%;color:var(--gold);font-size:26px;background:#e6be7d0a}
+.current-music div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.current-music small{color:var(--muted);font-size:10px}
+.current-music strong{font-family:'Noto Serif JP',serif;font-size:19px;color:var(--gold)}
+.current-music div>span{color:var(--text);font-size:11px}
+.soundtrack-details{margin:10px 0 18px;border:1px solid var(--line);border-radius:10px;background:#ffffff03}
+.soundtrack-details summary{padding:11px 13px;cursor:pointer;font-size:12px;color:var(--green);touch-action:manipulation}
+.soundtrack-details summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:9px}
+.music-track-list{list-style:none;padding:0 9px 8px;margin:0}
+.music-track-list li{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px;align-items:center;padding:8px 10px;border-radius:7px;border:1px solid transparent;font-size:11px;line-height:1.5}
+.music-track-list li>span{color:var(--muted);font-size:10px}
+.music-track-list li>strong{font-weight:500}
+.music-track-list li.is-current{border-color:#e6be7d45;background:#e6be7d0d;color:var(--gold)}
+.music-track-list li.is-current>span{color:var(--gold)}
+#soundDialog .music-help{margin:0 0 18px;font-size:10px}
+@media(max-width:760px){.current-music{padding:12px;gap:11px}.current-music strong{font-size:18px}.music-track-list li{grid-template-columns:102px minmax(0,1fr);gap:5px;padding:8px}.music-track-list li>span{font-size:9px}.music-track-list li>strong{font-size:10px}}

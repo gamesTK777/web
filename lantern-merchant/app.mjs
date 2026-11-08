@@ -3,7 +3,8 @@ import {drawScene} from './renderer.mjs?v=20261108-anime10';
 import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-anime10';
 import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261108-anime10';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
-import {createAudioManager} from './audio.mjs?v=20261107-swarm';
+import {createAudioManager} from './audio.mjs?v=20261108-music7';
+import {TRACKS} from './music-score.mjs?v=20261108-music7';
 import {createHoldInput,isMovementKey} from './hold-input.mjs?v=20261107-swarm';
 import {createCloudSave} from './cloud-save.mjs?v=20261105-cloud';
 import {preloadEnvironment,getEnvironmentAssetStatus} from './anime-environment.mjs?v=20261108-anime10';
@@ -39,7 +40,7 @@ function save(manual=false){
   catch{$('saveStatus').textContent='保存できません';$('saveStatus').classList.add('failed');$('saveButton').textContent='未保存 !';if(manual||!saveFailed)toast('ブラウザーへの保存ができません。バックアップを書き出してください。');saveFailed=true;return false;}
 }
 function confirm(title,message,task){held.clear();confirmTask=task;$('confirmTitle').textContent=title;$('confirmText').textContent=message;$('confirmDialog').showModal();}
-function applyCloudState(value){state=validateSave(value);held.clear();resetTownView();motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;const ready=cloudReady;cloudReady=false;save();cloudReady=ready;render();}
+function applyCloudState(value){state=validateSave(value);held.clear();resetTownView();motion=null;effects=[];sound.setScene(state);persistAllowed=true;const ready=cloudReady;cloudReady=false;save();cloudReady=ready;render();}
 async function connectCloud(localSavedAt=savedAt){
   if(cloudConflict)return;if(cloudBusy){cloudReconnectQueued=true;return;}cloudBusy=true;const generation=cloudGeneration;
   try{const local=state,localTime=localSavedAt;const result=newCloudSlot?await cloud.newSlot(state):await cloud.enable(state);if(generation!==cloudGeneration)return;newCloudSlot=false;try{localStorage.removeItem('tk777-lantern-new-cloud-slot');}catch{}
@@ -90,9 +91,15 @@ function visualEvent(previous,action,result){
     held.clear();event=result.event;
     if(!reduced)effects.push({kind:event,...state.player,startedAt:time,duration:1600});
   }
-  effects=effects.slice(-16);sound.setScene(state.mode);sound.play(event||'ui');
+  effects=effects.slice(-16);sound.setScene(state);sound.play(event||'ui');
 }
-function updateSound(){const status=sound.getStatus();$('soundButton').textContent=muted?'♪ OFF':'♪ 音';$('soundButton').classList.toggle('sound-off',muted);$('muteAudio').checked=muted;$('audioVolume').value=Math.round(volume*100);$('volumeValue').textContent=`${Math.round(volume*100)}%`;$('audioStatus').textContent=!sessionStarted?'ゲーム開始後に再生されます。':muted?'ミュート中です。':status.playing?'オリジナルBGMを再生しています。':'音が聞こえない場合は、ミュートの解除や端末の音量をご確認ください。';}
+function updateSound(){
+  const status=sound.getStatus();$('soundButton').textContent=muted?'♪ OFF':'♪ 音';$('soundButton').classList.toggle('sound-off',muted);$('muteAudio').checked=muted;$('audioVolume').value=Math.round(volume*100);$('volumeValue').textContent=`${Math.round(volume*100)}%`;
+  $('currentTrackState').textContent=!sessionStarted?'冒険を始めると流れる曲':status.playing?'いま流れている曲':'選択中の曲';$('currentTrackTitle').textContent=status.trackTitle;$('currentTrackArea').textContent=status.trackArea;
+  if(!$('musicTrackList').childElementCount){for(const track of Object.values(TRACKS)){const li=document.createElement('li'),area=document.createElement('span'),title=document.createElement('strong');li.dataset.track=track.id;area.textContent=track.area;title.textContent=track.title;li.append(area,title);$('musicTrackList').append(li);}}
+  for(const row of $('musicTrackList').children){const active=row.dataset.track===status.trackId;row.classList.toggle('is-current',active);if(active)row.setAttribute('aria-current','true');else row.removeAttribute('aria-current');}
+  $('audioStatus').textContent=!sessionStarted?'ゲーム開始後に再生されます。':muted?'ミュート中です。':volume===0?'音量は0%です。':status.playing?`「${status.trackTitle}」を再生しています。`:'音が聞こえない場合は、ミュートの解除や端末の音量をご確認ください。';
+}
 function storeSound(){try{localStorage.setItem('tk777-lantern-audio',JSON.stringify({muted,volume}));}catch{}updateSound();}
 function dispatch(action){
   if(!sessionStarted)return;
@@ -110,6 +117,7 @@ function dispatch(action){
   }
 }
 function render(){
+  sound.setScene(state);updateSound();
   renderSwarm();
   const dungeon=state.mode==='dungeon', weapon=WEAPONS.find(w=>w.id===state.weaponId);
   document.body.dataset.mode=state.mode;
@@ -247,7 +255,7 @@ document.addEventListener('click',e=>{
 });
 $('primaryAction').addEventListener('click',inspectFloor);$('potionButton').addEventListener('click',()=>dispatch({type:'use',id:'potion'}));$('foodButton').addEventListener('click',()=>dispatch({type:'use',id:'ration'}));$('returnButton').addEventListener('click',returnHome);
 for(const id of ['helpButton','tipsButton'])$(id).addEventListener('click',()=>$('helpDialog').showModal());
-$('startButton').addEventListener('click',()=>{const localTime=savedAt;sessionStarted=true;sound.start(state.mode).then(ok=>{updateSound();if(!ok&&!muted)toast('音声を開始できませんでした。「♪ 音」から再生をお試しください。');});$('welcomeDialog').close();save();draw();void connectCloud(localTime);});
+$('startButton').addEventListener('click',()=>{const localTime=savedAt;sessionStarted=true;sound.start(state).then(ok=>{updateSound();if(!ok&&!muted)toast('音声を開始できませんでした。「♪ 音」から再生をお試しください。');});$('welcomeDialog').close();save();draw();void connectCloud(localTime);});
 $('startNewButton').addEventListener('click',()=>confirm('初めから冒険しますか？','新しい冒険を始めます。以前のオンライン記録は引き継ぎコードで読み込めます。必要なら先に保存画面でコードを控えてください。',restartGame));
 $('startupRestore').addEventListener('click',()=>{$('restoreDialog').showModal();});
 $('welcomeDialog').addEventListener('cancel',e=>e.preventDefault());
@@ -274,7 +282,7 @@ $('copyCloudCode').addEventListener('click',async()=>{const code=cloud.getCode()
 $('openRestore').addEventListener('click',()=>{held.clear();$('restoreCode').value=cloud.getCode();$('restoreDialog').showModal();});
 $('restoreCloudButton').addEventListener('click',()=>{const code=$('restoreCode').value.trim();if(!code){$('restoreStatus').textContent='引き継ぎコードを入力してください。';return;}confirm('このコードの旅を読み込みますか？','現在の端末内の進行を、このコードの記録に置き換えます。現在の記録を残す場合は先にバックアップを書き出してください。',async()=>{const generation=++cloudGeneration,before=state;cloudReady=false;cloudConflict=false;$('restoreStatus').textContent='記録を確認しています…';$('restoreCloudButton').disabled=true;try{const result=await cloud.load(code);if(generation!==cloudGeneration||state!==before)throw new Error('進行が変わったため読み込みを中止しました。');const validated=validateSave(result.state);try{localStorage.removeItem('tk777-lantern-new-cloud-slot');}catch{}cloudReady=!result.fromBackup;newCloudSlot=false;fresh=false;applyCloudState(validated);$('restoreDialog').close();if($('saveDialog').open)$('saveDialog').close();if(!sessionStarted)showStartContents();toast(result.fromBackup?'GitHubのバックアップから記録を読み込みました。':'オンラインの記録を読み込みました。');}catch(error){if(generation===cloudGeneration){cloudConflict=true;$('restoreStatus').textContent=error.message||'読み込めませんでした。';}}finally{$('restoreCloudButton').disabled=false;}});});
 $('exportSave').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({game:'lantern-ledger',version:1,savedAt:new Date().toISOString(),state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`pal-merchant-diary-day${state.day}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('バックアップファイルを書き出しました。');});
-$('importSave').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw new Error();const data=JSON.parse(await file.text());if(data.game&&data.game!=='lantern-ledger')throw new Error();const imported=validateSave(data.state??data);confirm('この記録を読み込みますか？',`${imported.day}日目・レベル${imported.level}・${money(imported.gold)}G の記録に置き換えます。現在の進行を残すには、先に書き出してください。`,()=>{state=imported;resetTownView();motion=null;effects=[];sound.setScene(state.mode);persistAllowed=true;save();render();$('saveDialog').close();toast('旅の記録を読み込みました。');});}catch{toast('このファイルは読み込めません。有効なバックアップを選んでください。現在の記録は変更していません。');}});
+$('importSave').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>500000)throw new Error();const data=JSON.parse(await file.text());if(data.game&&data.game!=='lantern-ledger')throw new Error();const imported=validateSave(data.state??data);confirm('この記録を読み込みますか？',`${imported.day}日目・レベル${imported.level}・${money(imported.gold)}G の記録に置き換えます。現在の進行を残すには、先に書き出してください。`,()=>{state=imported;resetTownView();motion=null;effects=[];sound.setScene(state);persistAllowed=true;save();render();$('saveDialog').close();toast('旅の記録を読み込みました。');});}catch{toast('このファイルは読み込めません。有効なバックアップを選んでください。現在の記録は変更していません。');}});
 $('newGameButton').addEventListener('click',()=>confirm('初めから冒険しますか？','新しい冒険を別のコードで保存します。以前の記録を残したい場合は、引き継ぎコードを先に控えてください。',restartGame));
 $('confirmCancel').addEventListener('click',()=>{$('confirmDialog').close();confirmTask=null;});$('confirmOk').addEventListener('click',()=>{const task=confirmTask;confirmTask=null;$('confirmDialog').close();task?.();});$('confirmDialog').addEventListener('cancel',()=>confirmTask=null);
 document.addEventListener('keydown',e=>{

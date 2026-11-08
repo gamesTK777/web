@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAudioManager} from './audio.mjs';
+import {TRACKS} from './music-score.mjs';
 
 function harness(options={}){
   let creations=0,resumes=0,suspends=0,closes=0,nextTimer=1,startedNodes=0,stoppedNodes=0;
-  const timers=new Map(),soundEvents=[];
+  const timers=new Map(),soundEvents=[],stopEvents=[];
   class Param{value=0;setValueAtTime(v){this.value=v;}linearRampToValueAtTime(v){this.value=v;}exponentialRampToValueAtTime(v){this.value=v;}setTargetAtTime(v){this.value=v;}}
-  class Node{gain=new Param();frequency=new Param();Q=new Param();threshold=new Param();knee=new Param();ratio=new Param();attack=new Param();release=new Param();connect(){}disconnect(){}setPeriodicWave(){}start(when){startedNodes++;soundEvents.push({when,frequency:this.frequency.value});}stop(){stoppedNodes++;}}
+  class Node{gain=new Param();frequency=new Param();Q=new Param();threshold=new Param();knee=new Param();ratio=new Param();attack=new Param();release=new Param();connect(){}disconnect(){}setPeriodicWave(){}start(when){startedNodes++;soundEvents.push({when,frequency:this.frequency.value});}stop(when){stoppedNodes++;stopEvents.push({when});}}
   class Context{
     state='suspended';currentTime=0;sampleRate=22050;destination=new Node();
     constructor(){creations++;if(options.constructError)throw Error('Unavailable');}
@@ -17,7 +18,7 @@ function harness(options={}){
     async close(){closes++;this.state='closed';}
   }
   const manager=createAudioManager({AudioContext:Context,setTimeout:(fn,ms)=>{const id=nextTimer++;timers.set(id,{fn,ms});return id;},clearTimeout:id=>timers.delete(id)});
-  return{manager,timers,soundEvents,stats:()=>({creations,resumes,suspends,closes,startedNodes,stoppedNodes})};
+  return{manager,timers,soundEvents,stopEvents,stats:()=>({creations,resumes,suspends,closes,startedNodes,stoppedNodes})};
 }
 
 test('loading, selecting a scene and using effects never create audio before explicit start',async()=>{
@@ -79,4 +80,34 @@ test('both swarm cues remain silent while muted, paused or at zero volume',async
     const before=h.stats().startedNodes;h.manager.play('swarm-start');h.manager.play('swarm-clear');
     assert.equal(h.stats().startedNodes,before);assert.equal(h.timers.size,0);h.manager.dispose();
   }
+});
+
+test('all seven tracks report the selected place and replace one scheduler without creating another context',async()=>{
+  const h=harness();await h.manager.start({mode:'town'});
+  for(const track of Object.values(TRACKS)){
+    const previous=[...h.timers.values()][0];h.manager.setScene(track.id);
+    const status=h.manager.getStatus();assert.equal(status.trackId,track.id);assert.equal(status.trackTitle,track.title);assert.equal(status.trackArea,track.area);
+    assert.equal(status.playing,true);assert.equal(h.timers.size,1);assert.equal(h.stats().creations,1);
+    if(track.id!=='town'){const activeTimer=[...h.timers.keys()][0];previous.fn();assert.deepEqual([...h.timers.keys()],[activeTimer]);}
+  }
+  h.manager.dispose();assert.equal(h.timers.size,0);
+});
+
+test('moving within one depth band keeps its musical phrase, while live swarm and return change it immediately',async()=>{
+  const h=harness();await h.manager.start({mode:'dungeon',floor:3});const timer=[...h.timers.keys()][0],notes=h.stats().startedNodes;
+  h.manager.setScene({mode:'dungeon',floor:4,map:{swarm:{status:'dormant',enemyIds:['group']}},enemies:[{id:'group',hp:8}]});
+  assert.deepEqual([...h.timers.keys()],[timer]);assert.equal(h.stats().startedNodes,notes);assert.equal(h.manager.getStatus().trackId,'dungeon-3-4');
+  const encounter={mode:'dungeon',floor:4,map:{swarm:{status:'active',enemyIds:['group']}},enemies:[{id:'group',hp:8}]};
+  h.manager.setScene(encounter);assert.equal(h.manager.getStatus().trackId,'swarm');assert.equal(h.timers.size,1);
+  h.manager.setScene({...encounter,enemies:[]});assert.equal(h.manager.getStatus().trackId,'dungeon-3-4');
+  h.manager.setScene({mode:'dungeon',floor:5});assert.equal(h.manager.getStatus().trackId,'dungeon-5-6');
+  h.manager.pause();h.manager.setScene({mode:'town'});assert.equal(h.manager.getStatus().trackId,'town');assert.equal(h.timers.size,0);
+  await h.manager.resume();assert.equal(h.manager.getStatus().trackId,'town');assert.equal(h.timers.size,1);h.manager.dispose();
+});
+
+test('switching location cancels old BGM voices while preserving an already playing damage effect',async()=>{
+  const h=harness();await h.manager.start('town');const musicVoices=h.stats().startedNodes;
+  h.manager.play('hurt');assert.ok(h.stats().startedNodes>musicVoices);
+  h.manager.setScene('dungeon-5-6');assert.equal(h.stopEvents.filter(event=>event.when===undefined).length,musicVoices);
+  h.manager.setMuted(true);assert.equal(h.timers.size,0);assert.equal(h.manager.getStatus().playing,false);h.manager.dispose();
 });
