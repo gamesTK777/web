@@ -8,6 +8,7 @@ import * as tiles from './tiles.mjs';
 import * as cast from './cast.mjs';
 import * as encounterModule from './encounter.mjs';
 import * as voiceLines from './voice-lines.mjs';
+import * as rewardMedia from './reward-media.mjs';
 
 // Real application handlers and the real game engine are exercised here.
 // The recording controller verifies speech requests without playing native audio.
@@ -30,6 +31,9 @@ class Element {
   click(){if(!this.disabled)this.dispatch('click');}
   showModal(){this.open=true;}
   close(){if(this.open){this.open=false;this.dispatch('close');}}
+  pause(){this.paused=true;this.pauseCalls=(this.pauseCalls||0)+1;}
+  load(){this.loadCalls=(this.loadCalls||0)+1;this.currentTime=0;}
+  play(){this.playCalls=(this.playCalls||0)+1;this.paused=false;this.dispatch('play');return Promise.resolve();}
   scrollIntoView(){}
   focus(){}
 }
@@ -56,14 +60,14 @@ async function harness({supported=true}={}){
     setVolume(value){this.value.volume=Number(value);calls.push({type:'volume',value:Number(value)});this.publish();}
   }
   const context=vm.createContext({document,window,console,structuredClone,AbortController,Date:ClockDate,
-    __engine:engine,__arcade:arcade,__tiles:tiles,__cast:cast,__encounter:encounterModule,__voice:{CharacterVoice:RecordingVoice},__voiceLines:voiceLines,createdRounds:0,
+    __engine:engine,__arcade:arcade,__tiles:tiles,__cast:cast,__encounter:encounterModule,__voice:{CharacterVoice:RecordingVoice},__voiceLines:voiceLines,__rewardMedia:rewardMedia,createdRounds:0,
     localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,String(value))},
     setTimeout(fn,delay){const id=++timerId;timers.set(id,{fn,delay});return id;},clearTimeout:id=>timers.delete(id),
     fetch:async url=>({ok:true,json:async()=>String(url).endsWith('/config')?{version:0,stages:cast.CAST.map(p=>({id:p.id,name:p.name,portrait:null,rewards:[null,null,null],accent:'#315f6b'}))}:{id:'test-session',entries:[]}})});
-  const imports=`const {actRound,legalActions,publicView}=__engine;const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});};const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade;const {tileHTML,tileName,portraitPlaceholder}=__tiles;const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast;const {createEncounter,advanceEncounter,skipEncounter}=__encounter;const {CharacterVoice}=__voice;const {chooseVoiceLine,getVoiceProfile}=__voiceLines;`;
+  const imports=`const {actRound,legalActions,publicView}=__engine;const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});};const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade;const {tileHTML,tileName,portraitPlaceholder}=__tiles;const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast;const {createEncounter,advanceEncounter,skipEncounter}=__encounter;const {CharacterVoice}=__voice;const {chooseVoiceLine,getVoiceProfile}=__voiceLines;const {createRewardMediaController,rewardMediaKind,isVideoControlEvent}=__rewardMedia;`;
   const hooks=`globalThis.hooks={ready:configReady,startBattle,nextEncounter,skipConversation,beginBattleRound,step,scheduleCpu,render,renderEncounter,show,close,endRun,
     begin({stage=1,battle=1}={}){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();run={...createArcade(),stage,battle,totalBattles:battle-1};runConfig=structuredClone(defaults);started=true;ended=false;encounter=null;round=null;startBattle();},
-    reward(stage,win){for(const d of document.querySelectorAll('dialog[open]'))d.close();const result={winner:0,points:2000,han:1,fu:30};run=finishBattle({...createArcade(),stage,battle:win,wins:win-1},result);round={result};runConfig=structuredClone(defaults);started=true;ended=false;showBattleResult();},
+    reward(stage,win,mediaId=null,types={}){for(const d of document.querySelectorAll('dialog[open]'))d.close();const result={winner:0,points:2000,han:1,fu:30};run=finishBattle({...createArcade(),stage,battle:win,wins:win-1},result);round={result};runConfig=structuredClone(defaults);if(mediaId)runConfig.stages[stage-1].rewards[win-1]=mediaId;runConfig.mediaTypes=structuredClone(types);started=true;ended=false;showBattleResult();},
     gallery(stage=1){for(const d of document.querySelectorAll('dialog[open]'))d.close();run={...createArcade(),stage};for(let i=0;i<3;i++){run=finishBattle(run,{winner:0,points:2000,finalPoints:[27000,23000]});if(i<2)run=advanceArcade(run);}runConfig=structuredClone(defaults);round=null;encounter=null;started=true;ended=false;showStageGallery();},
     setRound(value){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();round=structuredClone(value);run={...createArcade(),stage:value.stage};runConfig=structuredClone(defaults);started=true;ended=false;encounter=null;render();},
     state(){return{run,round,encounter,createdRounds};}};`;
@@ -192,4 +196,10 @@ test('leaving the stage gallery cancels its speech and a late close cannot silen
  const f=await harness();f.hooks.gallery(3);const stopped=f.calls.filter(c=>c.type==='stop').length;
  f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,4);assert.equal(f.node('encounterDialog').open,true);assert.ok(f.calls.filter(c=>c.type==='stop').length>stopped);assert.equal(f.plays.at(-1).text,f.hooks.state().encounter.lines[0]);
  const count=f.calls.filter(c=>c.type==='stop').length;f.node('stageGalleryDialog').dispatch('close');assert.equal(f.calls.filter(c=>c.type==='stop').length,count);assert.equal(f.controller.state().speaking,true);
+});
+
+test('manual reward video playback stops character voice, and replaying the character pauses the movie',async()=>{
+ const f=await harness();f.hooks.reward(2,1,'movie',{movie:'video/mp4'});assert.equal(f.controller.state().speaking,true);const video=f.node('rewardVideo'),spoken=f.plays.length;assert.equal(video.playCalls||0,0);
+ await video.play();assert.equal(f.controller.state().speaking,false);assert.equal(f.plays.length,spoken);const pauses=video.pauseCalls;f.node('rewardReplay').click();assert.equal(video.paused,true);assert.ok(video.pauseCalls>pauses);assert.equal(f.controller.state().speaking,true);assert.equal(f.plays.length,spoken+1);
+ f.node('rewardContinue').click();assert.equal(video.paused,true);assert.equal(f.node('rewardDialog').open,false);
 });

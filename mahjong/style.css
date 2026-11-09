@@ -109,6 +109,12 @@ dialog{width:min(620px,calc(100vw - 28px));max-height:90svh;margin:auto;border:1
 @media(prefers-reduced-motion:reduce){.encounter-dialog[open] .encounter-bubble{animation:none}}
 .reward-dialog[data-bundled=true] .reward-art{width:100%;height:auto;min-height:0;aspect-ratio:4/3;max-height:min(59svh,560px)}
 .reward-dialog[data-bundled=true] .reward-art>img{position:absolute;inset:0;max-height:none;object-fit:contain}
+.reward-art>video{display:block;width:100%;height:100%;max-height:min(59svh,560px);object-fit:contain;background:#06151c;touch-action:auto}
+.stage-gallery-picture video{display:block;width:100%;height:100%;min-height:0;object-fit:contain;background:#06151c;touch-action:auto}
+.reward-art video:focus-visible,.stage-gallery-picture video:focus-visible{outline:2px solid var(--gold);outline-offset:-3px}
+.reward-media-kind{color:#e6ce98!important;font-size:11px!important;line-height:1.7;margin:10px 0}
+.reward-media-status{position:absolute;left:20px;right:20px;bottom:15px;margin:0;padding:9px 13px;border-radius:8px;background:#102b35f0;color:#e4d4b3;font-size:12px;line-height:1.7;text-align:center}
+@media(max-width:620px){.reward-art>video{max-height:min(55svh,460px)}.reward-media-status{left:12px;right:12px;bottom:9px;padding:7px 10px;font-size:11px}}
 
 /* Character speech has its own controls and never blocks a player's action. */
 .voice-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-7px 0 20px;padding:10px 13px;border:1px solid #b7c69f2b;border-radius:10px;background:#18353b80}

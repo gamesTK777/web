@@ -5,11 +5,12 @@ import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from 
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
 import {CharacterVoice} from './voice.mjs?v=20261108-gallery';
 import {chooseVoiceLine,getVoiceProfile} from './voice-lines.mjs?v=20261108-voice';
+import {createRewardMediaController,rewardMediaKind,isVideoControlEvent} from './reward-media.mjs?v=20261109-mp4';
 const $=id=>document.getElementById(id),API='https://tk777-neonshift-scores.takesuke.chatgpt.site',MODE='mahjong:arcade';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('ja-JP');
 const colors=['#315f6b','#396c5c','#725d80','#8a625b','#526d91','#8b7452','#6f5b81'];
-const defaults={version:0,stages:CAST.map(profile=>({id:profile.id,name:profile.name,portrait:null,rewards:[null,null,null],gallery:Array(10).fill(null),accent:colors[profile.id-1]}))};
+const defaults={version:0,mediaTypes:{},stages:CAST.map(profile=>({id:profile.id,name:profile.name,portrait:null,rewards:[null,null,null],gallery:Array(10).fill(null),accent:colors[profile.id-1]}))};
 let config=defaults,runConfig=defaults,run=createArcade(),round=null,selected=null,riichiPicking=false,started=false,ended=false,submitted=false;
 let generation=0,cpuTimer=null,startedAt=0,duration=0,sessionPromise=null,toastTimer=null,logs=[];
 let audio=null,encounter=null,encounterRetryStage=null;
@@ -19,6 +20,11 @@ const voiceEventCounts=new Map(),VOICE_KEY='tk777-seven-mahjong-voice';
 function voicePreferences(){try{const p=JSON.parse(localStorage.getItem(VOICE_KEY));return{enabled:p?.enabled!==false,volume:Number.isFinite(p?.volume)?Math.max(0,Math.min(1,p.volume)):.8};}catch{return{enabled:true,volume:.8};}}
 const characterVoice=new CharacterVoice({...voicePreferences(),Context:window.AudioContext||window.webkitAudioContext,synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,onChange:state=>{voiceState=state;renderVoiceControls(state);}});
 voiceState=characterVoice.state();
+const rewardMedia=createRewardMediaController({image:$('rewardImage'),video:$('rewardVideo'),empty:$('rewardPlaceholder'),status:$('rewardMediaStatus'),onVideoPlay:stopCharacterVoice,onFallback:bundled=>{$('rewardDialog').dataset.bundled=String(bundled);}});
+const stageGalleryMedia=createRewardMediaController({image:$('stageGalleryImage'),video:$('stageGalleryVideo'),empty:$('stageGalleryEmpty'),onVideoPlay:stopCharacterVoice});
+function clearRewardMedia(id=null){if(!id||id==='rewardDialog')rewardMedia.clear();if(!id||id==='stageGalleryDialog')stageGalleryMedia.clear();}
+function pauseRewardVideos(){rewardMedia.pause();stageGalleryMedia.pause();}
+function restoreRewardMedia(){if(document.hidden)return;rewardMedia.resume();stageGalleryMedia.resume();}
 function saveVoicePreferences(){try{localStorage.setItem(VOICE_KEY,JSON.stringify({enabled:voiceState.enabled,volume:voiceState.volume}));}catch{}}
 function renderVoiceControls(state){
  const label=!state.supported?'音声非対応':state.enabled?'音声オン':'音声オフ';
@@ -37,6 +43,7 @@ function stopCharacterVoice(){clearTimeout(idleVoiceTimer);idleVoiceTimer=null;a
 function speakCharacter(text,{priority='important',key='',force=false}={}){
  if(!text||document.hidden)return false;
  if(priority==='ambient'&&Date.now()-lastCharacterLineAt<12000)return false;
+ pauseRewardVideos();
  const accepted=characterVoice.speak(run.stage,text,{key,priority,force});
  if(priority==='ambient'&&!accepted&&voiceState.enabled&&voiceState.supported)return false;
  activeSpeechOwner=document.querySelector('dialog[open]')?.id||'';
@@ -48,7 +55,7 @@ function sayEvent(event,{priority='ambient',key=''}={}){
  const count=voiceEventCounts.get(event)||0,text=chooseVoiceLine(run.stage,event,{variant:count});voiceEventCounts.set(event,count+1);
  return speakCharacter(text,{priority,key:key||`${generation}:${run.totalBattles}:${round?.turnCount??0}:${event}`});
 }
-function replayCharacterVoice(){if(!currentSpokenLine)return;characterVoice.unlock();activeSpeechOwner=document.querySelector('dialog[open]')?.id||'';characterVoice.speak(currentSpokenLine.stageId,currentSpokenLine.text,{key:currentSpokenLine.key,priority:'dialogue',force:true});}
+function replayCharacterVoice(){if(!currentSpokenLine)return;pauseRewardVideos();characterVoice.unlock();activeSpeechOwner=document.querySelector('dialog[open]')?.id||'';characterVoice.speak(currentSpokenLine.stageId,currentSpokenLine.text,{key:currentSpokenLine.key,priority:'dialogue',force:true});}
 function setVoiceEnabled(enabled){characterVoice.setEnabled(enabled);voiceState=characterVoice.state();saveVoicePreferences();renderVoiceControls(voiceState);if(enabled){characterVoice.unlock();if(started&&!ended&&currentSpokenLine)replayCharacterVoice();}}
 function syncVoiceSample(){const profile=getVoiceProfile(Number($('voiceCharacter').value));$('voiceStyle').textContent=profile?`${profile.name}：${profile.style}`:'';}
 function scheduleIdleVoice(){
@@ -69,9 +76,9 @@ function sound(kind='tile'){
  if(!audio)return;try{const t=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(kind==='win'?660:kind==='riichi'?480:340,t);o.frequency.exponentialRampToValueAtTime(kind==='win'?990:kind==='riichi'?720:240,t+.10);g.gain.setValueAtTime(.035,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.2);}catch{}
 }
 function appendLog(text){logs.push(text);logs=logs.slice(-7);}
-function show(id){clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();const d=$(id);if(!d.open)d.showModal();}
-function close(id){stopCharacterVoice();if($(id).open)$(id).close();scheduleCpu();}
-function stopTimers(){generation++;clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();}
+function show(id){clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();if(id!=='rewardDialog')rewardMedia.clear();if(id!=='stageGalleryDialog')stageGalleryMedia.clear();const d=$(id);if(!d.open)d.showModal();}
+function close(id){stopCharacterVoice();clearRewardMedia(id);if($(id).open)$(id).close();scheduleCpu();}
+function stopTimers(){generation++;clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();clearRewardMedia();}
 function currentStage(){return runConfig.stages[run.stage-1]||defaults.stages[run.stage-1];}
 function setPortrait(container,stage,className='registered-portrait'){
  const src=stage.portrait?asset(stage.portrait):defaultPortraitURL(stage.id),key=stage.id+':'+src+':'+displayStageName(stage);
@@ -179,14 +186,12 @@ function render(){
 function showBattleResult(){
  clearTimeout(cpuTimer);const result=round.result,won=result.winner===0,stage=runConfig.stages[run.stage-1];
  if(won){
-  sound('win');const image=stage.rewards[run.wins-1],profile=getCast(run.stage),name=displayStageName(stage),fallbackURL=defaultRewardURL(run.stage,run.wins);
+  sound('win');const image=stage.rewards[run.wins-1],profile=getCast(run.stage),name=displayStageName(stage),fallbackURL=defaultRewardURL(run.stage,run.wins),kind=rewardMediaKind(image,runConfig.mediaTypes);
   $('rewardTitle').textContent=`${name}との第${run.battle}戦に勝利`;
   $('rewardKicker').textContent=`STAGE ${run.stage} · ${run.wins}つ目の勝利`;
   $('rewardDescription').textContent=`「${profile.rewards[run.wins-1]}」 獲得スコア +${fmt(run.lastAward)} pt`;
-  const reward=$('rewardImage');reward.hidden=false;$('rewardPlaceholder').hidden=true;
-  $('rewardDialog').dataset.bundled=String(!image);
-  reward.src=image?asset(image):fallbackURL;reward.alt=`${name}・${run.wins}勝目の記念画像`;
-  let fallback=!image;reward.onerror=()=>{if(!fallback){fallback=true;$('rewardDialog').dataset.bundled='true';reward.src=fallbackURL;}else{reward.onerror=null;reward.hidden=true;$('rewardPlaceholder').hidden=false;$('rewardDialog').dataset.bundled='false';}};
+  $('rewardMediaKind').textContent=kind==='video'?'▶ ご褒美動画 · 再生ボタンでスタート':'ご褒美画像';
+  rewardMedia.show({id:image,mediaTypes:runConfig.mediaTypes,src:image?asset(image):fallbackURL,fallbackSrc:fallbackURL,alt:`${name}・${run.wins}勝目の記念${kind==='video'?'動画':'画像'}`,errorText:kind==='video'?'動画を読み込めませんでした。「対局結果へ」で次へ進めます。':'画像を読み込めませんでした。「対局結果へ」で次へ進めます。'});
   show('rewardDialog');
   speakCharacter(profile.rewards[run.wins-1],{priority:'important',key:`victory:${generation}:${run.stage}:${run.wins}:${run.totalBattles}`});
  }else renderResult();
@@ -205,22 +210,20 @@ function renderResult(){
  $('stageResultTotal').textContent=`合計 ${fmt(run.stageTotals[0])} 対 ${fmt(run.stageTotals[1])} 点`;
  $('nextRoundButton').hidden=run.phase!=='battle-result';$('nextStageButton').hidden=run.phase!=='stage-clear';$('retryStageButton').hidden=run.phase!=='stage-failed';
  $('retryStageButton').textContent=`3戦をやり直す（このステージの得点破棄・${run.stage*500}pt減点）`;
- $('nextStageButton').textContent='ご褒美の10枚を見る →';
- $('endRunButton').textContent=run.phase==='complete'?'最後のご褒美10枚を見る →':'終了してスコアを登録';
+ $('nextStageButton').textContent='ご褒美の画像・動画10件を見る →';
+ $('endRunButton').textContent=run.phase==='complete'?'最後のご褒美10件を見る →':'終了してスコアを登録';
  show('resultDialog');
  if(!won)sayEvent(result.winner===null?'draw':'cpuWin',{priority:'important',key:`result:${generation}:${run.totalBattles}`});
 }
 function renderStageGallery(){
  const restoreSlotFocus=document.activeElement?.closest?.('#stageGallerySlots');
  const stage=currentStage(),slots=Array.from({length:10},(_,i)=>stage.gallery?.[i]??null),id=slots[stageGalleryIndex];
- $('stageGalleryCounter').textContent=`${stageGalleryIndex+1} / 10 · ${slots.filter(Boolean).length}枚登録`;
+ const kind=rewardMediaKind(id,runConfig.mediaTypes);
+ $('stageGalleryCounter').textContent=`${stageGalleryIndex+1} / 10 · ${id?(kind==='video'?'動画':'画像'):'未登録'} · ${slots.filter(Boolean).length}件登録`;
+ $('stageGalleryMediaKind').textContent=id&&kind==='video'?'▶ 動画 · 再生ボタンでスタート':'画像・動画のご褒美ギャラリー';
  $('stageGalleryPrevious').disabled=stageGalleryIndex===0;$('stageGalleryNext').disabled=stageGalleryIndex===9;
- $('stageGalleryImage').hidden=!id;$('stageGalleryEmpty').hidden=!!id;
- $('stageGalleryEmpty').textContent=`画像 ${stageGalleryIndex+1} は未登録です。管理画面で、このステージのご褒美画像を登録できます。`;
- const picture=$('stageGalleryImage');picture.onerror=null;
- if(id){picture.alt=`${displayStageName(stage)}のステージ突破ご褒美 ${stageGalleryIndex+1} / 10`;picture.src=asset(id);picture.onerror=()=>{if(stageGalleryStage!==stage.id||stage.gallery?.[stageGalleryIndex]!==id)return;picture.hidden=true;$('stageGalleryEmpty').hidden=false;$('stageGalleryEmpty').textContent='画像を読み込めませんでした。ほかの画像へ進めます。';};}
- else picture.removeAttribute('src');
- $('stageGallerySlots').replaceChildren(...slots.map((image,index)=>{const button=document.createElement('button');button.type='button';button.textContent=String(index+1).padStart(2,'0');button.setAttribute('aria-label',`ご褒美画像${index+1}${image?'':'（未登録）'}`);button.setAttribute('aria-pressed',String(index===stageGalleryIndex));button.className=index===stageGalleryIndex?'is-current':'';button.onclick=()=>{stageGalleryIndex=index;renderStageGallery();};return button;}));
+ stageGalleryMedia.show({id,mediaTypes:runConfig.mediaTypes,src:id?asset(id):null,alt:`${displayStageName(stage)}のステージ突破ご褒美 ${stageGalleryIndex+1} / 10${kind==='video'?'・動画':''}`,emptyText:`ご褒美 ${stageGalleryIndex+1} は未登録です。管理画面で、画像またはMP4動画を登録できます。`,errorText:`${kind==='video'?'動画':'画像'}を読み込めませんでした。ほかのご褒美へ進めます。`});
+ $('stageGallerySlots').replaceChildren(...slots.map((image,index)=>{const video=!!image&&rewardMediaKind(image,runConfig.mediaTypes)==='video',button=document.createElement('button');button.type='button';button.textContent=`${video?'▶ ':''}${String(index+1).padStart(2,'0')}`;button.setAttribute('aria-label',`ご褒美${video?'動画':'画像'}${index+1}${image?'':'（未登録）'}`);button.setAttribute('aria-pressed',String(index===stageGalleryIndex));button.className=index===stageGalleryIndex?'is-current':'';button.onclick=()=>{stageGalleryIndex=index;renderStageGallery();};return button;}));
  if(restoreSlotFocus)$('stageGallerySlots').querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
 }
 function showStageGallery(){
@@ -269,7 +272,7 @@ $('rewardContinue').onclick=()=>{close('rewardDialog');renderResult();};
 $('nextRoundButton').onclick=()=>{close('resultDialog');run=advanceArcade(run);startBattle();};
 $('nextStageButton').onclick=showStageGallery;
 $('stageGalleryPrevious').onclick=()=>changeStageGallery(-1);$('stageGalleryNext').onclick=()=>changeStageGallery(1);$('stageGalleryContinue').onclick=continueStageGallery;
-$('stageGalleryDialog').addEventListener('keydown',event=>{if(['ArrowLeft','ArrowRight'].includes(event.key)&&!event.altKey&&!event.ctrlKey&&!event.metaKey){event.preventDefault();if(!event.repeat)changeStageGallery(event.key==='ArrowLeft'?-1:1);}});
+$('stageGalleryDialog').addEventListener('keydown',event=>{if(isVideoControlEvent(event))return;if(['ArrowLeft','ArrowRight'].includes(event.key)&&!event.altKey&&!event.ctrlKey&&!event.metaKey){event.preventDefault();if(!event.repeat)changeStageGallery(event.key==='ArrowLeft'?-1:1);}});
 $('retryStageButton').onclick=()=>{close('resultDialog');run=retryStage(run);encounterRetryStage=run.stage;startBattle();};
 $('endRunButton').onclick=()=>run.phase==='complete'?showStageGallery():endRun();$('finishButton').onclick=()=>{if(started&&!ended)show('quitDialog');};$('confirmFinishButton').onclick=endRun;
 $('finalRankForm').addEventListener('submit',submitScore);
@@ -283,7 +286,7 @@ $('voiceCharacter').onchange=()=>{stopCharacterVoice();syncVoiceSample();};
 $('voiceTest').onclick=()=>{const id=Number($('voiceCharacter').value);characterVoice.unlock();activeSpeechOwner='voiceDialog';characterVoice.speak(id,chooseVoiceLine(id,'roundStart'),{key:`sample:${id}`,priority:'dialogue',force:true});};
 for(const id of ['voiceReplay','encounterReplay','rewardReplay','stageGalleryReplay'])$(id).onclick=replayCharacterVoice;
 for(const id of ['welcomeDialog','encounterDialog','rewardDialog','resultDialog','stageGalleryDialog','finalDialog'])$(id).addEventListener('cancel',event=>event.preventDefault());
-document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',()=>{if(activeSpeechOwner===d.id)stopCharacterVoice();scheduleCpu();}));
+document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',()=>{if(!d.open)clearRewardMedia(d.id);if(activeSpeechOwner===d.id)stopCharacterVoice();scheduleCpu();}));
 document.addEventListener('keydown',event=>{
  if(/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)||event.ctrlKey||event.altKey||event.metaKey||document.querySelector('dialog[open]'))return;
  if(event.key==='?'){event.preventDefault();show('helpDialog');return;}
@@ -293,7 +296,7 @@ document.addEventListener('keydown',event=>{
  if(event.key==='Enter'||event.key===' '){if(event.target.closest('button,a'))return;event.preventDefault();if(!event.repeat)discard();}
  if(event.key.toLowerCase()==='r'&&!event.repeat&&!$('riichiButton').disabled){event.preventDefault();$('riichiButton').click();}
 });
-document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();}else scheduleCpu();});
-window.addEventListener('pagehide',()=>{clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();});
-window.addEventListener('pageshow',()=>scheduleCpu());
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();rewardMedia.suspend();stageGalleryMedia.suspend();}else{restoreRewardMedia();scheduleCpu();}});
+window.addEventListener('pagehide',()=>{clearTimeout(cpuTimer);cpuTimer=null;stopCharacterVoice();rewardMedia.suspend();stageGalleryMedia.suspend();});
+window.addEventListener('pageshow',()=>{restoreRewardMedia();scheduleCpu();});
 render();syncVoiceSample();renderVoiceControls(characterVoice.state());show('welcomeDialog');

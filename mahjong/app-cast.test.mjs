@@ -9,6 +9,7 @@ import * as cast from './cast.mjs';
 import * as encounterModule from './encounter.mjs';
 import * as voiceModule from './voice.mjs';
 import * as voiceLines from './voice-lines.mjs';
+import * as rewardMedia from './reward-media.mjs';
 
 // The actual app handlers and engine run with queued timers. This checks that
 // a conversation gates the real round, rather than testing a parallel mock app.
@@ -20,7 +21,7 @@ class Element {
   get textContent() { return this._text; }
   setAttribute(name,value) { this[name]=String(value); }
   getAttribute(name) { return this[name]??null; }
-  removeAttribute(name) { delete this[name]; }
+  removeAttribute(name) { if(name==='autoplay'){this.autoplay=false;return;}delete this[name]; }
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.children = nodes; }
   querySelector(selector) { return this.children.find(node => node.matches(selector)) || null; }
@@ -31,11 +32,14 @@ class Element {
   click() { if (!this.disabled) this.dispatch('click'); }
   showModal() { this.open = true; }
   close() { if (this.open) { this.open = false; this.dispatch('close'); } }
+  pause() {this.paused=true;this.pauseCalls=(this.pauseCalls||0)+1;}
+  load() {this.loadCalls=(this.loadCalls||0)+1;this.currentTime=0;}
+  play() {this.playCalls=(this.playCalls||0)+1;this.paused=false;this.dispatch('play');return Promise.resolve();}
   scrollIntoView() {}
   focus() {}
 }
 
-async function harness() {
+async function harness({mediaTypes={}}={}) {
   const [html, source] = await Promise.all(['index.html', 'app.mjs'].map(name => readFile(new URL(name, import.meta.url), 'utf8')));
   const nodes = new Map();
   for (const [, tag, attrs, id] of html.matchAll(/<([a-z][\w-]*)([^>]*\bid="([^"]+)"[^>]*)>/gi)) { const node = new Element(tag); node.id = id; node.disabled = /\sdisabled(?:\s|>|$)/.test(attrs); nodes.set(id, node); }
@@ -46,21 +50,21 @@ async function harness() {
   document.querySelector = selector => document.querySelectorAll(selector)[0] || null;
   const timers = new Map(); let timerId = 0;
   const context = vm.createContext({ document, window: new Element('window'), console, structuredClone, AbortController,
-    __engine: engine, __arcade: arcade, __tiles: tiles, __cast: cast, __encounter: encounterModule, __voice: voiceModule, __voiceLines: voiceLines, createdRounds: 0,
+    __engine: engine, __arcade: arcade, __tiles: tiles, __cast: cast, __encounter: encounterModule, __voice: voiceModule, __voiceLines: voiceLines,__rewardMedia:rewardMedia, createdRounds: 0,
     setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { fn, delay }); return id; }, clearTimeout(id) { timers.delete(id); },
-    fetch: async url => ({ ok: true, json: async () => String(url).endsWith('/config') ? { version: 0, stages: cast.CAST.map(p => ({ id: p.id, name: `ステージ${p.id}の対戦相手`, portrait: null, rewards: [null, null, null], accent: '#315f6b' })) } : { id: 'test-session', entries: [] } })
+    fetch: async url => ({ ok: true, json: async () => String(url).endsWith('/config') ? { version: 0, mediaTypes, stages: cast.CAST.map(p => ({ id: p.id, name: `ステージ${p.id}の対戦相手`, portrait: null, rewards: [null, null, null], accent: '#315f6b' })) } : { id: 'test-session', entries: [] } })
   });
-  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {CharacterVoice}=__voice; const {chooseVoiceLine,getVoiceProfile}=__voiceLines;`;
+  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {CharacterVoice}=__voice; const {chooseVoiceLine,getVoiceProfile}=__voiceLines;const {createRewardMediaController,rewardMediaKind,isVideoControlEvent}=__rewardMedia;`;
   const hooks = `globalThis.hooks={ready:configReady,startRun,startBattle,nextEncounter,skipConversation,beginBattleRound,step,scheduleCpu,
     begin({stage=1,battle=1,portrait=null,name,retries=0}={}){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();run=createArcade();Object.assign(run,{stage,battle,retries,totalBattles:battle-1});runConfig=structuredClone(defaults);if(portrait)runConfig.stages[stage-1].portrait=portrait;if(name)runConfig.stages[stage-1].name=name;started=true;ended=false;encounter=null;round=null;startBattle();},
-    reward(stage,win,custom=null){const result={winner:0,points:2000,han:1,fu:30};run={...createArcade(),stage,battle:win,wins:win-1};run=finishBattle(run,result);round={result};runConfig=structuredClone(defaults);if(custom)runConfig.stages[stage-1].rewards[win-1]=custom;showBattleResult();},
+    reward(stage,win,custom=null,types={}){const result={winner:0,points:2000,han:1,fu:30};run={...createArcade(),stage,battle:win,wins:win-1};run=finishBattle(run,result);round={result};runConfig=structuredClone(defaults);if(custom)runConfig.stages[stage-1].rewards[win-1]=custom;runConfig.mediaTypes=structuredClone(types);showBattleResult();},
     finish(result,points){for(const d of document.querySelectorAll('dialog[open]'))d.close();encounter=null;round={...__engine.createRound({stage:run.stage,seed:1}),phase:'finished',result:structuredClone(result),points:[...points]};run=finishBattle(run,{...result,finalPoints:points});render();showBattleResult();},
     configure(stage,patch){Object.assign(config.stages[stage-1],structuredClone(patch));},
     setupRound(value){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();encounter=null;round=structuredClone(value);started=true;ended=false;render();},
     state(){return{run,round,encounter,createdRounds,ended};}};`;
   vm.runInContext(imports + source.replace(/^import .*;\r?$/gm, '') + hooks, context);
   await context.hooks.ready;
-  return { hooks: context.hooks, node: id => nodes.get(id), timers, document };
+  return { hooks: context.hooks, node: id => nodes.get(id), timers, document, window:context.window };
 }
 
 test('every battle waits for its encounter before a real round is created or CPU timer is scheduled', async () => {
@@ -183,4 +187,32 @@ test('actual round completion passes held points including unclaimed riichi depo
  const drawn=engine.createRound({stage:1,seed:13,dealer:1});drawn.wall=[];drawn.points=[24000,25000];drawn.riichiPot=1000;drawn.riichi[0]=true;
  f.hooks.setupRound(drawn);f.hooks.step({type:'cpu'});
  assert.equal(f.hooks.state().round.result.winner,null);assert.deepEqual(Array.from(f.hooks.state().run.stageTotals),[24000,25000]);assert.deepEqual(Array.from(f.hooks.state().run.results[0].finalPoints),[24000,25000]);assert.equal(f.node('resultDialog').open,true);assert.equal(f.hooks.state().run.phase,'battle-result');
+});
+
+test('a victory MP4 is inline and manual, then is released when the player continues to the round result',async()=>{
+ const f=await harness();f.hooks.reward(2,1,'victory-movie',{'victory-movie':'video/mp4'});
+ const video=f.node('rewardVideo');assert.equal(video.hidden,false);assert.equal(f.node('rewardImage').hidden,true);assert.match(video.src,/victory-movie$/);assert.equal(video.controls,true);assert.equal(video.playsInline,true);assert.equal(video.autoplay,false);assert.equal(video.playCalls||0,0);assert.match(f.node('rewardMediaKind').textContent,/動画/);
+ await video.play();const loaded=video.loadCalls;f.node('rewardContinue').click();assert.equal(f.node('rewardDialog').open,false);assert.equal(f.node('resultDialog').open,true);assert.equal(video.paused,true);assert.equal(video.src,undefined);assert.ok(video.loadCalls>loaded);
+});
+
+test('the real stage gallery mixes images and MP4 while focused video arrow keys keep native seeking',async()=>{
+ const f=await harness({mediaTypes:{movie:'video/mp4'}});await beginConfigured(f,1,['photo','movie','last-photo',...Array(7).fill(null)]);finishThree(f);f.node('nextStageButton').click();
+ assert.equal(f.node('stageGalleryImage').hidden,false);assert.equal(f.node('stageGalleryVideo').hidden,true);assert.equal(f.node('stageGallerySlots').children.length,10);assert.match(f.node('stageGallerySlots').children[1].textContent,/▶/);
+ f.node('stageGalleryNext').click();const video=f.node('stageGalleryVideo');assert.equal(video.hidden,false);assert.equal(f.node('stageGalleryImage').hidden,true);assert.match(video.src,/movie$/);assert.match(f.node('stageGalleryCounter').textContent,/2 \/ 10 · 動画/);
+ const key=f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowRight',target:video});assert.notEqual(key.defaultPrevented,true);assert.match(f.node('stageGalleryCounter').textContent,/^2 \/ 10/);
+ await video.play();const moved=f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowRight'});assert.equal(moved.defaultPrevented,true);assert.match(f.node('stageGalleryCounter').textContent,/^3 \/ 10/);assert.equal(video.paused,true);assert.equal(video.src,undefined);assert.equal(f.node('stageGalleryImage').hidden,false);assert.match(f.node('stageGalleryImage').src,/last-photo$/);
+});
+
+test('background and page navigation unload gallery video; resume keeps playback paused and closing prevents reattachment',async()=>{
+ const f=await harness({mediaTypes:{movie:'video/mp4'}});await beginConfigured(f,1,['movie',...Array(9).fill(null)]);finishThree(f);f.node('nextStageButton').click();const video=f.node('stageGalleryVideo');await video.play();video.currentTime=12.5;
+ f.document.hidden=true;f.document.dispatch('visibilitychange');assert.equal(video.paused,true);assert.equal(video.src,undefined);assert.equal(video.hidden,true);
+ f.document.hidden=false;f.document.dispatch('visibilitychange');assert.match(video.src,/movie$/);assert.equal(video.paused,true);assert.equal(video.playCalls,1);video.onloadedmetadata();assert.equal(video.currentTime,12.5);
+ await video.play();f.window.dispatch('pagehide');assert.equal(video.src,undefined);f.window.dispatch('pageshow');assert.match(video.src,/movie$/);assert.equal(video.paused,true);assert.equal(video.playCalls,2);
+ f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);assert.equal(video.src,undefined);f.window.dispatch('pageshow');assert.equal(video.src,undefined);
+});
+
+test('MP4 failures retain next and continue controls, and a late old error cannot hide the following image',async()=>{
+ const f=await harness({mediaTypes:{broken:'video/mp4'}});await beginConfigured(f,1,['broken','following-image',...Array(8).fill(null)]);finishThree(f);f.node('nextStageButton').click();const video=f.node('stageGalleryVideo'),oldError=video.onerror;video.onerror();assert.match(f.node('stageGalleryEmpty').textContent,/動画を読み込めません/);assert.equal(video.hidden,true);assert.equal(f.node('stageGalleryNext').disabled,false);assert.equal(f.node('stageGalleryContinue').disabled,false);
+ f.node('stageGalleryNext').click();oldError();assert.equal(f.node('stageGalleryImage').hidden,false);assert.match(f.node('stageGalleryImage').src,/following-image$/);f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);
+ f.hooks.reward(2,1,'broken',{broken:'video/mp4'});f.node('rewardVideo').onerror();assert.match(f.node('rewardMediaStatus').textContent,/動画を読み込めません/);assert.equal(f.node('rewardContinue').disabled,false);f.node('rewardContinue').click();assert.equal(f.node('resultDialog').open,true);
 });
