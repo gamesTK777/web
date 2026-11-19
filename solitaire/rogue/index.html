@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b2028">
+  <title>星詠みのソリティア｜TK777 ゲームポータル</title>
+  <link rel="icon" type="image/webp" href="../../assets/solitaire-rogue/icon.webp">
+  <link rel="stylesheet" href="../../shared/fullscreen.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="mast">
+      <div class="brand"><i class="compass" aria-hidden="true">✦</i><h1>星詠みのソリティア</h1></div>
+      <nav class="header-tools" aria-label="ゲームメニュー">
+        <a href="../menu.html" class="tool"><span aria-hidden="true">‹</span> ゲーム選択</a>
+        <button class="tool" data-game-fullscreen data-fullscreen-target="body" data-fullscreen-focus="#field">⛶ 全画面</button>
+        <button class="tool" id="helpOpen"><span aria-hidden="true">?</span> 遊び方</button>
+      </nav>
+    </header>
+    <div class="workspace">
+      <div class="game-column">
+        <section class="board" aria-labelledby="routeName">
+          <div class="board-heading">
+            <div><p id="stageLabel" class="stage-label"></p><h2 id="routeName">星の航路</h2></div>
+            <div class="score-box"><span>スコア</span><strong id="score">0</strong><small id="scoreGain" aria-hidden="true"></small></div>
+          </div>
+          <div id="playView">
+            <div class="field-frame">
+              <div class="chart-line" aria-hidden="true"></div>
+              <div id="field" class="field" tabindex="-1" role="group" aria-label="星図の場札"></div>
+              <div id="remaining" class="remaining"></div>
+              <div id="combo" class="combo" aria-hidden="true" hidden></div>
+            </div>
+            <div class="dock">
+              <button class="stock-control dock-control" id="draw" type="button" title="山札を1枚引く">
+                <span class="stock-card playing-back" aria-hidden="true"><i>✦</i></span>
+                <span><b>山札を引く</b><small id="stockCount"></small></span>
+              </button>
+              <div class="waste-control dock-control">
+                <span class="waste-card" id="wasteFace"></span>
+                <span><b>捨て札</b><small id="targets"></small></span>
+              </div>
+              <button class="wild-control dock-control" type="button" id="wild" aria-pressed="false">
+                <span class="wild-orbit" aria-hidden="true">✧</span><span><b>流れ星</b><small id="wildCount"></small></span>
+              </button>
+            </div>
+          </div>
+          <div id="choiceView" class="choice-view" hidden>
+            <div class="choice-heading"><span id="phaseMark" aria-hidden="true">✦</span><h3 id="choiceTitle" tabindex="-1"></h3><p id="choiceText"></p></div>
+            <div id="choices" class="choices"></div>
+          </div>
+        </section>
+        <div class="table-note"><span class="note-star" aria-hidden="true">✧</span><p id="note" role="status" aria-live="polite" aria-atomic="true"></p></div>
+      </div>
+      <aside class="journal" aria-label="冒険の記録">
+        <section class="journey">
+          <h2>航海図 <span id="journeyCount"></span></h2>
+          <ol id="itinerary" class="itinerary"></ol>
+        </section>
+        <section class="relic-section"><h2>星の遺物 <span id="relicCount"></span></h2><div id="relics" class="relic-list"></div></section>
+        <p class="record-line">自己ベスト <strong id="record">―</strong></p>
+        <div class="journal-actions"><button id="restartOpen" type="button">↻ 最初から</button><a href="../../index.html">ポータルへ ↗</a></div>
+        <p class="storage" id="storage"></p>
+      </aside>
+    </div>
+  </main>
+  <dialog id="help" aria-labelledby="helpTitle">
+    <h2 id="helpTitle">星図の読み方</h2>
+    <ol class="instructions">
+      <li><b>捨て札の前後の数字を取る</b><p>捨て札が「5」なら「4」か「6」。マークにかかわらず取れます。Aは2とKにつながります。</p></li>
+      <li><b>手前の札から星図を開く</b><p>重なっている手前の札をすべて取ると、奥の札が表になります。続けて取るほど連鎖の得点が上がります。</p></li>
+      <li><b>行き詰まったら山札か流れ星</b><p>「山札を引く」で捨て札を入れ替えます。「流れ星」は表の札を1枚、数字に関係なく取れます。流れ星をもう一度押すと選択を取り消せます。</p></li>
+      <li><b>5つの航路を踏破する</b><p>場札を全部取ると航路を突破します。遺物を1つ選び、次の行き先を決めましょう。取れる札・山札・流れ星が尽きると冒険終了です。</p></li>
+    </ol>
+    <p class="keys">キーボードは Tab で移動、Enter・Space で決定。場札同士は矢印キーでも移動できます。</p>
+    <form method="dialog"><button class="primary">ゲームに戻る</button></form>
+  </dialog>
+  <dialog id="restart" aria-labelledby="restartTitle">
+    <h2 id="restartTitle">新しい航海を始めますか？</h2>
+    <p>現在の航路・遺物・スコアをリセットして、第1航路から新しい星図で始めます。</p>
+    <div class="dialog-actions"><form method="dialog"><button class="secondary" autofocus>今の冒険に戻る</button></form><button class="primary" type="button" id="restartConfirm">最初から始める</button></div>
+  </dialog>
+  <noscript>このゲームを遊ぶにはJavaScriptを有効にしてください。</noscript>
+  <script type="module" src="./app.mjs"></script>
+  <script type="module" src="../../shared/fullscreen.mjs"></script>
+</body>
+</html>
