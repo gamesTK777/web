@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ソリティア | TK777</title>
+<title>オールドソリティア | TK777</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
 
@@ -382,7 +382,7 @@
 <a class="tk-portal-return" href="../index.html">← ゲーム一覧へ</a>
 
 <header>
-  <h1>♠ ♥ ソリティア ♦ ♣</h1>
+  <h1>オールドソリティア</h1>
   <div class="score-bar">
     <div class="score-badge">⭐ スコア: <span id="score">0</span></div>
     <div class="score-badge">⏱️ タイム: <span id="timer">0:00</span></div>
@@ -480,7 +480,7 @@ function startSolitaireSession(mode) {
 }
 function solitaireNow() { return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now(); }
 function showSolitaireRanking() {
-  if (window.TKLeaderboard) TKLeaderboard.show({mode:rankingMode,label:'ソリティア',
+  if (window.TKLeaderboard) TKLeaderboard.show({mode:rankingMode,label:'オールドソリティア',
     modeOptions:SOLITAIRE_RANKING_MODES,note:'スコアが高い順に表示します。'});
   else alert('ランキングを読み込めませんでした。');
 }
@@ -1102,7 +1102,7 @@ function showWin() {
   document.getElementById('win-moves').textContent = moves;
   document.getElementById('win-screen').classList.add('show');
   launchConfetti();
-  const result = {mode:rankingMode,label:'ソリティア',score,duration:winDurationMs,
+  const result = {mode:rankingMode,label:'オールドソリティア',score,duration:winDurationMs,
     session:rankingSessionPromise,modeOptions:SOLITAIRE_RANKING_MODES,note:`${moves}回移動`};
   lastWinRankingResult = result;
   openSolitaireWinRanking();
