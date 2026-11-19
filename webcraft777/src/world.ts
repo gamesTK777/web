@@ -1,14 +1,41 @@
+import { validStacks, type Stack, type Outcome } from "./inventory.ts";
+import { makeLandmarks, type Landmark } from "./landmarks.ts";
+
 export const SIZE = 256;
 export const HEIGHT = 96;
 export const CHUNK = 16;
 export const SEA_LEVEL = 28;
-export const GENERATOR_VERSION = 1;
+export const GENERATOR_VERSION = 2;
+export type GeneratorVersion = 1 | 2;
 const AREA = SIZE * SIZE;
 const CHUNKS_Y = HEIGHT / CHUNK;
 const VOLUME = AREA * HEIGHT;
 const SPAWN_X = 128, SPAWN_Z = 139;
 
 export type Edit = [number, number];
+export type Axis = 'x'|'y'|'z';
+export type WorldFixtures = { axes:[number,'x'|'z'][]; chests:[number,Stack[]][]; benches:[number,number][] };
+type CapturedCell = {x:number;y:number;z:number;id:number;axis:Axis};
+export const emptyFixtures = (): WorldFixtures => ({axes:[],chests:[],benches:[]});
+export function editableId(id: unknown): id is number {
+  return typeof id==="number" && Number.isInteger(id) && (id>=0 && id<=13 || [21,22,23,25,26].includes(id));
+}
+export function validFixtures(value: unknown): value is WorldFixtures {
+  if (!value || typeof value!=="object") return false;
+  const f=value as Partial<WorldFixtures>;
+  const rows=(entries: unknown, valid: (item:unknown)=>boolean) => {
+    if (!Array.isArray(entries) || entries.length>VOLUME-AREA) return false;
+    const seen=new Set<number>();
+    for (const entry of entries) {
+      if (!Array.isArray(entry) || entry.length!==2 || !Number.isInteger(entry[0]) ||
+        entry[0]<AREA || entry[0]>=VOLUME || seen.has(entry[0]) || !valid(entry[1])) return false;
+      seen.add(entry[0]);
+    }
+    return true;
+  };
+  return rows(f.axes,v=>v==='x'||v==='z') && rows(f.chests,validStacks) &&
+    rows(f.benches,v=>Number.isSafeInteger(v)&&Number(v)>=0);
+}
 export type Spawn = { x: number; y: number; z: number; yaw: number; pitch: number };
 export const voxelIndex = (x: number, y: number, z: number) => x + SIZE * z + AREA * y;
 export const chunkKey = (cx: number, cy: number, cz: number) => cx + 16 * cz + 256 * cy;
@@ -60,16 +87,23 @@ export class World {
   readonly dense = new Uint16Array(256 * CHUNKS_Y);
   readonly lamps = new Set<number>();
   readonly salt: number;
+  readonly generator: GeneratorVersion;
+  landmarks: Landmark[]=[];
+  private axes=new Map<number,'x'|'z'>();
+  private chests=new Map<number,Stack[]>();
+  private benches=new Map<number,number>();
+  private history:{before:CapturedCell;after:CapturedCell}[]=[];
   private readonly heights = new Uint8Array(AREA);
   private readonly edits = new Map<number, {id: number; base: number}>();
   private readonly listeners = new Set<(x: number, y: number, z: number) => void>();
 
-  constructor(seed: string, defer = false) {
+  constructor(seed: string, defer = false, generator:GeneratorVersion=1) {
     this.salt = seedHash(seed);
+    this.generator=generator;
     if (!defer) for (const _ of this.generateTerrain()) { /* synchronous use in tools/tests */ }
   }
-  static async generate(seed: string, progress?: (fraction: number) => void) {
-    const world = new World(seed, true);
+  static async generate(seed: string, progress?: (fraction: number) => void, generator:GeneratorVersion=1) {
+    const world = new World(seed, true,generator);
     let checkpoint = performance.now();
     for (const part of world.generateTerrain()) {
       if (performance.now() - checkpoint < 7 && part < 1) continue;
@@ -186,6 +220,10 @@ export class World {
     this.tree(SPAWN_X-2,SPAWN_Z-3,true);
     this.tree(SPAWN_X-7,SPAWN_Z-7,true);
     this.tree(SPAWN_X+12,SPAWN_Z-10,true);
+    if (this.generator===2) this.landmarks=makeLandmarks({
+      ground:(x,z)=>this.heights[x+SIZE*z],noise:(x,z)=>scatter(x,z,this.salt^0x777),
+      get:(x,y,z)=>this.get(x,y,z),put:(x,y,z,id)=>this.write(x,y,z,id)
+    });
     this.highest.fill(-1);
     for(let y=0;y<HEIGHT;y++) {
       for(let z=0;z<SIZE;z++) for(let x=0;x<SIZE;x++) {
@@ -235,9 +273,10 @@ export class World {
   }
   set(x:number,y:number,z:number,id:number):boolean {
     if(!Number.isInteger(x)||!Number.isInteger(y)||!Number.isInteger(z)||!inside(x,y,z)||
-      !Number.isInteger(id)||id<0||id>13||y===0) return false;
+      !editableId(id)||y===0) return false;
     const key=voxelIndex(x,y,z), old=this.data[key];
     if(old===id || old===14) return false;
+    if(old===22 && this.chests.get(key)?.length) return false;
     const base=this.edits.get(key)?.base ?? old;
     if(id===base) this.edits.delete(key); else this.edits.set(key,{id,base});
     this.replace(x,y,z,id);
@@ -246,10 +285,13 @@ export class World {
   private replace(x:number,y:number,z:number,id:number) {
     const key=voxelIndex(x,y,z), old=this.data[key], ck=chunkKey(x>>4,y>>4,z>>4);
     this.data[key]=id;
+    this.axes.delete(key);
+    this.chests.delete(key);
+    this.benches.delete(key);
     this.occupied[ck]+=Number(id!==0)-Number(old!==0);
     this.dense[ck]+=Number(isOpaque(id))-Number(isOpaque(old));
-    if(old===12) this.lamps.delete(key);
-    if(id===12) this.lamps.add(key);
+    if(old===12||old===25) this.lamps.delete(key);
+    if(id===12||id===25) this.lamps.add(key);
     const column=x+SIZE*z;
     if (y>=this.highest[column]) {
       let top=Math.max(y,this.highest[column]);
@@ -262,12 +304,71 @@ export class World {
   loadEdits(edits:Edit[]) {
     const seen=new Set<number>();
     for(const [key,id] of edits) {
-      if(!Number.isInteger(key)||key<AREA||key>=VOLUME||!Number.isInteger(id)||id<0||id>13||seen.has(key)||
+      if(!Number.isInteger(key)||key<AREA||key>=VOLUME||!editableId(id)||seen.has(key)||
         (this.edits.get(key)?.base??this.data[key])===14) throw new Error("地形の変更データが不正です。");
       seen.add(key);
     }
+    this.history=[];
+    this.axes.clear(); this.benches.clear(); this.chests.clear();
     for(const [key,{base}] of this.edits) this.replace(key%256,key>>>16,(key>>>8)&255,base);
     this.edits.clear();
     for(const [key,id] of edits) this.set(key%256,key>>>16,(key>>>8)&255,id);
+  }
+  axisAt(x:number,y:number,z:number):Axis { return this.axes.get(voxelIndex(x,y,z)) ?? 'y'; }
+  setAxis(x:number,y:number,z:number,axis:Axis):boolean {
+    if (this.get(x,y,z)!==5 || !['x','y','z'].includes(axis)) return false;
+    if (this.axisAt(x,y,z)===axis) return true;
+    const key=voxelIndex(x,y,z);
+    if (axis==='y') this.axes.delete(key); else this.axes.set(key,axis);
+    for (const notify of this.listeners) notify(x,y,z);
+    return true;
+  }
+  chestAt(x:number,y:number,z:number):Stack[]|undefined {
+    if (this.get(x,y,z)!==22) return;
+    const key=voxelIndex(x,y,z);
+    const slots=this.chests.get(key) ?? [];
+    this.chests.set(key,slots);
+    return slots;
+  }
+  benchUses(x:number,y:number,z:number):number {return this.benches.get(voxelIndex(x,y,z)) ?? 0;}
+  useBench(x:number,y:number,z:number,craftCount=1):void {
+    if (this.get(x,y,z)!==21 || !Number.isSafeInteger(craftCount) || craftCount<1) return;
+    this.benches.set(voxelIndex(x,y,z),Math.min(Number.MAX_SAFE_INTEGER,this.benchUses(x,y,z)+craftCount));
+  }
+  exportFixtures():WorldFixtures {
+    return {axes:[...this.axes],benches:[...this.benches],chests:[...this.chests].filter(([,slots])=>slots.length)
+      .map(([key,slots])=>[key,slots.map(s=>({...s}))])};
+  }
+  loadFixtures(f:WorldFixtures) {
+    if (!validFixtures(f) || f.axes.some(([key])=>this.data[key]!==5) || f.chests.some(([key])=>this.data[key]!==22) ||
+      f.benches.some(([key])=>this.data[key]!==21)) throw new Error("建具と地形の保存内容が一致しません。元のバックアップを確認してください。");
+    const changedAxes=new Set([...this.axes.keys(),...f.axes.map(([key])=>key)]);
+    this.axes=new Map(f.axes); this.benches=new Map(f.benches);
+    this.chests=new Map(f.chests.map(([key,slots])=>[key,slots.map(s=>({...s}))]));
+    for (const key of changedAxes) for (const notify of this.listeners) notify(key%256,key>>>16,(key>>>8)&255);
+  }
+  capture(x:number,y:number,z:number):CapturedCell {
+    return {x,y,z,id:this.get(x,y,z),axis:this.axisAt(x,y,z)};
+  }
+  remember(before:CapturedCell) {
+    const after=this.capture(before.x,before.y,before.z);
+    if (before.id===21 || before.id===22 || after.id===21 || after.id===22 ||
+      before.id===after.id && before.axis===after.axis) return;
+    this.history.push({before,after});
+    if (this.history.length>20) this.history.shift();
+  }
+  undo(overlaps:(x:number,y:number,z:number)=>boolean):Outcome {
+    const entry=this.history.at(-1);
+    if (!entry) return {ok:false,message:"戻せる通常ブロックの編集がありません。作業台・チェストは対象外です。"};
+    const {before,after}=entry,{x,y,z}=before;
+    if (this.get(x,y,z)!==after.id || this.axisAt(x,y,z)!==after.axis) {
+      this.history.pop();
+      return {ok:false,message:"この場所はすでに変化したため、戻せません。"};
+    }
+    if (isSolid(before.id) && overlaps(x,y,z)) return {ok:false,message:"体と重なります。少し離れてから戻してください。"};
+    if (before.id!==after.id && !this.set(x,y,z,before.id)) return {ok:false,message:"この編集は戻せません。"};
+    if (before.id===5) this.setAxis(x,y,z,before.axis);
+    this.history.pop();
+    return {ok:true,message:"直前のブロック編集を戻しました。"};
   }
 }

@@ -1,0 +1,96 @@
+{
+  "browser": "Chrome/157.0.8103.79",
+  "windowed": true,
+  "asset": [
+    "http://127.0.0.1:8795/webcraft777/play/assets/index-j9HflxgC.js"
+  ],
+  "enter": "scene",
+  "spot": {
+    "seconds": 5.0001999999999995,
+    "fps": 31.998720051197953,
+    "internal": [
+      880,
+      600
+    ],
+    "viewport": [
+      880,
+      600
+    ],
+    "hud": "32 FPS　描画 58 回　チャンク 43\n三角形 45,294　更新 0.0 ms　待ち 0\n形状 60 個　テクスチャ 2 個\n座標 128.5 / 33.0 / 139.5",
+    "preset": {
+      "distance": 3,
+      "scale": 1,
+      "shadows": true,
+      "vegetation": true,
+      "effects": true,
+      "quality": "standard",
+      "sensitivity": 1,
+      "volume": 0.45,
+      "muted": false,
+      "effectsVolume": 0.85,
+      "ambientVolume": 0.4,
+      "invertY": false,
+      "bob": true,
+      "sprintFov": true
+    }
+  },
+  "escape": {
+    "screen": "pause",
+    "lock": null
+  },
+  "reentered": "scene",
+  "game": {
+    "requests": [
+      {
+        "id": "scene",
+        "connected": true,
+        "focus": true,
+        "visibility": "visible",
+        "active": true,
+        "frame": true
+      },
+      {
+        "id": "scene",
+        "connected": true,
+        "focus": true,
+        "visibility": "visible",
+        "active": true,
+        "frame": true
+      }
+    ],
+    "changes": [
+      "scene",
+      null,
+      "scene"
+    ],
+    "errors": [],
+    "physical": [
+      [
+        15,
+        30
+      ],
+      [
+        23,
+        4
+      ]
+    ],
+    "clicks": [
+      [
+        "goto-create",
+        true,
+        true
+      ],
+      [
+        "resume",
+        true,
+        true
+      ],
+      [
+        "resume",
+        true,
+        true
+      ]
+    ]
+  },
+  "native": true
+}

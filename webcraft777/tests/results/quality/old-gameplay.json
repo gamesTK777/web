@@ -1,0 +1,121 @@
+{
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "checks": [
+    {
+      "name": "タイトルからシード指定で探索を開始",
+      "data": {
+        "seed": "777-SOAK",
+        "mode": "explore",
+        "version": 1,
+        "generator": 1
+      }
+    },
+    {
+      "name": "ドラッグで狙って木を採掘し、持ち物から木材を作成",
+      "data": {
+        "wood": "原木 +1",
+        "bag": "木材\n× 4"
+      }
+    },
+    {
+      "name": "木材を設置し、消費1個・採掘跡・設置位置を保存",
+      "data": {
+        "placed": "木材を置きました。",
+        "edits": [
+          [
+            2263166,
+            0
+          ],
+          [
+            2197888,
+            7
+          ]
+        ],
+        "bag": [
+          {
+            "id": 7,
+            "count": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "走行・ジャンプ・Esc停止",
+      "data": {
+        "before": {
+          "x": 128.5,
+          "y": 33,
+          "z": 139.5,
+          "yaw": 0.000200000000000089,
+          "pitch": -0.6349
+        },
+        "after": {
+          "x": 130.9012799519743,
+          "y": 33.84504681,
+          "z": 139.49951974400335,
+          "yaw": 0.000200000000000089,
+          "pitch": -0.6349
+        }
+      }
+    },
+    {
+      "name": "設定と、掘った跡・建材・所持数・位置をページ再読み込み後に確認",
+      "data": {
+        "edits": 2,
+        "settingsForm": [
+          "distance",
+          "scale",
+          "shadows",
+          "sensitivity",
+          "volume",
+          "muted"
+        ]
+      }
+    },
+    {
+      "name": "実際の旧版バックアップを画面から読み込み・再保存・再読み込み",
+      "data": {
+        "originalVersion": 1,
+        "savedVersion": 1,
+        "generator": 1,
+        "edits": 215,
+        "air": 7,
+        "bag": [
+          {
+            "id": 1,
+            "count": 1
+          },
+          {
+            "id": 7,
+            "count": 3
+          },
+          {
+            "id": 16,
+            "count": 2
+          },
+          {
+            "id": 17,
+            "count": 1,
+            "durability": 32
+          },
+          {
+            "id": 9,
+            "count": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "同じ面に設置・採掘を10往復、計20操作、および飛行",
+      "data": {
+        "edits": [],
+        "flightY": 35.25199999999998
+      }
+    }
+  ],
+  "ok": true
+}

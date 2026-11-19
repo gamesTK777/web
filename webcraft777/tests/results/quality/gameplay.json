@@ -1,0 +1,219 @@
+{
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "checks": [
+    {
+      "name": "タイトルからシード指定で探索を開始",
+      "data": {
+        "seed": "777-SOAK",
+        "mode": "explore",
+        "version": 2,
+        "generator": 2
+      }
+    },
+    {
+      "name": "ドラッグで狙って木を採掘し、持ち物から木材を作成",
+      "data": {
+        "wood": "原木 +1",
+        "bag": "木材\n× 4\n分割"
+      }
+    },
+    {
+      "name": "木材を設置し、消費1個・採掘跡・設置位置を保存",
+      "data": {
+        "placed": "木材を置きました。",
+        "edits": [
+          [
+            2263166,
+            0
+          ],
+          [
+            2197888,
+            7
+          ]
+        ],
+        "bag": [
+          {
+            "id": 7,
+            "count": 3
+          }
+        ]
+      }
+    },
+    {
+      "name": "走行・ジャンプ・Esc停止",
+      "data": {
+        "before": {
+          "x": 128.5,
+          "y": 33,
+          "z": 139.5,
+          "yaw": 0.000200000000000089,
+          "pitch": -0.6349,
+          "crouched": false
+        },
+        "after": {
+          "x": 131.39407743961846,
+          "y": 33.99861204,
+          "z": 139.49942118450426,
+          "yaw": 0.000200000000000089,
+          "pitch": -0.6349,
+          "crouched": false
+        }
+      }
+    },
+    {
+      "name": "設定と、掘った跡・建材・所持数・位置をページ再読み込み後に確認",
+      "data": {
+        "edits": 2,
+        "settingsForm": [
+          "quality",
+          "distance",
+          "scale",
+          "shadows",
+          "vegetation",
+          "effects",
+          "bob",
+          "sprintFov",
+          "invertY",
+          "effectsVolume",
+          "ambientVolume",
+          "sensitivity",
+          "volume",
+          "muted"
+        ]
+      }
+    },
+    {
+      "name": "実際の旧版バックアップを画面から読み込み・再保存・再読み込み",
+      "data": {
+        "originalVersion": 1,
+        "savedVersion": 2,
+        "generator": 1,
+        "edits": 215,
+        "air": 7,
+        "bag": [
+          {
+            "id": 1,
+            "count": 1
+          },
+          {
+            "id": 7,
+            "count": 3
+          },
+          {
+            "id": 16,
+            "count": 2
+          },
+          {
+            "id": 17,
+            "count": 1,
+            "durability": 32
+          },
+          {
+            "id": 9,
+            "count": 4
+          }
+        ]
+      }
+    },
+    {
+      "name": "中クリックで原木を選び、回転・設置後にCtrl+Zで元通り",
+      "data": {
+        "edits": []
+      }
+    },
+    {
+      "name": "同じ面に設置・採掘を10往復、計20操作、および飛行",
+      "data": {
+        "edits": [],
+        "flightY": 35.5008
+      }
+    },
+    {
+      "name": "開始ボタンで視点固定を要求し、Escで再停止",
+      "data": {
+        "locked": null,
+        "unlocked": true
+      }
+    },
+    {
+      "name": "テスト用の旧ワールドで作業台・チェストを自作。分割、整理、半分預ける、収納中の破壊拒否、代替レシピのまとめ制作",
+      "data": {
+        "bench": [
+          [
+            4426634,
+            3
+          ]
+        ],
+        "chest": [
+          [
+            4426638,
+            [
+              {
+                "id": 7,
+                "count": 7
+              }
+            ]
+          ]
+        ],
+        "bag": [
+          {
+            "id": 7,
+            "count": 7
+          },
+          {
+            "id": 24,
+            "count": 3
+          },
+          {
+            "id": 26,
+            "count": 8
+          }
+        ],
+        "home": {
+          "x": 140.5,
+          "y": 67,
+          "z": 140.5
+        }
+      }
+    },
+    {
+      "name": "再読み込み後のチェストと作業台を開き、7個を全量回収",
+      "data": {
+        "chest": [],
+        "boards": 14,
+        "bench": [
+          [
+            4426634,
+            3
+          ]
+        ]
+      }
+    },
+    {
+      "name": "1ブロック高の坑道に入りCキーを離してもしゃがみを維持し、再読み込み後も同位置",
+      "data": {
+        "saved": {
+          "x": 140.5,
+          "y": 67,
+          "z": 137.4129260037502,
+          "yaw": 0,
+          "pitch": -5.551115123125783e-17,
+          "crouched": true
+        },
+        "loaded": {
+          "x": 140.5,
+          "y": 67,
+          "z": 137.4129260037502,
+          "yaw": 0,
+          "pitch": -5.551115123125783e-17,
+          "crouched": true
+        }
+      }
+    }
+  ],
+  "ok": true
+}

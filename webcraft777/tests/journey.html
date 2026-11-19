@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ウェブクラフト777・探索検証</title>
+<style>body{background:#172d33;color:#f2f1da;font:16px/1.65 system-ui,sans-serif;max-width:65em;margin:3vh auto;padding:0 20px}h1{font-size:1.5rem}pre{white-space:pre-wrap}button{padding:.5em 1em}canvas{width:100%;aspect-ratio:16/8;display:block}canvas[hidden]{display:none}</style></head>
+<body><main><h1>探索から拠点づくりまで</h1><p id="status" role="status">徒歩経路と素材の移動を確認中…</p>
+<ol id="observations"></ol><pre id="detail"></pre><div id="views" hidden><label>確認する場所 <select id="view">
+<option value="home">帰還した拠点</option><option value="grove">風待ちの大樹</option><option value="cave">潮晶の岩窟</option><option value="ruin">潮見の回廊</option>
+</select></label></div><canvas id="scene" hidden aria-label="生成した探索ワールド"></canvas></main>
+<script type="module" src="./journey.ts"></script></body></html>

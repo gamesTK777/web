@@ -1,0 +1,108 @@
+{
+  "before": {
+    "env": {
+      "version": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "width": 1920,
+      "height": 1080,
+      "generationMs": 49.700000047683716,
+      "setupMs": 59.5
+    },
+    "firstReadyMs": 558.3999999761581,
+    "shots": {
+      "forest": {
+        "pose": {
+          "x": 98.5,
+          "y": 36.2,
+          "z": 106.5,
+          "yaw": 1.5707963267948966,
+          "pitch": -0.05732841748614165
+        },
+        "day": 0.45
+      },
+      "shore": {
+        "pose": {
+          "x": 106.45,
+          "y": 29.02,
+          "z": 115.5,
+          "yaw": -0.9870596056536216,
+          "pitch": -0.01640472676351926
+        },
+        "day": 0.52
+      },
+      "cave": {
+        "pose": {
+          "x": 122.4,
+          "y": 17,
+          "z": 143.8,
+          "yaw": 0.0795419672870223,
+          "pitch": -0.02311097328366911
+        },
+        "day": 0.45
+      },
+      "cottage": {
+        "pose": {
+          "x": 139.6,
+          "y": 40.7,
+          "z": 154.5,
+          "yaw": 0.7067227211273573,
+          "pitch": -0.37961543374909246
+        },
+        "day": 0.735
+      }
+    }
+  },
+  "after": {
+    "env": {
+      "version": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+      "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "width": 1920,
+      "height": 1080,
+      "generationMs": 45.60000002384186,
+      "setupMs": 75.10000002384186
+    },
+    "firstReadyMs": 564.2999999523163,
+    "shots": {
+      "forest": {
+        "pose": {
+          "x": 98.5,
+          "y": 36.2,
+          "z": 106.5,
+          "yaw": 1.5707963267948966,
+          "pitch": -0.05732841748614165
+        },
+        "day": 0.45
+      },
+      "shore": {
+        "pose": {
+          "x": 106.45,
+          "y": 29.02,
+          "z": 115.5,
+          "yaw": -0.9870596056536216,
+          "pitch": -0.01640472676351926
+        },
+        "day": 0.52
+      },
+      "cave": {
+        "pose": {
+          "x": 122.4,
+          "y": 17,
+          "z": 143.8,
+          "yaw": 0.0795419672870223,
+          "pitch": -0.02311097328366911
+        },
+        "day": 0.45
+      },
+      "cottage": {
+        "pose": {
+          "x": 139.6,
+          "y": 40.7,
+          "z": 154.5,
+          "yaw": 0.7067227211273573,
+          "pitch": -0.37961543374909246
+        },
+        "day": 0.735
+      }
+    }
+  }
+}

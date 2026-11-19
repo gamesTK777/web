@@ -1,0 +1,129 @@
+{
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+  "renderer": "SwiftShader",
+  "checks": [
+    {
+      "name": "旧版の原本を専用フォルダへ実際に書き出し、JSON全項目が読み込み前と一致",
+      "data": {
+        "version": 1,
+        "edits": 215
+      }
+    },
+    {
+      "name": "旧版と同じ構造のIndexedDBから直接起動し、215編集と道具耐久を維持して保存",
+      "data": {
+        "version": 2,
+        "generator": 1,
+        "edits": 215,
+        "tool": {
+          "id": 17,
+          "count": 1,
+          "durability": 32
+        }
+      }
+    },
+    {
+      "name": "幅720の設定画面で低画質、上下反転、揺れ・視野角無効、効果音音量を実操作",
+      "data": {
+        "w": 720,
+        "doc": 720,
+        "low": "2",
+        "bob": false,
+        "invert": true,
+        "fov": false,
+        "effects": "1",
+        "ambient": "0.4"
+      }
+    },
+    {
+      "name": "視点固定と代替操作の状態",
+      "data": {
+        "grant": "pointerLock granted in temporary profile",
+        "id": null,
+        "errors": [
+          "WrongDocumentError: The root document of this element is not valid for pointer lock."
+        ],
+        "drag": true
+      }
+    },
+    {
+      "name": "Web Audio実波形でプレイ中に出音、一時停止後に無音を確認",
+      "data": {
+        "state": "running",
+        "ambientSources": 3,
+        "footsteps": 1,
+        "masterGain": 0.23399999737739563,
+        "peak": 0.01295921579003334,
+        "pausedPeak": 0
+      }
+    },
+    {
+      "name": "別タブへ切替後に停止し、押しっぱなしのWが再開後に残らない",
+      "data": {
+        "hidden": true,
+        "screen": "pause",
+        "events": [
+          "hidden"
+        ],
+        "position": [
+          131.282542076434,
+          138.67533537538014
+        ]
+      }
+    },
+    {
+      "name": "画質・音量・視点設定をワールドに保存",
+      "data": {
+        "quality": "low",
+        "distance": 2,
+        "ambient": 0.4
+      }
+    },
+    {
+      "name": "クリエイティブでチェストを設置。パレットから64個を補充・預入し、再読み込み後に全量回収",
+      "data": {
+        "before": [
+          [
+            2197888,
+            [
+              {
+                "id": 10,
+                "count": 64
+              }
+            ]
+          ]
+        ],
+        "after": [
+          {
+            "id": 10,
+            "count": 64
+          }
+        ],
+        "assets": [
+          "http://127.0.0.1:8795/webcraft777/play/assets/index-j9HflxgC.js"
+        ]
+      }
+    },
+    {
+      "name": "旧形式の水中セーブを同じ湖の位置に復元し、Spaceで浮上して手動保存",
+      "data": {
+        "before": {
+          "x": 130.5,
+          "y": 27.12,
+          "z": 111.5,
+          "yaw": 0,
+          "pitch": 0
+        },
+        "after": {
+          "x": 130.5,
+          "y": 28.344999999999967,
+          "z": 111.5,
+          "yaw": 0,
+          "pitch": 0,
+          "crouched": false
+        }
+      }
+    }
+  ],
+  "ok": true
+}

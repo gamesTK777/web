@@ -1,0 +1,158 @@
+{
+  "version": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "width": 1920,
+  "height": 1080,
+  "generationMs": 51.200000047683716,
+  "setupMs": 55.59999990463257,
+  "firstReadyMs": 546.8999999761581,
+  "internal": [
+    1460,
+    821
+  ],
+  "settings": {
+    "distance": 3,
+    "scale": 1,
+    "shadows": false
+  },
+  "rows": [
+    {
+      "scene": "forest",
+      "minute": 1,
+      "seconds": 60.031200000000005,
+      "avgFPS": 30.750676314982872,
+      "p50": 31.299999999995634,
+      "p95": 31.599999999999454,
+      "p99": 31.700000000004366,
+      "chunkP95": 0,
+      "chunkMax": 3.899999976158142,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          50,
+          76
+        ],
+        "triangles": [
+          40352,
+          62482
+        ],
+        "queued": [
+          0,
+          23
+        ],
+        "geometries": [
+          82,
+          105
+        ],
+        "chunks": [
+          36,
+          62
+        ],
+        "textures": [
+          2,
+          2
+        ],
+        "heapMiB": [
+          20.76724147796631,
+          38.23779296875
+        ]
+      },
+      "startGeometry": 99,
+      "endGeometry": 102,
+      "endTextures": 2
+    },
+    {
+      "scene": "cave",
+      "minute": 2,
+      "seconds": 60,
+      "avgFPS": 32,
+      "p50": 31.29999999998836,
+      "p95": 31.60000000000582,
+      "p99": 31.69999999999709,
+      "chunkP95": 0,
+      "chunkMax": 0,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          45,
+          66
+        ],
+        "triangles": [
+          41684,
+          58158
+        ],
+        "queued": [
+          0,
+          0
+        ],
+        "geometries": [
+          103,
+          104
+        ],
+        "chunks": [
+          37,
+          54
+        ],
+        "textures": [
+          2,
+          2
+        ],
+        "heapMiB": [
+          21.18033504486084,
+          28.521140098571777
+        ]
+      },
+      "startGeometry": 103,
+      "endGeometry": 104,
+      "endTextures": 2
+    },
+    {
+      "scene": "cottage",
+      "minute": 3,
+      "seconds": 60,
+      "avgFPS": 32,
+      "p50": 31.29999999998836,
+      "p95": 31.60000000000582,
+      "p99": 31.70000000001164,
+      "chunkP95": 1.100000023841858,
+      "chunkMax": 3.700000047683716,
+      "edit": 214,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          27,
+          27
+        ],
+        "triangles": [
+          24636,
+          24728
+        ],
+        "queued": [
+          0,
+          16
+        ],
+        "geometries": [
+          89,
+          89
+        ],
+        "chunks": [
+          23,
+          23
+        ],
+        "textures": [
+          2,
+          2
+        ],
+        "heapMiB": [
+          21.344982147216797,
+          32.744937896728516
+        ]
+      },
+      "startGeometry": 85,
+      "endGeometry": 89,
+      "endTextures": 2
+    }
+  ]
+}

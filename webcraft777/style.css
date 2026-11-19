@@ -198,6 +198,26 @@ dialog::backdrop { background: #122b28bb; }
   .belt { bottom: 5px; gap: 3px; }
   .slot { width: 37px; }
 }
+.supply { margin:10px 0; padding:9px; border:1px solid var(--edge); border-radius:6px; }
+.supply summary { cursor:pointer; font-weight:bold; }
+#game[data-screen="inventory"] .panel-head { position:sticky; top:0; z-index:2; background:var(--sand); }
+.trail { position:absolute; top:62px; left:18px; display:grid; justify-items:start; gap:4px; max-width:min(38rem,75vw); pointer-events:none; }
+.trail span, #target-hint { background:#142923dd; color:#fff9e9; padding:5px 10px; font-size:.78rem; border-radius:4px; text-shadow:0 1px 2px #182a24; }
+.trail #bearing { color:#f4ddab; font-weight:650; }
+.trail span:empty { display:none; }
+#guide:not([hidden]) ~ .trail { top:auto; bottom:106px; left:12px; max-width:38vw; }
+#target-hint { position:absolute; top:55%; left:50%; transform:translateX(-50%); }
+.stack { min-width:0; border:1px solid var(--edge); border-radius:7px; background:#f3f2e3; overflow:hidden; }
+.stack .bag-item { width:100%; border:0; border-radius:0; }
+.stack > span { display:grid; justify-items:center; padding:5px; font-size:.82rem; }
+.stack > span img { width:32px; height:32px; }
+.stack-actions,.quality-presets,.storage-tools,.craft-actions { display:flex; gap:4px; flex-wrap:wrap; }
+.stack-actions { justify-content:center; padding:0 3px 4px; }
+.stack-actions button,.storage-tools button { padding:3px 7px; min-height:24px; font-size:.74rem; }
+.storage-tools,.quality-presets { margin:6px 0; }
+.quality-presets button[aria-pressed="true"] { color:#fff; background:#385e49; }
+.craft-actions { flex-direction:column; align-items:stretch; }
+@media (max-height:550px) { #guide:not([hidden]) ~ .trail { display:none; } }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

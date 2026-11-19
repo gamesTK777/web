@@ -18,12 +18,13 @@ function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
     Object.defineProperty(globalThis,name,{value,configurable:true});
     t.after(()=>{if(original)Object.defineProperty(globalThis,name,original);else Reflect.deleteProperty(globalThis,name);});
   }
-  const events={pauses:0,backgrounds:0,mines:0,places:0,looks:[] as number[][],drag:[] as boolean[]};
+  const events={pauses:0,backgrounds:0,mines:0,places:0,picks:0,undos:0,rotates:0,looks:[] as number[][],drag:[] as boolean[]};
   const input=new InputController(canvas as unknown as HTMLCanvasElement,{
     pause(){events.pauses++;input.stop();}, // Same stop-on-pause contract as the game.
     background(){events.backgrounds++;},beginMine(){events.mines++;},place(){events.places++;},
     look(x,y){events.looks.push([x,y]);},dragChanged(on){events.drag.push(on);},
-    inventory(){},fly(){},debug(){},select(){},cycle(){}
+    inventory(){},fly(){},debug(){},select(){},cycle(){},
+    pick(){events.picks++;},undo(){events.undos++;},rotate(){events.rotates++;}
   });
   function grant(){doc.pointerLockElement=canvas;fire(doc,"pointerlockchange");}
   function hold(){fire(win,"keydown",{code:"KeyW"});fire(win,"keydown",{code:"ShiftLeft"});fire(canvas,"pointerdown",{button:0});}
@@ -41,6 +42,26 @@ test("Pointer Lock は要求後の所有権変更で有効になり、解除通�
   h.doc.exitPointerLock();
   assert.equal(h.events.pauses,1);assert.equal(h.input.active,false);assert.equal(h.input.mining,false);
   assert.equal(h.input.keys.size,0);
+});
+
+test("a space tap between frames is consumed once; repeats from a formerly focused tab are ignored",t=>{
+  const h=setup(t);h.input.start(true);
+  fire(h.win,"keydown",{code:"Space"});fire(h.win,"keyup",{code:"Space"});
+  const tapped=h.input.movement();
+  assert.equal(tapped.jump,false);assert.equal(tapped.jumpPressed,true);assert.equal(h.input.movement().jumpPressed,false);
+  fire(h.win,"keydown",{code:"KeyC"});assert.equal(h.input.movement().down,true);
+  fire(h.win,"blur");h.input.start(true);
+  fire(h.win,"keydown",{code:"KeyC",repeat:true});assert.equal(h.input.movement().down,false);
+});
+
+test("building shortcuts do not double-trigger and a secondary mouse release never cancels mining",t=>{
+  const h=setup(t,()=>{});h.input.start(false);h.grant();h.hold();
+  fire(h.canvas,"pointerdown",{button:1});fire(h.win,"pointerup",{button:1});
+  assert.equal(h.input.mining,true);assert.equal(h.events.picks,1);
+  fire(h.win,"keydown",{code:"KeyQ"});fire(h.win,"keydown",{code:"KeyQ",repeat:true});
+  fire(h.win,"keydown",{code:"KeyZ",ctrlKey:true});fire(h.win,"keydown",{code:"KeyR"});
+  assert.deepEqual([h.events.picks,h.events.undos,h.events.rotates],[2,1,1]);
+  h.input.stop();fire(h.win,"keydown",{code:"KeyZ",ctrlKey:true});assert.equal(h.events.undos,1);
 });
 
 for(const cause of ["blur","visibilitychange"] as const){

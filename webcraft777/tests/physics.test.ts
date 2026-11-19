@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canPlaceAt, createPlayer, mineAt, placeAt, raycast, safeSpawn, stepPlayer } from "../src/physics.ts";
+import { canPlaceAt, createPlayer, eyeHeight, mineAt, overlapsPlayer, placeAt, raycast, resetPlayerInput, safeSpawn, stepPlayer } from "../src/physics.ts";
 import type { Input, Pose } from "../src/physics.ts";
 import { createBag, quantity } from "../src/inventory.ts";
 
@@ -28,9 +28,85 @@ test("movement respects flat feet, normalized directions and sprint speed", () =
     assert.equal(p.y, 1);
     return Math.hypot(p.x - pose.x, p.z - pose.z);
   };
-  assert.ok(Math.abs(travel({forward:1}) - 4.2) < 1e-6);
-  assert.ok(Math.abs(travel({forward:1,right:1}) - 4.2) < 1e-6);
+  const straight = travel({forward:1});
+  assert.ok(straight>4 && straight<4.2);
+  assert.ok(Math.abs(travel({forward:1,right:1}) - straight) < 1e-6);
   assert.ok(travel({forward:1,sprint:true}) > 6);
+});
+
+test("jump buffering consumes a quick tap on landing, and cannot repeat in midair", () => {
+  const w=new FloorWorld(),p=createPlayer({...pose,y:1.19});
+  p.vy=-4;
+  stepPlayer(w,p,{...idle,jumpPressed:true},.016);
+  for(let i=0;i<7;i++) stepPlayer(w,p,idle,.01);
+  assert.ok(p.vy>6 && p.y>1.2);
+  const rising=p.vy;
+  stepPlayer(w,p,{...idle,jumpPressed:true},.025);
+  assert.ok(p.vy<rising && p.coyote===0);
+  for(let i=0;i<100;i++) stepPlayer(w,p,{...idle,jump:true},.01);
+  assert.equal(p.y,1);
+});
+
+test("jump grace after support disappears is short and cannot be spent twice",()=>{
+  const w=new FloorWorld(); w.set(16,4,16,3);
+  const attempt=(delay:number)=>{
+    w.set(16,4,16,3);
+    const p=createPlayer({...pose,y:5});stepPlayer(w,p,idle,1/120);
+    w.set(16,4,16,0);stepPlayer(w,p,idle,delay);
+    stepPlayer(w,p,{...idle,jump:true},1/120);return p;
+  };
+  const early=attempt(.050);assert.ok(early.vy>7);
+  stepPlayer(w,early,idle,.01);stepPlayer(w,early,{...idle,jump:true},.01);
+  assert.ok(early.vy<8);assert.equal(early.coyote,0);
+  assert.ok(attempt(.11).vy<0);
+});
+
+test("crouching slides along an edge without falling and respects the tunnel ceiling",()=>{
+  const w=new FloorWorld(),p=createPlayer({...pose,y:5});
+  for(let z=10;z<20;z++)w.set(16,4,z,3);
+  for(let i=0;i<90;i++)stepPlayer(w,p,{...idle,right:1,forward:1,down:true},1/60);
+  assert.equal(p.y,5);assert.ok(p.z<15 && p.x<17.105);assert.ok(p.crouched);
+  const tunnel=createPlayer(pose);
+  w.set(17,2,16,3);w.set(18,2,16,3);
+  for(let n=0;n<50;n++)stepPlayer(w,tunnel,{...idle,right:1,down:true},1/60);
+  assert.ok(tunnel.x>17.5 && tunnel.x<18.5);
+  stepPlayer(w,tunnel,idle,.20);
+  assert.ok(tunnel.crouched);assert.ok(eyeHeight(tunnel)<1);
+  const sleep={x:tunnel.x,y:tunnel.y,z:tunnel.z,yaw:0,pitch:0,crouched:true};
+  assert.deepEqual(safeSpawn(w,sleep),sleep);
+  assert.equal(overlapsPlayer(tunnel,Math.floor(tunnel.x),2,16),false);
+  for(let n=0;n<110;n++)stepPlayer(w,tunnel,{...idle,right:1},1/60);
+  assert.ok(!tunnel.crouched && eyeHeight(tunnel)>1.55);
+});
+
+test("grounding is stable, a grazing wall permits sliding and releasing movement brakes promptly",()=>{
+  const w=new FloorWorld(),p=createPlayer(pose);
+  for(let z=5;z<24;z++)w.set(17,1,z,3);
+  for(let n=0;n<90;n++)stepPlayer(w,p,{...idle,right:1,forward:1},1/60);
+  assert.ok(p.z<13 && p.x===16.7); assert.equal(p.y,1);
+  const last=p.z;stepPlayer(w,p,idle,.14);
+  assert.ok(last-p.z<.12 && p.vz===0);
+  const still=[p.x,p.y,p.z];
+  for(let n=0;n<500;n++)stepPlayer(w,p,idle,1/60);
+  assert.deepEqual([p.x,p.y,p.z],still);
+  resetPlayerInput(p);assert.equal(p.bobOffset,0);
+});
+
+test("crouching after stepping beyond the safety margin still lets the player retreat",()=>{
+  const w=new FloorWorld(),p=createPlayer({...pose,x:17.23,y:5});
+  w.set(16,4,16,3);
+  stepPlayer(w,p,{...idle,down:true,right:-1},.01);
+  assert.ok(p.eye>.96 && p.eye<1.62); // No camera snap in the open.
+  for(let n=0;n<35;n++) stepPlayer(w,p,{...idle,down:true,right:-1},.01);
+  assert.equal(p.y,5);assert.ok(p.x<17 && p.x>16.3);
+});
+
+test("crouched targeting starts at the camera and diagonal rays skip cells they merely graze",()=>{
+  const w=new FloorWorld(),p=createPlayer({...pose,crouched:true});
+  w.set(16,1,14,7);w.set(16,2,14,3);assert.equal(raycast(w,p)?.id,7);
+  w.set(15,2,16,9);w.set(16,2,15,9);w.set(15,2,15,10);
+  const hit=raycast(w,{...pose,yaw:Math.PI/4})!;
+  assert.deepEqual([hit.x,hit.z,hit.id],[15,15,10]);
 });
 
 test("dropped frames, walls, ceilings and the edge cannot be tunneled through", () => {
@@ -152,4 +228,8 @@ test("safe spawn preserves valid cave/flight saves and recovers embedded or wet 
   w.set(16,3,16,13);
   assert.deepEqual(safeSpawn(w,pose),w.spawn());
   assert.deepEqual(safeSpawn(w,{...pose,x:NaN}),w.spawn());
+  const swimming={...pose,y:3,pitch:1.55};
+  assert.deepEqual(safeSpawn(w,swimming,true),swimming);
+  assert.deepEqual(safeSpawn(w,swimming),{...w.spawn(),pitch:swimming.pitch});
+  assert.notDeepEqual(safeSpawn(w,pose,true),pose);
 });

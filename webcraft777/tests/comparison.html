@@ -1,0 +1,8 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><title>景観・フレーム計測</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#10282d;color:white;font:16px system-ui}canvas{width:100vw;height:100vh;display:block}aside{position:fixed;top:8px;left:8px;background:#152e31dc;padding:8px;border-radius:5px}button{margin:3px}body.photo aside{display:none}</style>
+<canvas aria-label="比較用のワールド"></canvas><aside>
+<label>場面 <select id="scene"><option value="forest">草地と森</option><option value="shore">水辺</option><option value="cave">灯りのある坑道</option><option value="cottage">湖畔の小屋</option></select></label>
+<button id="measure">3場面を計測（3分）</button><button id="soak">同じ地域を周回（15分）</button>
+<a id="download" hidden style="color:white">結果を保存</a><output id="status" style="display:block"></output>
+<table id="results"></table><details id="detail" hidden><summary>測定値を表示（JSON）</summary><pre style="max-height:38vh;max-width:85vw;overflow:auto" id="raw"></pre></details></aside>
+<script type="module" src="./comparison.ts"></script></html>

@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "viewport": [
+    1920,
+    1080
+  ],
+  "internal": [
+    1460,
+    821
+  ],
+  "terrainMs": 52.60000002384186,
+  "rendererMs": 58.700000047683716,
+  "initialMeshesMs": 77.09999990463257,
+  "shaderWarmupMs": 36.60000002384186,
+  "firstWarmedDrawMs": 26.899999976158142,
+  "programs": 10,
+  "parallelCompile": true
+}

@@ -3,10 +3,12 @@ import {World,affectedChunks,chunkKey} from "./world";
 import {makeAtlas} from "./textures";
 import {meshChunk} from "./mesher";
 import {Atmosphere,terrainMaterial} from "./atmosphere";
+import {InteractionView,type Presentation} from "./interaction-view";
+import {eyeHeight} from "./physics";
 
 interface Position {x:number;y:number;z:number}
 interface CameraPose extends Position {yaw:number;pitch:number}
-interface Quality {distance:number;scale:number;shadows:boolean}
+interface Quality {distance:number;scale:number;shadows:boolean;quality?:'low'|'standard'|'high'|'legacy';vegetation?:boolean;effects?:boolean}
 type ChunkMeshes=T.Mesh<T.BufferGeometry,T.ShaderMaterial>[];
 interface Task {key:number;priority:number}
 
@@ -16,7 +18,7 @@ const fragments=[0,0x83ac52,0xa87c54,0x929d92,0xdfbf89,0x96784e,0x639c52,0xc7975
 export class SceneView {
   readonly scene=new T.Scene();
   readonly camera=new T.PerspectiveCamera(67,1,.06,320);
-  readonly stats={draws:0,chunks:0,geometries:0,fps:0,queued:0,triangles:0};
+  readonly stats={draws:0,chunks:0,geometries:0,textures:0,fps:0,queued:0,triangles:0,chunkMs:0,rebuilt:0};
   private readonly gl:T.WebGLRenderer;
   private readonly sky:Atmosphere;
   private readonly atlas=makeAtlas();
@@ -24,8 +26,10 @@ export class SceneView {
   private readonly heights=new Uint8Array(256*256);
   private readonly uniforms={
     lampPositions:{value:Array.from({length:4},()=>new T.Vector3())},lampCount:{value:0},
-    fogEnd:{value:75},clock:{value:0},shadows:{value:1},submerged:{value:0},
+    lampColors:{value:Array.from({length:4},()=>new T.Vector3())},
+    fogEnd:{value:75},clock:{value:0},shadows:{value:1},extras:{value:1},submerged:{value:0},
   };
+  private readonly tools:InteractionView;
   private readonly materials:[T.ShaderMaterial,T.ShaderMaterial];
   private readonly batches=new Map<number,ChunkMeshes>();
   private readonly pending:Task[]=[];
@@ -40,12 +44,17 @@ export class SceneView {
   private readonly chipColor=new T.Color();
   private quality:Quality={distance:4,scale:1,shadows:true};
   private cx=-100;private cz=-100;private cy=-100;private t=0;
-  private wt=0;private ht=0;private lampDue=0;private elapsed=0;private frameCount=0;
+  private wt=0;private ht=0;private lampDue=0;private elapsed=0;private frameCount=0;private totalFrames=0;
+  private lampCamera=new T.Vector3(Infinity,Infinity,Infinity);
+  private vegetation=1;
   private visibleChunks=new Set<number>();
   constructor(private canvas:HTMLCanvasElement,private world:World) {
     const ctx=canvas.getContext("webgl2",{antialias:false,alpha:false,powerPreference:"high-performance"});
     if(!ctx) throw new Error("WebGL 2を利用できません。ChromeまたはEdgeの設定でグラフィック アクセラレーションを有効にして再起動してください。");
     this.gl=new T.WebGLRenderer({canvas,context:ctx,antialias:false,alpha:false});
+    this.gl.outputColorSpace=T.SRGBColorSpace;
+    this.gl.toneMapping=T.NoToneMapping;
+    this.atlas.anisotropy=Math.min(4,this.gl.capabilities.getMaxAnisotropy());
     this.gl.setClearColor(0xbcd7cd);
     this.sky=new Atmosphere(this.scene,world.salt);
     for(let i=0;i<this.heights.length;i++)this.heights[i]=Math.max(0,world.highest[i]);
@@ -54,6 +63,7 @@ export class SceneView {
     this.heightTexture.needsUpdate=true;
     this.materials=[terrainMaterial(this.atlas,this.heightTexture,this.sky,this.uniforms,false),
       terrainMaterial(this.atlas,this.heightTexture,this.sky,this.uniforms,true)];
+    this.tools=new InteractionView(this.scene,this.camera,this.atlas);
     const outlineBox=new T.BoxGeometry(1.008,1.008,1.008);
     this.selection=new T.LineSegments(new T.EdgesGeometry(outlineBox),new T.LineBasicMaterial({color:0xffedb5,toneMapped:false}));
     outlineBox.dispose();this.selection.visible=false;this.selection.renderOrder=4;this.scene.add(this.selection);
@@ -70,8 +80,14 @@ export class SceneView {
   configure(q:Quality) {
     const distance=Math.max(2,Math.min(8,Math.round(q.distance)));
     if(distance!==this.quality.distance)this.cx=-100;
-    this.quality={distance,scale:Math.max(.45,Math.min(1.5,q.scale)),shadows:q.shadows};
-    this.uniforms.shadows.value=q.shadows?1:0;
+    const density=q.vegetation===false?0:q.quality==='high'?1.40:q.quality==='low'?.42:1;
+    if(density!==this.vegetation){
+      this.vegetation=density;
+      for(const key of this.batches.keys()) if(this.world.occupied[key])this.dirty.add(key);
+    }
+    this.quality={...q,distance,scale:Math.max(.45,Math.min(1.5,q.scale))};
+    this.uniforms.shadows.value=q.shadows?(q.quality==='high'?2:1):0;
+    this.uniforms.extras.value=q.effects===false?0:1;
     this.uniforms.fogEnd.value=(distance+.45)*16;
     this.wt=0;
   }
@@ -117,17 +133,17 @@ export class SceneView {
   private rebuild(key:number) {
     const before=this.batches.get(key);if(before) this.removeMeshes(before);
     const result:ChunkMeshes=[];
-    const geometries=meshChunk(this.world,key&15,key>>>8,(key>>>4)&15);
-    for(let i=0;i<2;i++) {
+    const geometries=meshChunk(this.world,key&15,key>>>8,(key>>>4)&15,this.vegetation);
+    for(let i=0;i<geometries.length;i++) {
       const geom=geometries[i];if(!geom) continue;
-      const mesh=new T.Mesh(geom,this.materials[i]);mesh.renderOrder=i;
+      const mesh=new T.Mesh(geom,this.materials[i===0?0:1]);mesh.renderOrder=i===0?0:1;
       mesh.onBeforeRender=()=>{this.visibleChunks.add(key);};
       result.push(mesh);this.scene.add(mesh);
     }
     this.batches.set(key,result);
   }
   private pump() {
-    const start=performance.now(),budget=this.frameCount<4?8:3.5;
+    const start=performance.now(),budget=this.totalFrames<4?8:3.5;
     let count=0;
     do{
       let key:number;
@@ -136,6 +152,8 @@ export class SceneView {
       else break;
       this.rebuild(key);count++;
     }while(count<9 && performance.now()-start<budget);
+    this.stats.chunkMs=count?performance.now()-start:0;
+    this.stats.rebuilt=count;
   }
   private lamps(p:Position) {
     const nearby:{key:number;d:number}[]=[];
@@ -148,10 +166,15 @@ export class SceneView {
       if(nearby.length>4)nearby.pop();
     }
     this.uniforms.lampCount.value=nearby.length;
-    nearby.forEach(({key},i)=>this.uniforms.lampPositions.value[i].set((key&255)+.5,(key>>>16)+.5,((key>>>8)&255)+.5));
+    nearby.forEach(({key},i)=>{
+      this.uniforms.lampPositions.value[i].set((key&255)+.5,(key>>>16)+.5,((key>>>8)&255)+.5);
+      const aqua=this.world.data[key]===25;
+      this.uniforms.lampColors.value[i].set(aqua?.36:1.86,aqua?1.57:1.09,aqua?1.40:.43);
+    });
   }
-  effect(x:number,y:number,z:number,id:number) {
-    const n=this.quality.shadows?8:4;
+  effect(x:number,y:number,z:number,id:number,kind:'mine'|'place'='mine') {
+    this.tools.swing();
+    const n=this.quality.effects===false?0:kind==='place'?3:7;
     for(let i=0;i<n;i++){
       if(this.particles.length>=64)this.particles.shift();
       this.particles.push({x:x+.5+(Math.random()-.5)*.65,y:y+.55+Math.random()*.38,z:z+.5+(Math.random()-.5)*.65,
@@ -169,37 +192,50 @@ export class SceneView {
       const p=this.particles[i];
       this.dummy.position.set(p.x,p.y,p.z);this.dummy.rotation.set(p.life*4,i+p.life*5,i*.8);
       this.dummy.scale.setScalar(Math.min(1,p.life*5));this.dummy.updateMatrix();
-      this.chips.setMatrixAt(i,this.dummy.matrix);this.chips.setColorAt(i,this.chipColor.setHex(fragments[p.id]??0xb4a98a));
+      this.chips.setMatrixAt(i,this.dummy.matrix);this.chips.setColorAt(i,this.chipColor.setHex(fragments[p.id]??
+        (p.id===23||p.id===25||p.id===26?0x91c8bd:0xb4a077)));
     }
     if(this.chips.count){this.chips.instanceMatrix.needsUpdate=true;if(this.chips.instanceColor)this.chips.instanceColor.needsUpdate=true;}
   }
-  update(p:CameraPose,target:Position|null,day:number,dt:number) {
+  update(p:CameraPose & {fovOffset?:number},target:Position|null,day:number,dt:number,presentation?:Presentation) {
     const w=Math.max(1,this.canvas.clientWidth),h=Math.max(1,this.canvas.clientHeight);
     if(w!==this.wt || h!==this.ht){
       this.wt=w;this.ht=h;
       // Keep fill cost comparable on laptop and high-DPI displays. The chosen
       // resolution multiplier still scales up or down relative to this baseline.
       const nativeRatio=Math.min(window.devicePixelRatio||1,1.5);
-      const budgetRatio=Math.sqrt(1_200_000/(w*h));
+      // Explicit standard/high presets render native 1080p at scale 1. The
+      // legacy/custom benchmark and low preset retain the original pixel cap.
+      const budget=this.quality.quality==='standard'||this.quality.quality==='high'?2_073_600:1_200_000;
+      const budgetRatio=Math.sqrt(budget/(w*h));
       this.gl.setPixelRatio(Math.min(nativeRatio,budgetRatio)*this.quality.scale);
       this.gl.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();
     }
     this.t+=dt;this.uniforms.clock.value=this.t;
-    this.camera.position.set(p.x,p.y+1.62,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,"YXZ");
+    const eye=eyeHeight(p), fov=67+(p.fovOffset??0);
+    if(Math.abs(fov-this.camera.fov)>.01){this.camera.fov=fov;this.camera.updateProjectionMatrix();}
+    this.camera.position.set(p.x,p.y+eye,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,"YXZ");
     this.sky.update(day,this.camera,this.t);
     this.selection.visible=Boolean(target);
     if(target)this.selection.position.set(target.x+.5,target.y+.5,target.z+.5);
-    this.uniforms.submerged.value=Number(this.world.get(p.x|0,(p.y+1.62)|0,p.z|0)===13);
+    this.uniforms.submerged.value=Number(this.world.get(p.x|0,(p.y+eye)|0,p.z|0)===13);
     this.border.visible=Math.min(p.x,p.z,256-p.x,256-p.z)<12;
     this.schedule(p);this.pump();
-    this.lampDue-=dt;if(this.lampDue<=0){this.lamps(p);this.lampDue=.23;}
+    this.lampDue-=dt;
+    if(this.lampDue<=0||this.lampCamera.distanceToSquared(this.camera.position)>4){
+      this.lamps(p);this.lampDue=.23;this.lampCamera.copy(this.camera.position);
+    }
     this.updateParticles(dt);
+    const indoors=this.world.highest[(p.x|0)+(p.z|0)*256]>p.y+eye+1.5;
+    this.tools.update(this.camera,target,presentation,dt,
+      (indoors?.57:.70)+this.sky.day.value*(indoors?.13:.30),this.uniforms.extras.value>0);
     this.visibleChunks.clear();this.gl.render(this.scene,this.camera);
     const info=this.gl.info;
     this.stats.draws=info.render.calls;this.stats.triangles=info.render.triangles;
     this.stats.geometries=info.memory.geometries;this.stats.chunks=this.visibleChunks.size;
+    this.stats.textures=info.memory.textures;
     this.stats.queued=this.pending.length+this.dirty.size;
-    this.frameCount++;this.elapsed+=dt;
+    this.totalFrames++;this.frameCount++;this.elapsed+=dt;
     if(this.elapsed>=.6){this.stats.fps=Math.round(this.frameCount/this.elapsed);this.frameCount=0;this.elapsed=0;}
   }
   dispose(){
@@ -210,6 +246,7 @@ export class SceneView {
     this.border.geometry.dispose();this.border.material.dispose();
     this.chips.geometry.dispose();this.chips.material.dispose();this.chips.dispose();
     this.sky.dispose(this.scene);this.materials.forEach(m=>m.dispose());
+    this.tools.dispose();
     this.atlas.dispose();this.heightTexture.dispose();this.scene.clear();this.gl.dispose();
   }
 }

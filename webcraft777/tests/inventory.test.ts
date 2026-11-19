@@ -91,7 +91,7 @@ test("creative hotbar only admits placeable blocks and swaps assigned positions"
 
 test("save validation rejects invalid ids, capacities, counts and tool durability", () => {
   const bag = createBag("explore");
-  for (const slots of [[{id:21,count:1}], [{id:2,count:0}], [{id:2,count:65}], [{id:14,count:1}],
+  for (const slots of [[{id:27,count:1}], [{id:2,count:0}], [{id:2,count:65}], [{id:14,count:1}],
     [{id:13,count:1}], [{id:18,count:2,durability:1}], [{id:17,count:1,durability:37}],
     [{id:17,count:1,durability:0}], [{id:7,count:10,durability:4}], Array(28).fill({id:1,count:1})]) {
     assert.equal(validBag({...bag,slots}),false);

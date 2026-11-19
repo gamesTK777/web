@@ -1,0 +1,711 @@
+{
+  "version": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "width": 1920,
+  "height": 1080,
+  "generationMs": 50,
+  "setupMs": 68.29999995231628,
+  "firstReadyMs": 582.7000000476837,
+  "internal": [
+    1920,
+    1080
+  ],
+  "settings": {
+    "quality": "standard",
+    "distance": 3,
+    "scale": 1,
+    "shadows": true
+  },
+  "rows": [
+    {
+      "scene": "forest",
+      "minute": 1,
+      "seconds": 60.0003,
+      "avgFPS": 31.999840000799995,
+      "p50": 31.299999999995634,
+      "p95": 31.700000000004366,
+      "p99": 32.099999999998545,
+      "chunkP95": 0,
+      "chunkMax": 4,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          51,
+          77
+        ],
+        "triangles": [
+          40460,
+          62590
+        ],
+        "queued": [
+          0,
+          23
+        ],
+        "geometries": [
+          60,
+          85
+        ],
+        "chunks": [
+          36,
+          62
+        ],
+        "textures": [
+          2,
+          2
+        ],
+        "heapMiB": [
+          20.798057556152344,
+          37.17796516418457
+        ]
+      },
+      "startGeometry": 70,
+      "endGeometry": 84,
+      "endTextures": 2
+    },
+    {
+      "scene": "cave",
+      "minute": 2,
+      "seconds": 60.03150000000001,
+      "avgFPS": 31.999866736629933,
+      "p50": 31.30000000000291,
+      "p95": 31.79999999998836,
+      "p99": 32,
+      "chunkP95": 0,
+      "chunkMax": 0,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          46,
+          67
+        ],
+        "triangles": [
+          41744,
+          58218
+        ],
+        "queued": [
+          0,
+          0
+        ],
+        "geometries": [
+          85,
+          87
+        ],
+        "chunks": [
+          37,
+          54
+        ],
+        "textures": [
+          2,
+          2
+        ],
+        "heapMiB": [
+          21.421836853027344,
+          27.08619499206543
+        ]
+      },
+      "startGeometry": 85,
+      "endGeometry": 87,
+      "endTextures": 2
+    },
+    {
+      "scene": "cottage",
+      "minute": 3,
+      "seconds": 60.0313,
+      "avgFPS": 31.99997334723719,
+      "p50": 31.29999999998836,
+      "p95": 31.800000000017462,
+      "p99": 32,
+      "chunkP95": 1.100000023841858,
+      "chunkMax": 4.699999928474426,
+      "edit": 214,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          28,
+          29
+        ],
+        "triangles": [
+          24704,
+          24800
+        ],
+        "queued": [
+          0,
+          18
+        ],
+        "geometries": [
+          88,
+          90
+        ],
+        "chunks": [
+          23,
+          23
+        ],
+        "textures": [
+          2,
+          3
+        ],
+        "heapMiB": [
+          21.87312412261963,
+          31.343597412109375
+        ]
+      },
+      "startGeometry": 84,
+      "endGeometry": 90,
+      "endTextures": 3
+    },
+    {
+      "scene": "forest",
+      "minute": 4,
+      "seconds": 60.031600000000005,
+      "avgFPS": 31.999813431592692,
+      "p50": 31.29999999998836,
+      "p95": 31.800000000017462,
+      "p99": 32.10000000000582,
+      "chunkP95": 0,
+      "chunkMax": 3.899999976158142,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          51,
+          77
+        ],
+        "triangles": [
+          40460,
+          62590
+        ],
+        "queued": [
+          0,
+          15
+        ],
+        "geometries": [
+          90,
+          112
+        ],
+        "chunks": [
+          36,
+          62
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.61922550201416,
+          34.404340744018555
+        ]
+      },
+      "startGeometry": 109,
+      "endGeometry": 109,
+      "endTextures": 3
+    },
+    {
+      "scene": "cave",
+      "minute": 5,
+      "seconds": 60.031099999999974,
+      "avgFPS": 32.00007995855483,
+      "p50": 31.29999999998836,
+      "p95": 31.79999999998836,
+      "p99": 32,
+      "chunkP95": 0,
+      "chunkMax": 0,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          46,
+          67
+        ],
+        "triangles": [
+          41744,
+          58218
+        ],
+        "queued": [
+          0,
+          0
+        ],
+        "geometries": [
+          110,
+          111
+        ],
+        "chunks": [
+          37,
+          54
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          24.043463706970215,
+          27.214804649353027
+        ]
+      },
+      "startGeometry": 110,
+      "endGeometry": 111,
+      "endTextures": 3
+    },
+    {
+      "scene": "cottage",
+      "minute": 6,
+      "seconds": 60.031099999999974,
+      "avgFPS": 32.00007995855483,
+      "p50": 31.20000000001164,
+      "p95": 31.79999999998836,
+      "p99": 32.09999999997672,
+      "chunkP95": 1.0999999046325684,
+      "chunkMax": 3.600000023841858,
+      "edit": 214,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          28,
+          29
+        ],
+        "triangles": [
+          24704,
+          24800
+        ],
+        "queued": [
+          0,
+          17
+        ],
+        "geometries": [
+          90,
+          90
+        ],
+        "chunks": [
+          23,
+          23
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          22.144139289855957,
+          30.950180053710938
+        ]
+      },
+      "startGeometry": 92,
+      "endGeometry": 90,
+      "endTextures": 3
+    },
+    {
+      "scene": "forest",
+      "minute": 7,
+      "seconds": 60,
+      "avgFPS": 32,
+      "p50": 31.29999999998836,
+      "p95": 31.800000000046566,
+      "p99": 32,
+      "chunkP95": 0,
+      "chunkMax": 3.799999952316284,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          51,
+          77
+        ],
+        "triangles": [
+          40460,
+          62590
+        ],
+        "queued": [
+          0,
+          16
+        ],
+        "geometries": [
+          90,
+          112
+        ],
+        "chunks": [
+          36,
+          62
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.62898349761963,
+          32.31549835205078
+        ]
+      },
+      "startGeometry": 109,
+      "endGeometry": 109,
+      "endTextures": 3
+    },
+    {
+      "scene": "cave",
+      "minute": 8,
+      "seconds": 60.030900000000024,
+      "avgFPS": 32.000186570582805,
+      "p50": 31.29999999998836,
+      "p95": 31.79999999998836,
+      "p99": 32,
+      "chunkP95": 0,
+      "chunkMax": 0,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          46,
+          67
+        ],
+        "triangles": [
+          41744,
+          58218
+        ],
+        "queued": [
+          0,
+          0
+        ],
+        "geometries": [
+          110,
+          111
+        ],
+        "chunks": [
+          37,
+          54
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.56670093536377,
+          28.44240093231201
+        ]
+      },
+      "startGeometry": 110,
+      "endGeometry": 111,
+      "endTextures": 3
+    },
+    {
+      "scene": "cottage",
+      "minute": 9,
+      "seconds": 60.03089999999997,
+      "avgFPS": 32.000186570582834,
+      "p50": 31.29999999998836,
+      "p95": 31.79999999993015,
+      "p99": 32,
+      "chunkP95": 1.100000023841858,
+      "chunkMax": 3.8000000715255737,
+      "edit": 214,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          28,
+          29
+        ],
+        "triangles": [
+          24704,
+          24800
+        ],
+        "queued": [
+          0,
+          18
+        ],
+        "geometries": [
+          90,
+          90
+        ],
+        "chunks": [
+          23,
+          23
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          22.166977882385254,
+          32.99325942993164
+        ]
+      },
+      "startGeometry": 92,
+      "endGeometry": 90,
+      "endTextures": 3
+    },
+    {
+      "scene": "forest",
+      "minute": 10,
+      "seconds": 60.031100000000094,
+      "avgFPS": 31.95010586179492,
+      "p50": 31.29999999993015,
+      "p95": 31.79999999993015,
+      "p99": 32.10000000009313,
+      "chunkP95": 0,
+      "chunkMax": 4,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          51,
+          77
+        ],
+        "triangles": [
+          40460,
+          62590
+        ],
+        "queued": [
+          0,
+          16
+        ],
+        "geometries": [
+          90,
+          112
+        ],
+        "chunks": [
+          36,
+          62
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.65797710418701,
+          29.408324241638184
+        ]
+      },
+      "startGeometry": 109,
+      "endGeometry": 109,
+      "endTextures": 3
+    },
+    {
+      "scene": "cave",
+      "minute": 11,
+      "seconds": 60.000300000000045,
+      "avgFPS": 31.89984050079747,
+      "p50": 31.20000000006985,
+      "p95": 31.70000000006985,
+      "p99": 32.20000000006985,
+      "chunkP95": 0,
+      "chunkMax": 0,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          46,
+          67
+        ],
+        "triangles": [
+          41744,
+          58218
+        ],
+        "queued": [
+          0,
+          0
+        ],
+        "geometries": [
+          110,
+          111
+        ],
+        "chunks": [
+          37,
+          54
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          22.11476230621338,
+          25.806618690490723
+        ]
+      },
+      "startGeometry": 110,
+      "endGeometry": 111,
+      "endTextures": 3
+    },
+    {
+      "scene": "cottage",
+      "minute": 12,
+      "seconds": 60.03129999999993,
+      "avgFPS": 31.99997334723723,
+      "p50": 31.20000000006985,
+      "p95": 31.600000000093132,
+      "p99": 31.70000000006985,
+      "chunkP95": 1.100000023841858,
+      "chunkMax": 3.5,
+      "edit": 214,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          28,
+          29
+        ],
+        "triangles": [
+          24704,
+          24800
+        ],
+        "queued": [
+          0,
+          16
+        ],
+        "geometries": [
+          90,
+          90
+        ],
+        "chunks": [
+          23,
+          23
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          22.219048500061035,
+          32.9768180847168
+        ]
+      },
+      "startGeometry": 92,
+      "endGeometry": 90,
+      "endTextures": 3
+    },
+    {
+      "scene": "forest",
+      "minute": 13,
+      "seconds": 60.00019999999996,
+      "avgFPS": 31.999893333688913,
+      "p50": 31.20000000006985,
+      "p95": 31.599999999976717,
+      "p99": 31.70000000006985,
+      "chunkP95": 0,
+      "chunkMax": 3.6999999284744263,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          51,
+          77
+        ],
+        "triangles": [
+          40460,
+          62590
+        ],
+        "queued": [
+          0,
+          15
+        ],
+        "geometries": [
+          90,
+          112
+        ],
+        "chunks": [
+          36,
+          62
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.64973545074463,
+          30.007773399353027
+        ]
+      },
+      "startGeometry": 109,
+      "endGeometry": 109,
+      "endTextures": 3
+    },
+    {
+      "scene": "cave",
+      "minute": 14,
+      "seconds": 60.000300000000045,
+      "avgFPS": 31.99984000079997,
+      "p50": 31.29999999993015,
+      "p95": 31.599999999976717,
+      "p99": 31.70000000006985,
+      "chunkP95": 0,
+      "chunkMax": 0,
+      "edit": 0,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          46,
+          67
+        ],
+        "triangles": [
+          41744,
+          58218
+        ],
+        "queued": [
+          0,
+          0
+        ],
+        "geometries": [
+          110,
+          111
+        ],
+        "chunks": [
+          37,
+          54
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.72200870513916,
+          28.962885856628418
+        ]
+      },
+      "startGeometry": 110,
+      "endGeometry": 111,
+      "endTextures": 3
+    },
+    {
+      "scene": "cottage",
+      "minute": 15,
+      "seconds": 60.031,
+      "avgFPS": 32.00013326448002,
+      "p50": 31.20000000006985,
+      "p95": 31.600000000093132,
+      "p99": 31.70000000006985,
+      "chunkP95": 1.0999999046325684,
+      "chunkMax": 3.799999952316284,
+      "edit": 214,
+      "fail": 0,
+      "ranges": {
+        "draws": [
+          28,
+          29
+        ],
+        "triangles": [
+          24704,
+          24800
+        ],
+        "queued": [
+          0,
+          17
+        ],
+        "geometries": [
+          90,
+          90
+        ],
+        "chunks": [
+          23,
+          23
+        ],
+        "textures": [
+          3,
+          3
+        ],
+        "heapMiB": [
+          21.957409858703613,
+          33.01484680175781
+        ]
+      },
+      "startGeometry": 92,
+      "endGeometry": 90,
+      "endTextures": 3
+    }
+  ]
+}

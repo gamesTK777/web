@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "internal": [
+    1920,
+    1080
+  ],
+  "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "rows": [
+    {
+      "name": "標準",
+      "frames": 48,
+      "medianMs": 0.2999999523162842,
+      "p95Ms": 0.5,
+      "draws": 59,
+      "triangles": 46574
+    },
+    {
+      "name": "影オフ",
+      "frames": 48,
+      "medianMs": 0.2999999523162842,
+      "p95Ms": 0.5,
+      "draws": 59,
+      "triangles": 46574
+    },
+    {
+      "name": "草花オフ",
+      "frames": 48,
+      "medianMs": 0.2999999523162842,
+      "p95Ms": 0.40000009536743164,
+      "draws": 59,
+      "triangles": 44982
+    },
+    {
+      "name": "水面・葉・手元の追加演出オフ",
+      "frames": 48,
+      "medianMs": 0.2999999523162842,
+      "p95Ms": 0.3999999761581421,
+      "draws": 59,
+      "triangles": 46574
+    }
+  ]
+}
