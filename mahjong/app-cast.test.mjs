@@ -22,12 +22,18 @@ class Element {
   setAttribute(name,value) { this[name]=String(value); }
   getAttribute(name) { return this[name]??null; }
   removeAttribute(name) { if(name==='autoplay'){this.autoplay=false;return;}delete this[name]; }
-  append(...nodes) { this.children.push(...nodes); }
+  append(...nodes) { for (const node of nodes) node.parentElement = this; this.children.push(...nodes); }
+  get lastElementChild() { return this.children.at(-1); }
+  remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(node => node !== this); }
   replaceChildren(...nodes) { this.children = nodes; }
   querySelector(selector) { return this.children.find(node => node.matches(selector)) || null; }
   matches(selector) { return selector.split(',').some(part => {part=part.trim();const data=part.match(/^\[data-([\w-]+)\]$/);return part===this.tagName.toLowerCase()||part==='dialog[open]'&&this.tagName==='DIALOG'&&this.open||data&&this.dataset[data[1].replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]!==undefined;}); }
-  closest(selector) { return this.matches(selector) ? this : null; }
+  closest(selector) {
+    if (selector === 'button[data-tile-index]') return this.tagName === 'BUTTON' && 'tileIndex' in this.dataset ? this : null;
+    return this.matches(selector) ? this : null;
+  }
   addEventListener(type, fn) { if (!this.listeners.has(type)) this.listeners.set(type, []); this.listeners.get(type).push(fn); }
+  removeEventListener(type, fn) { this.listeners.set(type, (this.listeners.get(type) || []).filter(callback => callback !== fn)); }
   dispatch(type, extras = {}) { const event = { type, target: this, key: '', repeat: false, preventDefault() { this.defaultPrevented = true; }, ...extras }; for (const fn of this.listeners.get(type) || []) fn(event); this['on' + type]?.(event); return event; }
   click() { if (!this.disabled) this.dispatch('click'); }
   showModal() { this.open = true; }
@@ -39,7 +45,7 @@ class Element {
   focus() {}
 }
 
-async function harness({mediaTypes={}}={}) {
+async function harness({mediaTypes={}, withTable=false}={}) {
   const [html, source] = await Promise.all(['index.html', 'app.mjs'].map(name => readFile(new URL(name, import.meta.url), 'utf8')));
   const nodes = new Map();
   for (const [, tag, attrs, id] of html.matchAll(/<([a-z][\w-]*)([^>]*\bid="([^"]+)"[^>]*)>/gi)) { const node = new Element(tag); node.id = id; node.disabled = /\sdisabled(?:\s|>|$)/.test(attrs); nodes.set(id, node); }
@@ -62,9 +68,39 @@ async function harness({mediaTypes={}}={}) {
     configure(stage,patch){Object.assign(config.stages[stage-1],structuredClone(patch));},
     setupRound(value){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();encounter=null;round=structuredClone(value);started=true;ended=false;render();},
     state(){return{run,round,encounter,createdRounds,ended};}};`;
-  vm.runInContext(imports + source.replace(/^import .*;\r?$/gm, '') + hooks, context);
+  let tableSource = '';
+  let table;
+  if (withTable) {
+    // Run the production hit targets and app. Only Three.js projection and rendering
+    // are substituted so these tests do not require a GPU or a browser permission.
+    const controls = await readFile(new URL('./table-controls.mjs', import.meta.url), 'utf8');
+    tableSource = controls.replace(/^import .*;\r?$/gm, '').replace('export function createTableControls', 'function createTableControls')
+      .replace(/import\('\.\/table-scene\.mjs[^']*'\)/, 'Promise.resolve(__gpu)');
+    assert.ok(tableSource.includes('Promise.resolve(__gpu)'));
+    let drawn;
+    const ready = new Promise(resolve => { drawn = resolve; });
+    const canvas = nodes.get('tableScene'), board = new Element('section'), targets = nodes.get('handTargets');
+    canvas.getContext = () => null;
+    canvas.closest = selector => selector === '.mahjong-table' ? board : null;
+    targets.getClientRects = () => [{}];
+    table = {
+      model: null, ready, disposed: false, hitTest: () => -1,
+      press(index) { targets.dispatch('click', { target: targets.children[index] }); },
+    };
+    context.cancelAnimationFrame = () => {};
+    context.__gpu = { createTableScene(_canvas, { onUnavailable }) {
+      table.loseContext = onUnavailable;
+      return {
+        update(model) { table.model = structuredClone(model); drawn(); },
+        projectHand() { return table.model.hand.map((_, i) => ({ left:i / 16, top:0.7, width:0.06, height:0.2 })); },
+        pickAt(x, y) { return table.hitTest(x, y); },
+        dispose() { table.disposed = true; },
+      };
+    } };
+  }
+  vm.runInContext(imports + tableSource + '\n' + source.replace(/^import .*;\r?$/gm, '') + hooks, context);
   await context.hooks.ready;
-  return { hooks: context.hooks, node: id => nodes.get(id), timers, document, window:context.window };
+  return { hooks: context.hooks, node: id => nodes.get(id), timers, document, window:context.window, table };
 }
 
 test('every battle waits for its encounter before a real round is created or CPU timer is scheduled', async () => {
@@ -89,6 +125,139 @@ test('skip starts exactly one real round and CPU dealer waits until that explici
   assert.equal(f.hooks.state().round.phase, 'cpu'); assert.equal(f.timers.size, 1);
   f.node('encounterSkip').click(); assert.equal(f.hooks.state().createdRounds, 1);
   assert.equal(f.node('cpuName').textContent, '橘朱音');
+});
+
+test('3D手牌の初回選択では河に置かず、同じ牌をもう一度押したときだけ1枚を打つ', async () => {
+  const game = await harness({ withTable: true });
+  const initial = engine.createRound({ seed: 1, dealer: 0 });
+  game.hooks.setupRound(initial);
+  await game.table.ready;
+  const index = 5, tile = initial.hands[0][index];
+  const targets = game.node('handTargets');
+  assert.deepEqual(game.table.model.hand, initial.hands[0]);
+  assert.deepEqual(game.table.model.cpu, Array(initial.hands[1].length).fill(null));
+  assert.equal(game.table.model.dora, initial.doraIndicator);
+  assert.equal(game.table.model.wallCount, initial.wall.length);
+  assert.equal(targets.children.length, 14);
+  assert.equal(targets.children[index].getAttribute('aria-label'), tiles.tileName(tile));
+  assert.equal(game.node('discardButton').disabled, true);
+
+  game.table.press(index);
+  assert.deepEqual(game.hooks.state().round, initial);
+  assert.equal(game.table.model.selected, index);
+  assert.equal(targets.children[index].getAttribute('aria-pressed'), 'true');
+  assert.equal(game.node('discardButton').disabled, false);
+  game.table.press(index);
+  const after = game.hooks.state().round;
+  assert.deepEqual(after, engine.actRound(initial, { type: 'discard', index }).state);
+  assert.deepEqual(game.table.model.rivers, [[tile], []]);
+  assert.equal(game.table.model.selected, null);
+  assert.equal(targets.children.length, 13);
+  assert.ok(targets.children.every(button => button.disabled));
+  assert.ok(game.table.model.cpu.every(id => id === null));
+  game.table.press(index);
+  game.node('discardButton').click();
+  assert.equal(game.hooks.state().round, after);
+});
+
+test('3Dで牌を選び直して打牌ボタンを押すと、最後に選択した牌だけが河に並ぶ', async () => {
+  const game = await harness({ withTable: true });
+  const initial = engine.createRound({ seed: 6, dealer: 0 });
+  game.hooks.setupRound(initial);
+  await game.table.ready;
+  const second = initial.hands[0].findIndex(id => id !== initial.hands[0][0]);
+  game.table.press(0);
+  game.table.press(second);
+  assert.equal(game.table.model.selected, second);
+  assert.deepEqual(game.table.model.rivers, [[], []]);
+  game.node('discardButton').click();
+  assert.deepEqual(game.hooks.state().round, engine.actRound(initial, { type: 'discard', index: second }).state);
+  assert.deepEqual(game.table.model.rivers, [[initial.hands[0][second]], []]);
+  assert.equal(game.node('discardButton').disabled, true);
+});
+
+test('3Dのポインター操作は最前面の牌を選び、重なったボタン・隙間・CPU手番で誤打牌しない', async () => {
+  const game = await harness({ withTable: true });
+  const initial = engine.createRound({ seed: 6, dealer: 0 });
+  game.hooks.setupRound(initial);
+  await game.table.ready;
+  const targets = game.node('handTargets'), canvas = game.node('tableScene');
+  const overlap = { detail:1, clientX:142, clientY:238, target:targets.children[0] };
+  game.table.hitTest = (x, y) => x === 142 && y === 238 ? 5 : -1;
+  targets.dispatch('click', overlap);
+  assert.equal(game.table.model.selected, 5);
+  assert.equal(targets.children[0].getAttribute('aria-pressed'), 'false');
+  targets.dispatch('click', { detail:1, clientX:143, clientY:238, target:targets.children[5] });
+  canvas.dispatch('click', { detail:1, clientX:-30, clientY:-30 });
+  assert.equal(game.table.model.selected, 5);
+  assert.deepEqual(game.table.model.rivers, [[], []]);
+  canvas.dispatch('click', { detail:1, clientX:142, clientY:238 });
+  const after = game.hooks.state().round;
+  assert.deepEqual(after, engine.actRound(initial, { type:'discard', index:5 }).state);
+  assert.equal(after.phase, 'cpu');
+  canvas.dispatch('click', { detail:1, clientX:142, clientY:238 });
+  assert.equal(game.table.model.selected, null);
+  assert.equal(game.hooks.state().round, after);
+});
+
+test('3D描画が中断しても、選択した牌と同じ局を保って通常の手牌から打牌できる', async () => {
+  const game = await harness({ withTable: true });
+  const initial = engine.createRound({ seed: 1, dealer: 0 });
+  game.hooks.setupRound(initial);
+  await game.table.ready;
+  game.table.press(4);
+  game.table.loseContext();
+  assert.equal(game.table.disposed, true);
+  assert.equal(game.node('handTargets').children.length, 0);
+  assert.equal(game.window.listeners.get('resize').length, 0);
+  assert.deepEqual(game.hooks.state().round, initial);
+  const hand = game.node('playerHand');
+  assert.match(hand.innerHTML, /<button[^>]+aria-pressed="true"[^>]+data-tile-index="4"/);
+  const selectedButton = new Element('button');
+  selectedButton.dataset.tileIndex = '4';
+  hand.dispatch('click', { target:selectedButton });
+  const after = game.hooks.state().round;
+  assert.deepEqual(after, engine.actRound(initial, { type:'discard', index:4 }).state);
+  assert.match(game.node('playerRiver').innerHTML, new RegExp('data-tile="' + initial.hands[0][4] + '"'));
+  assert.equal(game.node('handTargets').children.length, 0);
+});
+
+test('リーチ時の3D手牌と捨て牌履歴は同じ局に従い、長い河にも宣言牌が残る', async () => {
+  const game = await harness({ withTable: true });
+  // This genuine shuffled deal permits riichi only by discarding index 7.
+  const initial = engine.createRound({ seed: 568, dealer: 0 });
+  initial.discards = [initial.wall.splice(-23), initial.wall.splice(-23)];
+  initial.riichiAt[1] = 6;
+  initial.riichi[1] = true;
+  initial.riichiPot = 1000;
+  initial.points[1] -= 1000;
+  initial.turnCount = 46;
+  game.hooks.setupRound(initial);
+  await game.table.ready;
+  assert.deepEqual(engine.legalActions(initial).riichiDiscards, [7]);
+  game.node('riichiButton').click();
+  assert.deepEqual(game.table.model.legal, [7]);
+  const targets = game.node('handTargets').children;
+  assert.ok(targets.every((button, i) => button.disabled === (i !== 7)));
+  game.table.press(0);
+  assert.equal(game.table.model.selected, null);
+  game.table.press(7);
+  game.node('discardButton').click();
+  const after = game.hooks.state().round;
+  assert.equal(after.riichi[0], true);
+  assert.deepEqual(game.table.model.riichiAt, [23, 6]);
+  assert.deepEqual(game.table.model.rivers, after.discards);
+  assert.deepEqual(game.table.model.cpu, Array(13).fill(null));
+  game.node('reviewRivers').click();
+  assert.equal(game.node('riverReviewDialog').open, true);
+  for (const [seat, id] of ['reviewPlayerRiver', 'reviewCpuRiver'].entries()) {
+    const html = game.node(id).innerHTML;
+    const displayed = Array.from(html.matchAll(/data-tile="(\d+)"/g), match => Number(match[1]));
+    assert.deepEqual(displayed, after.discards[seat]);
+    assert.equal((html.match(/class="riichi-discard"/g) || []).length, 1);
+    const label = tiles.tileName(after.discards[seat][after.riichiAt[seat]]) + '（リーチ宣言牌）';
+    assert.ok(html.includes('aria-label="' + label + '"'));
+  }
 });
 
 test('dialog cannot escape into gameplay, and repeated keys do not skip dialogue lines', async () => {

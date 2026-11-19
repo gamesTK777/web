@@ -1,0 +1,312 @@
+/* The original board stays playable while the renderer is loading or unavailable. */
+.table-viewport, .review-rivers { display: none; }
+
+.mahjong-table.has-3d {
+  --rail: #172829;
+  --rail-dark: #102122;
+  --brass: #b9985f;
+  display: grid;
+  grid-template-columns: minmax(110px, .9fr) minmax(155px, 1.6fr) minmax(130px, 1fr);
+  grid-template-areas:
+    "rival turn meta"
+    "scene scene scene"
+    "hand hand hand"
+    "actions actions actions";
+  align-items: stretch;
+  isolation: isolate;
+  min-width: 0;
+  border: 1px solid #9c805585;
+  border-radius: 15px;
+  color: #f6ebd5;
+  background: linear-gradient(125deg, #233938, var(--rail-dark) 65%);
+  box-shadow: 0 16px 44px #030c10a6, inset 0 1px #f1d3912b;
+}
+.mahjong-table.has-3d .table-viewport {
+  grid-area: scene;
+  display: block;
+  position: relative;
+  width: 100%;
+  height: clamp(345px, min(54vw, calc(100svh - 268px)), 625px);
+  min-width: 0;
+  overflow: hidden;
+  border-block: 1px solid #ac8a4c73;
+  background: #153b38;
+}
+#tableScene, #handTargets { position: absolute; inset: 0; width: 100%; height: 100%; }
+#tableScene { display: block; }
+#handTargets { pointer-events: none; }
+#handTargets .table-hit {
+  position: absolute;
+  display: block;
+  pointer-events: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: transparent;
+  transform: none;
+  touch-action: manipulation;
+}
+#handTargets .table-hit:focus-visible {
+  outline: 3px solid #ffe2a2;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #222c26;
+}
+.has-3d .cpu-hand, .has-3d .table-grain, .has-3d .river-zone,
+.has-3d .table-compass > div { display: none; }
+.has-3d .table-field { display: contents; }
+.has-3d .table-top, .has-3d .table-meta, .has-3d .table-compass {
+  min-width: 0;
+  min-height: 59px;
+  margin: 0;
+  padding: 8px clamp(9px, 1.5vw, 20px);
+  align-self: stretch;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.has-3d .table-top {
+  grid-area: rival;
+  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.has-3d .seat-label { color: #f4e9d5; font-size: 12px; font-weight: 650; }
+.has-3d .seat-label span { overflow-wrap: anywhere; }
+.has-3d .seat-points { gap: 7px; line-height: 1.15; }
+.has-3d .seat-points b { font-size: 18px; color: #d7c299; }
+.has-3d .seat-points small { font-size: 10px; color: #b0bbb4; white-space: nowrap; }
+.has-3d .table-compass {
+  grid-area: turn;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  gap: 2px;
+  text-align: center;
+}
+.has-3d .table-compass p { color: #ffe1aa; font-size: 12px; font-weight: 700; line-height: 1.45; }
+.has-3d .wall-badge { color: #b1c1b8; font-size: 10px; }
+.has-3d .wall-badge b { color: #f4e9d5; }
+.has-3d .table-meta {
+  grid-area: meta;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.has-3d .dora-panel { flex: none; gap: 5px; }
+.has-3d .dora-panel small { color: #d6c399; font-size: 10px; }
+.has-3d .hand-rail {
+  grid-area: hand;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 3px 16px;
+  border: 0;
+  padding: 8px clamp(10px, 1.5vw, 20px) 4px;
+  background: transparent;
+}
+.has-3d .player-seat {
+  width: auto;
+  margin: 0;
+  gap: 10px;
+  color: #f0e9d9;
+  font-size: 12px;
+}
+.has-3d .player-seat b { color: #e7c98e; font-size: 16px; }
+.has-3d .tile-hint { margin: 0; color: #becbc1; font-size: 11px; line-height: 1.5; }
+.has-3d .table-actions {
+  grid-area: actions;
+  justify-content: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 7px clamp(10px, 1.5vw, 20px) 12px;
+  background: transparent;
+}
+.has-3d .table-actions .primary {
+  width: auto;
+  min-width: 128px;
+  min-height: 38px;
+  border-color: #f0d395;
+  background: linear-gradient(#f6dca3, #daba7e);
+  color: #302c23;
+}
+.has-3d .table-actions .primary:disabled {
+  opacity: 1;
+  background: #584f3d;
+  border-color: #89775270;
+  color: #c2b8a3;
+}
+.has-3d .call-actions { display: flex; width: auto; gap: 5px; }
+.has-3d .call-actions button {
+  min-width: 48px;
+  min-height: 38px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border-color: #859c8659;
+  background: #314642;
+}
+.has-3d .call-actions button:disabled { opacity: .57; }
+.has-3d .call-actions .is-armed, .has-3d .call-actions .win-action:not(:disabled) {
+  border-color: #ffbc91;
+  background: #854536;
+  color: #fff1d9;
+}
+.has-3d .review-rivers {
+  display: inline-block;
+  margin-inline-start: auto;
+  min-height: 38px;
+  padding: 4px 10px;
+  border: 1px solid #b5a17a51;
+  border-radius: 7px;
+  color: #e4d6b9;
+  background: transparent;
+  font-size: 12px;
+}
+.has-3d .review-rivers:hover { border-color: #dbc68b; }
+
+.river-review-dialog { width: min(530px, calc(100% - 24px)); }
+.river-review-dialog .dialog-heading { margin-bottom: 14px; align-items: center; }
+.river-review-dialog h2 { margin: 0; }
+.river-review-dialog section + section { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 16px; }
+.river-review-dialog h3 { margin: 0 0 8px; color: #d9ccaa; font-size: 13px; }
+.review-river { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-height: 40px; }
+.review-river .tile { width: 32px; height: 44px; }
+.review-river .riichi-discard { display: inline-grid; width: 44px; min-height: 44px; place-items: center; }
+.review-river .riichi-discard .tile { transform: rotate(90deg); outline: 1px solid #e6bd77; outline-offset: 1px; }
+
+@media (min-width: 620px) {
+  .has-3d .player-hand { display: none; }
+}
+
+/* Keep the table high on the page while leaving character dialogue and stage progress in view. */
+body:not(.game-fullscreen):has(.has-3d) .topbar { height: 55px; }
+body:not(.game-fullscreen):has(.has-3d) .brand { font-size: 20px; line-height: 1.05; }
+body:not(.game-fullscreen):has(.has-3d) .brand-mark { width: 29px; height: 35px; font-size: 20px; }
+body:not(.game-fullscreen):has(.has-3d) .game-shell {
+  display: grid;
+  grid-template-columns: auto minmax(190px, 1fr) auto;
+  grid-template-areas: "score stages sound" "game game game" "footer footer footer";
+  align-items: center;
+  gap: 12px clamp(10px, 2vw, 26px);
+  padding: 14px clamp(10px, 2.2vw, 32px);
+}
+body:not(.game-fullscreen):has(.has-3d) .page-heading { grid-area: score; margin: 0; }
+body:not(.game-fullscreen):has(.has-3d) .page-heading > div:first-child { display: none; }
+body:not(.game-fullscreen):has(.has-3d) .score-pill { gap: 5px; padding: 5px 12px; }
+body:not(.game-fullscreen):has(.has-3d) .score-pill strong { font-size: 20px; }
+body:not(.game-fullscreen):has(.has-3d) .stage-map { grid-area: stages; margin: 0; padding: 0; }
+body:not(.game-fullscreen):has(.has-3d) .stage-node { gap: 5px; }
+body:not(.game-fullscreen):has(.has-3d) .stage-node b { width: 25px; height: 25px; font-size: 11px; }
+body:not(.game-fullscreen):has(.has-3d) .stage-node small { display: none; }
+body:not(.game-fullscreen):has(.has-3d) .stage-node::after { margin-inline: 0 5px; }
+body:not(.game-fullscreen):has(.has-3d) .voice-toolbar { grid-area: sound; display: block; margin: 0; padding: 0; border: 0; background: none; }
+body:not(.game-fullscreen):has(.has-3d) .voice-toolbar button { min-height: 36px; }
+body:not(.game-fullscreen):has(.has-3d) .voice-toolbar > p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+body:not(.game-fullscreen):has(.has-3d) .game-layout { grid-area: game; grid-template-columns: clamp(185px, 18vw, 240px) minmax(0, 1fr); gap: clamp(10px, 1.4vw, 22px); }
+body:not(.game-fullscreen):has(.has-3d) .rival-column, body:not(.game-fullscreen):has(.has-3d) .play-column { gap: 10px; }
+body:not(.game-fullscreen):has(.has-3d) footer { grid-area: footer; }
+body:not(.game-fullscreen):has(.has-3d) .rival-art { aspect-ratio: 1 / 1; }
+body:not(.game-fullscreen):has(.has-3d) .rival-details { padding: 13px 15px; }
+body:not(.game-fullscreen):has(.has-3d) .rival-details .eyebrow { display: none; }
+body:not(.game-fullscreen):has(.has-3d) .rival-details h2 { font-size: 21px; margin: 0 0 3px; }
+body:not(.game-fullscreen):has(.has-3d) .rival-commentary { padding: 12px 14px; }
+body:not(.game-fullscreen):has(.has-3d) .rival-personality { margin-bottom: 8px; }
+body:not(.game-fullscreen):has(.has-3d) .round-notice { min-height: 22px; }
+
+@media (max-width: 850px) {
+  body:not(.game-fullscreen):has(.has-3d) .game-shell {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "score sound" "stages stages" "game game" "footer footer";
+    gap: 9px;
+  }
+  body:not(.game-fullscreen):has(.has-3d) .voice-toolbar { justify-self: end; }
+  body:not(.game-fullscreen):has(.has-3d) .game-layout {
+    display: grid;
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+    grid-template-areas: "rival speech" "play play" "stage stage";
+    align-items: stretch;
+    gap: 7px;
+  }
+  body:not(.game-fullscreen):has(.has-3d) .rival-column { display: contents; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-card { grid-area: rival; display: flex; align-items: center; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-art { width: 52px; min-width: 52px; height: 63px; min-height: 0; align-self: stretch; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-details { padding: 5px 8px; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-details h2 { margin: 0; font-size: 15px; line-height: 1.4; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-role { margin: 1px 0 0; font-size: 10px; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-tags, body:not(.game-fullscreen):has(.has-3d) .rival-personality,
+  body:not(.game-fullscreen):has(.has-3d) .short-guide { display: none; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-commentary { grid-area: speech; margin: 0; padding: 6px 10px; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-commentary::before { display: none; }
+  body:not(.game-fullscreen):has(.has-3d) .commentary-heading { margin: 0; }
+  body:not(.game-fullscreen):has(.has-3d) #characterCaption { margin: 2px 0; font-size: 11px; line-height: 1.45; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-commentary button { min-height: 24px; padding: 0 6px; }
+  body:not(.game-fullscreen):has(.has-3d) .play-column { grid-area: play; }
+  body:not(.game-fullscreen):has(.has-3d) .stage-card { grid-area: stage; margin: 0; }
+}
+@media (max-width: 619px) {
+  #handTargets { display: none; }
+  .mahjong-table.has-3d { grid-template-columns: minmax(80px, .85fr) minmax(100px, 1.4fr) minmax(77px, .75fr); border-radius: 11px; }
+  .mahjong-table.has-3d .table-viewport { height: clamp(200px, 61vw, 328px); }
+  .has-3d .table-top, .has-3d .table-compass, .has-3d .table-meta { min-height: 53px; gap: 2px; padding: 5px 6px; }
+  .has-3d .table-top { padding-left: 10px; }
+  .has-3d .seat-label, .has-3d .table-compass p { font-size: 10px; }
+  .has-3d .seat-points b { font-size: 15px; }
+  .has-3d .table-meta { flex-direction: column-reverse; justify-content: center; }
+  .has-3d #windLabel { font-size: 8px; }
+  .has-3d .dora-panel > small { font-size: 9px; }
+  .has-3d .dora-panel #doraIndicator { min-height: 0; }
+  .has-3d .dora-panel .tile { width: 16px; height: 22px; border-bottom-width: 2px; }
+  .has-3d .hand-rail { display: block; padding: 6px 8px 0; }
+  .has-3d .player-seat { justify-content: space-between; font-size: 11px; }
+  .has-3d .player-seat b { font-size: 14px; }
+  .has-3d .player-hand {
+    justify-content: safe center;
+    gap: 2px;
+    min-height: 0;
+    padding: 7px 4px;
+    scrollbar-width: thin;
+  }
+  .has-3d .player-hand .tile { width: clamp(32px, 7.8vw, 42px); height: clamp(45px, 10.9vw, 59px); }
+  .has-3d .tile-hint { text-align: left; font-size: 10px; }
+  .has-3d .table-actions { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; padding: 7px 8px 9px; }
+  .has-3d .table-actions .primary { grid-area: 1 / 1; min-width: 0; padding: 7px 10px; }
+  .has-3d .call-actions { grid-area: 2 / 1 / 3 / 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .has-3d .call-actions button { min-width: 0; min-height: 40px; padding: 5px; font-size: 11px; }
+  .has-3d .review-rivers { grid-area: 1 / 2; min-height: 38px; padding-inline: 8px; font-size: 11px; }
+  body:not(.game-fullscreen):has(.has-3d) .topbar { height: 46px; }
+  body:not(.game-fullscreen):has(.has-3d) .game-shell { padding: 8px; }
+  body:not(.game-fullscreen):has(.has-3d) .score-pill { padding: 3px 6px; }
+  body:not(.game-fullscreen):has(.has-3d) .score-pill small { display: inline; margin: 0; font-size: 9px; letter-spacing: .6px; }
+  body:not(.game-fullscreen):has(.has-3d) .voice-toolbar-buttons { gap: 3px; }
+  body:not(.game-fullscreen):has(.has-3d) .voice-toolbar button { min-height: 32px; padding: 3px 6px; font-size: 10px; }
+}
+@media (max-width: 365px) {
+  body:not(.game-fullscreen):has(.has-3d) .rival-details h2 { font-size: 12px; }
+  body:not(.game-fullscreen):has(.has-3d) .rival-art { width: 45px; min-width: 45px; }
+}
+
+/* The shared fullscreen wrapper owns the screen size and its exit button. */
+body.game-fullscreen[data-game=mahjong] .mahjong-table.has-3d {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+body.game-fullscreen[data-game=mahjong] .has-3d .table-viewport { height: 100%; min-height: 165px; }
+body.game-fullscreen[data-game=mahjong] .has-3d .table-field { display: contents; }
+body.game-fullscreen[data-game=mahjong] .has-3d .cpu-hand { display: none; }
+body.game-fullscreen[data-game=mahjong] .has-3d .table-compass { min-width: 0; }
+body.game-fullscreen[data-game=mahjong] .has-3d .table-top,
+body.game-fullscreen[data-game=mahjong] .has-3d .table-meta,
+body.game-fullscreen[data-game=mahjong] .has-3d .table-compass { min-height: 34px; padding: 3px 8px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  body.game-fullscreen[data-game=mahjong] .has-3d .hand-rail { padding-block: 0; }
+  body.game-fullscreen[data-game=mahjong] .has-3d .table-actions { padding-block: 3px; }
+}

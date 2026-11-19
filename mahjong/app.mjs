@@ -1,6 +1,7 @@
 import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261107-mahjong';
 import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261108-gallery';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
+import {createTableControls} from './table-controls.mjs?v=20261119-3d';
 import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-gallery';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
 import {CharacterVoice} from './voice.mjs?v=20261108-gallery';
@@ -17,6 +18,9 @@ let audio=null,encounter=null,encounterRetryStage=null;
 let stageGalleryIndex=0,stageGalleryStage=null;
 let voiceState=null,currentSpokenLine=null,idleVoiceTimer=null,lastCharacterLineAt=0,activeSpeechOwner='';
 const voiceEventCounts=new Map(),VOICE_KEY='tk777-seven-mahjong-voice';
+const tableCanvas=$('tableScene');
+const tableControls=typeof tableCanvas?.getContext==='function'
+  ? createTableControls(tableCanvas,$('handTargets'),pickHandTile) : null;
 function voicePreferences(){try{const p=JSON.parse(localStorage.getItem(VOICE_KEY));return{enabled:p?.enabled!==false,volume:Number.isFinite(p?.volume)?Math.max(0,Math.min(1,p.volume)):.8};}catch{return{enabled:true,volume:.8};}}
 const characterVoice=new CharacterVoice({...voicePreferences(),Context:window.AudioContext||window.webkitAudioContext,synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,onChange:state=>{voiceState=state;renderVoiceControls(state);}});
 voiceState=characterVoice.state();
@@ -151,9 +155,22 @@ function discard(){
  if(!Number.isInteger(selected)){notify('打牌する牌を選んでください。');return;}
  step({type:'discard',index:selected,riichi:riichiPicking});
 }
+function pickHandTile(index){
+ if(!round||!started||ended||encounter||run.phase!=='playing')return;
+ const actions=legalActions(round);
+ if(!(riichiPicking?actions.riichiDiscards:actions.discardIndices).includes(index))return;
+ if(selected===index){discard();return;}
+ selected=index;sound();render();
+}
+function riverHTML(view,seat){
+ return (view?.discards[seat]||[]).map((id,index)=>{
+  const declared=view.riichiAt[seat]===index;
+  return `<span class="${declared?'riichi-discard':''}">${tileHTML(id,{small:true,label:declared?tileName(id)+'（リーチ宣言牌）':null})}</span>`;
+ }).join('');
+}
 function render(){
- const stage=currentStage(),profile=getCast(run.stage),name=displayStageName(stage),a=round?legalActions(round):{};
- const view=round?publicView(round):null;
+ const stage=currentStage(),profile=getCast(run.stage),name=displayStageName(stage);
+ const view=round?publicView(round):null,a=view?.legal||{};
  document.documentElement.style.setProperty('--rival-accent',stage.accent||colors[run.stage-1]);
  $('stageNumber').textContent=run.stage;$('battleNumber').textContent=run.battle;$('stageName').textContent=profile.tableTitle;$('cpuName').textContent=name;$('opponentSeatName').textContent=name;
  $('cpuRole').textContent=profile.role;$('cpuPersonality').textContent=profile.personality;
@@ -170,7 +187,12 @@ function render(){
   const disabled=!live||!legal.includes(index)||(riichiPicking&&!riichiLegal.includes(index));
   return `<span class="hand-tile-wrap ${round.drawn?.[0]!==null&&index===13?'drawn-tile':''}">${tileHTML(id,{button:true,index,selected:selected===index,disabled})}</span>`;
  }).join('');
- for(const [id,seat] of [['playerRiver',0],['cpuRiver',1]])$(id).innerHTML=(view?.discards?.[seat]||[]).map((t,i)=>`<span class="${view.riichiAt[seat]===i?'riichi-discard':''}">${tileHTML(t,{small:true})}</span>`).join('');
+ for(const [id,seat] of [['playerRiver',0],['cpuRiver',1]])$(id).innerHTML=riverHTML(view,seat);
+ tableControls?.update({
+  hand:view?.hands[0]||[], cpu:view?.hands[1]||[], rivers:view?.discards||[[],[]],
+  riichiAt:view?.riichiAt||[null,null], dora:view?.doraIndicator??null, wallCount:view?.wallRemaining??0,
+  selected, legal:riichiPicking?riichiLegal:legal, active:live, roundKey:String(generation),
+ });
  $('doraIndicator').innerHTML=round?tileHTML(view.doraIndicator,{small:true}):'—';
  $('windLabel').textContent=round?.dealer===1?'あなた：南家 / CPU：東家':'あなた：東家 / CPU：南家';
  $('wallCount').textContent=round?.wall?.length??108;
@@ -261,7 +283,17 @@ async function submitScore(event){
  catch(error){$('finalRankStatus').textContent=error.message;$('submitScore').disabled=false;}
 }
 document.addEventListener('click',event=>{const b=event.target.closest('button');if(!b)return;if(b.dataset.close)close(b.dataset.close);});
-$('playerHand').addEventListener('click',event=>{const b=event.target.closest('[data-tile-index]');if(!b||b.disabled)return;const index=Number(b.dataset.tileIndex);if(selected===index)discard();else{selected=index;sound();render();}});
+$('playerHand').addEventListener('click',event=>{const b=event.target.closest('[data-tile-index]');if(b&&!b.disabled)pickHandTile(Number(b.dataset.tileIndex));});
+$('reviewRivers').onclick=()=>{
+ if(!round)return;
+ const view=publicView(round);
+ for(const [id,seat] of [['reviewCpuRiver',1],['reviewPlayerRiver',0]]){
+  const content=riverHTML(view,seat);
+  if(content)$(id).innerHTML=content;
+  else $(id).textContent='まだ捨て牌はありません。';
+ }
+ show('riverReviewDialog');
+};
 $('startButton').onclick=startRun;$('discardButton').onclick=discard;
 $('encounterNext').onclick=nextEncounter;$('encounterSkip').onclick=skipConversation;
 $('encounterDialog').addEventListener('keydown',event=>{if(event.key==='ArrowRight'||(['Enter',' '].includes(event.key)&&!event.target.closest('button'))){event.preventDefault();if(!event.repeat)nextEncounter();}});
@@ -292,7 +324,15 @@ document.addEventListener('keydown',event=>{
  if(event.key==='?'){event.preventDefault();show('helpDialog');return;}
  if(!started||ended||!round)return;
  const a=legalActions(round),indices=riichiPicking?a.riichiDiscards:a.discardIndices;
- if(['ArrowLeft','ArrowRight'].includes(event.key)&&indices.length){event.preventDefault();const i=indices.indexOf(selected),next=i<0?0:(i+(event.key==='ArrowLeft'?-1:1)+indices.length)%indices.length;selected=indices[next];render();$('playerHand').querySelector(`[data-tile-index="${selected}"]`)?.scrollIntoView({block:'nearest',inline:'nearest'});}
+ if(['ArrowLeft','ArrowRight'].includes(event.key)&&indices.length){
+  event.preventDefault();
+  const i=indices.indexOf(selected),next=i<0?0:(i+(event.key==='ArrowLeft'?-1:1)+indices.length)%indices.length;
+  selected=indices[next];render();
+  if(!tableControls?.focusTile(selected)){
+   const button=$('playerHand').querySelector(`[data-tile-index="${selected}"]`);
+   button?.focus?.({preventScroll:true});button?.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
+ }
  if(event.key==='Enter'||event.key===' '){if(event.target.closest('button,a'))return;event.preventDefault();if(!event.repeat)discard();}
  if(event.key.toLowerCase()==='r'&&!event.repeat&&!$('riichiButton').disabled){event.preventDefault();$('riichiButton').click();}
 });

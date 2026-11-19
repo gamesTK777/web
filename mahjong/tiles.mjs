@@ -13,7 +13,7 @@ function sou(n){
   if(n===1)return '<path d="M27 9C16 10 12 19 16 30L12 43L23 37L29 47L32 35C42 29 38 14 27 9Z" fill="#2c7c67"/><path d="M25 12C18 16 18 25 24 31L32 26L33 16Z" fill="#6faa85"/><path d="M27 18L39 20L32 24" fill="#bd5545"/><circle cx="28" cy="17" r="1.7" fill="#172f38"/><path d="M17 32L27 27M20 47L20 40M27 48L25 39" fill="none" stroke="#8d6b45" stroke-width="2"/>';
   return positions(n).map(([x,y],i)=>{const color=n===5&&i===2?'#b34f45':'#2e7864';return `<path d="M${x} ${y-5}L${x} ${y+5}" stroke="${color}" stroke-width="4.7" stroke-linecap="round"/><path d="M${x-3} ${y-3}L${x+3} ${y-3}M${x-3} ${y+3}L${x+3} ${y+3}" stroke="${color}" stroke-width="1.8"/><path d="M${x-1} ${y-3}L${x-1} ${y+2}" stroke="#99bd97" stroke-width="1.1"/>`;}).join('');
 }
-function face(id){
+export function face(id){
   if(id<9)return `<text x="25" y="27" text-anchor="middle" font-size="28" font-weight="800" fill="#213943">${RANKS[id]}</text><text x="25" y="49" text-anchor="middle" font-size="20" font-weight="800" fill="#b34d45">萬</text>`;
   if(id<18)return pin(id%9+1);
   if(id<27)return sou(id%9+1);

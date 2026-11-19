@@ -2,6 +2,12 @@
 
 Seven-stage, two-player closed-hand arcade mahjong. Each stage plays all three rounds and advances when the sum of the player's three final point balances exceeds the rival's. Campaign progress stays in memory; shared TOP10 records are handled by the existing ranking service.
 
+## 3Dの対局画面
+
+対局が始まると、手前に自分の手牌、奥に相手の伏せ牌が並びます。牌を一度選んで「選んだ牌を打牌」を押すか、同じ牌をもう一度押して切ります。左右キーで選び、Enterでも打牌できます。小さい画面では卓の下にタップ用の手牌が並びます。「捨て牌を見る」では、相手と自分の河、横向きのリーチ宣言牌を拡大して確認できます。
+
+卓は同梱の Three.js で描画します。ゲーム状態は従来のエンジンが管理し、対戦中に描画側へ渡すCPUの手牌は伏せています。WebGLが使えない場合や途中で描画コンテキストを失った場合は、同じ対局を平面の卓で続けられます。
+
 ## 2026-11-09：ご褒美のMP4動画対応
 
 勝利時の3枠とステージ突破後の10枠に、静止画像とMP4を混在して登録できます。10件一括登録・個別差し替え・並べ替え・取り外しと、最後に「設定を保存する」操作は従来どおりです。対戦中のキャラクター画像は静止画像専用です。
