@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>10分間の描画計測 | ウェブクラフト777</title>
+  <style>
+    * {box-sizing:border-box} body{margin:0;background:#142d32;color:#f1f5ed;font:14px/1.55 system-ui,sans-serif}
+    canvas{display:block;width:100vw;height:100vh} main{position:absolute;top:10px;left:10px;padding:12px 15px;
+    width:min(550px,calc(100% - 20px));max-height:94vh;overflow:auto;border-radius:8px;background:#13292dec}
+    h1{font-size:1.2rem;margin:0} p{margin:.4em 0} button,a{font:inherit;color:inherit}button{padding:5px 12px;background:#334e4f;border:1px solid #aec4b4;border-radius:4px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
+    td,th{padding:2px 4px;border-bottom:1px solid #68847b} caption{text-align:left}
+  </style>
+</head>
+<body>
+  <canvas id="view" aria-label="移動中の試験ワールド"></canvas>
+  <main>
+    <h1>10分間の描画計測</h1>
+    <p>同じ周回路で採掘と設置を繰り返します。タブが非表示の間は計測を休止します。</p>
+    <button id="begin">10分の計測を開始</button> <a href="../index.html">ゲームへ</a>
+    <p id="conditions"></p><p id="progress" role="status">開始前</p>
+    <table><caption>1分ごとの実測</caption><thead><tr><th>分</th><th>平均FPS</th><th>描画回数</th><th>チャンク</th><th>形状数</th><th>ヒープ MiB</th></tr></thead><tbody id="results"></tbody></table>
+    <p id="totals"></p>
+  </main><script type="module" src="./soak.ts"></script>
+</body></html>
