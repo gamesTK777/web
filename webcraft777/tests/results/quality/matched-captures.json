@@ -58,10 +58,10 @@
       "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 (0x00002C02) Direct3D11 vs_5_0 ps_5_0, D3D11)",
       "width": 1920,
       "height": 1080,
-      "generationMs": 45.60000002384186,
-      "setupMs": 75.10000002384186
+      "generationMs": 52.799999952316284,
+      "setupMs": 48.40000009536743
     },
-    "firstReadyMs": 564.2999999523163,
+    "firstReadyMs": 563.7000000476837,
     "shots": {
       "forest": {
         "pose": {

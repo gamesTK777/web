@@ -1,0 +1,11 @@
+{
+  "captureSize": [
+    1920,
+    1080
+  ],
+  "pixels": 2073600,
+  "threshold": "JPEG: B,R >150; G<105; R+B-2G>230",
+  "priorMarked": 611039,
+  "finalMarked": 0,
+  "changedMarked": 474652
+}
