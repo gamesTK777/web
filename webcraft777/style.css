@@ -37,6 +37,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,.file-btn:focus-within 
               linear-gradient(0deg,#193d3266,transparent 32%),var(--cover) 64% 50% / cover, #537b67;
 }
 .home #cover { display: block; }
+#game[data-screen="title"] #cover { --cover: url("/art/title-classic.webp"); }
 .overlay { z-index: 3; }
 .title-overlay { overflow: auto; }
 .title-stage { min-height: 100%; display: flex; flex-direction: column; align-items: flex-start; padding: clamp(23px,5vh,55px) clamp(23px,7vw,110px); }
