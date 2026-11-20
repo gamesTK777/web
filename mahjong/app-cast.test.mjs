@@ -80,15 +80,18 @@ async function harness({mediaTypes={}, withTable=false}={}) {
     let drawn;
     const ready = new Promise(resolve => { drawn = resolve; });
     const canvas = nodes.get('tableScene'), board = new Element('section'), targets = nodes.get('handTargets');
+    const classes = new Set(['has-3d','is-loading-3d']);
+    board.classList = { add: name => classes.add(name), remove: name => classes.delete(name), toggle() {} };
     canvas.getContext = () => null;
     canvas.closest = selector => selector === '.mahjong-table' ? board : null;
     targets.getClientRects = () => [{}];
     table = {
-      model: null, ready, disposed: false, hitTest: () => -1,
+      model: null, ready, classes, disposed: false, hitTest: () => -1,
       press(index) { targets.dispatch('click', { target: targets.children[index] }); },
     };
     context.cancelAnimationFrame = () => {};
-    context.__gpu = { createTableScene(_canvas, { onUnavailable }) {
+    context.__gpu = { createTableScene(_canvas, { onReady, onUnavailable }) {
+      table.present = onReady;
       table.loseContext = onUnavailable;
       return {
         update(model) { table.model = structuredClone(model); drawn(); },
@@ -102,6 +105,36 @@ async function harness({mediaTypes={}, withTable=false}={}) {
   await context.hooks.ready;
   return { hooks: context.hooks, node: id => nodes.get(id), timers, document, window:context.window, table };
 }
+
+test('the 3D table prepares before the first round and only removes the loading state after a frame', async () => {
+  const f = await harness({withTable:true});
+  await f.table.ready;
+  assert.equal(f.node('welcomeDialog').open, true);
+  assert.equal(f.table.model.hand.length, 0);
+  assert.equal(f.table.classes.has('is-loading-3d'), true);
+  f.hooks.begin();
+  f.hooks.skipConversation();
+  assert.equal(f.table.model.hand.length, 14);
+  assert.equal(f.table.classes.has('is-loading-3d'), true);
+  f.table.present();
+  assert.equal(f.table.classes.has('is-loading-3d'), false);
+  assert.equal(f.table.classes.has('has-3d'), true);
+  f.table.loseContext();
+  assert.equal(f.table.classes.has('has-3d'), false);
+  assert.equal(f.table.disposed, true);
+});
+
+test('the CPU discard preview updates from public discards and clears for the next round', async () => {
+  const f = await harness();
+  const round = engine.createRound({seed: 12});
+  round.discards[1] = [9,28];
+  f.hooks.setupRound(round);
+  assert.match(f.node('latestCpuDiscard').innerHTML, /data-tile="28"/);
+  assert.match(f.node('cpuRiver').innerHTML, /latest-river-tile[^>]*><span[^>]*data-tile="28"/);
+  f.hooks.begin();
+  f.hooks.skipConversation();
+  assert.equal(f.node('latestCpuDiscard').textContent, '—');
+});
 
 test('every battle waits for its encounter before a real round is created or CPU timer is scheduled', async () => {
   const f = await harness();

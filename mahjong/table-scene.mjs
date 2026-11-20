@@ -3,7 +3,7 @@ import { makeTableArt } from './table-art.mjs';
 
 // Local +Z is the printed face of a standing tile. Table +Z is the player's seat.
 const W = 1.02, H = 1.43, D = .64;
-const OWN = 1.14, CPU = .94, WARE = .64, RIVER = .70;
+const OWN = 1.14, CPU = .94, WARE = .64, RIVER = .70, CPU_RIVER = .79;
 // After two 13-tile hands are dealt, 96 live tiles and the 14-tile dead wall remain.
 const NEAR_STACKS = 27, FAR_LIVE_STACKS = 21, DEAD_STACKS = 7;
 const WALL_CAPACITY = (NEAR_STACKS + FAR_LIVE_STACKS) * 2;
@@ -32,7 +32,7 @@ function facePlate() {
   return geometry;
 }
 
-export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
+export function createTableScene(canvas, {onPick,onHover,onReady,onUnavailable} = {}) {
   const renderer = new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});
   renderer.setClearColor(0x101c1d, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -152,6 +152,8 @@ export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
   stick(9.03,.116,-5.86,pip,-.13); stick(9.07,.118,-6.10,red,.02);
   const deposits=[stick(0,.116,.82,red),stick(0,.116,-.82,red)];
   deposits.forEach(m=>{m.visible=false;});
+  const discardMark = box(0,.055,0,CPU_RIVER*W+.08,.012,CPU_RIVER*H+.08,finish(0xffd479),.005);
+  discardMark.castShadow = false;
 
   const plate=keep(facePlate());
   function batch(geo,material,capacity=170,cast=false,receive=true) {
@@ -211,16 +213,19 @@ export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
     // Three banks of conventional six-by-three rivers leave room for all 53 discards per seat.
     for(const seat of [0,1]){
       const ids=m.rivers[seat], side=seat===0?1:-1;
+      const size=seat===0?RIVER:CPU_RIVER;
+      const bankGap=seat===0?4.92:5.5;
       for(let start=0;start<ids.length;start+=6){
         const bank=Math.floor(start/18), row=Math.floor(start/6)%3;
-        const offset=[0,-4.92,4.92][bank]??0;
-        const base=offset-(6*(W+.066)*RIVER)/2;
+        const offset=[0,-bankGap,bankGap][bank]??0;
+        const base=offset-(6*(W+.066)*size)/2;
         let edge=base;
         for(let i=start;i<Math.min(start+6,ids.length);i++){
           const sideways=m.riichiAt[seat]===i;
-          const step=((sideways?H:W)+.066)*RIVER;
-          const x=side*(edge+step/2), z=side*(1.42+row*1.057);
-          output.push(tile('r'+seat+'-'+i,ids[i],x,.056+D*RIVER/2,z,-Math.PI/2,(seat?Math.PI:0)+(sideways?Math.PI/2:0),RIVER));
+          const step=((sideways?H:W)+.066)*size;
+          const x=side*(edge+step/2), z=seat===0?1.42+row*1.057:-(1.25+row*1.15);
+          // Show both rivers upright from the player's seat. Riichi still turns a tile sideways.
+          output.push(tile('r'+seat+'-'+i,ids[i],x,.056+D*size/2,z,-Math.PI/2,sideways?Math.PI/2:0,size));
           edge+=step;
         }
       }
@@ -296,6 +301,9 @@ export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
     if(dead||lost||!model||!width||!height)return;
     for(const b of batches)b.count=0;
     let moving=false;
+    const discardIndex = model.rivers[1].length-1;
+    const latestCpuKey = 'r1-'+discardIndex;
+    discardMark.visible = false;
     for(const t of tiles){
       point.copy(t.p);spin.copy(t.q);
       const anim=motion.get(t.key);
@@ -309,6 +317,12 @@ export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
         }else motion.delete(t.key);
       }
       const x=point.x,z=point.z;
+      if(t.key===latestCpuKey && !motion.has(t.key)){
+        discardMark.visible = true;
+        discardMark.position.x = x;
+        discardMark.position.z = z;
+        discardMark.rotation.y = model.riichiAt[1]===discardIndex ? Math.PI/2 : 0;
+      }
       poseMatrix.compose(point,spin,scale.setScalar(t.scale));
       if(t.key[0]==='h') {
         const index=Number(t.key.slice(1));
@@ -325,9 +339,22 @@ export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
     }
     for(const b of batches){b.instanceMatrix.needsUpdate=true;if(b.instanceColor)b.instanceColor.needsUpdate=true;}
     renderer.render(scene,camera);
+    if (onReady) {
+      const ready = onReady;
+      onReady = undefined;
+      ready();
+    }
     if(moving)request();
   }
-  function request(){if(!dead&&!lost&&!frame)frame=requestAnimationFrame(draw);}
+  function request(){
+    if(!dead&&!lost&&!frame)frame=requestAnimationFrame(now=>{
+      try { draw(now); }
+      catch (error) {
+        console.warn('3D卓を描画できないため、通常の卓に切り替えました。',error);
+        onUnavailable?.();
+      }
+    });
+  }
   function projectHand(){
     resize();
     return hand.map(t=>{

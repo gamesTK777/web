@@ -2,7 +2,7 @@
 <html lang="ja">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#102b35"><meta name="description" content="7人の対戦相手を突破する、2人対戦のアーケード麻雀。3対局の持ち点合計で突破し、画像・動画10件のご褒美を閲覧。"><title>セブン麻雀 — SEVEN MAHJONG | TK777</title><link rel="stylesheet" href="style.css?v=20261109-mp4">  <link rel="stylesheet" href="../shared/fullscreen.css?v=20261108-fullscreen">
   <link rel="stylesheet" href="../shared/fullscreen-games.css?v=20261108-fullscreen">
-  <link rel="stylesheet" href="table-view.css?v=20261119-3d">
+  <link rel="stylesheet" href="table-view.css?v=20261120-clarity">
 </head>
 <body data-game="mahjong">
   <header class="topbar"><a class="portal-link" href="../index.html">← ゲーム一覧</a><a class="brand" href="#"><span class="brand-mark" aria-hidden="true">7</span><span>セブン麻雀<small>SEVEN MAHJONG</small></span></a><div class="header-actions"><button id="rankingButton" class="quiet">TOP 10</button><button id="helpButton" class="icon-button" aria-label="遊び方を開く">?</button><a id="adminLink" class="admin-link" href="admin.html" target="_blank" rel="noopener">管理</a></div></header>
@@ -13,17 +13,21 @@
     <div class="game-layout">
       <aside class="rival-column"><section class="rival-card panel"><div class="rival-art" id="cpuPortrait"><div class="unregistered-portrait"><span>七</span><small>CHARACTER IMAGE</small><p>キャラクター未登録</p></div></div><div class="rival-details"><p class="eyebrow">YOUR NEXT RIVAL</p><h2 id="cpuName">春野ひなた</h2><p id="cpuRole" class="rival-role">カフェ店主</p><p id="cpuPersonality" class="rival-personality">明るく、人なつこい</p><div class="rival-tags"><span id="cpuLevel">CPU LEVEL 1</span><span>2人対戦</span></div></div></section><section id="characterCommentary" class="rival-commentary panel" hidden><div class="commentary-heading"><strong id="characterSpeaker">春野ひなた</strong><span id="characterVoiceState">台詞</span></div><p id="characterCaption" role="status" aria-live="polite"></p><button id="voiceReplay" type="button">もう一度聞く</button></section><section class="stage-card panel"><div class="section-row"><span class="eyebrow">STAGE <b id="stageNumber">1</b> / 7</span><span class="battle-tag">第 <b id="battleNumber">1</b> 戦 / 3</span></div><h3 id="stageName">はじまりの卓</h3><p id="stageDescription">3対局の持ち点合計で上回れば、次の対戦相手へ。</p><div id="stageProgress" class="win-progress" aria-label="このステージの3対局の結果"><span>第1戦</span><span>第2戦</span><span>第3戦</span></div><div class="stage-total-panel"><p>確定した対局の持ち点合計</p><div><span>あなた <b id="stagePlayerTotal">0</b></span><span>相手 <b id="stageCpuTotal">0</b></span></div></div></section><section class="short-guide panel"><span class="eyebrow">ONE MORE TILE</span><p>同じ牌を3枚、または同じ種類の数字を3つ続けて集めよう。</p><p class="muted">このゲームは門前・鳴きなしの簡易ルールです。</p></section></aside>
       <section class="play-column">
-        <section class="mahjong-table" aria-label="麻雀の対戦卓">
-          <div class="table-viewport">
+        <section class="mahjong-table has-3d is-loading-3d" aria-label="麻雀の対戦卓">
+          <div class="table-viewport" aria-busy="true">
             <canvas id="tableScene" aria-hidden="true"></canvas>
             <div id="handTargets" role="group" aria-label="あなたの手牌。牌を選択して打牌"></div>
+            <div class="table-loading" role="status">3D卓を準備しています…</div>
           </div>
-          <div class="table-top"><div class="seat-label"><i class="seat-dot cpu"></i><span id="opponentSeatName">対戦相手</span></div><div class="seat-points"><small>持ち点</small><b id="cpuPoints">25,000</b></div></div>
+          <div class="table-top">
+            <div><div class="seat-label"><i class="seat-dot cpu"></i><span id="opponentSeatName">対戦相手</span></div><div class="seat-points"><small>持ち点</small><b id="cpuPoints">25,000</b></div></div>
+            <div class="latest-discard"><span>最新の打牌</span><span id="latestCpuDiscard" aria-live="polite">—</span></div>
+          </div>
           <div id="cpuHand" class="cpu-hand" aria-label="対戦相手の伏せた手牌"></div>
           <div class="table-meta"><span id="windLabel">あなた：東家 / CPU：南家</span><div class="dora-panel"><small>ドラ表示</small><div id="doraIndicator" aria-label="ドラ表示牌"></div></div></div>
           <div class="table-field"><div class="table-grain" aria-hidden="true"></div><section class="river-zone cpu-river-zone" aria-label="相手の捨て牌"><span class="river-caption">RIVAL'S DISCARDS</span><div id="cpuRiver" class="river"></div></section><div class="table-compass"><div><span class="compass-tile">七</span><small>東場の二人卓</small></div><p id="turnStatus" role="status">ゲーム開始を待っています</p><span class="wall-badge">残り <b id="wallCount">—</b> 牌</span></div><section class="river-zone player-river-zone" aria-label="あなたの捨て牌"><div id="playerRiver" class="river"></div><span class="river-caption">YOUR DISCARDS</span></section></div>
           <div class="hand-rail"><div class="player-seat"><span><i class="seat-dot you"></i>あなたの手牌</span><b id="playerPoints">25,000 <small>点</small></b></div><div id="playerHand" class="player-hand" role="group" aria-label="あなたの手牌。牌を選択して打牌"></div><p id="tileHint" class="tile-hint">牌を選んで「打牌」。同じ牌をもう一度押しても打牌できます。</p></div>
-          <div class="table-actions"><button id="discardButton" class="primary" disabled>選んだ牌を打牌</button><div class="call-actions"><button id="riichiButton" disabled>リーチ</button><button id="tsumoButton" class="win-action" disabled>ツモ</button><button id="ronButton" class="win-action" disabled>ロン</button><button id="passButton" disabled>見送り</button></div><button id="reviewRivers" class="review-rivers" type="button" aria-haspopup="dialog" aria-controls="riverReviewDialog">捨て牌を見る</button></div>
+          <div class="table-actions"><button id="discardButton" class="primary" disabled>選んだ牌を打牌</button><div class="call-actions"><button id="riichiButton" disabled>リーチ</button><button id="tsumoButton" class="win-action" disabled>ツモ</button><button id="ronButton" class="win-action" disabled>ロン</button><button id="passButton" disabled>見送り</button></div><button id="reviewRivers" class="review-rivers" type="button" aria-haspopup="dialog" aria-controls="riverReviewDialog" disabled>捨て牌を拡大</button></div>
         </section>
         <div id="roundNotice" class="round-notice" role="status"><span class="notice-spark" aria-hidden="true">✦</span>ゆっくり考えて大丈夫。あなたのペースで一局を。</div>
         <div class="session-controls"><button id="finishButton" class="text-button">プレイを終了して記録へ →</button></div><section class="log-panel panel"><div class="section-row"><span class="eyebrow">TABLE JOURNAL</span><small>直近の対局ログ</small></div><ol id="logList"><li>セブン麻雀へようこそ。</li></ol></section>
@@ -56,6 +60,6 @@
   <dialog id="rankingDialog"><div class="dialog-heading"><div><p class="eyebrow">SHARED HALL OF FAME</p><h2>TOP 10</h2></div><button data-close="rankingDialog" class="close-button" aria-label="ランキングを閉じる">×</button></div><p id="rankingStatus" class="status-line" role="status">ランキングを取得しています…</p><div class="ranking-table-wrap"><table class="ranking-table"><thead><tr><th>順位</th><th>名前</th><th>スコア</th></tr></thead><tbody id="rankingRows"></tbody></table></div><button id="refreshRankingButton" class="quiet wide">最新のランキングに更新</button></dialog>
   <dialog id="quitDialog"><div class="dialog-heading"><h2>今回の挑戦を終了しますか？</h2></div><p>現在のスコアをランキングへ登録できます。続ける場合は対局へ戻ってください。</p><div class="dialog-actions"><button id="confirmFinishButton" class="primary wide">終了して記録を見る</button><button data-close="quitDialog" class="quiet wide">対局へ戻る</button></div></dialog>
   <script src="../shared/leaderboard.js?v=20261107"></script>
-  <script type="module" src="app.mjs?v=20261120-duel"></script>
+  <script type="module" src="app.mjs?v=20261120-clarity"></script>
   <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body></html>

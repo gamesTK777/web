@@ -3,6 +3,7 @@ import { tileName } from './tiles.mjs?v=20261107-mahjong';
 /** Connect the accessible buttons to the projected hand. All moves still go through app/engine. */
 export function createTableControls(canvas, targets, onPick) {
   const table = canvas.closest('.mahjong-table');
+  const viewport = canvas.parentElement;
   let model = null;
   let scene = null;
   let loading = false;
@@ -10,8 +11,14 @@ export function createTableControls(canvas, targets, onPick) {
   let resizeFrame = 0;
   let observer;
 
+  function finishLoading() {
+    table.classList.remove('is-loading-3d');
+    viewport?.removeAttribute('aria-busy');
+  }
+
   function fallback() {
     unavailable = true;
+    finishLoading();
     table.classList.remove('has-3d');
     targets.replaceChildren();
     observer?.disconnect();
@@ -70,9 +77,9 @@ export function createTableControls(canvas, targets, onPick) {
   async function openScene() {
     loading = true;
     try {
-      const { createTableScene } = await import('./table-scene.mjs?v=20261120-duel');
+      const { createTableScene } = await import('./table-scene.mjs?v=20261120-clarity');
       table.classList.add('has-3d');
-      scene = createTableScene(canvas, { onUnavailable: fallback });
+      scene = createTableScene(canvas, { onReady: finishLoading, onUnavailable: fallback });
       if (!scene || unavailable) { fallback(); return; }
       if (typeof ResizeObserver !== 'undefined') {
         observer = new ResizeObserver(resized);
@@ -108,7 +115,7 @@ export function createTableControls(canvas, targets, onPick) {
       table.classList.toggle('is-live-table', next.active);
       if (unavailable) return;
       if (scene) draw();
-      else if (!loading && next.active) void openScene();
+      else if (!loading) void openScene();
     },
     focusTile(index) {
       const button = targets.children[index];

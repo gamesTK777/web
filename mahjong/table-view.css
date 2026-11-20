@@ -1,5 +1,5 @@
-/* The original board stays playable while the renderer is loading or unavailable. */
-.table-viewport, .review-rivers { display: none; }
+/* The 3D layout is present from the first paint. The loading notice covers it until a frame arrives. */
+.table-viewport, .table-loading, .review-rivers { display: none; }
 
 .mahjong-table.has-3d {
   --rail: #172829;
@@ -35,6 +35,18 @@
 #tableScene, #handTargets { position: absolute; inset: 0; width: 100%; height: 100%; }
 #tableScene { display: block; }
 #handTargets { pointer-events: none; }
+.is-loading-3d #tableScene,
+.is-loading-3d #handTargets,
+.is-loading-3d .player-hand { visibility: hidden; }
+.is-loading-3d .table-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, #28514b, #173734 68%);
+  color: #faeed5;
+  font-size: 14px;
+}
 #handTargets .table-hit {
   position: absolute;
   display: block;
@@ -71,10 +83,29 @@
 }
 .has-3d .table-top {
   grid-area: rival;
-  justify-content: center;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  justify-content: space-between;
+  gap: 8px;
+}
+.latest-discard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #f3d89d;
+  font-size: 10px;
+  font-weight: 650;
+}
+#latestCpuDiscard {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  min-height: 40px;
+}
+#latestCpuDiscard .tile {
+  width: 30px;
+  height: 40px;
+  border-bottom-width: 3px;
+  outline: 1px solid #e6ba67;
+  outline-offset: 2px;
 }
 .has-3d .seat-label { color: #f4e9d5; font-size: 12px; font-weight: 650; }
 .has-3d .seat-label span { overflow-wrap: anywhere; }
@@ -178,10 +209,24 @@
 .river-review-dialog h2 { margin: 0; }
 .river-review-dialog section + section { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 16px; }
 .river-review-dialog h3 { margin: 0 0 8px; color: #d9ccaa; font-size: 13px; }
-.review-river { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-height: 40px; }
-.review-river .tile { width: 32px; height: 44px; }
-.review-river .riichi-discard { display: inline-grid; width: 44px; min-height: 44px; place-items: center; }
+.review-river {
+  --review-tile-width: clamp(38px, 9.5vw, 47px);
+  --review-tile-height: clamp(52px, 13.2vw, 64px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 6px;
+  min-height: var(--review-tile-height);
+}
+.review-river .tile { width: var(--review-tile-width); height: var(--review-tile-height); }
+.review-river .riichi-discard {
+  display: inline-grid;
+  width: var(--review-tile-height);
+  min-height: var(--review-tile-height);
+  place-items: center;
+}
 .review-river .riichi-discard .tile { transform: rotate(90deg); outline: 1px solid #e6bd77; outline-offset: 1px; }
+:is(.river,.review-river) .latest-river-tile .tile { outline: 2px solid #ffd479; outline-offset: 2px; }
 
 @media (min-width: 620px) {
   .has-3d .player-hand { display: none; }
@@ -257,7 +302,10 @@ body:not(.game-fullscreen):has(.has-3d) .round-notice { min-height: 22px; }
   .mahjong-table.has-3d { grid-template-columns: minmax(80px, .85fr) minmax(100px, 1.4fr) minmax(77px, .75fr); border-radius: 11px; }
   .mahjong-table.has-3d .table-viewport { height: clamp(200px, 61vw, 328px); }
   .has-3d .table-top, .has-3d .table-compass, .has-3d .table-meta { min-height: 53px; gap: 2px; padding: 5px 6px; }
-  .has-3d .table-top { padding-left: 10px; }
+  .has-3d .table-top { flex-wrap: wrap; gap: 1px 8px; padding-left: 10px; }
+  .has-3d .latest-discard { gap: 5px; font-size: 9px; }
+  .has-3d #latestCpuDiscard { width: 23px; min-height: 30px; }
+  .has-3d #latestCpuDiscard .tile { width: 23px; height: 30px; }
   .has-3d .seat-label, .has-3d .table-compass p { font-size: 10px; }
   .has-3d .seat-points b { font-size: 15px; }
   .has-3d .table-meta { flex-direction: column-reverse; justify-content: center; }

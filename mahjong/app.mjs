@@ -1,7 +1,7 @@
 import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261107-mahjong';
 import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261108-gallery';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
-import {createTableControls} from './table-controls.mjs?v=20261120-duel';
+import {createTableControls} from './table-controls.mjs?v=20261120-clarity';
 import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-gallery';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
 import {CharacterVoice} from './voice.mjs?v=20261108-gallery';
@@ -163,9 +163,13 @@ function pickHandTile(index){
  selected=index;sound();render();
 }
 function riverHTML(view,seat){
- return (view?.discards[seat]||[]).map((id,index)=>{
+ const discards=view?.discards[seat]||[];
+ return discards.map((id,index)=>{
   const declared=view.riichiAt[seat]===index;
-  return `<span class="${declared?'riichi-discard':''}">${tileHTML(id,{small:true,label:declared?tileName(id)+'（リーチ宣言牌）':null})}</span>`;
+  const latest=seat===1&&index===discards.length-1;
+  const notes=[declared?'リーチ宣言牌':'',latest?'相手の最新の打牌':''].filter(Boolean);
+  const classes=[declared?'riichi-discard':'',latest?'latest-river-tile':''].filter(Boolean).join(' ');
+  return `<span class="${classes}">${tileHTML(id,{small:true,label:notes.length?tileName(id)+'（'+notes.join('・')+'）':null})}</span>`;
  }).join('');
 }
 function render(){
@@ -188,6 +192,13 @@ function render(){
   return `<span class="hand-tile-wrap ${round.drawn?.[0]!==null&&index===13?'drawn-tile':''}">${tileHTML(id,{button:true,index,selected:selected===index,disabled})}</span>`;
  }).join('');
  for(const [id,seat] of [['playerRiver',0],['cpuRiver',1]])$(id).innerHTML=riverHTML(view,seat);
+ const latest=$('latestCpuDiscard'),cpuTile=view?.discards[1].at(-1);
+ if(latest.dataset.tile!==String(cpuTile)){
+  latest.dataset.tile=String(cpuTile);
+  if(cpuTile===undefined)latest.textContent='—';
+  else latest.innerHTML=tileHTML(cpuTile,{small:true,label:'相手の最新の打牌 '+tileName(cpuTile)});
+ }
+ $('reviewRivers').disabled=!round;
  tableControls?.update({
   hand:view?.hands[0]||[], cpu:view?.hands[1]||[], rivers:view?.discards||[[],[]],
   riichiAt:view?.riichiAt||[null,null], dora:view?.doraIndicator??null, wallCount:view?.wallRemaining??0,
@@ -293,6 +304,7 @@ $('reviewRivers').onclick=()=>{
   else $(id).textContent='まだ捨て牌はありません。';
  }
  show('riverReviewDialog');
+ $('reviewCpuRiver').querySelector('.latest-river-tile')?.scrollIntoView({block:'nearest'});
 };
 $('startButton').onclick=startRun;$('discardButton').onclick=discard;
 $('encounterNext').onclick=nextEncounter;$('encounterSkip').onclick=skipConversation;
