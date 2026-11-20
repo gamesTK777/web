@@ -30,8 +30,13 @@ test('default asset mapping has all 28 unique slots and supports the hosted admi
 test('generic server defaults get original names while administrator names remain intact', () => {
   for (const profile of CAST) assert.equal(displayStageName({ id: profile.id, name: `ステージ${profile.id}の対戦相手` }), profile.name);
   assert.equal(displayStageName({ id: 3, name: '  私の対戦キャラクター  ' }), '私の対戦キャラクター');
-  assert.ok(encounterLines(3, 1, { name: 'カスタムの名前' }).join('').includes('カスタムの名前'));
-  assert.ok(!encounterLines(3, 1, { name: 'カスタムの名前' }).join('').includes('小森こはる'));
+  for (const profile of CAST) {
+    const stock = encounterLines(profile.id, 1, { name: profile.name });
+    const custom = encounterLines(profile.id, 1, { name: 'カスタムの名前' });
+    assert.ok(stock[0].includes(profile.name));
+    assert.equal(custom[0], profile.customGreeting);
+    assert.deepEqual(custom.slice(1), stock.slice(1));
+  }
 });
 
 test('encounter progression is immutable, completes only after the final line, and supports explicit skip', () => {

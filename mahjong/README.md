@@ -22,7 +22,7 @@ MP4は1本25MB以下で、そのまま保存します。ブラウザーで再生
 
 1勝ごとの記念画像3枠は従来どおり。3対局終了後に合計点で突破すると、次ステージへ進む前に、その相手が敗北を認めてご褒美を案内する10枠の閲覧画面を開きます。前後ボタン、番号、左右キーに対応し、画像は縦横を問わず全体を表示。最終ステージもギャラリーを経由して完全クリアの記録へ進みます。未登録・読込失敗の枠は案内を出し、閲覧や進行を止めません。
 
-新しい7人の台詞も自然な日本語音声を追加し、標準録音は合計238クリップ。既存231クリップは変更せず、新規7クリップも同じ声と人物別の話し方で制作しています。音声完了は進行の条件になりません。
+ギャラリーを開くと、対戦相手からご褒美を案内する収録音声が流れます。
 
 管理画面の「ステージ突破のご褒美10枚」に、ちょうど10枚をドラッグ＆ドロップするかファイル選択で登録します。ファイル名を自然な数字順で並べ、各画像をWebP・長辺1400px以下・2MB以下へ調整。10枚の準備後に順にアップロードし、すべて成功してから編集設定へ一括反映します。途中失敗時は従来の並びを維持。アップロード後は番号とプレビューで順序を確認でき、左右の入れ替え・個別差し替え・取り外しにも対応します。最後に「設定を保存する」で公開設定へ反映します。
 
@@ -48,12 +48,10 @@ Generated-image prompts and provenance are stored with the cast assets. The orig
 
 ## Character voices
 
-`voice.mjs` selects bundled natural Japanese recordings for all 238 original character lines. `recorded-voice.mjs` plays them with Web Audio at playback rate 1, so the standard dialogue has the same voice quality across devices and does not depend on installed system voices. The recordings use Microsoft `ja-JP-NanamiNeural` with seven subtle generation-time delivery presets; they are one female base voice with character-specific delivery, not seven separately recorded actors. A regional accent cannot be guaranteed. Details, per-file hashes and generation settings are stored in `assets/voices/`.
+`app.mjs` selects the bundled MP3 by character and caption. `recorded-voice.mjs` plays it through Web Audio at its recorded speed. The 245 licensed VOICEVOX Nemo clips use six Japanese voices with seven sets of delivery settings. Each character has an alternate recorded greeting for administrator-assigned names. Exact generation settings and file hashes are in [assets/voices/](assets/voices/).
 
 Encounter lines, all 21 victory captions, round starts, both players' public riichi declarations, CPU wins and draws can be spoken. Ordinary comments wait at least 12 seconds after another line. An idle human turn gets one gentle comment after 20 seconds. No concealed hand analysis is used for character remarks. Speech is optional and never controls turn progression or waits for playback to complete.
 
 Voice on/off is available before starting, during encounters, and on victory images. The settings dialog includes per-character samples and voice volume. Replay is explicit; advancing a line, skipping, changing dialogs, ending, hiding or leaving the page cancels older speech. Preferences stay in localStorage under `tk777-seven-mahjong-voice`. The audio context starts only from a user gesture, before awaited work. MP3s download only when requested, with at most two pending downloads and a 24-clip decoded LRU cache. The game does not call an external synthesis service during play. Stopped or muted requests cannot revive when an old download finishes.
 
-Administrator-customized text that does not match a bundled line retains device Japanese speech as a fallback. Standard recording errors keep the full caption and expose explicit replay; they never silently substitute a different device voice. Speech remains optional and cannot block game progression.
-
-Validation for the natural-recording update: all 75 mahjong tests passed, including 12 recorded-audio checks for the 231-line manifest, user-gesture gating, duplicate requests, forced replay, bounded caching, source replacement, late callbacks, cancellation, media errors and custom-text fallback. All 231 MP3s match their provenance hashes and decode completely with ffmpeg; duration is 2.232–9.936 seconds, total 7,380,432 bytes. Seven representative character samples were decoded to nonzero PCM waveforms. Browser playback/layout checks are performed separately; this file does not claim a subjective listening-quality or iPhone hardware assessment from automated decoding.
+If a recording fails to load, the full caption and replay control stay available. If Web Audio is unavailable, the game presents the dialogue as text. The game advances independently of audio playback.

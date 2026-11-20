@@ -33,7 +33,7 @@
         <div class="session-controls"><button id="finishButton" class="text-button">プレイを終了して記録へ →</button></div><section class="log-panel panel"><div class="section-row"><span class="eyebrow">TABLE JOURNAL</span><small>直近の対局ログ</small></div><ol id="logList"><li>セブン麻雀へようこそ。</li></ol></section>
       </section>
     </div>
-    <footer><span>閉じると進行はリセットされます。最終スコアはTOP10へ登録できます。</span><span>TK777 ORIGINAL ARCADE</span></footer>
+    <footer><span>閉じると進行はリセットされます。最終スコアはTOP10へ登録できます。</span><span>TK777 ORIGINAL ARCADE · 音声合成 <a href="https://voicevox.hiroshiba.jp/nemo/" target="_blank" rel="noopener">VOICEVOX Nemo</a></span></footer>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <dialog id="riverReviewDialog" class="river-review-dialog" aria-labelledby="riverReviewHeading">
@@ -60,6 +60,6 @@
   <dialog id="rankingDialog"><div class="dialog-heading"><div><p class="eyebrow">SHARED HALL OF FAME</p><h2>TOP 10</h2></div><button data-close="rankingDialog" class="close-button" aria-label="ランキングを閉じる">×</button></div><p id="rankingStatus" class="status-line" role="status">ランキングを取得しています…</p><div class="ranking-table-wrap"><table class="ranking-table"><thead><tr><th>順位</th><th>名前</th><th>スコア</th></tr></thead><tbody id="rankingRows"></tbody></table></div><button id="refreshRankingButton" class="quiet wide">最新のランキングに更新</button></dialog>
   <dialog id="quitDialog"><div class="dialog-heading"><h2>今回の挑戦を終了しますか？</h2></div><p>現在のスコアをランキングへ登録できます。続ける場合は対局へ戻ってください。</p><div class="dialog-actions"><button id="confirmFinishButton" class="primary wide">終了して記録を見る</button><button data-close="quitDialog" class="quiet wide">対局へ戻る</button></div></dialog>
   <script src="../shared/leaderboard.js?v=20261107"></script>
-  <script type="module" src="app.mjs?v=20261120-clarity"></script>
+  <script type="module" src="app.mjs?v=20261120-dialogue"></script>
   <script type="module" src="../shared/fullscreen.mjs?v=20261108-fullscreen"></script>
 </body></html>

@@ -7,7 +7,7 @@ import * as arcade from './arcade.mjs';
 import * as tiles from './tiles.mjs';
 import * as cast from './cast.mjs';
 import * as encounterModule from './encounter.mjs';
-import * as voiceModule from './voice.mjs';
+import * as voiceModule from './recorded-voice.mjs';
 import * as voiceLines from './voice-lines.mjs';
 import * as rewardMedia from './reward-media.mjs';
 
@@ -60,7 +60,7 @@ async function harness({mediaTypes={}, withTable=false}={}) {
     setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { fn, delay }); return id; }, clearTimeout(id) { timers.delete(id); },
     fetch: async url => ({ ok: true, json: async () => String(url).endsWith('/config') ? { version: 0, mediaTypes, stages: cast.CAST.map(p => ({ id: p.id, name: `ステージ${p.id}の対戦相手`, portrait: null, rewards: [null, null, null], accent: '#315f6b' })) } : { id: 'test-session', entries: [] } })
   });
-  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {CharacterVoice}=__voice; const {chooseVoiceLine,getVoiceProfile}=__voiceLines;const {createRewardMediaController,rewardMediaKind,isVideoControlEvent}=__rewardMedia;`;
+  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {RecordedCharacterVoice}=__voice;const VOICE_ASSETS={}; const {chooseVoiceLine,getVoiceProfile}=__voiceLines;const {createRewardMediaController,rewardMediaKind,isVideoControlEvent}=__rewardMedia;`;
   const hooks = `globalThis.hooks={ready:configReady,startRun,startBattle,nextEncounter,skipConversation,beginBattleRound,step,scheduleCpu,
     begin({stage=1,battle=1,portrait=null,name,retries=0}={}){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();run=createArcade();Object.assign(run,{stage,battle,retries,totalBattles:battle-1});runConfig=structuredClone(defaults);if(portrait)runConfig.stages[stage-1].portrait=portrait;if(name)runConfig.stages[stage-1].name=name;started=true;ended=false;encounter=null;round=null;startBattle();},
     reward(stage,win,custom=null,types={}){const result={winner:0,points:2000,han:1,fu:30};run={...createArcade(),stage,battle:win,wins:win-1};run=finishBattle(run,result);round={result};runConfig=structuredClone(defaults);if(custom)runConfig.stages[stage-1].rewards[win-1]=custom;runConfig.mediaTypes=structuredClone(types);showBattleResult();},
@@ -316,10 +316,10 @@ test('all 21 win slots select the matching person and image; custom images fall 
   f.node('rewardImage').onerror(); assert.equal(f.node('rewardImage').hidden, true); assert.equal(f.node('rewardPlaceholder').hidden, false);
 });
 
-test('custom character name and portrait override defaults, with a bundled-image recovery path', async () => {
+test('custom characters keep their displayed name and use a dedicated greeting and portrait', async () => {
   const f = await harness(); f.hooks.begin({ stage: 3, name: '独自のキャラクター', portrait: 'portrait-upload' });
   assert.equal(f.node('encounterName').textContent, '独自のキャラクター');
-  assert.ok(f.node('encounterSpeech').textContent.includes('独自のキャラクター'));
+  assert.equal(f.node('encounterSpeech').textContent, cast.getCast(3).customGreeting);
   const image = f.node('encounterPortrait').querySelector('img'); assert.match(image.src, /portrait-upload$/);
   image.onerror(); assert.equal(image.src, cast.defaultPortraitURL(3));
   image.onerror(); assert.ok(f.node('encounterPortrait').innerHTML.includes('画像を読み込めません'));

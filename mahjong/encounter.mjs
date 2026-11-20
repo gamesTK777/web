@@ -1,4 +1,4 @@
-import { encounterLines } from './cast.mjs?v=20261108-cast';
+import { encounterLines } from './cast.mjs?v=20261120-dialogue';
 
 export function createEncounter(stageId, battle = 1, options = {}) {
   return { stageId, battle, lines: encounterLines(stageId, battle, options), index: 0, complete: false };

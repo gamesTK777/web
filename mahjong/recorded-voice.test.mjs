@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {statSync} from 'node:fs';
 import {RecordedCharacterVoice,findRecordedVoice} from './recorded-voice.mjs';
 import {CharacterVoice} from './voice.mjs';
 import {CAST,encounterLines} from './cast.mjs';
@@ -37,10 +38,15 @@ test('every original encounter, event variation and reward has one safe natural 
   const keys=new Set();
   for(const character of CAST){
     const lines=[...encounterLines(character.id,1),...encounterLines(character.id,2),...encounterLines(character.id,3),...encounterLines(character.id,1,{retry:true}),...character.rewards,character.stageReward];
+    lines.push(encounterLines(character.id,1,{name:'登録された名前'})[0]);
     for(const event of events)for(let variant=0;variant<3;variant++)lines.push(chooseVoiceLine(character.id,event,{variant}));
     for(const text of lines){const path=findRecordedVoice(VOICE_ASSETS,character.id,text);assert.match(path,new RegExp('^\\./assets/voices/'+character.slug+'/[a-f0-9]{16}\\.mp3$'));keys.add(character.id+'\n'+text);}
   }
-  assert.equal(keys.size,238);assert.equal(Object.keys(VOICE_ASSETS).length,238);
+  assert.equal(keys.size,245);assert.equal(Object.keys(VOICE_ASSETS).length,245);
+  for(const path of Object.values(VOICE_ASSETS)) {
+    const file=statSync(new URL(path,import.meta.url));
+    assert.ok(file.isFile()&&file.size>2000, path);
+  }
   assert.equal(findRecordedVoice(Object.create({'1\nhello':'./assets/voices/hinata/0000000000000000.mp3'}),1,'hello'),null);
   assert.equal(findRecordedVoice({'1\nhello':'https://invalid.example/recording.mp3'},1,'hello'),null);
 });

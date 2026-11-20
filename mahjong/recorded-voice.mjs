@@ -1,4 +1,4 @@
-import {getVoiceProfile} from './voice-lines.mjs?v=20261108-voice';
+import {getVoiceProfile} from './voice-lines.mjs?v=20261120-dialogue';
 
 const volumeValue=(value,fallback)=>Number.isFinite(Number(value))?Math.max(0,Math.min(1,Number(value))):fallback;
 const failure=code=>Object.assign(new Error(code),{code});

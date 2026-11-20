@@ -2,10 +2,11 @@ import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261
 import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261108-gallery';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
 import {createTableControls} from './table-controls.mjs?v=20261120-clarity';
-import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-gallery';
-import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
-import {CharacterVoice} from './voice.mjs?v=20261108-gallery';
-import {chooseVoiceLine,getVoiceProfile} from './voice-lines.mjs?v=20261108-voice';
+import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261120-dialogue';
+import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261120-dialogue';
+import {RecordedCharacterVoice} from './recorded-voice.mjs?v=20261120-dialogue';
+import {VOICE_ASSETS} from './assets/voices/manifest.mjs?v=20261120-dialogue';
+import {chooseVoiceLine,getVoiceProfile} from './voice-lines.mjs?v=20261120-dialogue';
 import {createRewardMediaController,rewardMediaKind,isVideoControlEvent} from './reward-media.mjs?v=20261109-mp4';
 const $=id=>document.getElementById(id),API='https://tk777-neonshift-scores.takesuke.chatgpt.site',MODE='mahjong:arcade';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -22,7 +23,10 @@ const tableCanvas=$('tableScene');
 const tableControls=typeof tableCanvas?.getContext==='function'
   ? createTableControls(tableCanvas,$('handTargets'),pickHandTile) : null;
 function voicePreferences(){try{const p=JSON.parse(localStorage.getItem(VOICE_KEY));return{enabled:p?.enabled!==false,volume:Number.isFinite(p?.volume)?Math.max(0,Math.min(1,p.volume)):.8};}catch{return{enabled:true,volume:.8};}}
-const characterVoice=new CharacterVoice({...voicePreferences(),Context:window.AudioContext||window.webkitAudioContext,synth:window.speechSynthesis,Utterance:window.SpeechSynthesisUtterance,onChange:state=>{voiceState=state;renderVoiceControls(state);}});
+const characterVoice=new RecordedCharacterVoice({
+ ...voicePreferences(),Context:window.AudioContext||window.webkitAudioContext,assets:VOICE_ASSETS,
+ onChange:state=>{voiceState=state;renderVoiceControls(state);}
+});
 voiceState=characterVoice.state();
 const rewardMedia=createRewardMediaController({image:$('rewardImage'),video:$('rewardVideo'),empty:$('rewardPlaceholder'),status:$('rewardMediaStatus'),onVideoPlay:stopCharacterVoice,onFallback:bundled=>{$('rewardDialog').dataset.bundled=String(bundled);}});
 const stageGalleryMedia=createRewardMediaController({image:$('stageGalleryImage'),video:$('stageGalleryVideo'),empty:$('stageGalleryEmpty'),onVideoPlay:stopCharacterVoice});
@@ -35,7 +39,7 @@ function renderVoiceControls(state){
  for(const id of ['voiceToggle','welcomeVoiceToggle','encounterVoiceToggle','rewardVoiceToggle','stageGalleryVoiceToggle']){const button=$(id);button.textContent='♪ '+label;button.setAttribute('aria-pressed',String(state.enabled));button.disabled=!state.supported;}
  $('voiceEnabled').checked=state.enabled;$('voiceEnabled').disabled=!state.supported;
  $('voiceVolume').value=String(Math.round(state.volume*100));$('voiceVolume').disabled=!state.supported;$('voiceVolumeValue').textContent=Math.round(state.volume*100)+'%';
- const status=!state.supported?'このブラウザーは音声に対応していません。':!state.enabled?'声はオフです。台詞は文字で表示します。':state.volume===0?'音量は0%です。':state.availability==='unavailable'?'日本語の読み上げ音声が見つかりません。':state.blocked?'「もう一度聞く」か「声を聞く」を押してください。':state.error?'音声を再生できませんでした。「もう一度聞く」で再試行できます。':state.loading?'自然な音声を準備しています…':state.speaking?'キャラクターが話しています…':state.availability==='loading'?'日本語の音声を準備しています。':'会話・対局中・勝利時に話しかけます。';
+ const status=!state.supported?'このブラウザーでは声を再生できません。台詞を表示します。':!state.enabled?'声はオフです。台詞は文字で表示します。':state.volume===0?'音量は0%です。':state.blocked?'「もう一度聞く」か「声を聞く」を押してください。':state.error?'音声を再生できませんでした。「もう一度聞く」で再試行できます。':state.loading?'音声を読み込んでいます…':state.speaking?'キャラクターが話しています…':'会話・対局中・勝利時に話しかけます。';
  $('voiceStatus').textContent=status;$('voiceHelp').textContent=status;
  for(const id of ['encounterVoiceStatus','rewardVoiceStatus','stageGalleryVoiceStatus']){$(id).textContent=status;$(id).hidden=!state.enabled||!!state.supported&&state.availability!=='unavailable'&&!state.blocked&&!state.error&&!state.loading;}
  for(const id of ['voiceReplay','encounterReplay','rewardReplay','stageGalleryReplay'])$(id).disabled=!state.supported||!state.enabled||state.volume===0||!currentSpokenLine;

@@ -1,1469 +1,3521 @@
 {
-  "created": "2026-11-08",
-  "voice": "Microsoft ja-JP-NanamiNeural",
-  "tool": "edge-tts 7.3.1",
+  "created": "2026-11-20",
+  "voice": "VOICEVOX Nemo 0.26.0",
+  "license": "https://voicevox.hiroshiba.jp/nemo/term/",
   "originalDialogue": true,
   "playbackRate": 1,
-  "files": 238,
-  "failures": [],
+  "files": 245,
   "presets": {
-    "1": {
-      "rate": "+5%",
-      "pitch": "+14Hz"
-    },
-    "2": {
-      "rate": "-3%",
-      "pitch": "-8Hz"
-    },
-    "3": {
-      "rate": "-7%",
-      "pitch": "+4Hz"
-    },
-    "4": {
-      "rate": "+7%",
-      "pitch": "+2Hz"
-    },
-    "5": {
-      "rate": "-8%",
-      "pitch": "-16Hz"
-    },
-    "6": {
-      "rate": "+3%",
-      "pitch": "+0Hz"
-    },
-    "7": {
-      "rate": "-5%",
-      "pitch": "-5Hz"
-    }
+    "1": [
+      10005,
+      1.05,
+      0,
+      1.12,
+      0.86
+    ],
+    "2": [
+      10007,
+      1.0,
+      0,
+      0.98,
+      0.88
+    ],
+    "3": [
+      10004,
+      0.98,
+      0,
+      1.02,
+      0.94
+    ],
+    "4": [
+      10003,
+      1.08,
+      0,
+      1.12,
+      0.82
+    ],
+    "5": [
+      10008,
+      0.95,
+      -0.015,
+      0.96,
+      0.92
+    ],
+    "6": [
+      10006,
+      1.06,
+      0.01,
+      1.12,
+      0.85
+    ],
+    "7": [
+      10007,
+      0.94,
+      -0.035,
+      1.04,
+      0.97
+    ]
+  },
+  "directions": {
+    "start": [
+      0.02,
+      -0.03
+    ],
+    "surprised": [
+      0.07,
+      -0.03
+    ],
+    "decisive": [
+      0.045,
+      -0.04
+    ],
+    "win": [
+      0.035,
+      0
+    ],
+    "calm": [
+      -0.04,
+      0.025
+    ],
+    "friendly": [
+      0,
+      0
+    ],
+    "warm": [
+      0.015,
+      0.03
+    ]
   },
   "recordings": [
     {
       "stageId": 1,
-      "file": "hinata/20328a9e590a09e5.mp3",
-      "bytes": 42768,
-      "sha256": "73490ed196241c4abfcd9a8914b764246428544e203cd7c6e3c499294e868423"
+      "slug": "hinata",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "いらっしゃい！ 春野ひなたです。今日はコーヒーより先に、一局どう？",
+      "spoken": "いらっしゃい！ はるのひなたです。今日はコーヒーより先に、一局どう？",
+      "file": "hinata/ff90c9e63e0f4eaa.mp3",
+      "bytes": 37868,
+      "seconds": 4.651,
+      "sha256": "8cb13041f02509e11c8c11c796c3005f0e2ac972c4682de63a237cf8b849eab7",
+      "speaker": 10005,
+      "pcmPeak": 13738
     },
     {
       "stageId": 1,
-      "file": "hinata/f0c231da992ce8ed.mp3",
-      "bytes": 44064,
-      "sha256": "b87bda8af3ee20ea8b53ac9563af3f72190900d6b0e40d715b2a1ab06cc45c98"
+      "slug": "hinata",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "うちのお店でも、よく常連さんと打つの。気楽に遊んでいってね。",
+      "spoken": "うちのお店でも、よく常連さんと打つの。気楽に遊んでいってね。",
+      "file": "hinata/f9e60c76d5f0a0b1.mp3",
+      "bytes": 33836,
+      "seconds": 4.139,
+      "sha256": "93cbf121fb0dcb221d365fd298c9b730d2432d1cab80c2b99b37abf52c22ce22",
+      "speaker": 10005,
+      "pcmPeak": 16379
     },
     {
       "stageId": 1,
-      "file": "hinata/aa32515929b0b3d9.mp3",
-      "bytes": 38304,
-      "sha256": "f3bd4bbe25fdf7f897478732d2fabf58f5c3d18b59a88a0b4831b8e877477864"
+      "slug": "hinata",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "準備できた？ じゃあ、やってみようか！",
+      "spoken": "準備できた？ じゃあ、やってみようか！",
+      "file": "hinata/5a3543d9e66ede1d.mp3",
+      "bytes": 21740,
+      "seconds": 2.635,
+      "sha256": "47f63956482de8c4c022f1064edcd21e7396c6757d816fc6ce8dc23c2eff1fe9",
+      "speaker": 10005,
+      "pcmPeak": 16856
     },
     {
       "stageId": 1,
-      "file": "hinata/f100b15edd14119d.mp3",
-      "bytes": 42048,
-      "sha256": "c378bb6b26d3db8b369af12fee90d34b13caa6c3b955d8fbf085eb86fad86848"
+      "slug": "hinata",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "さっきの一局、楽しかったね。もう少し打ててうれしいな。",
+      "spoken": "さっきの一局、楽しかったね。もう少し打ててうれしいな。",
+      "file": "hinata/fcfff2324452edc2.mp3",
+      "bytes": 32300,
+      "seconds": 3.947,
+      "sha256": "eca6a5142739542556fbeec1daae64d001f5de7f5983aaae4bd723e2628062b7",
+      "speaker": 10005,
+      "pcmPeak": 17856
     },
     {
       "stageId": 1,
-      "file": "hinata/f8225a6129e351f7.mp3",
-      "bytes": 39888,
-      "sha256": "a0946cb09f8cdca89f186ae1608299923c22435f9e7aaa05d36684815afe40d9"
+      "slug": "hinata",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "でも、今度は私も勝ちにいくよ！",
+      "spoken": "でも、今度は私も勝ちにいくよ！",
+      "file": "hinata/e9be677f7b7c83d9.mp3",
+      "bytes": 19052,
+      "seconds": 2.293,
+      "sha256": "6b2db4bacde8cf4aa1f70db282b61de4663aa9a520108f8872327d93c708a533",
+      "speaker": 10005,
+      "pcmPeak": 19320
     },
     {
       "stageId": 1,
-      "file": "hinata/20c85c6016b100d9.mp3",
-      "bytes": 38016,
-      "sha256": "0a6a7b120dc884790639336e8d9d01d3e0f7355e399df1d0f389da427e7dea0d"
+      "slug": "hinata",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "もう三局目かあ。あっという間だったね。",
+      "spoken": "もう三局目かあ。あっという間だったね。",
+      "file": "hinata/0624866baea61a9d.mp3",
+      "bytes": 22316,
+      "seconds": 2.699,
+      "sha256": "a2b2d556527b7ffcf79ff4f028d2eceec93c5a32580c053dd35ad19cc2153b30",
+      "speaker": 10005,
+      "pcmPeak": 14365
     },
     {
       "stageId": 1,
-      "file": "hinata/6ba998124c097abf.mp3",
-      "bytes": 28944,
-      "sha256": "cdd2c486d7541ee8092ebf5594ec5577f72372ca01050fffc181e7c2f71b63ec"
+      "slug": "hinata",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "よし、最後の一局も楽しもう！",
+      "spoken": "よし、最後の一局も楽しもう！",
+      "file": "hinata/2055a36c754fabcd.mp3",
+      "bytes": 19244,
+      "seconds": 2.325,
+      "sha256": "2b749d5b51953b570794d2837dc90c9201786e15919ce3da6c69951f657df988",
+      "speaker": 10005,
+      "pcmPeak": 21449
     },
     {
       "stageId": 1,
-      "file": "hinata/11b4e50c808181a5.mp3",
-      "bytes": 24336,
-      "sha256": "d2e3e2ef7a72e0365d0fdb17f80f8837df8f2eededdea2e8834f8bce32da06e5"
+      "slug": "hinata",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "おかえり！ また来てくれたんだ、うれしいな。",
+      "spoken": "おかえり！ また来てくれたんだ、うれしいな。",
+      "file": "hinata/676b27a0ed8d92d7.mp3",
+      "bytes": 22700,
+      "seconds": 2.752,
+      "sha256": "6a4eb6fad13595d1d60efbf3cd927baa7242f8c9a0385106dfcd66c731648bbf",
+      "speaker": 10005,
+      "pcmPeak": 18994
     },
     {
       "stageId": 1,
-      "file": "hinata/39b891287fbd23e1.mp3",
-      "bytes": 34128,
-      "sha256": "c579c09626a950f1e16c06e35e3773b8bed5f048b7c667202e438303ee05bd30"
+      "slug": "hinata",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "ひと息ついたら、もう一回やってみよっか。",
+      "spoken": "ひと息ついたら、もう一回やってみよっか。",
+      "file": "hinata/ba7845237d24b35f.mp3",
+      "bytes": 21932,
+      "seconds": 2.656,
+      "sha256": "fc20d455e3fd5c3dcc7b5180f37b96f2d75378ef1c414b2033f38466df0895a1",
+      "speaker": 10005,
+      "pcmPeak": 15287
     },
     {
       "stageId": 1,
-      "file": "hinata/0ea549b476ef1530.mp3",
-      "bytes": 34272,
-      "sha256": "13d5df21892afb9572b9faffb19d9bff0e98d7a4ca41d6234f6ed897b60edc7b"
+      "slug": "hinata",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "いらっしゃい！ 今日はコーヒーより先に、一局どう？",
+      "spoken": "いらっしゃい！ 今日はコーヒーより先に、一局どう？",
+      "file": "hinata/1801c50986c69e0d.mp3",
+      "bytes": 27884,
+      "seconds": 3.403,
+      "sha256": "b5f1ab248058b06a3a00e71e644d6c119e74a2ed5ec67531d9ba1a68aab69055",
+      "speaker": 10005,
+      "pcmPeak": 15601
     },
     {
       "stageId": 1,
-      "file": "hinata/c292bff09302c7da.mp3",
-      "bytes": 38448,
-      "sha256": "3884b62c80e0deb1f163344db14c47bfd2032363bb4f763ac0039d4481a86c58"
+      "slug": "hinata",
+      "name": "win-1",
+      "direction": "win",
+      "text": "わあ、きれいに決まったね！ 一勝目、おめでとう。",
+      "spoken": "わあ、きれいに決まったね！ 一勝目、おめでとう。",
+      "file": "hinata/24ee504fc0cd818f.mp3",
+      "bytes": 29036,
+      "seconds": 3.541,
+      "sha256": "5fa2ced0f383f88e90015e9f7de6c5c72d7086cc6fb43978a36ba3d9bb3d8b2b",
+      "speaker": 10005,
+      "pcmPeak": 12771
     },
     {
       "stageId": 1,
-      "file": "hinata/081307a61c432a6f.mp3",
-      "bytes": 41472,
-      "sha256": "b82107ca416e219b87761065cdd48366efadd5a50ebbc33ea339cc7c77b6f439"
+      "slug": "hinata",
+      "name": "win-2",
+      "direction": "win",
+      "text": "これで二勝目だね。ちょっと悔しいけど、見事だったよ！",
+      "spoken": "これで二勝目だね。ちょっと悔しいけど、見事だったよ！",
+      "file": "hinata/c4dd1d7763beb333.mp3",
+      "bytes": 29804,
+      "seconds": 3.627,
+      "sha256": "172159a57b1cf2553176a587425e21710c464121881306088bebf0f1b795d2c4",
+      "speaker": 10005,
+      "pcmPeak": 19704
     },
     {
       "stageId": 1,
-      "file": "hinata/91d5fa596c3140dd.mp3",
-      "bytes": 21312,
-      "sha256": "5a3e4fac2de821cad5cf18bbbc3fcc333fe13911fed36968fd77ee13db69d11f"
+      "slug": "hinata",
+      "name": "win-3",
+      "direction": "win",
+      "text": "私に三勝かあ。すごいね、おめでとう！",
+      "spoken": "私に三勝かあ。すごいね、おめでとう！",
+      "file": "hinata/2d03a692ea384a8b.mp3",
+      "bytes": 24428,
+      "seconds": 2.955,
+      "sha256": "57c9ff4548481f027ae4e4b9c2a24bde89e5ace789a2daf0199cbacc04d35a5b",
+      "speaker": 10005,
+      "pcmPeak": 18767
     },
     {
       "stageId": 1,
-      "file": "hinata/82199f31618a02b5.mp3",
-      "bytes": 28512,
-      "sha256": "d50d4f56911d6ca33f19095ba5551c4e794c923718f671669ec742497c966d6f"
+      "slug": "hinata",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計は私の負けだね。おめでとう！ これ、ご褒美。ゆっくり見ていってね。",
+      "spoken": "合計は私の負けだね。おめでとう！ これ、ご褒美。ゆっくり見ていってね。",
+      "file": "hinata/f0a1f9f85c933c12.mp3",
+      "bytes": 43052,
+      "seconds": 5.301,
+      "sha256": "d4a91a199d2a008dd176e9319e77e38ea94fff4055eb00eecb7c2d44ca75a9b3",
+      "speaker": 10005,
+      "pcmPeak": 18239
     },
     {
       "stageId": 1,
-      "file": "hinata/8ea3b72195041600.mp3",
-      "bytes": 28944,
-      "sha256": "8bb7ee73998fd4e6f66c7beb5bca1ce4d2f69741d3d38cb5ffec33e07bb5b61f"
+      "slug": "hinata",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "よし、始めよっか。よろしくね！",
+      "spoken": "よし、始めよっか。よろしくね！",
+      "file": "hinata/f292c38873e75563.mp3",
+      "bytes": 19820,
+      "seconds": 2.379,
+      "sha256": "b3e790de8c29e5600f6e0946f33c3775a6e61e1a60e215508af4bb644570b1fa",
+      "speaker": 10005,
+      "pcmPeak": 22326
     },
     {
       "stageId": 1,
-      "file": "hinata/f440380e965d68ef.mp3",
-      "bytes": 28944,
-      "sha256": "fc31bc8932f8b8be319c5806d05fcbcc85ba7ae51eadd1c4e281b79c7fe4d0b5"
+      "slug": "hinata",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "お待たせ。今日も楽しく打とうね。",
+      "spoken": "お待たせ。今日も楽しく打とうね。",
+      "file": "hinata/9183bca7394ce7b1.mp3",
+      "bytes": 18476,
+      "seconds": 2.219,
+      "sha256": "fdab2f87e2d1813d8e053e06506f45d19ba6f5f28a6e49edc3b8865e937ff384",
+      "speaker": 10005,
+      "pcmPeak": 16056
     },
     {
       "stageId": 1,
-      "file": "hinata/15b11cdbc3b1d48c.mp3",
-      "bytes": 28800,
-      "sha256": "71e49eca8575ab3afe2b3e54be4523346bb7ff3c8a54bc51f7a87407bc366812"
+      "slug": "hinata",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "なんか緊張してきた。じゃあ、いくよ！",
+      "spoken": "なんか緊張してきた。じゃあ、いくよ！",
+      "file": "hinata/82d2a1cc06588123.mp3",
+      "bytes": 21548,
+      "seconds": 2.603,
+      "sha256": "e8e08bacc5564dbced938f2bb367be3a7ec4d24aaad802cb802f92b187ab4d85",
+      "speaker": 10005,
+      "pcmPeak": 17412
     },
     {
       "stageId": 1,
-      "file": "hinata/efa250d9e864e887.mp3",
-      "bytes": 31392,
-      "sha256": "c3e385671956fbe000217acc731a6f593098e1be3f6eb34c8e438c9d1f38a124"
+      "slug": "hinata",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "おっ、リーチだ。早いね！",
+      "spoken": "おっ、リーチだ。早いね！",
+      "file": "hinata/39daa68b9bf921c2.mp3",
+      "bytes": 15404,
+      "seconds": 1.845,
+      "sha256": "e0f307102e031546467e0acc16b10e705a0c09f53fd2a46ba66d0f506e22a1a9",
+      "speaker": 10005,
+      "pcmPeak": 14137
     },
     {
       "stageId": 1,
-      "file": "hinata/90564284e32ad90f.mp3",
-      "bytes": 28800,
-      "sha256": "b5122927efcec5b16e4d28a1a3f040eb89b2611f4a377fedc957be56494f68fa"
+      "slug": "hinata",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "わ、来たね。ここからどうしようかな。",
+      "spoken": "わ、来たね。ここからどうしようかな。",
+      "file": "hinata/55acbf487e94cf91.mp3",
+      "bytes": 20972,
+      "seconds": 2.539,
+      "sha256": "f819a0f8095daa862e37f38053fee8708b251b600033fabc190531550842015d",
+      "speaker": 10005,
+      "pcmPeak": 16105
     },
     {
       "stageId": 1,
-      "file": "hinata/8a58f22d64057a34.mp3",
-      "bytes": 23472,
-      "sha256": "ad4c3869c411ce1b71155348ba31b0a11999c54751fc9bc68d78902ccd2cb803"
+      "slug": "hinata",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "リーチね。私もちょっと考えさせて。",
+      "spoken": "リーチね。私もちょっと考えさせて。",
+      "file": "hinata/b4dd54b0d0c49271.mp3",
+      "bytes": 21932,
+      "seconds": 2.656,
+      "sha256": "44667f5f48c01d74ac109f994f98c54673e0c1914f2bbce19f87682bbaee2e8e",
+      "speaker": 10005,
+      "pcmPeak": 16723
     },
     {
       "stageId": 1,
-      "file": "hinata/317d602ff4a5e0fc.mp3",
-      "bytes": 28080,
-      "sha256": "138f8e46a6580d26d718ece609b37a034147a4a924f0d74bfa70e4ec6152ed69"
+      "slug": "hinata",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "よし、そろった。リーチ！",
+      "spoken": "よし、そろった。リーチ！",
+      "file": "hinata/561a74fcdcebc421.mp3",
+      "bytes": 15788,
+      "seconds": 1.877,
+      "sha256": "6234f14f5252acc4292dcd7a1fb74ad8616aa212cae294f5326a925dd746e027",
+      "speaker": 10005,
+      "pcmPeak": 24196
     },
     {
       "stageId": 1,
-      "file": "hinata/7666c18825dcb278.mp3",
-      "bytes": 41616,
-      "sha256": "69d9e00fdc27fb3bb079492bc64345e218ab4c32647ce96931d2c88c54c6441a"
+      "slug": "hinata",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "どうしよっかな。うん、リーチしちゃおう。",
+      "spoken": "どうしよっかな。うん、リーチしちゃおう。",
+      "file": "hinata/aafa69276f8ce02f.mp3",
+      "bytes": 22124,
+      "seconds": 2.677,
+      "sha256": "60f33aa8191efb9093ebcdf55fa43f300957a80cbcf1acb52065316ae0896767",
+      "speaker": 10005,
+      "pcmPeak": 19109
     },
     {
       "stageId": 1,
-      "file": "hinata/b416675d1c9fd20e.mp3",
-      "bytes": 34992,
-      "sha256": "7efa08d427c7a6e2178db85142cbcd0290d5a797c8873c18709c9b9672e4b8ac"
+      "slug": "hinata",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "ここで勝負するね。リーチ！",
+      "spoken": "ここで勝負するね。リーチ！",
+      "file": "hinata/e8f6af55926f7131.mp3",
+      "bytes": 16172,
+      "seconds": 1.941,
+      "sha256": "4500fadf1212db2d25aa9f99a3ddd286e8579923d28517ebde825bd7ec706c78",
+      "speaker": 10005,
+      "pcmPeak": 19411
     },
     {
       "stageId": 1,
-      "file": "hinata/13314cf041b7e727.mp3",
-      "bytes": 35424,
-      "sha256": "f364c4663ca3ef13d81cc40f41bbdce113ff27df60c78fa6a4cf26058bbd32a5"
+      "slug": "hinata",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "やった！ この局は私の勝ちだね。",
+      "spoken": "やった！ この局は私の勝ちだね。",
+      "file": "hinata/be4af50c36a9f49d.mp3",
+      "bytes": 20012,
+      "seconds": 2.411,
+      "sha256": "8dbde8cc4497ec926bec5a30907f32b4d90edc3530dc23925d366ad1a0c9263d",
+      "speaker": 10005,
+      "pcmPeak": 14178
     },
     {
       "stageId": 1,
-      "file": "hinata/db4a68d9c7e1594c.mp3",
-      "bytes": 28368,
-      "sha256": "e40658f240f70cab67d14ecf5e16385e0eade524f496d568d654fe61460afaaa"
+      "slug": "hinata",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "うれしいな。最後までどきどきしたよ。",
+      "spoken": "うれしいな。最後までどきどきしたよ。",
+      "file": "hinata/de158c97823a5ec0.mp3",
+      "bytes": 19820,
+      "seconds": 2.389,
+      "sha256": "709195e5dc781d87fc74d3c558381f3fffdd3cd1c44e513eb99100dc2b175cd2",
+      "speaker": 10005,
+      "pcmPeak": 17427
     },
     {
       "stageId": 1,
-      "file": "hinata/7096c610774894cf.mp3",
-      "bytes": 32112,
-      "sha256": "81292c439054118c0f16ec9e25d738bcdda2eb241faf303adf4adadc4569e019"
+      "slug": "hinata",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "ふう、あがれた。いい対局だったね。",
+      "spoken": "ふう、あがれた。いい対局だったね。",
+      "file": "hinata/18e7af4facd20a9d.mp3",
+      "bytes": 21356,
+      "seconds": 2.571,
+      "sha256": "30e8b9867834d9eeb82eaecfa0078a8e0c78e8638179c82ff132d9e082483896",
+      "speaker": 10005,
+      "pcmPeak": 13464
     },
     {
       "stageId": 1,
-      "file": "hinata/592fa719e1702410.mp3",
-      "bytes": 30240,
-      "sha256": "e9386b12c10cf70f3769906bcf613e4c1b4b36bb8f04d307879f4e9297d11fb8"
+      "slug": "hinata",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "あら、流局だね。おつかれさま！",
+      "spoken": "あら、りゅうきょくだね。おつかれさま！",
+      "file": "hinata/19378dcecaf28d54.mp3",
+      "bytes": 19820,
+      "seconds": 2.4,
+      "sha256": "4fc5cf60ce721195cd448aece66c9bf8b2158f236ba3f0c4c92f935a1c61f0c9",
+      "speaker": 10005,
+      "pcmPeak": 13398
     },
     {
       "stageId": 1,
-      "file": "hinata/338761d374a131e7.mp3",
-      "bytes": 28656,
-      "sha256": "0cc5291fab39323d02da736426bff98e63aa110476caa5b567778cf334555baf"
+      "slug": "hinata",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "最後まで決まらなかったね。ふう。",
+      "spoken": "最後まで決まらなかったね。ふう。",
+      "file": "hinata/309e08fb64925863.mp3",
+      "bytes": 18860,
+      "seconds": 2.272,
+      "sha256": "8393f695e8a23348b94a000245bbaec6fd2cbb7df42b49967f6b6a6a1fc9470e",
+      "speaker": 10005,
+      "pcmPeak": 21395
     },
     {
       "stageId": 1,
-      "file": "hinata/3e90e54a17f1100a.mp3",
-      "bytes": 30096,
-      "sha256": "a265ebe2e0b627c1a80464b11972b16ac9d7e5cf05a2426a7522396655cba1d7"
+      "slug": "hinata",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "ここまでかあ。ちょっとひと息つこっか。",
+      "spoken": "ここまでかあ。ちょっとひと息つこっか。",
+      "file": "hinata/7db354b38072ff38.mp3",
+      "bytes": 20588,
+      "seconds": 2.475,
+      "sha256": "e6d6876fb8decad342164122d32b2b97f23df502410a500ec536dbfbc7307ef9",
+      "speaker": 10005,
+      "pcmPeak": 18710
     },
     {
       "stageId": 1,
-      "file": "hinata/97ad1e7f0caa78fa.mp3",
-      "bytes": 29808,
-      "sha256": "f99366f4fb1e0d8cc9c369674fdf005298347c3b53090a7c4d7e3f51f58d55b6"
+      "slug": "hinata",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "ゆっくり考えていいよ。待ってるね。",
+      "spoken": "ゆっくり考えていいよ。待ってるね。",
+      "file": "hinata/2450e505742b5fd0.mp3",
+      "bytes": 19628,
+      "seconds": 2.368,
+      "sha256": "3f92fd1a9e60ed1b61f7b19bf881b0eafa3df8de9c1f09907038e8f674e3b71d",
+      "speaker": 10005,
+      "pcmPeak": 15779
     },
     {
       "stageId": 1,
-      "file": "hinata/611149b1a8eff721.mp3",
-      "bytes": 13968,
-      "sha256": "5f36a69c77b409a53e66310d618046c1854f5dc40cfaaf3dde27cee930301b11"
+      "slug": "hinata",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "あわてなくて大丈夫だよ。",
+      "spoken": "あわてなくて大丈夫だよ。",
+      "file": "hinata/bf501a58ad3a97bf.mp3",
+      "bytes": 14060,
+      "seconds": 1.664,
+      "sha256": "96c9fe8dda276866f8be59a3a388a5187bb2c95935c6971424ef61b7326b4b7f",
+      "speaker": 10005,
+      "pcmPeak": 15659
     },
     {
       "stageId": 1,
-      "file": "hinata/9647c58741b41b71.mp3",
-      "bytes": 16704,
-      "sha256": "368b513377c441d9109e7048c11a4a1c50c8d0e9efff2855130fc0488dae0df4"
+      "slug": "hinata",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "迷うよね。私もよく考え込んじゃう。",
+      "spoken": "迷うよね。私もよく考え込んじゃう。",
+      "file": "hinata/d4d4e8d7c00f14fe.mp3",
+      "bytes": 21164,
+      "seconds": 2.56,
+      "sha256": "55112f442dcb31a8642b3ee76109fbb6fdcbda0bd3049d2dbcbf84cf2bf042da",
+      "speaker": 10005,
+      "pcmPeak": 17792
     },
     {
       "stageId": 1,
-      "file": "hinata/1d60b9e2a40f68d7.mp3",
-      "bytes": 20448,
-      "sha256": "dc4f377b5f4906f8ff486706c6b7457a62c964bd8f964007a1d2a3e3f4b02f8e"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/1b9aa1f6e158985d.mp3",
-      "bytes": 40752,
-      "sha256": "d17fa38e2e8f73f4f75f2c89e9a6d9a2666825acd2e631e247c20f88cb7ef7b1"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/8be70294ab3b4fef.mp3",
-      "bytes": 48960,
-      "sha256": "aa89521dbe353f349cd2e4053f09c466797c11786e4914252ccc010dc083789f"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/6a1dd61afb8c8ccf.mp3",
-      "bytes": 33696,
-      "sha256": "5a25b7ff148f68852956fcc51bdf0c34830f5038a6fef2641a35b8ecd6b56388"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/27340cc720f7a249.mp3",
-      "bytes": 39744,
-      "sha256": "c66e35d4bd6639429f590fe95e9e14a5ccc3bc23d8c531a9fe8daf9076572ef6"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/227f51f57201fe71.mp3",
-      "bytes": 36864,
-      "sha256": "704b14370e9c43589fda1d2fc9a86505e214e78ae3eb890d3e5f3fc9be6804c6"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/994d96c86620aeab.mp3",
-      "bytes": 34128,
-      "sha256": "bd43359292aeb3fa304073d7261de5ca3ac87101a6a2c4f6573c74fa13af3874"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/fe576702ff513a2a.mp3",
-      "bytes": 34272,
-      "sha256": "a0dc363a409d3f4633424301f6a07a5a4a7bdc2f0e11e8d83a5be904eb0c1b3b"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/6f3729a8469b8e7d.mp3",
-      "bytes": 34560,
-      "sha256": "41167353fb34ed0e21038230bfbc38d2784dac23a48f46aafa88c32bdd03c0cd"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/6797e4e3f1d2cfc9.mp3",
-      "bytes": 26352,
-      "sha256": "bdb166d0ff31aa8a17dba9b6c7734b5d8ee5c1f3a072dd2ccbd44642ad708fd2"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/1e0ba4f5b4ef9c84.mp3",
-      "bytes": 36864,
-      "sha256": "edfb22ecd45795bf131e82e55f9d26af0d4d7e97b17e26fa25a221bef65da3cf"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/f0d24ad8ab83f346.mp3",
-      "bytes": 46080,
-      "sha256": "72630792c19d12452624aaf4b28fbdabe74e2664a6499a9d5ed3fb0742b35590"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/8ddf814b6520a377.mp3",
-      "bytes": 45072,
-      "sha256": "01d5d868186483bf58ff83fdb26bbd7c78a15786d053601e939a5ffce03bbe64"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/0fc6561b4db4377c.mp3",
-      "bytes": 27216,
-      "sha256": "a084fd768a38d4801c2cc23cb00b3c012577b09870c27e78c1a3542854eed996"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/8ba5b67c9860f8c9.mp3",
-      "bytes": 28512,
-      "sha256": "713653890d8056f6b57543c8f8f40d16b9143d48193f343c079179b9e7063498"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/4a76ac9d20169d5b.mp3",
-      "bytes": 20880,
-      "sha256": "d42adb2d336329f2bc4935d48ca05355bcd5b34f36f7ebc937133c7482ca73a0"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/b9e2b5dbc85a9613.mp3",
-      "bytes": 29520,
-      "sha256": "e3983604b1d582c358a503055ed999a31fc70862f0c3591de1c5d0761eca92ee"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/449e0e2b4aea080f.mp3",
-      "bytes": 27504,
-      "sha256": "b4d8c95b9acdd575549558037cb9e3a47a9780b956a9d2337ca53c447dccaf89"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/5de678e1f3f8ef3f.mp3",
-      "bytes": 28080,
-      "sha256": "890ad890c45ffc735fd8b0c5aaeb87d8c3cfb93ab96e71923bdfc099f6c4e344"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/58c09f92c6cb044f.mp3",
-      "bytes": 24336,
-      "sha256": "b9b3140cb73c9f279db4ec095857bd85dfd317aef8882e8a4018dc16db3ba3ad"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/31f5543525d5d771.mp3",
-      "bytes": 22896,
-      "sha256": "86076a507da387850a957602a0ee40cf91e75aa80ba70be95b145e252bd9f2ff"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/a526d4b52bca4bd1.mp3",
-      "bytes": 31104,
-      "sha256": "6b01fc809825f5f1aa9e120378b20eca941c20b6302c4a16655245ae86796081"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/767397c1c8d7b996.mp3",
-      "bytes": 37296,
-      "sha256": "0d94b6eef237037e637c1418fe5cbadaf100251c70db458f40f79c3656bc4876"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/53d2bf807e2843f4.mp3",
-      "bytes": 32544,
-      "sha256": "43bd35dcb97fb043184085a582a84b850e5cc8dc2ea770e13ee215bdc12f23bc"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/58764afe0d2914b3.mp3",
-      "bytes": 29952,
-      "sha256": "8860d98124ad4411a3af0bc19385b6981e618bf1f9ea64dc71199f1a502c6088"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/83bffdff3bed38be.mp3",
-      "bytes": 29232,
-      "sha256": "2f6fb91c4812aa44252216c004207a094b9870f097060ec5a8d1c1ac8099cf26"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/251bcb409023894b.mp3",
-      "bytes": 30240,
-      "sha256": "dc1045cb3ef96813f7100fceffd2525a827e3b13b9a1f991579f11a59b12213e"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/58c84f138c4f5500.mp3",
-      "bytes": 32544,
-      "sha256": "bd71139edb35ae6437055e85bfaf554c349924db89090b71573400b53cfe018d"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/3fa82d8d750e5473.mp3",
-      "bytes": 25632,
-      "sha256": "a450fb57a2af9366908ce35080006984cc382a7abb45d60cc74f56da2b4fb141"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/6651e63e3510ca80.mp3",
-      "bytes": 21024,
-      "sha256": "3eb7029df9647bf27f1b2ba176f91b3c4a2272ed03a057cf4d964d7712047fa8"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/73a2beb302a1e6f7.mp3",
-      "bytes": 17568,
-      "sha256": "574013b562ce762d219942f2cb67fa916dfb4b4d0b37bb9c7c3efbe9c1eb1db6"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/3340923e6edc17f5.mp3",
-      "bytes": 16272,
-      "sha256": "d18c1e1b97df7cf1527051179bb0493cfbba062581a5845451e5d4a640f0ef63"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/babc29e00d0559dd.mp3",
-      "bytes": 20304,
-      "sha256": "29fdee045c2c12c675bed1f38f0b2a63d24b94a3f1ee6cb45a9ccdd8a2e225b4"
-    },
-    {
-      "stageId": 2,
-      "file": "mio/76e5d0807fdb47df.mp3",
-      "bytes": 15984,
-      "sha256": "cf225858268ceda9c56dbce89ada02e4e437f4445b42e42e6b936678cd970bfb"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/4167ee9e3cd7c043.mp3",
-      "bytes": 57744,
-      "sha256": "73a11f3ffb5c4c83ef393faf3abc9391a8b4440c6f018e8a5a855bfd698daf2e"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/52aaf05f96e34974.mp3",
-      "bytes": 39024,
-      "sha256": "6957f4ce9ec1abe420af3b37534d2eeef070ee2088f998ca6bc7110431a1974f"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/6d5b7735476b2da6.mp3",
-      "bytes": 37296,
-      "sha256": "825a63facb754eabd03ba8073bb2b65caa06a26b9f6116b71f4d285c7feae2f3"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/99937fe9e6227233.mp3",
-      "bytes": 39600,
-      "sha256": "7545428cb4b6268b832dca9ce4af2a68883a23b27318062060d66e5c53b68a9f"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/dbf920883214d43f.mp3",
-      "bytes": 30096,
-      "sha256": "0d3684eb69ee68b16f6fa33a66bc04e09b2cac0723d398c87556d46d92cc8438"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/f9599b1437bdc5a7.mp3",
-      "bytes": 41616,
-      "sha256": "6ab3366e5806f5e50408c64a84c47ef78aa81618828a49d8f8e450c3ae942e01"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/105208c52a003d5f.mp3",
-      "bytes": 30240,
-      "sha256": "57f461865cfcbf8c241959f9cf01f137e552bb3fffbb77184589247f9773d14e"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/4c4f1d787fb10f6f.mp3",
-      "bytes": 30816,
-      "sha256": "d821381b7a979e13b4456b2ebf6082a485134b06999c3c0e572fe1cb00ea3e3f"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/2f07b99954f5959b.mp3",
-      "bytes": 42192,
-      "sha256": "03b831e916ee50cc18a0f1a5019a26c677a5d61f5708e708c3bd688dcbed78cc"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/c751dda7af2423c5.mp3",
-      "bytes": 36576,
-      "sha256": "7a1cd1dffbb819cdfcea3d6908cb6491ffe53ebae24866f696c34b2ad785c298"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/269a0ab06b33bcbe.mp3",
-      "bytes": 48672,
-      "sha256": "ecac13d265dcf7cedff10e433c92c21471deb07e281f14ffe5154ae1d7e8356c"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/68f48a64a1480682.mp3",
-      "bytes": 48528,
-      "sha256": "02ff36fe09452fd4bbbcf2195bb6c5b371899c1645c735a44ade98c2835ebee3"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/dc727273596c5cd4.mp3",
-      "bytes": 21600,
-      "sha256": "18cdf7e29a8539197111f7c0d281477ccaa2dc9562cfc886cc2e8f118002e8d3"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/ac178fb557dafa21.mp3",
-      "bytes": 23328,
-      "sha256": "5f35b5c147ec4db04bd9e09da41dd26a7e9ad494f1689c46886b2d1c4859f7e3"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/7aab187a4892aa7a.mp3",
-      "bytes": 26208,
-      "sha256": "5ce96ed9b54f4257112f91dcc8abb8b107bd80c38e0b642081f0cdd9006ccacc"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/45f6609c0015018c.mp3",
-      "bytes": 32688,
-      "sha256": "ccd4cea235e4f4d89d9f8e8e87fd2b0e18a1905819f6f30c764f31be38808b2c"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/d383216db2b0fd44.mp3",
-      "bytes": 33120,
-      "sha256": "0cf176665f7e562620556c6b526cdccd2e8a27d0bbf3af6df1ee7daf8a9d3c83"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/a36f1fab4cfcd2a6.mp3",
-      "bytes": 36864,
-      "sha256": "e7d182483df89d655de7d05fafda032369206b5c6e70f37e7f59ce7aeba54bb5"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/aeb64955fb7de124.mp3",
-      "bytes": 21456,
-      "sha256": "a160c2fc645fb0fec0e5fefdea60fa6a77b6113421eded17aae0b883c05008af"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/66ce00beaf0d8b0d.mp3",
-      "bytes": 32112,
-      "sha256": "615afd0d5cf0b0d061b32093fb6af071e646d565769a3446de404da46e2867b9"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/1f911156bab32636.mp3",
-      "bytes": 28368,
-      "sha256": "cfe87dc3db750bd84484730caa7ee93c93858ea3c1bcf2d0794251529f9488f9"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/bf7a65c6b0b8b797.mp3",
-      "bytes": 41472,
-      "sha256": "58f2743c9b53c7db677741c03ba1106e858b11ae3b10bebd9b0bb78f9944535d"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/350e3b1ad0b5d9fd.mp3",
-      "bytes": 37728,
-      "sha256": "b50ed3262a193f3a604dd9cd316f78e304143d63baa626ebe889894910f20c13"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/20ce4e1ce190139e.mp3",
-      "bytes": 35712,
-      "sha256": "9a5f3ff4c97a92e1e6e96ecf08adb3bcb9c93000703dcd9a0226fb54cbf42bce"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/91a7cd43a8b37342.mp3",
-      "bytes": 27216,
-      "sha256": "8c6eee6cfed34ab4a6a439927aa8cb0287290e0f68e6bd0aa0ca8729b7d6d607"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/716c50beba2fd0c3.mp3",
-      "bytes": 34992,
-      "sha256": "bf36be3bb04415793a435e1b636b68d197221bde70891e8f2d9597d5c4f46227"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/41f0f9f4f088114d.mp3",
-      "bytes": 41760,
-      "sha256": "0c4ebc238683a965a12c565309ffefc41eb26a42336a94178163ef9b3bb901d5"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/358a93e8acca7753.mp3",
-      "bytes": 21312,
-      "sha256": "6d39248de2c2abd09bba9dde1c34102a50bc85f9f9490cc28e966f694a8322eb"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/cf113a7f4c7d6cc7.mp3",
-      "bytes": 20736,
-      "sha256": "822c26167d868b25760e2d2644f24ec4144158af17a1b3954f2b421936068425"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/9035bdedeac194ce.mp3",
-      "bytes": 23472,
-      "sha256": "d46965524e232d61e917001ce8d0616235da236746e755108717c854d96f48cb"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/58aa4a4379051942.mp3",
-      "bytes": 20304,
-      "sha256": "b46fe79c71f2787d64d26b12c0a6037d5b7ece3230ade18f7ab169159718aa68"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/8c4f6baec9dfbc07.mp3",
-      "bytes": 23616,
-      "sha256": "3df1a4c2ca3a4b2bdf747ea7eb64f58f58973a6c595f7700f83c1f5fd70cf91a"
-    },
-    {
-      "stageId": 3,
-      "file": "koharu/a57c38446b138044.mp3",
-      "bytes": 22608,
-      "sha256": "b0efb2b93c643688396346df5ad29dd0cb71db69e2918a626f5a1388c5326bf2"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/3754979fbd537557.mp3",
-      "bytes": 50976,
-      "sha256": "66428cdfde8d1a8f54b64c2f27592cecb12a73dd08628cb6179fb881fbb7815b"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/982c6a109d7b5a58.mp3",
-      "bytes": 38160,
-      "sha256": "d0d9b1aa3fc485c8007a773fe59ad40f58d92e956d342571145083158ce60742"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/7468725ba0037aff.mp3",
-      "bytes": 33552,
-      "sha256": "a78fa499d70435abb9494dead26071f27e3e4a8213d11237e98ffa69a6187c00"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/a0dae614136782f3.mp3",
-      "bytes": 40752,
-      "sha256": "a6f9183bc3e0fef5c3d95584948c4215091f2b4f6542ddb8fe0dc3cd1e842fc8"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/1428c15f894df755.mp3",
-      "bytes": 21168,
-      "sha256": "f281d4c249296208fd7deb44fd61cb111b11d134c5b95e806e235a4deda452ee"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/522b599a4ebe0eab.mp3",
-      "bytes": 21888,
-      "sha256": "72a6fddc0968a406dbc242eb22a586733f0f46256c13d32da001b929d995df40"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/37ef5d2b10e59aed.mp3",
-      "bytes": 36432,
-      "sha256": "51de422de609f61d7f657049d5fbed93becff8aa46f36ff8bf1825733debc3ba"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/cc892db4d03e7392.mp3",
-      "bytes": 34272,
-      "sha256": "d3b51bd7288ec47bb9bf67ffe1bcb5d9e54dc3f5f2043a633ea177a687884de6"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/7f23d4c0ae067653.mp3",
-      "bytes": 34704,
-      "sha256": "ecc7d8d44464cae725d8c53edb9cd472239aa97146119404cad2a414c18f8266"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/a8e23047abf0da6c.mp3",
-      "bytes": 32832,
-      "sha256": "a1477db9a3af53e32f5204fe3bdafbdbd66be949adef1b6dd24675b1a8bd26aa"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/c0aacd1a9c736277.mp3",
-      "bytes": 36576,
-      "sha256": "12773d0b977ae0331b08c60e715af285ee84426b4b9ec833f8f42a66ad62ef80"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/590c713b6284afbc.mp3",
-      "bytes": 39168,
-      "sha256": "2229a84e48e9ac49fc5bc556eea67dec7f5512c8754976f7f92286b5341dab34"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/dbe00244045d6e8b.mp3",
-      "bytes": 25488,
-      "sha256": "b117d026dc204dcc889b878fb42f800dac5d857478dd8b436032c582b4ed4f59"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/ccdbceb401ae0c06.mp3",
-      "bytes": 27216,
-      "sha256": "ae0eb6bfdd55c47ee784aa96891ece6e1746ea577f3b2340fa6d663e042cf0c5"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/ce901feb145f1e93.mp3",
-      "bytes": 29952,
-      "sha256": "b8d57477640c068040bdd2f20b5302897971b66f0cb1a602164ea34afedb9992"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/13b2e303bed220c6.mp3",
-      "bytes": 26352,
-      "sha256": "02ad0ce853609413aced7814c2e1756903ee8045303262c06170a6c890547137"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/9a4e4841a3cd43b5.mp3",
-      "bytes": 27216,
-      "sha256": "553982fac147a576514ac0254741c264ce10b0532caf09a4b4670dfaab8edba7"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/81e87f6ce8534660.mp3",
-      "bytes": 16272,
-      "sha256": "41a795f6fdc22e76ed4c0cd1eaee5f787f45de92d4b9df69ab8742af86086522"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/50db203da47bab3f.mp3",
-      "bytes": 20160,
-      "sha256": "fe49e825a751eab510717d7cf02bd72f16e2373b4ec8db36a0c4b35dbc10eeec"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/f30374170b9b19b6.mp3",
-      "bytes": 23472,
-      "sha256": "08afdd93a69d4f67a4c2efab636e211ba52b809e695b8e70834dc9b3bd164537"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/04443a8d0d0cb927.mp3",
-      "bytes": 23760,
-      "sha256": "7941c7f696cbc948bfac591126f31cc16f2b68ada5d69d96f40ebfb6825d84c1"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/cff79083871662a6.mp3",
-      "bytes": 30528,
-      "sha256": "ab241172fb6a50efe677d98b066f0b2672984ae6d10d29e31e0fe8179cc48a1f"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/5f23132427a2ccdc.mp3",
-      "bytes": 24768,
-      "sha256": "575725709fa28e9985170a3815207fa102131b7a5f4a64a1799647f1e4bbc264"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/26f1644fe4abc651.mp3",
-      "bytes": 29376,
-      "sha256": "17e563413ad6f406c247c883b8589d01cf1c965bcd1fe8a95682f26d7208cf63"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/fb8c24f1918f18e8.mp3",
-      "bytes": 27936,
-      "sha256": "e5ac9dd44bdf79e338cb68589973c96418ad156479f20e6bf80e0b568eafc6d4"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/e95831fd50f5177c.mp3",
-      "bytes": 28080,
-      "sha256": "bb621eafb403ef8a707f610330c70f902c764ff08bfde8be29eb5ce12092e5ac"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/804a65bf8a4cdba3.mp3",
-      "bytes": 29376,
-      "sha256": "f202263c77c11406f3c7b332f08cbbb769befc6827eb9309314ec422c3593440"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/9095a89927f6e6b5.mp3",
-      "bytes": 23760,
-      "sha256": "25921d686f3b08278ddce551c2fa6bd1822d10e11c8681235dd054967c3d3418"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/397ba4686e952a70.mp3",
-      "bytes": 27648,
-      "sha256": "ef7ac76bc1e6bde494029fae3d2fec7495d6667fcc500129dfdc3c1fb18dbd90"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/94a1c673c9f257a4.mp3",
-      "bytes": 19728,
-      "sha256": "9b62562e179c09144905c2442785e646dcca39e8038da894c0b081a14dcd1138"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/43ebfe8139544b12.mp3",
-      "bytes": 24048,
-      "sha256": "7fe0feed6512262e8088cd9d076736a59d0088114a39cdd8bd5cadd13a2a83c8"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/1405ccd2d1a5caaa.mp3",
-      "bytes": 19152,
-      "sha256": "9f09b7409edeb5a5a6724e1e8991bf8b566ad6ab86eb78338b44cc0edcf3791e"
-    },
-    {
-      "stageId": 4,
-      "file": "akane/825adc1718c31c3b.mp3",
-      "bytes": 17280,
-      "sha256": "fc20a252456d951581655555e60084af8241fa1b2bcdba94eb642a03e6000d82"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/31cbb3e027c881c4.mp3",
-      "bytes": 59616,
-      "sha256": "aefe0cd1dbbac2cfa6f08f242ab9ca72ed10c0e14cca7fe2aafb0a9201a47724"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/7ff173bf75f2b637.mp3",
-      "bytes": 50832,
-      "sha256": "91dd6b153b2e209ced7e22a9f27dacf4a3d914c89cf4c3a219d6850ee7f7618b"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/49127ce731f00015.mp3",
-      "bytes": 43776,
-      "sha256": "27d52f2abaeed39264be2c86ba870c3a7fe74590474b997ce773665febe1dab7"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/ef5b10b3bbe01154.mp3",
-      "bytes": 48096,
-      "sha256": "f1746824d62192ef99f215db613f1c67924398848aa2511c4e308157e6ab5f38"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/59ac49efca59ea82.mp3",
-      "bytes": 31392,
-      "sha256": "9869302f968026b9e65f3901c1a77e5cba2be32159f2884d0ed3bdcbafb5eed1"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/545ae146d2d4c75e.mp3",
-      "bytes": 21888,
-      "sha256": "d4b1f0f89a57c84026538835afa3bc86a07981cb1b853e372b489a37bf73c4e2"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/fa82314c7dd93b8d.mp3",
-      "bytes": 42768,
-      "sha256": "ec6c8277f9a48b131775d335301da474ca9cf165f3672761ab8fd14f88692485"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/0abd03891b278d81.mp3",
-      "bytes": 38160,
-      "sha256": "7f28ee4ae3e578d7fd950afe8ce9a5468cb627e34d1dcc786c727fe885bc52ee"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/428d5e52a506675e.mp3",
-      "bytes": 45216,
-      "sha256": "9970661bd7b59c36817189452083cdeca1e0c1766caa0238f4a912c27c2898a2"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/020c87913af00da0.mp3",
-      "bytes": 44784,
-      "sha256": "cd68a059c453e9d48017c4a025f8a03a21e61ac5842f2f02edac12dc1e24a09c"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/09285cd82f7ac659.mp3",
-      "bytes": 49248,
-      "sha256": "983f65999d23ba3f83bc4b17d340883e394a3cac2f0804290f24accd223dbc0b"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/43599aa1d20d35cb.mp3",
-      "bytes": 54720,
-      "sha256": "e5f880db676cb64a36e625030bdb0a2baeb6f55231722e37013aafca35ab1c28"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/8402099e9cadbc85.mp3",
-      "bytes": 20736,
-      "sha256": "f900cad140ef2826f2252e5139f7990422e02e436e86e8a7726e3b8dbfa36251"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/f952707675e89aa9.mp3",
-      "bytes": 25488,
-      "sha256": "5df5cf42f12ef090e7b9addb2f32712f6856d80c94057f61af646da1873e2d17"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/ba01622921afd018.mp3",
-      "bytes": 23472,
-      "sha256": "e94db281c85eb0cce992f254863b37042370fa280774b8252fbb23fe0a52675e"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/e37bae23efdd9306.mp3",
-      "bytes": 28656,
-      "sha256": "feb590503e9e67022de4369af2a865d3f19a19fc1e134e579630a120b318ba5f"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/dc30f957f99470e0.mp3",
-      "bytes": 36864,
-      "sha256": "0f0a77ec3a891e470484363bfb8311fa37363f92fab3ac15cf20e33369b7c23c"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/1666838d9e1801ff.mp3",
-      "bytes": 28656,
-      "sha256": "28ac1330e887a121669930ff7ab5b0a7894a277a63b8390b5566a3ccc96c9434"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/988028596a5c28a3.mp3",
-      "bytes": 32544,
-      "sha256": "7ded6d5e8cbeba777feffd63572eefd651f219027044481d53875f1f6c5ee6bd"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/209f2104fa38b5f7.mp3",
-      "bytes": 32400,
-      "sha256": "8c64f672571180d963460acc0ab100fb079cd1792513d77bb4ed7565ebe8a58e"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/df4c2e3287f96655.mp3",
-      "bytes": 25776,
-      "sha256": "05e2cab4db93a11ca5bd27c5e1ea57a00174347c94f7abe1738a5ddfeb05e386"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/0a1fdfab5aa332fb.mp3",
-      "bytes": 44208,
-      "sha256": "99428ecf596d7cd590904c8819ade41d75b2f97ea6cae2844c37837278aff25e"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/16e0a968ead768bf.mp3",
-      "bytes": 37440,
-      "sha256": "7208415d4dcb048c515116e098f69b9c2821aa4eddc031bfaeccb0a59b567cba"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/c798a82c2112a318.mp3",
-      "bytes": 28224,
-      "sha256": "624f7f98d243a4ec2d9edfb966c04488a3c0ac8650bd1de62e7f99b7793bd6bf"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/fe2574416d69e02c.mp3",
-      "bytes": 32256,
-      "sha256": "582f2991efd2d0ed6951c7ea62569c8fa5949db40d3bda1974b04a29e413dbca"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/50cc44fb148c4861.mp3",
-      "bytes": 35280,
-      "sha256": "dc38a8d19372e325679906f5baf019dbe5e028d76b25fec429c5465b69a32f00"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/59bbb2525f5dc678.mp3",
-      "bytes": 35424,
-      "sha256": "d0bafa740a988e268ffccba527bcb751988a977f52bc0d3593b32ed1d4818cf1"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/02c72cf2af66c73d.mp3",
-      "bytes": 29088,
-      "sha256": "31486603c3643858bc5275923db11182e46406ccba7be1fe93fce8f69d94677a"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/556f298c4004a4d5.mp3",
-      "bytes": 23328,
-      "sha256": "1935198b5a6f8e582c9ed48c8d96024ef7959459c0923e874376bec815c81e3e"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/4dc321001c95aac2.mp3",
-      "bytes": 31536,
-      "sha256": "0c5312616b70d59d82458507b78c8cfa9f14453cb434bc3cc1b4fe1f0cd2af77"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/cbdd043929056ec3.mp3",
-      "bytes": 21456,
-      "sha256": "b36d281bf6f5c0cc83b054b6aed3d8a6db793e94de37d07698fa1c0644c71f43"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/2064e0cb5581c862.mp3",
-      "bytes": 25488,
-      "sha256": "21e9541c9cace1db541b7feaf8f9848d578f5d511306c66f365ed8ec043e0c33"
-    },
-    {
-      "stageId": 5,
-      "file": "shion/bb3d6a27e472c875.mp3",
-      "bytes": 19728,
-      "sha256": "3bf155c79ba8b87dfc675149fe32dc3a27117b2092fa5afcff6618a30eb6c4b4"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/2d39c8df4a3755d4.mp3",
-      "bytes": 46080,
-      "sha256": "94df85ec4989f7f8937219e995d1123befa9f47228cfacf7ef5f38b62f9a23a8"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/b64306e158fae07a.mp3",
-      "bytes": 42336,
-      "sha256": "4f56ef0672c62ccd3fef1a7c001ac76a75a85f1fb5c093559fd27fe11d3ff609"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/84b1a3706c611441.mp3",
-      "bytes": 34560,
-      "sha256": "f111bbbe8f65ffdf92bf21198f013b4e4d4bf724547467a27dcd78ca1f3efcf1"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/6bcdfc02c6ba08df.mp3",
-      "bytes": 37872,
-      "sha256": "8757496237f873e29e43c380fe63bea104e156633cc7bdb344247af492e9c5b4"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/08ebac088e9729fa.mp3",
-      "bytes": 23328,
-      "sha256": "645e6bc636b612974d937de7207dcac383a7561590e5eb2345fef2e8ffca4c3c"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/b170f8acfbb7cd06.mp3",
-      "bytes": 39312,
-      "sha256": "80f2045bfeac6617be93a01e20169910b3c9bdb0f102cc0453e2bef488cfe899"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/291ba02c8bd52a88.mp3",
-      "bytes": 32544,
-      "sha256": "a0371ab2e13e89521abb0f129e890678201a8bb448714bc974e91eca3fba286f"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/9ec8d554179be113.mp3",
-      "bytes": 25776,
-      "sha256": "8b11bfe5c5de5b15b14107a924822fb07d85b94bbe2414fbaa20a84e1cfcfcb2"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/07a4bf1c6a0b7135.mp3",
-      "bytes": 37008,
-      "sha256": "ee521b312c7e4702d41d74862fee86dd9a09dc0ec4403bf83311a3197acea673"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/f3536b425e80e37a.mp3",
-      "bytes": 30384,
-      "sha256": "21798030da8bf3832469675ec5a894f53f66650ee413028e9d63a55b6fbeeaac"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/8e5215fe33224a5a.mp3",
-      "bytes": 34848,
-      "sha256": "dbd7a067e59229535776ac7e879af43e2d1737b72a6bcf231f8e3486d042a917"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/bb47adffb3c3cec0.mp3",
-      "bytes": 45648,
-      "sha256": "394386542d8bf07cd58e3aec5cff3a601dc92d9461e6592a4af0ad9303379b9e"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/555dd20b86d5f80f.mp3",
-      "bytes": 16272,
-      "sha256": "a85e4a55181b76f74803cf91cb1f3e9a474fca0cd4139b38f37f675d50821e12"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/92bb355c55971fa0.mp3",
-      "bytes": 28080,
-      "sha256": "9da972beb31187e42f076bb7e24c22e2be54910fd473808eee3b126debd07ba1"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/c31d300176b6cee8.mp3",
-      "bytes": 29232,
-      "sha256": "05f781854f049783f5e198e64072c803501ad2e8e8108af22a12bbc1c66c1de8"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/b9d2631b40a74981.mp3",
-      "bytes": 24336,
-      "sha256": "9f69b270789519f153e329c06b74c5a83caa3b7f342d1e0aea90668e75d5edb0"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/59bf1fcdce7f0a94.mp3",
-      "bytes": 26496,
-      "sha256": "ce5a25aa2f79b271d754b096a6f60d5bccca9e638b822c4aca539d42d5a47650"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/d87f671431343030.mp3",
-      "bytes": 29664,
-      "sha256": "3194e09fb3a7291eab3f6876a6ef446b4876f35b6ed00fabf618c0950d1e7604"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/cdfd17f792f9175e.mp3",
-      "bytes": 14832,
-      "sha256": "7481c178315dde9e707273ef89ccf8bbb4d4c3ef125215b016da13c07aa257b3"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/fa870bd827e4fa2b.mp3",
-      "bytes": 27360,
-      "sha256": "67bea051d3814e3eccecaa1aee06fd2bcc82639d820626fd0279ec7bed655c5a"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/02bf3d3096ec5a52.mp3",
-      "bytes": 22752,
-      "sha256": "159ef71e93e85e3f1a6e9d58d530233875d49118f5ac6d17d564a5de828878f9"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/9f24e6099e4036fc.mp3",
-      "bytes": 32400,
-      "sha256": "43b8982dd82b1d088415086a5342ef72bebf98b8e9a07e93af682278c60da3c8"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/d2a964facdc5710e.mp3",
-      "bytes": 30096,
-      "sha256": "f95a2226258f78b10cbcd4c1fe0c74cc7d262fe38437ec39a6e48e3bce3addc9"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/5a25dbd98b7e39f1.mp3",
-      "bytes": 28800,
-      "sha256": "c1e7248011e3835c1cfabfd330bc97b43435608fa2526c646b77ebed3ae78bc6"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/a5e18b0aeb3ddd95.mp3",
-      "bytes": 28800,
-      "sha256": "25d0cb804a25ecbc1887bfceed67ff32251b4fea2cb82ba4c37ca139f418a8b6"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/11cca7c54823e2bb.mp3",
-      "bytes": 28080,
-      "sha256": "1edf5b01f16b48e2b1762790e158bd1dfa23d8a1b08f3eafa9303213c459e142"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/e9a865a59872d64d.mp3",
-      "bytes": 30240,
-      "sha256": "76fe2028f535e59dce177b6c008874791944ade6c4d2aa7680b61c2291940bfc"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/86d4edd72e563040.mp3",
-      "bytes": 25200,
-      "sha256": "e30cff1499ff6ecb3e83c781b1d631fe4059c4a8848b444b55d2f6e5e224419a"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/0e9a8a56ce1f4ae7.mp3",
-      "bytes": 30528,
-      "sha256": "144fdbb5b6230c5d4024ff7db834716c228593a527597c598b0e188d24a5a1dd"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/0eacbf65dec8aa2d.mp3",
-      "bytes": 21312,
-      "sha256": "c6a715e0e00de4154bb7db3d5beb7021ff4dde79f915b728d90dbb654b104a9b"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/0aa5dfee455b14a0.mp3",
-      "bytes": 13392,
-      "sha256": "796b646901d416c3daad4025fed5eee08f8ae14c64ff3aa1e717dd4b7f60faed"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/ac5e91a88435f5f3.mp3",
-      "bytes": 17280,
-      "sha256": "9aafffb49cb5f9cabf2d49df1657d946a9f8b28a6863d938225162e8dccdc2a4"
-    },
-    {
-      "stageId": 6,
-      "file": "nagi/18948343ae09b041.mp3",
-      "bytes": 19008,
-      "sha256": "80c44a39f484996f3e1a1345c5688edfa086c709711be14367d9066c13d40319"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/e6531b67bd4471ff.mp3",
-      "bytes": 55872,
-      "sha256": "fbca8dd438f6ccda612038d5f6928b0fe53534197cf676a03954885f07a4904d"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/262dffc392e1e68b.mp3",
-      "bytes": 54144,
-      "sha256": "4dfa055ebe3fd73bdd481a599d91c4e95d763ed0eb1ad7e1acdd0e9f0297b023"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/971c0c3d670fa3c8.mp3",
-      "bytes": 45360,
-      "sha256": "18e81485af9b3924d26dc351e9d4c9c40e20eb8a4f351c3eb1be4bd033aa59c1"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/6fd0d70f9706a5eb.mp3",
-      "bytes": 42624,
-      "sha256": "36e02dd3fee58758241e087693ad43d8ad5edd3f195089c152437ab79b483161"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/122441f4cbaab833.mp3",
-      "bytes": 34272,
-      "sha256": "684d6573299e48d5a0f126dda29e8bb36436e8d26e7d92c8bb650d5bb345d555"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/9b68b0fbe51b009f.mp3",
-      "bytes": 40752,
-      "sha256": "e66153f956d00a6c660e00aaa98e4f077fb172098bd1d43264700607cef3cbaa"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/28a41c4848bfe3be.mp3",
-      "bytes": 44496,
-      "sha256": "840bdf94fca63f0e6d616cf7906f7c5a2a8d21abe43531ab37a61f2ff74d3e2c"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/ccdea61751eaf9e9.mp3",
-      "bytes": 43632,
-      "sha256": "d41c43ab7b82f6501cf25498d0613123f10735cd14b0c9fc1a59e8cf6359f030"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/8f5a49d8ef78c8ce.mp3",
-      "bytes": 48096,
-      "sha256": "b259ae48620ed9fe59192c387f0f091c7cae94a7312b44888b8628234ea47a7a"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/0af6a7dffee88595.mp3",
-      "bytes": 36144,
-      "sha256": "aa359f828dec58fab2a66365cd3f69f8773a67be4e1ff869112afe855af72a55"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/6584f7167099cee7.mp3",
-      "bytes": 46368,
-      "sha256": "fffe80919a36d5d056afc61327170ba3fa11e244ae88d546cd1f8ac5229dad47"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/4bc80c32ea5dcd07.mp3",
-      "bytes": 46224,
-      "sha256": "143965e1f3a81c89874e293788a505ca870621ffaf661ad39b35e0b7ce9fb3cd"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/04b313d14d7b1eb4.mp3",
-      "bytes": 25776,
-      "sha256": "8238129cc0c9bfdeea7e798cc4d5e5ba4dae25336f845030ec2de4e006fcc44d"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/b81c664bfc8c1a54.mp3",
-      "bytes": 35280,
-      "sha256": "404ce5ad00e4079dd957c6fb9c3bfdb198867315d65a284c362759c1714ce37b"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/4cd5481fe79fd3bf.mp3",
-      "bytes": 34704,
-      "sha256": "86e4e9ef1320d37e5387a30188b7b03478b19766124ab84abb3e5ac6cc7b7bac"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/da032774f553eb71.mp3",
-      "bytes": 35136,
-      "sha256": "7f014f92ef0f4142cc64a8317e74d2c29ebd2256fa7276c6dfbf828461fc897d"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/c8b50739237dbd0b.mp3",
-      "bytes": 36000,
-      "sha256": "049631f15932508e796fc37623e2856beaa6f0399fcd77375734ca0b7b1eb35f"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/9a9d5f94bf80b225.mp3",
-      "bytes": 36432,
-      "sha256": "b5c8000dab9e88323593c8e35601a8801407331dd6965a2376a4cecf3d678dce"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/a8397b0ebf91786c.mp3",
-      "bytes": 22320,
-      "sha256": "995d2cfaf269603c6d319195fba842c63b58cf084ca1c7347caaf8ba7868b5b5"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/96acf35c5bcd59f0.mp3",
-      "bytes": 32832,
-      "sha256": "7da85beef2325368f7373b05a09e63eb5d433a7070a1fc459996801f6a278312"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/fd6d019d04a4affc.mp3",
-      "bytes": 28944,
-      "sha256": "12a6cf7ee474d1aaab9768601d18fb90e70a799b960afa963d5b2b7c3b721156"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/2f875ecfdf1dd33e.mp3",
-      "bytes": 45792,
-      "sha256": "4cb845c8165f0b7841cf90134df0fa0e8045300a16e4585c3c4140a90c95f79b"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/142bd371dd90058b.mp3",
-      "bytes": 42768,
-      "sha256": "5d634cd4cd1c22a3570355e5935ff5f9fc52227dcf4ab11eefb2c6900666ac46"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/4d4e46ee0fe176d5.mp3",
-      "bytes": 40896,
-      "sha256": "056ee4f3682960dfda043bba6517c9b2bbea552b17523ad9457f1ab73118e5ed"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/7ba9a902104ff144.mp3",
-      "bytes": 29520,
-      "sha256": "d82f7f6304a1ceb7c15b59ad4f916f9ac895fb09d3fc1a49bba4737f8dc1fb89"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/740c9546a1e00c29.mp3",
-      "bytes": 38448,
-      "sha256": "c5ecdf069179fe859928f187c41f03919e54d279b69d9db4342ed86889d02616"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/7679bb4f02c7bd09.mp3",
-      "bytes": 36576,
-      "sha256": "635219a96ce0369e1b5d7efef95d1327f576ebcf926d7698c2acc1aaf7e9a952"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/602aa17a8914486c.mp3",
-      "bytes": 22176,
-      "sha256": "369377790a2858ed050659de2f900dc53f1db1ab349127f2fc69dff405b3bc66"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/e2fc523d7b0f627f.mp3",
-      "bytes": 20592,
-      "sha256": "9da1ea45a2b8f1bbda2b16a789d5b9027df44c77cdbf1e7669ad09d6bdacd286"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/697f8a7a01ce882e.mp3",
-      "bytes": 31680,
-      "sha256": "6a8efee7c1e22b0881eff52ae219e3948d08ddd7c7ae3746ed76df6cdaed4b35"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/b1c6984a36ee1038.mp3",
-      "bytes": 21600,
-      "sha256": "dfabbb1bc2b8fd03fdde993659c87a11852219b126beb0779dda3217a4031b7b"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/0e6afbad8332b0c2.mp3",
-      "bytes": 22608,
-      "sha256": "88311a090736e51c9a5caad6b7f8e3b624e6fe5d2867cc73440e16c98a036e7d"
-    },
-    {
-      "stageId": 7,
-      "file": "sara/7431245b127690ac.mp3",
-      "bytes": 25488,
-      "sha256": "3a6ed652554f3603a5309c5774747d12c50c3446067a42fe3c7cc9d8bfbcbd7a"
+      "slug": "hinata",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "なんかいい感じだね！",
+      "spoken": "なんかいい感じだね！",
+      "file": "hinata/5a1dfed56f2c8596.mp3",
+      "bytes": 11180,
+      "seconds": 1.312,
+      "sha256": "7fdee4248a2e14669681013ea80a945602d095bd7f7e96551133e6fa00fdecaa",
+      "speaker": 10005,
+      "pcmPeak": 18504
     },
     {
       "stageId": 1,
-      "file": "hinata/02bf16995779e7c0.mp3",
-      "bytes": 50544,
-      "sha256": "659865de1fad8b25823994f64018ba8ba9c14d80676549d4535fb51b812ef1c7"
+      "slug": "hinata",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "落ち着いてるね。私も見習いたいな。",
+      "spoken": "落ち着いてるね。私も見習いたいな。",
+      "file": "hinata/77175922ceb0c069.mp3",
+      "bytes": 20588,
+      "seconds": 2.485,
+      "sha256": "498ed92a91c6e7c8cc643fd631836789b80514c8c136aa3faedb8efacbb45986",
+      "speaker": 10005,
+      "pcmPeak": 17359
+    },
+    {
+      "stageId": 1,
+      "slug": "hinata",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "一緒に打てて楽しいな。",
+      "spoken": "一緒に打てて楽しいな。",
+      "file": "hinata/a84d82bdce51aad2.mp3",
+      "bytes": 13292,
+      "seconds": 1.568,
+      "sha256": "63fe87b294546b451fc3003555553ac8276b0ac56cdd0a2f6b0bad86f68e31a4",
+      "speaker": 10005,
+      "pcmPeak": 10964
     },
     {
       "stageId": 2,
-      "file": "mio/6ff4cd1d3dfeefc4.mp3",
-      "bytes": 59184,
-      "sha256": "55c66f936daf491299913a5065b2533429fe06087ae5c7e35732d9b944388161"
+      "slug": "mio",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "水瀬澪です。設計の仕事のあと、ここでよく打つの。",
+      "spoken": "みなせみおです。設計の仕事のあと、ここでよく打つの。",
+      "file": "mio/db05c1a1d0a466e9.mp3",
+      "bytes": 42476,
+      "seconds": 5.216,
+      "sha256": "4f51676bc138690ea241ea800906b3129e15bf9211e1ae4a911df7bd87818da0",
+      "speaker": 10007,
+      "pcmPeak": 10724
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "どう組み立てるか考えるのが好き。仕事でも、麻雀でもね。",
+      "spoken": "どう組み立てるか考えるのが好き。仕事でも、マージャンでもね。",
+      "file": "mio/deddec1b61daf28e.mp3",
+      "bytes": 43628,
+      "seconds": 5.365,
+      "sha256": "eedf35bf39f3c8166f22e0c77c8a635ec944d17b798e60d42a66de2f73a01530",
+      "speaker": 10007,
+      "pcmPeak": 14642
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "お待たせ。そろそろ始めようか。",
+      "spoken": "お待たせ。そろそろ始めようか。",
+      "file": "mio/2c692bb93da5247e.mp3",
+      "bytes": 25004,
+      "seconds": 3.029,
+      "sha256": "3dc2a177ebf8e974fb45b005acd449f2b906ddc9b129cfa3c5f72a16c14230a8",
+      "speaker": 10007,
+      "pcmPeak": 12441
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "さっきの打ち方、少しわかった気がする。",
+      "spoken": "さっきの打ち方、少しわかった気がする。",
+      "file": "mio/a80e34f313ea567e.mp3",
+      "bytes": 29036,
+      "seconds": 3.531,
+      "sha256": "e0224735cc0880d69004887c8042d1cb1046ea6e3d684febf276898d6f4ced40",
+      "speaker": 10007,
+      "pcmPeak": 10197
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "二局目は私も打ち方を変えてみるね。",
+      "spoken": "二局目は私も打ち方を変えてみるね。",
+      "file": "mio/3bad781f8319169b.mp3",
+      "bytes": 25964,
+      "seconds": 3.147,
+      "sha256": "fe7fe363badaad599629b1b3238103991b937ec056f48efacb69015c375de20f",
+      "speaker": 10007,
+      "pcmPeak": 11371
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "三局目ね。さっきの二局は、よく覚えてる。",
+      "spoken": "三局目ね。さっきの二局は、よく覚えてる。",
+      "file": "mio/1a332dfcd0baacf7.mp3",
+      "bytes": 37100,
+      "seconds": 4.544,
+      "sha256": "675dc4d6777908e68ca1ecd8cbee9c8473960fb04c54f73c6598730f9dab1363",
+      "speaker": 10007,
+      "pcmPeak": 12262
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "最後まで一手ずつ、丁寧にいこう。",
+      "spoken": "最後まで一手ずつ、丁寧にいこう。",
+      "file": "mio/6c7812d77cdfe3d7.mp3",
+      "bytes": 27692,
+      "seconds": 3.371,
+      "sha256": "67fd9958332cd463d3f77f9c1633cf7d663194810d9942c46792a1ca5af8e9d9",
+      "speaker": 10007,
+      "pcmPeak": 9178
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "戻ってきたね。さっきの一局、覚えてる？",
+      "spoken": "戻ってきたね。さっきの一局、覚えてる？",
+      "file": "mio/721189a71f07e711.mp3",
+      "bytes": 36140,
+      "seconds": 4.437,
+      "sha256": "634992ee2fb11514767bbc74faebc43cfa7de381310adedf78df28f5eb24a38d",
+      "speaker": 10007,
+      "pcmPeak": 11448
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "気持ちを切り替えて、最初からやろう。",
+      "spoken": "気持ちを切り替えて、最初からやろう。",
+      "file": "mio/84940de1286c9be0.mp3",
+      "bytes": 25964,
+      "seconds": 3.157,
+      "sha256": "4c4c0d56979828949b258d292e9d3fbbbeed85f4e9b629082cf794320f761da2",
+      "speaker": 10007,
+      "pcmPeak": 9467
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "どうぞ。設計の仕事のあと、ここでよく打つの。",
+      "spoken": "どうぞ。設計の仕事のあと、ここでよく打つの。",
+      "file": "mio/86e2561de7f54cb9.mp3",
+      "bytes": 35564,
+      "seconds": 4.363,
+      "sha256": "afd3e8536c7b5951d3c72df69199c3cf221f640e77253e24bb599d684bc7008d",
+      "speaker": 10007,
+      "pcmPeak": 13653
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "win-1",
+      "direction": "win",
+      "text": "うまく組み立てたね。まずはあなたの一勝。",
+      "spoken": "うまく組み立てたね。まずはあなたの一勝。",
+      "file": "mio/78cb9a560f985eea.mp3",
+      "bytes": 29036,
+      "seconds": 3.531,
+      "sha256": "4924f5c8b9d25e27724d0cff95d99f11b1ae7f91b67bc918c5f491ea6d13480f",
+      "speaker": 10007,
+      "pcmPeak": 10098
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "win-2",
+      "direction": "win",
+      "text": "なるほど、そこで待ってたのね。二勝目、おめでとう。",
+      "spoken": "なるほど、そこで待ってたのね。二勝目、おめでとう。",
+      "file": "mio/7e80b036fdafa923.mp3",
+      "bytes": 41324,
+      "seconds": 5.067,
+      "sha256": "0fd23853d9a79c3ed6082ee49f32cf143f9f21e355be26ddd616c35c1f8c917d",
+      "speaker": 10007,
+      "pcmPeak": 12811
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "win-3",
+      "direction": "win",
+      "text": "私から三勝ね。負けたけど、勉強になったわ。ありがとう。",
+      "spoken": "私から三勝ね。負けたけど、勉強になったわ。ありがとう。",
+      "file": "mio/2671abecdfc4fb42.mp3",
+      "bytes": 47660,
+      "seconds": 5.877,
+      "sha256": "53e9167cebba0a9ccea1bcafd6bcd858e4bdf7a221a2ec64a797b392f4e1d025",
+      "speaker": 10007,
+      "pcmPeak": 11821
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計点はあなたのほうが上ね。約束どおり、ご褒美を用意したわ。",
+      "spoken": "合計点はあなたのほうが上ね。約束どおり、ご褒美を用意したわ。",
+      "file": "mio/058f425b59ef935a.mp3",
+      "bytes": 50156,
+      "seconds": 6.187,
+      "sha256": "117bcc153a545debb8c1db1423e328c77feccab17b166f3b633205067b6a3b3f",
+      "speaker": 10007,
+      "pcmPeak": 10990
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "じゃあ、始めようか。よろしく。",
+      "spoken": "じゃあ、始めようか。よろしく。",
+      "file": "mio/79b6966f5764d203.mp3",
+      "bytes": 26348,
+      "seconds": 3.211,
+      "sha256": "e01d62b02e13849de7ed7f30a3d0c798d4592a82391b4e3174cb991e0bdf6b3e",
+      "speaker": 10007,
+      "pcmPeak": 11436
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "準備できたよ。始めよう。",
+      "spoken": "準備できたよ。始めよう。",
+      "file": "mio/aac23ae3a0405323.mp3",
+      "bytes": 20588,
+      "seconds": 2.485,
+      "sha256": "d9791dcf8791b6d329bf8f5a112b09a49b031a2baa8f4f763f6f52e097e476a4",
+      "speaker": 10007,
+      "pcmPeak": 10212
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "今度はどう組み立てようかな。よし、いこう。",
+      "spoken": "今度はどう組み立てようかな。よし、いこう。",
+      "file": "mio/40bb7891020169d4.mp3",
+      "bytes": 35180,
+      "seconds": 4.309,
+      "sha256": "3a4e215680f9762db880d303603ac8256c4e5af913a477ffc49b81e19d8518b8",
+      "speaker": 10007,
+      "pcmPeak": 11744
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "リーチね。河をもう一度見ておこう。",
+      "spoken": "リーチね。河をもう一度見ておこう。",
+      "file": "mio/a3e803c3dd8d8fb5.mp3",
+      "bytes": 25388,
+      "seconds": 3.093,
+      "sha256": "0c7ce8b797c16ceaa7c81e82bc58095add3856924ad775a3a470f8a0c7e1a814",
+      "speaker": 10007,
+      "pcmPeak": 13767
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "そっか、来たね。少し考えさせて。",
+      "spoken": "そっか、来たね。少し考えさせて。",
+      "file": "mio/c7d1ef65662ed411.mp3",
+      "bytes": 31532,
+      "seconds": 3.851,
+      "sha256": "f86db90a6ccf3f0b0258c745c440e54861699186fc4593e99b2eaf82ba3bc372",
+      "speaker": 10007,
+      "pcmPeak": 11216
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "リーチか。ここからは慎重にいくよ。",
+      "spoken": "リーチか。ここからは慎重にいくよ。",
+      "file": "mio/05e6beef9db72ad7.mp3",
+      "bytes": 25964,
+      "seconds": 3.157,
+      "sha256": "d9ef52af90d3f0215c889868de0fc6eae5b12a12c64724a81baeae53f2063fcd",
+      "speaker": 10007,
+      "pcmPeak": 11432
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "ここは押す。リーチ。",
+      "spoken": "ここは押す。リーチ。",
+      "file": "mio/511d5147546af9a3.mp3",
+      "bytes": 17324,
+      "seconds": 2.08,
+      "sha256": "92e5da51106964acb565df537064e0717cac96a57231b4ccb88c80a18acce614",
+      "speaker": 10007,
+      "pcmPeak": 10160
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "うん、待ちはこれでいい。リーチ。",
+      "spoken": "うん、待ちはこれでいい。リーチ。",
+      "file": "mio/20c0b912821a759f.mp3",
+      "bytes": 27116,
+      "seconds": 3.296,
+      "sha256": "18b64cd16da4f3589449dea0f745548bd78f54163d0696ff1c93d777bbe02211",
+      "speaker": 10007,
+      "pcmPeak": 7457
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "迷ったけど、決めた。リーチね。",
+      "spoken": "迷ったけど、決めた。リーチね。",
+      "file": "mio/025e057626a9890a.mp3",
+      "bytes": 26156,
+      "seconds": 3.179,
+      "sha256": "277c114b86c8da553b03db7f951ae54288ccfed197864b336ce2f72a6eae1dba",
+      "speaker": 10007,
+      "pcmPeak": 10925
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "この局は私の勝ちね。対局ありがとう。",
+      "spoken": "この局は私の勝ちね。対局ありがとう。",
+      "file": "mio/1589a77036a0d71d.mp3",
+      "bytes": 31916,
+      "seconds": 3.893,
+      "sha256": "94ae6e3d301a9b1b35fc7eb5e5da3b89bced0770db2097084d41f6fef983617c",
+      "speaker": 10007,
+      "pcmPeak": 11819
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "うまくいった。最後は少し迷ったよ。",
+      "spoken": "うまくいった。最後は少し迷ったよ。",
+      "file": "mio/8d66f149f8cb2d76.mp3",
+      "bytes": 27500,
+      "seconds": 3.36,
+      "sha256": "a23cb6169ced7059f86d89af11e95cb53deff4e8329009d71245d730c451013a",
+      "speaker": 10007,
+      "pcmPeak": 10935
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "決まったね。最後まで気が抜けなかったよ。",
+      "spoken": "決まったね。最後まで気が抜けなかったよ。",
+      "file": "mio/0f6ea48e860ab5ab.mp3",
+      "bytes": 29420,
+      "seconds": 3.584,
+      "sha256": "a52f62ada585b9b35f1feba3cf98c6c78f7df101312afec8d42955ee46b986ad",
+      "speaker": 10007,
+      "pcmPeak": 11815
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "流局ね。おつかれさま。",
+      "spoken": "りゅうきょくね。おつかれさま。",
+      "file": "mio/0c6d04b0ea2469e3.mp3",
+      "bytes": 21356,
+      "seconds": 2.571,
+      "sha256": "6b18cf06a916ffaa3cc0ade99709218b70bbf351654835fbb8a86d92bf419a85",
+      "speaker": 10007,
+      "pcmPeak": 10818
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "最後まで決まらなかったね。",
+      "spoken": "最後まで決まらなかったね。",
+      "file": "mio/5b399a932d4db5a9.mp3",
+      "bytes": 18092,
+      "seconds": 2.165,
+      "sha256": "c3ba3867b4fef9094cabe2d7b0321dbc8d5f5f8f3e62f7fe5d37b1017235dee4",
+      "speaker": 10007,
+      "pcmPeak": 10195
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "ここで流局か。私も少し迷いすぎたかな。",
+      "spoken": "ここでりゅうきょくか。私も少し迷いすぎたかな。",
+      "file": "mio/0843f0f6d2ee3552.mp3",
+      "bytes": 35180,
+      "seconds": 4.309,
+      "sha256": "b015097558cd6ff681e02af2870ee4a12db0b754e3a600914386fdfe58d53284",
+      "speaker": 10007,
+      "pcmPeak": 12303
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "時間はあるよ。ゆっくりどうぞ。",
+      "spoken": "時間はあるよ。ゆっくりどうぞ。",
+      "file": "mio/a945e8c0d4222bce.mp3",
+      "bytes": 22508,
+      "seconds": 2.72,
+      "sha256": "fee93e793518f71bc026f259ed2810405cd48e6c5419aa633474efc8bfb348b9",
+      "speaker": 10007,
+      "pcmPeak": 11620
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "もう一度見直していいよ。待ってる。",
+      "spoken": "もう一度見直していいよ。待ってる。",
+      "file": "mio/05908e680de679f8.mp3",
+      "bytes": 25580,
+      "seconds": 3.115,
+      "sha256": "2394c5afe9c30043c4f46eb66dbe7e37150e4b7126bf30b5c9cff6e1e8d9684a",
+      "speaker": 10007,
+      "pcmPeak": 11855
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "迷うところだね。あせらなくていいよ。",
+      "spoken": "迷うところだね。あせらなくていいよ。",
+      "file": "mio/7906dd7fc8a9c289.mp3",
+      "bytes": 26348,
+      "seconds": 3.211,
+      "sha256": "3c867acd341a0af4065533cba9be60a7efe1b362f8e058e3173d3c259a5cc4b0",
+      "speaker": 10007,
+      "pcmPeak": 14291
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "なるほど。そういう打ち方もあるね。",
+      "spoken": "なるほど。そういう打ち方もあるね。",
+      "file": "mio/ac4cba46450c5402.mp3",
+      "bytes": 24236,
+      "seconds": 2.944,
+      "sha256": "c0401d5c61942d0be91da499d121e87c343af2350927abf90e2bb26b061bf79e",
+      "speaker": 10007,
+      "pcmPeak": 10184
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "落ち着いて打つね。いいと思う。",
+      "spoken": "落ち着いて打つね。いいと思う。",
+      "file": "mio/454f073d3fd44df9.mp3",
+      "bytes": 23660,
+      "seconds": 2.859,
+      "sha256": "79186f69322ce0ff974084be4c60c4895ce7c79e5cc928b1af1627875e38d5c5",
+      "speaker": 10007,
+      "pcmPeak": 9459
+    },
+    {
+      "stageId": 2,
+      "slug": "mio",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "いい勝負になってきたね。",
+      "spoken": "いい勝負になってきたね。",
+      "file": "mio/a22e7c396ac571a2.mp3",
+      "bytes": 15788,
+      "seconds": 1.877,
+      "sha256": "24afa1c14e48572b1cbe77f243a763c087fb712bb858868aa3b9eaaaa96e728b",
+      "speaker": 10007,
+      "pcmPeak": 11289
     },
     {
       "stageId": 3,
-      "file": "koharu/01fe455c487fb5d1.mp3",
-      "bytes": 62784,
-      "sha256": "a41a3418887ed27df4a08febb254f99a1a2bb4683f97315699ed08760189d980"
+      "slug": "koharu",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "こんにちは。小森こはるです。ちょうど、お花の手入れが終わったところです。",
+      "spoken": "こんにちは。こもりこはるです。ちょうど、お花の手入れが終わったところです。",
+      "file": "koharu/a0e7e6cb2c8b831f.mp3",
+      "bytes": 45548,
+      "seconds": 5.6,
+      "sha256": "0c11ce3576f3f5bf14e0a6e364012aad7a15295475d9789bcbfbaf50a2e5f3ab",
+      "speaker": 10004,
+      "pcmPeak": 17167
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "よかったら、一局お付き合いしてもいいですか？",
+      "spoken": "よかったら、一局お付き合いしてもいいですか？",
+      "file": "koharu/03491ba01cc7f8ee.mp3",
+      "bytes": 29228,
+      "seconds": 3.573,
+      "sha256": "62bdf446cd035bd3af9b9c75d982da44ff334aaf86dbbe5d3882870ede4d5702",
+      "speaker": 10004,
+      "pcmPeak": 13169
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "どうぞ、急がずに。ゆっくり始めましょうね。",
+      "spoken": "どうぞ、急がずに。ゆっくり始めましょうね。",
+      "file": "koharu/d8be8811425e4190.mp3",
+      "bytes": 27692,
+      "seconds": 3.371,
+      "sha256": "91088435f63ed0c2c00844efadba601fca88b002d01aba0bfa370fd4d6d2d486",
+      "speaker": 10004,
+      "pcmPeak": 12361
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "ふふ、もう一局ですね。ご一緒できてうれしいです。",
+      "spoken": "ふふ、もう一局ですね。ご一緒できてうれしいです。",
+      "file": "koharu/dea76b9aca5bec54.mp3",
+      "bytes": 34988,
+      "seconds": 4.288,
+      "sha256": "925fcabd70ff3222ef9f078e1b4470162a02aa3d978d51d8cc8e57b9e5001d8b",
+      "speaker": 10004,
+      "pcmPeak": 15067
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "今度は私も、いつもと違う打ち方を試してみますね。",
+      "spoken": "今度は私も、いつもと違う打ち方を試してみますね。",
+      "file": "koharu/1d327ea3cc58a031.mp3",
+      "bytes": 34412,
+      "seconds": 4.203,
+      "sha256": "ca82c10718416582534b56378d19a0a63e741fe574a131f82bb6649837ab6bc3",
+      "speaker": 10004,
+      "pcmPeak": 11729
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "もう最後の一局なんですね。",
+      "spoken": "もう最後の一局なんですね。",
+      "file": "koharu/533b481366360d0a.mp3",
+      "bytes": 17900,
+      "seconds": 2.155,
+      "sha256": "9e9a3022d7d8adb9fdba5fbd5b43a14bbe89255aa8ff1df0cfe06bc46d1dba42",
+      "speaker": 10004,
+      "pcmPeak": 12274
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "せっかくですから、最後まで楽しみましょう。",
+      "spoken": "せっかくですから、最後まで楽しみましょう。",
+      "file": "koharu/4ebdd1f6f4e614c0.mp3",
+      "bytes": 26348,
+      "seconds": 3.2,
+      "sha256": "f1b465315a20dc053e398abf5552764e277ee34ce1f459ef7de40a319aa3a8f9",
+      "speaker": 10004,
+      "pcmPeak": 17283
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "またお会いできましたね。どうぞ、こちらへ。",
+      "spoken": "またお会いできましたね。どうぞ、こちらへ。",
+      "file": "koharu/45f0f9b6d19b29bb.mp3",
+      "bytes": 27116,
+      "seconds": 3.307,
+      "sha256": "1e90e237a00cf1af836a9b8d59999e594f47265b4077bc73e146329bce0d8581",
+      "speaker": 10004,
+      "pcmPeak": 17838
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "大丈夫ですよ。もう一度、ゆっくり始めましょう。",
+      "spoken": "大丈夫ですよ。もう一度、ゆっくり始めましょう。",
+      "file": "koharu/5ca03e2442f7297d.mp3",
+      "bytes": 31340,
+      "seconds": 3.829,
+      "sha256": "88c1fc018048e372905b86353bcf4ebd1f11a76d5e16aeead9f609122aa77d5b",
+      "speaker": 10004,
+      "pcmPeak": 18168
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "こんにちは。ちょうど、お花の手入れが終わったところです。",
+      "spoken": "こんにちは。ちょうど、お花の手入れが終わったところです。",
+      "file": "koharu/5ce97da52c51d085.mp3",
+      "bytes": 33644,
+      "seconds": 4.128,
+      "sha256": "9407701dea2fb1a4c21ae8a5a032f162d0ab59ea711e2cfb32ea17c222a812ed",
+      "speaker": 10004,
+      "pcmPeak": 15306
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "win-1",
+      "direction": "win",
+      "text": "お上手ですね。一勝目、おめでとうございます。",
+      "spoken": "お上手ですね。一勝目、おめでとうございます。",
+      "file": "koharu/1e3dbfaf7a388f0e.mp3",
+      "bytes": 33452,
+      "seconds": 4.096,
+      "sha256": "4410443dab3ff2fb5977589545c63367602458d62edb768397d02c50aea10174",
+      "speaker": 10004,
+      "pcmPeak": 13852
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "win-2",
+      "direction": "win",
+      "text": "二勝目ですね。お祝いに、小さな花束をどうぞ。",
+      "spoken": "二勝目ですね。お祝いに、小さな花束をどうぞ。",
+      "file": "koharu/96f5e3ac0b17bce5.mp3",
+      "bytes": 32876,
+      "seconds": 4.021,
+      "sha256": "f6c3c449be2e66c818a89b82d70d5ce073231c075acee35765f2f7898a55afa3",
+      "speaker": 10004,
+      "pcmPeak": 10753
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "win-3",
+      "direction": "win",
+      "text": "これで三勝ですね。ご一緒できて、うれしかったです。",
+      "spoken": "これで三勝ですね。ご一緒できて、うれしかったです。",
+      "file": "koharu/29e4a14029bc7a33.mp3",
+      "bytes": 34028,
+      "seconds": 4.171,
+      "sha256": "50ba11ff612e6c3a6a959651992ee33429407e022d3dbea1c8f25644ab2a09df",
+      "speaker": 10004,
+      "pcmPeak": 17402
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計では私の負けですね。おめでとうございます。こちら、ご褒美です。",
+      "spoken": "合計では私の負けですね。おめでとうございます。こちら、ご褒美です。",
+      "file": "koharu/0a8791512a7d8414.mp3",
+      "bytes": 48236,
+      "seconds": 5.952,
+      "sha256": "b36c68fab87eb76473f3e182de71edfacdd4186933cb85f77abb011c22d68cec",
+      "speaker": 10004,
+      "pcmPeak": 16829
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "それじゃあ、始めましょうか。",
+      "spoken": "それじゃあ、始めましょうか。",
+      "file": "koharu/d5109e3e61e367b2.mp3",
+      "bytes": 18092,
+      "seconds": 2.176,
+      "sha256": "3672beced6aa35ce7e16bf97bab4f084efe2ac0d2f21834ad08c7f4d386f109e",
+      "speaker": 10004,
+      "pcmPeak": 15924
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "今日はご一緒できてうれしいです。よろしくお願いします。",
+      "spoken": "今日はご一緒できてうれしいです。よろしくお願いします。",
+      "file": "koharu/992604d28cdb909a.mp3",
+      "bytes": 33452,
+      "seconds": 4.085,
+      "sha256": "158e764a0ef2e032e6a79d584069eb9c3a84a2e1146b3fa0c180407dfb618096",
+      "speaker": 10004,
+      "pcmPeak": 12900
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "お茶もありますよ。では、始めましょう。",
+      "spoken": "お茶もありますよ。では、始めましょう。",
+      "file": "koharu/75230daeb003efa2.mp3",
+      "bytes": 26348,
+      "seconds": 3.211,
+      "sha256": "8f2e7d6cc0276499e60d1a6805191ceb60b72725777710ba2f14674c86016e2e",
+      "speaker": 10004,
+      "pcmPeak": 17547
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "あ、リーチですね。私もちょっと考えますね。",
+      "spoken": "あ、リーチですね。私もちょっと考えますね。",
+      "file": "koharu/29b1d475a714dfe8.mp3",
+      "bytes": 30380,
+      "seconds": 3.701,
+      "sha256": "71e0bef9c2dc050dd25e69e178f2043fa3ad11fd0b42a7a8e9589fb2331256f1",
+      "speaker": 10004,
+      "pcmPeak": 9793
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "リーチですか。どきっとしました。",
+      "spoken": "リーチですか。どきっとしました。",
+      "file": "koharu/9a20d2b134d8dad8.mp3",
+      "bytes": 19436,
+      "seconds": 2.347,
+      "sha256": "b8488a524f528ee1ce1eaef6d0a4f55d8cbe1fcd778faca1eb1195068872fa54",
+      "speaker": 10004,
+      "pcmPeak": 14389
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "そう来ましたか。ゆっくり考えさせてくださいね。",
+      "spoken": "そう来ましたか。ゆっくり考えさせてくださいね。",
+      "file": "koharu/630bacb1388cd002.mp3",
+      "bytes": 28076,
+      "seconds": 3.424,
+      "sha256": "cbd995258f079f2e887eddb6deea47f92fdf6f34e55e26b8396d92b991ad98da",
+      "speaker": 10004,
+      "pcmPeak": 10973
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "はい。ここでリーチしますね。",
+      "spoken": "はい。ここでリーチしますね。",
+      "file": "koharu/5279100e0c9e5b98.mp3",
+      "bytes": 18668,
+      "seconds": 2.24,
+      "sha256": "26de5737ad7a69890c1853549d0715a0be4a8a89e900b415bb5b64e1bec893ce",
+      "speaker": 10004,
+      "pcmPeak": 18124
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "少し迷いましたけど、リーチです。",
+      "spoken": "少し迷いましたけど、リーチです。",
+      "file": "koharu/49d5160c2531574e.mp3",
+      "bytes": 21356,
+      "seconds": 2.592,
+      "sha256": "683bb4f831f998657bf3321235156ec82b0ac841f15d75d94eeef213927ddd01",
+      "speaker": 10004,
+      "pcmPeak": 8643
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "では、リーチにします。",
+      "spoken": "では、リーチにします。",
+      "file": "koharu/bbb5ca62806b57b9.mp3",
+      "bytes": 15212,
+      "seconds": 1.803,
+      "sha256": "e7cdaef889fbba8d2613f7946d9be464928ab05269f67fbe2910a5dae1ddaf1e",
+      "speaker": 10004,
+      "pcmPeak": 19642
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "あ、あがれました。ありがとうございました。",
+      "spoken": "あ、あがれました。ありがとうございました。",
+      "file": "koharu/6c0066446aa312e4.mp3",
+      "bytes": 26156,
+      "seconds": 3.189,
+      "sha256": "a266ac8a2a57a531cff90eead5afc9e9c3b3a33075aadc3e64d410384c04c52e",
+      "speaker": 10004,
+      "pcmPeak": 19144
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "この局は私でしたね。いい対局でした。",
+      "spoken": "この局は私でしたね。いい対局でした。",
+      "file": "koharu/011f0a1b6a605611.mp3",
+      "bytes": 26732,
+      "seconds": 3.253,
+      "sha256": "e486d2da71c283008953aa7fe65e2e4d3c296daf4282528ba9670bcb0fdff6a1",
+      "speaker": 10004,
+      "pcmPeak": 13961
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "うまくいきました。最後まで緊張しました。",
+      "spoken": "うまくいきました。最後まで緊張しました。",
+      "file": "koharu/86c2f2e08bdde2fb.mp3",
+      "bytes": 25388,
+      "seconds": 3.093,
+      "sha256": "7070fde5fd1b2299a8e9318e65530eaeed4657e0529ecc4d2e218646b94f5644",
+      "speaker": 10004,
+      "pcmPeak": 15094
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "流局ですね。おつかれさまでした。",
+      "spoken": "りゅうきょくですね。おつかれさまでした。",
+      "file": "koharu/1fdc766029bff3fd.mp3",
+      "bytes": 22124,
+      "seconds": 2.688,
+      "sha256": "b50991dd98e8dc070102316f3d1fed93e792c0aa7f42bbfe13dd163452ff1d62",
+      "speaker": 10004,
+      "pcmPeak": 17708
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "決まらなかったですね。こういう局も好きです。",
+      "spoken": "決まらなかったですね。こういう局も好きです。",
+      "file": "koharu/4368c05775e4e716.mp3",
+      "bytes": 27692,
+      "seconds": 3.371,
+      "sha256": "eba5e4bebf7640cfbdbba11ae87e69d52fe575eb9daa3d52293369a34ca6b667",
+      "speaker": 10004,
+      "pcmPeak": 12786
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "ふう。少しお茶にしましょうか。",
+      "spoken": "ふう。少しお茶にしましょうか。",
+      "file": "koharu/dc71029a7af3c695.mp3",
+      "bytes": 20396,
+      "seconds": 2.464,
+      "sha256": "c5ba247194db5e1489c9449e1e735a73f8921613e8a913a18ccd51e4de3ec1ef",
+      "speaker": 10004,
+      "pcmPeak": 11085
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "どうぞ、ゆっくり考えてくださいね。",
+      "spoken": "どうぞ、ゆっくり考えてくださいね。",
+      "file": "koharu/22415b73f2e7537d.mp3",
+      "bytes": 22124,
+      "seconds": 2.677,
+      "sha256": "c37434762963161bca711472f96470dc0cde08950c743a85368f91dd1e9c243a",
+      "speaker": 10004,
+      "pcmPeak": 12477
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "急がなくて大丈夫ですよ。",
+      "spoken": "急がなくて大丈夫ですよ。",
+      "file": "koharu/7e430186ec1a86d8.mp3",
+      "bytes": 16940,
+      "seconds": 2.037,
+      "sha256": "2b52ae1592018ed265aa12dee25ff6ded3ae63dc046b4dd0283a171f41132e46",
+      "speaker": 10004,
+      "pcmPeak": 11906
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "待ってますから、どうぞご自分のペースで。",
+      "spoken": "待ってますから、どうぞご自分のペースで。",
+      "file": "koharu/21cce5dee61e7de6.mp3",
+      "bytes": 24620,
+      "seconds": 2.997,
+      "sha256": "5c21b3c360785f9a0333397698fa832daa68ac87555acb6038999cc5a7c3f65b",
+      "speaker": 10004,
+      "pcmPeak": 18379
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "丁寧に打つんですね。すてきです。",
+      "spoken": "丁寧に打つんですね。すてきです。",
+      "file": "koharu/8c54009e19d4e8c1.mp3",
+      "bytes": 21932,
+      "seconds": 2.645,
+      "sha256": "08408a9a7ea13c5731257ea69ce052643c669a5a08fd13f7e42a35a2394a0a62",
+      "speaker": 10004,
+      "pcmPeak": 15053
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "ふふ、楽しくなってきましたね。",
+      "spoken": "ふふ、楽しくなってきましたね。",
+      "file": "koharu/f6ac6d9a7b5e83e7.mp3",
+      "bytes": 20780,
+      "seconds": 2.517,
+      "sha256": "299da001e725321520d781a9dbdd1241df4783265fc07d5c62d1f87495d66b1a",
+      "speaker": 10004,
+      "pcmPeak": 12442
+    },
+    {
+      "stageId": 3,
+      "slug": "koharu",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "なんだか落ち着きますね。",
+      "spoken": "なんだか落ち着きますね。",
+      "file": "koharu/7053ffd4e54c4fac.mp3",
+      "bytes": 14444,
+      "seconds": 1.717,
+      "sha256": "aea4e6b30693046e3a168e003795d4992476f97cfa6b49ecce20e39875cd21c5",
+      "speaker": 10004,
+      "pcmPeak": 15864
     },
     {
       "stageId": 4,
-      "file": "akane/7dc0be54b7e7f35d.mp3",
-      "bytes": 56736,
-      "sha256": "7e1f8be2bebbc91719ff86130a6edbb7ce53bf53c29c327586c3b3f5838aa69a"
+      "slug": "akane",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "おっ、来たね！ 橘朱音だよ。ふだんは山や海で写真を撮ってるんだ。",
+      "spoken": "おっ、来たね！ たちばなあかねだよ。ふだんは山や海で写真を撮ってるんだ。",
+      "file": "akane/71114edf4d9fdabd.mp3",
+      "bytes": 49772,
+      "seconds": 6.144,
+      "sha256": "681ff53e89ce6b264a7503001041d2d5900870ff2f52f2c825179227c5f016ed",
+      "speaker": 10003,
+      "pcmPeak": 14398
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "麻雀も大好き。打ち始めると、つい本気になっちゃうけどね。",
+      "spoken": "マージャンも大好き。打ち始めると、つい本気になっちゃうけどね。",
+      "file": "akane/162b36218b574cfd.mp3",
+      "bytes": 38060,
+      "seconds": 4.661,
+      "sha256": "b995a5e655e8d2cb219b529040b931c92e5c237b6426ec082a2d81e2ca7cdc03",
+      "speaker": 10003,
+      "pcmPeak": 14368
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "よし、準備できた？ 思いっきりいこう！",
+      "spoken": "よし、準備できた？ 思いっきりいこう！",
+      "file": "akane/32d990132d19a10d.mp3",
+      "bytes": 26732,
+      "seconds": 3.253,
+      "sha256": "e01999df1070f2ee6242a4d2fc73f3d6320d0f83f7368cb89ddb322e776a2d62",
+      "speaker": 10003,
+      "pcmPeak": 14924
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "さっきの一手、よかったなあ！ ちょっと驚いたよ。",
+      "spoken": "さっきの一手、よかったなあ！ ちょっと驚いたよ。",
+      "file": "akane/7c5e58ccdfe03336.mp3",
+      "bytes": 30764,
+      "seconds": 3.765,
+      "sha256": "93a62fdc3ff5a33f0fa70663fdf9570bf277862d9ddb7991d250e39c169a1702",
+      "speaker": 10003,
+      "pcmPeak": 17082
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "今度は私からいくからね。気を抜かないでよ！",
+      "spoken": "今度は私からいくからね。気を抜かないでよ！",
+      "file": "akane/ac214b7b82913317.mp3",
+      "bytes": 28844,
+      "seconds": 3.52,
+      "sha256": "ddf29d3d9c1dbcfd1156fbae85fbf3689be9cd0cc87cea231d36e375e42b24b6",
+      "speaker": 10003,
+      "pcmPeak": 12325
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "よし、三局目！ 最後まで負ける気はないよ。",
+      "spoken": "よし、三局目！ 最後まで負ける気はないよ。",
+      "file": "akane/8afd05e9574efbe0.mp3",
+      "bytes": 31916,
+      "seconds": 3.893,
+      "sha256": "98aaa8d0a5858f50746c620d039db4a524d411caf94f07402c82a2c7215c2fc2",
+      "speaker": 10003,
+      "pcmPeak": 13847
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "お互い本気でいこう。いい勝負にしようね！",
+      "spoken": "お互い本気でいこう。いい勝負にしようね！",
+      "file": "akane/1644fca9c4f4a0ef.mp3",
+      "bytes": 26156,
+      "seconds": 3.189,
+      "sha256": "317dc5e81973e784242687cc8a44e277780ed070c49387f6b42b1de61dd76529",
+      "speaker": 10003,
+      "pcmPeak": 15356
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "おかえり！ また来ると思ってたよ。",
+      "spoken": "おかえり！ また来ると思ってたよ。",
+      "file": "akane/e495c8b2d282e77d.mp3",
+      "bytes": 21740,
+      "seconds": 2.635,
+      "sha256": "37ec210d7e787295fa41e475e6a408b22a1d944532246b9e47af6a339732f9a6",
+      "speaker": 10003,
+      "pcmPeak": 14357
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "さっきのことは置いといて、もう一勝負！",
+      "spoken": "さっきのことは置いといて、もう一勝負！",
+      "file": "akane/257c53279c10e7ea.mp3",
+      "bytes": 25004,
+      "seconds": 3.04,
+      "sha256": "1ebb52601a68ab97d054f059c448123042941dc220e00ea7dfdbaaaa027a2782",
+      "speaker": 10003,
+      "pcmPeak": 16823
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "おっ、来たね！ ふだんは山や海で写真を撮ってるんだ。",
+      "spoken": "おっ、来たね！ ふだんは山や海で写真を撮ってるんだ。",
+      "file": "akane/0b0898abab0de860.mp3",
+      "bytes": 37100,
+      "seconds": 4.544,
+      "sha256": "7952634d0769587d67c5849ddcaf96bc18535c5ea08db8ef696c30eab7bc54e4",
+      "speaker": 10003,
+      "pcmPeak": 14905
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "win-1",
+      "direction": "win",
+      "text": "うわ、やられた！ 今のはお見事。まずは一勝だね。",
+      "spoken": "うわ、やられた！ 今のはお見事。まずは一勝だね。",
+      "file": "akane/fc4d997964b72c28.mp3",
+      "bytes": 34220,
+      "seconds": 4.192,
+      "sha256": "6d2e1aa53b5cc0948d597aaf69d314bf433b7566e0f51663c1c7eec396d5b4a3",
+      "speaker": 10003,
+      "pcmPeak": 12182
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "win-2",
+      "direction": "win",
+      "text": "また勝ったか！ 二勝目、おめでとう。",
+      "spoken": "また勝ったか！ 二勝目、おめでとう。",
+      "file": "akane/6b86e060ab6c858b.mp3",
+      "bytes": 24236,
+      "seconds": 2.944,
+      "sha256": "3d5c0176424eff47639f6fb0a87f7fea0852baf66eba8df0e06e9824dca1b146",
+      "speaker": 10003,
+      "pcmPeak": 13923
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "win-3",
+      "direction": "win",
+      "text": "三勝も持ってかれた！ 悔しいけど、楽しかったよ！",
+      "spoken": "三勝も持ってかれた！ 悔しいけど、楽しかったよ！",
+      "file": "akane/11b18807c90b23b0.mp3",
+      "bytes": 33260,
+      "seconds": 4.064,
+      "sha256": "1e7cd8f5ab5302a5d76c90d9fe3a4b5910b1922919425dbed567e24828e80bbc",
+      "speaker": 10003,
+      "pcmPeak": 14296
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計は私の負けか！ 悔しいけど、いい勝負だった。はい、勝ったご褒美！",
+      "spoken": "合計は私の負けか！ 悔しいけど、いい勝負だった。はい、勝ったご褒美！",
+      "file": "akane/2290576b8c4c3576.mp3",
+      "bytes": 51884,
+      "seconds": 6.389,
+      "sha256": "9c3e0545ee0367ed3b53e1417f44443e1ca0ab1676a58c4f4110897f173e6fbc",
+      "speaker": 10003,
+      "pcmPeak": 14965
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "よし、勝負！ 本気でいくからね。",
+      "spoken": "よし、勝負！ 本気でいくからね。",
+      "file": "akane/56045f01dde1984b.mp3",
+      "bytes": 23660,
+      "seconds": 2.859,
+      "sha256": "edd41eb3b72bbaa1e2bcb673b35b08bdcd6f5cce7a3250d0cdd465bd97cddec0",
+      "speaker": 10003,
+      "pcmPeak": 17228
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "準備いい？ じゃあ始めるよ！",
+      "spoken": "準備いい？ じゃあ始めるよ！",
+      "file": "akane/8c0287ee74fc9ade.mp3",
+      "bytes": 18860,
+      "seconds": 2.272,
+      "sha256": "ea83564e6bb1d33e51d3f68019d3793c732f1b93c705b210d31c2e09d31e7732",
+      "speaker": 10003,
+      "pcmPeak": 14193
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "さあ、いこう！ いい勝負にしようね。",
+      "spoken": "さあ、いこう！ いい勝負にしようね。",
+      "file": "akane/49cf45a594e5ee91.mp3",
+      "bytes": 25196,
+      "seconds": 3.051,
+      "sha256": "223feefc4a67eb13a974fdabb9c46e0eba016fd705c0078450dc8b5233d39c8e",
+      "speaker": 10003,
+      "pcmPeak": 15184
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "おっ、リーチ！ おもしろくなってきたね。",
+      "spoken": "おっ、リーチ！ おもしろくなってきたね。",
+      "file": "akane/90a5d131153f0a9b.mp3",
+      "bytes": 27308,
+      "seconds": 3.328,
+      "sha256": "df3ead76d976ac9f88921eaced106f0322928b7f2975217c3023af8ffb20d0b1",
+      "speaker": 10003,
+      "pcmPeak": 15882
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "来た来た！ さて、どうしよっか。",
+      "spoken": "来た来た！ さて、どうしよっか。",
+      "file": "akane/99e9fded2c2df44d.mp3",
+      "bytes": 20780,
+      "seconds": 2.507,
+      "sha256": "ba076c1b4e7e33026ee00ff58dcc2b05de4fd64307ec4af81351e762161a6605",
+      "speaker": 10003,
+      "pcmPeak": 17188
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "うわ、来たね！ まだまだ、こっからだよ。",
+      "spoken": "うわ、来たね！ まだまだ、こっからだよ。",
+      "file": "akane/1d6c8dd44d34a53b.mp3",
+      "bytes": 27308,
+      "seconds": 3.328,
+      "sha256": "02583ea7c36a5954361c64faac2cc0119155c573eed8308b6bc1d4cf2475aabc",
+      "speaker": 10003,
+      "pcmPeak": 13555
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "ここだ。リーチ！",
+      "spoken": "ここだ。リーチ！",
+      "file": "akane/78095c15a1add56b.mp3",
+      "bytes": 11372,
+      "seconds": 1.344,
+      "sha256": "79053f9635e57c3fa5f7f4fa1478965b1ae4a164831c6b3188ad03550814d737",
+      "speaker": 10003,
+      "pcmPeak": 18177
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "待ってたよ、この牌。リーチ！",
+      "spoken": "待ってたよ、この牌。リーチ！",
+      "file": "akane/9dfe55b0de36c04c.mp3",
+      "bytes": 21932,
+      "seconds": 2.645,
+      "sha256": "b99d1d247bb465cb195aa11d10d49acd830bc6bbbad0705ff2b26140969b4401",
+      "speaker": 10003,
+      "pcmPeak": 11519
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "よし、迷わない。リーチ！",
+      "spoken": "よし、迷わない。リーチ！",
+      "file": "akane/0dfb0d43d70fdb89.mp3",
+      "bytes": 20396,
+      "seconds": 2.464,
+      "sha256": "488f00be8195b41719a755b57bd4a3e43e76f5c59d85d89765732cb0db9af7ad",
+      "speaker": 10003,
+      "pcmPeak": 16757
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "やった！ この局は私がもらったよ。",
+      "spoken": "やった！ この局は私がもらったよ。",
+      "file": "akane/f6ca8dc386275de5.mp3",
+      "bytes": 22892,
+      "seconds": 2.784,
+      "sha256": "2da3f43793d8ce4828a2dd4794fa05b6a72d7b0695c5102032a21404c75e12e6",
+      "speaker": 10003,
+      "pcmPeak": 16553
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "よっしゃ、決まった！ いい勝負だったね。",
+      "spoken": "よっしゃ、決まった！ いい勝負だったね。",
+      "file": "akane/b4c7ce4e0a88c6d4.mp3",
+      "bytes": 24812,
+      "seconds": 3.008,
+      "sha256": "3b353900083738c912b052e8b299f2f57f997dd161e3f9be50e46857949c8b85",
+      "speaker": 10003,
+      "pcmPeak": 15608
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "ふう、勝った。思ったより手ごわかった！",
+      "spoken": "ふう、勝った。思ったより手ごわかった！",
+      "file": "akane/5ba91a76ba14a18b.mp3",
+      "bytes": 26156,
+      "seconds": 3.189,
+      "sha256": "54e5f359c6f9549d58c9e509097eb2575be650b57741a27293a78d9909e9431e",
+      "speaker": 10003,
+      "pcmPeak": 12402
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "うわ、流局かあ。あとちょっとだったな。",
+      "spoken": "うわ、りゅうきょくかあ。あとちょっとだったな。",
+      "file": "akane/2fb5d5f68d9b87b3.mp3",
+      "bytes": 24812,
+      "seconds": 3.019,
+      "sha256": "db98b379cc610879ea3b2613ae339d3c299067e219f646006e466d38d4aebd9d",
+      "speaker": 10003,
+      "pcmPeak": 15056
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "決まらなかったか。うん、面白かった！",
+      "spoken": "決まらなかったか。うん、面白かった！",
+      "file": "akane/7dd92bcf64963991.mp3",
+      "bytes": 25580,
+      "seconds": 3.104,
+      "sha256": "5d9da003fcd6de1d9b453ab4917211eea99ad48c10ab7563813d079aeb73955b",
+      "speaker": 10003,
+      "pcmPeak": 14836
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "よし、ここでひと休み。おつかれ！",
+      "spoken": "よし、ここでひと休み。おつかれ！",
+      "file": "akane/bc86adf8c9483ac9.mp3",
+      "bytes": 24044,
+      "seconds": 2.912,
+      "sha256": "b95f49ba2ff6233ac25f5c283f6b4db9d9ba0ecf3f1582abce166153020d3f6d",
+      "speaker": 10003,
+      "pcmPeak": 13924
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "納得いくまで考えていいよ。",
+      "spoken": "納得いくまで考えていいよ。",
+      "file": "akane/bda1ddd9e3b3c8d7.mp3",
+      "bytes": 18668,
+      "seconds": 2.251,
+      "sha256": "375aa52dc77e2eecaaa6fa8640ded574656bd6c889f73e266b4cd7beb344eaa1",
+      "speaker": 10003,
+      "pcmPeak": 12885
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "迷うときは、いったん深呼吸だよ。",
+      "spoken": "迷うときは、いったん深呼吸だよ。",
+      "file": "akane/f3e91803c4e513a6.mp3",
+      "bytes": 23660,
+      "seconds": 2.869,
+      "sha256": "90833e7359f3bba53a9d6efa1ba0361e45f9a1f467eb74d2524df4646f538901",
+      "speaker": 10003,
+      "pcmPeak": 13974
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "時間はあるからさ。ゆっくりでいいよ。",
+      "spoken": "時間はあるからさ。ゆっくりでいいよ。",
+      "file": "akane/57eaa66236c0eac2.mp3",
+      "bytes": 23084,
+      "seconds": 2.795,
+      "sha256": "a36ddbaee388efab567378e473d36d80e435cd99ffac8ef4a22eef16fb2d6480",
+      "speaker": 10003,
+      "pcmPeak": 13433
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "お、いいね！ 楽しくなってきた。",
+      "spoken": "お、いいね！ 楽しくなってきた。",
+      "file": "akane/5b644a87f01f89d5.mp3",
+      "bytes": 23084,
+      "seconds": 2.795,
+      "sha256": "81ab641a479d8045d17da88d7f8e1a29a145a7cd6c2b7cd76cb4d936604a5906",
+      "speaker": 10003,
+      "pcmPeak": 12701
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "そうきたか。いいじゃん！",
+      "spoken": "そうきたか。いいじゃん！",
+      "file": "akane/f1a0c5d8ad791e0e.mp3",
+      "bytes": 15212,
+      "seconds": 1.813,
+      "sha256": "354e2faf46f65d06f802255aaf04eae2b219d8e66dc36ad579c4d212a199a9e5",
+      "speaker": 10003,
+      "pcmPeak": 13945
+    },
+    {
+      "stageId": 4,
+      "slug": "akane",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "いい勝負だね。私も負けないよ！",
+      "spoken": "いい勝負だね。私も負けないよ！",
+      "file": "akane/667f19388a512ec0.mp3",
+      "bytes": 22124,
+      "seconds": 2.667,
+      "sha256": "2f156ebdd2f0b77efedbcb1276e9a297a898c5cf86326dc0691eec07a47e9af6",
+      "speaker": 10003,
+      "pcmPeak": 14843
     },
     {
       "stageId": 5,
-      "file": "shion/f9b2a311c5d94eda.mp3",
-      "bytes": 58896,
-      "sha256": "b9b1af122ecdea379197b8de0e741ffb7e8c0763e4a8baa0817b228b76bcdc31"
+      "slug": "shion",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "ようこそ。月城紫苑です。原稿は置いてきました。今日は麻雀を。",
+      "spoken": "ようこそ。つきしろしおんです。原稿は置いてきました。今日はマージャンを。",
+      "file": "shion/55e1ff686f2f3943.mp3",
+      "bytes": 46700,
+      "seconds": 5.76,
+      "sha256": "8d33beec787e6fc87ffd662103a2cb523693765fa0c28d5e2fc7c7f5bb90db7f",
+      "speaker": 10008,
+      "pcmPeak": 17117
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "伏せた牌を見ていると、相手が何を考えているのか気になって。",
+      "spoken": "伏せた牌を見ていると、相手が何を考えているのか気になって。",
+      "file": "shion/cfcd493467e5b54b.mp3",
+      "bytes": 38636,
+      "seconds": 4.747,
+      "sha256": "2c68e4a33b36c5d5f273bf004a8f914484857aac5ef6c8996fe52e04920a964f",
+      "speaker": 10008,
+      "pcmPeak": 19827
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "では、始めましょう。あなたの打ち方、楽しみです。",
+      "spoken": "では、始めましょう。あなたの打ち方、楽しみです。",
+      "file": "shion/d4a16dda3255435c.mp3",
+      "bytes": 37484,
+      "seconds": 4.608,
+      "sha256": "4ec2931518fb31ab523b933fa470078286abfb7abd23b6299b3baf7a456056b6",
+      "speaker": 10008,
+      "pcmPeak": 14523
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "先ほどは、思っていた展開と違いました。面白いですね。",
+      "spoken": "先ほどは、思っていた展開と違いました。面白いですね。",
+      "file": "shion/16661e4fcdfdb0dc.mp3",
+      "bytes": 39020,
+      "seconds": 4.8,
+      "sha256": "943faf53587850f8d93009a9f44b6ce726d4ecc2f301ac50ff5ee2a18db82a13",
+      "speaker": 10008,
+      "pcmPeak": 16553
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "次は、私が少し意外な手を打ってみましょうか。",
+      "spoken": "次は、私が少し意外な手を打ってみましょうか。",
+      "file": "shion/ca51d4c7cefcd918.mp3",
+      "bytes": 31916,
+      "seconds": 3.893,
+      "sha256": "c4818dda72d533610cbb9f2b77c5576e0468d69d3eef08910f1de7c3bb555017",
+      "speaker": 10008,
+      "pcmPeak": 15723
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "もう最後の一局ですね。",
+      "spoken": "もう最後の一局ですね。",
+      "file": "shion/57621b867253ec75.mp3",
+      "bytes": 16172,
+      "seconds": 1.931,
+      "sha256": "dbd0f49c91b28065dd6555a1181079faddd17eec1a311a921c5214ffb823544d",
+      "speaker": 10008,
+      "pcmPeak": 12636
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "急ぐ必要はありません。最後まで、ゆっくり打ちましょう。",
+      "spoken": "急ぐ必要はありません。最後まで、ゆっくり打ちましょう。",
+      "file": "shion/6b8d445c592ffdd4.mp3",
+      "bytes": 38060,
+      "seconds": 4.661,
+      "sha256": "f406c7c5b963cd33e49ab49201dcc7010b29a8216da56daf2cbd93dd0565f23b",
+      "speaker": 10008,
+      "pcmPeak": 15481
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "またいらしたんですね。お待ちしていました。",
+      "spoken": "またいらしたんですね。お待ちしていました。",
+      "file": "shion/7d4148f4a20ee6ea.mp3",
+      "bytes": 25196,
+      "seconds": 3.051,
+      "sha256": "fc17b1301670f4fbbc444167bea85c135238d46436ca26633640ec3057998a67",
+      "speaker": 10008,
+      "pcmPeak": 12473
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "同じ相手でも、毎回違う一局になりますからね。",
+      "spoken": "同じ相手でも、毎回違う一局になりますからね。",
+      "file": "shion/933c91dd3afc4671.mp3",
+      "bytes": 32876,
+      "seconds": 4.021,
+      "sha256": "85527f85a5fd1977339428d6c98cfb477e86bf72f5af0b9f1da31ed07060e63d",
+      "speaker": 10008,
+      "pcmPeak": 17849
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "ようこそ。原稿は置いてきました。今日は麻雀を。",
+      "spoken": "ようこそ。原稿は置いてきました。今日はマージャンを。",
+      "file": "shion/0670cb1563ed64cc.mp3",
+      "bytes": 33260,
+      "seconds": 4.075,
+      "sha256": "21040870abd848386fd9646774fb66fa7d80ee998794a157f0335de5a1d82d15",
+      "speaker": 10008,
+      "pcmPeak": 16038
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "win-1",
+      "direction": "win",
+      "text": "その待ちは読めませんでした。まずは一勝、おめでとう。",
+      "spoken": "その待ちは読めませんでした。まずは一勝、おめでとう。",
+      "file": "shion/426c439c0b99a928.mp3",
+      "bytes": 35948,
+      "seconds": 4.416,
+      "sha256": "65716aff34de3afe84ef26c1197a7caf60f368caa06a8de20e24d582b8cd198a",
+      "speaker": 10008,
+      "pcmPeak": 13558
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "win-2",
+      "direction": "win",
+      "text": "二勝目ですね。今の一局は、しばらく忘れなさそうです。",
+      "spoken": "二勝目ですね。今の一局は、しばらく忘れなさそうです。",
+      "file": "shion/16079fa5e55f72fb.mp3",
+      "bytes": 39980,
+      "seconds": 4.907,
+      "sha256": "5b09c50f3076967ba2b5a9bfd6ecad955d09472979ef14e6a56f1a50871ddd0e",
+      "speaker": 10008,
+      "pcmPeak": 14621
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "win-3",
+      "direction": "win",
+      "text": "私に三勝ですか。思いがけない結果でした。おめでとう。",
+      "spoken": "私に三勝ですか。思いがけない結果でした。おめでとう。",
+      "file": "shion/dc91b22b3c3df903.mp3",
+      "bytes": 38252,
+      "seconds": 4.704,
+      "sha256": "d163f63ea9be66d5a91e07fc5f589893579d27212bd8183706bd8b263524c4c0",
+      "speaker": 10008,
+      "pcmPeak": 16645
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計では、あなたの勝ちですね。おめでとう。お祝いに、これをどうぞ。",
+      "spoken": "合計では、あなたの勝ちですね。おめでとう。お祝いに、これをどうぞ。",
+      "file": "shion/f514c7d31c236001.mp3",
+      "bytes": 49580,
+      "seconds": 6.101,
+      "sha256": "765bcc67177be3855a604911e4c2265d9b7a53e8bca21ade90cbd549f433c82f",
+      "speaker": 10008,
+      "pcmPeak": 17567
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "静かでいいですね。では、始めましょう。",
+      "spoken": "静かでいいですね。では、始めましょう。",
+      "file": "shion/9db9764e974db9ab.mp3",
+      "bytes": 29228,
+      "seconds": 3.563,
+      "sha256": "b1ffb37a855efe353c525a0628ffc532f76f960f7425025ee7daf3e33e0b2fe2",
+      "speaker": 10008,
+      "pcmPeak": 11959
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "お待たせしました。どんな一局になるかな。",
+      "spoken": "お待たせしました。どんな一局になるかな。",
+      "file": "shion/9eb913dc6dca146d.mp3",
+      "bytes": 25772,
+      "seconds": 3.136,
+      "sha256": "4c3e52b3e2cfc51b0d8226d866fc83a346baef51843742cd463b6ee8477b5609",
+      "speaker": 10008,
+      "pcmPeak": 14522
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "よろしくお願いします。楽しみにしていました。",
+      "spoken": "よろしくお願いします。楽しみにしていました。",
+      "file": "shion/07a24c94703e838b.mp3",
+      "bytes": 29036,
+      "seconds": 3.531,
+      "sha256": "882dde7eab0e68dc0131ba557d9a665c36dec3f28ab00aeff32f5cde026bffec",
+      "speaker": 10008,
+      "pcmPeak": 14735
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "リーチですね。なるほど、そう来ましたか。",
+      "spoken": "リーチですね。なるほど、そう来ましたか。",
+      "file": "shion/2a1011a165a06f1b.mp3",
+      "bytes": 27308,
+      "seconds": 3.317,
+      "sha256": "1774bc4a4d03ba1b4b7e0c023572702e6dbfc404c9eae0158d5c8fc00b098cb3",
+      "speaker": 10008,
+      "pcmPeak": 16377
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "あら、もうですか。少し考えますね。",
+      "spoken": "あら、もうですか。少し考えますね。",
+      "file": "shion/bb06cdc1c6af655a.mp3",
+      "bytes": 27116,
+      "seconds": 3.307,
+      "sha256": "9eb5b1b0cc01311ac6c14cccb530032f8cd87e7c0bb25780a562034f661cd1ba",
+      "speaker": 10008,
+      "pcmPeak": 15955
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "ここからですね。慎重にいきます。",
+      "spoken": "ここからですね。慎重にいきます。",
+      "file": "shion/9fb7adf888cb197a.mp3",
+      "bytes": 23468,
+      "seconds": 2.837,
+      "sha256": "fb7a624c341a4c5fbd83029ecf62aa945349c8323aa081ac40b0d036890b4be9",
+      "speaker": 10008,
+      "pcmPeak": 14661
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "そろいました。リーチです。",
+      "spoken": "そろいました。リーチです。",
+      "file": "shion/e2a2ebfab858ddd0.mp3",
+      "bytes": 17516,
+      "seconds": 2.101,
+      "sha256": "392bab425ff0d2f13ea9a426f715d6fd52d413df33dad0769279155537367f83",
+      "speaker": 10008,
+      "pcmPeak": 14488
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "少し迷っていましたが、リーチにします。",
+      "spoken": "少し迷っていましたが、リーチにします。",
+      "file": "shion/695afb08f8ec0717.mp3",
+      "bytes": 25004,
+      "seconds": 3.04,
+      "sha256": "d2609b67b0fb212eb1670818d2a11706391405b4a5e492d229ae299de35cd4ac",
+      "speaker": 10008,
+      "pcmPeak": 14962
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "ここで決めましょう。リーチ。",
+      "spoken": "ここで決めましょう。リーチ。",
+      "file": "shion/7ccfb2cd7ea2f7a2.mp3",
+      "bytes": 18668,
+      "seconds": 2.251,
+      "sha256": "ca7440e9d8284e6dbe28df05cfccb2c9b1b5d0718d073de4d560ca843d23090c",
+      "speaker": 10008,
+      "pcmPeak": 14212
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "この局は私でしたね。ありがとうございました。",
+      "spoken": "この局は私でしたね。ありがとうございました。",
+      "file": "shion/12d5fbbd20ef3c6a.mp3",
+      "bytes": 30956,
+      "seconds": 3.787,
+      "sha256": "c3d5412781fe01605410626fb6309238ab0052244f31dc4ab0b248a574ac7c20",
+      "speaker": 10008,
+      "pcmPeak": 17320
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "あがれました。ほっとしています。",
+      "spoken": "あがれました。ほっとしています。",
+      "file": "shion/87e502196d9aa643.mp3",
+      "bytes": 20396,
+      "seconds": 2.453,
+      "sha256": "272f06761fb738c49d06b235ef7aa32e78824e959bc3d8cfeb4345237a0b5ff7",
+      "speaker": 10008,
+      "pcmPeak": 14637
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "最後の牌まで、気が抜けませんでしたね。",
+      "spoken": "最後の牌まで、気が抜けませんでしたね。",
+      "file": "shion/8561f44897355597.mp3",
+      "bytes": 26924,
+      "seconds": 3.275,
+      "sha256": "c648d5ba844cf6d18f0d169102d1650967995d8edd6cfe4dfad9f09f1f48fa10",
+      "speaker": 10008,
+      "pcmPeak": 18707
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "流局ですね。最後までわかりませんでした。",
+      "spoken": "りゅうきょくですね。最後までわかりませんでした。",
+      "file": "shion/d051f32e22f748f2.mp3",
+      "bytes": 29420,
+      "seconds": 3.584,
+      "sha256": "199636adbd8d4ba36262b828eef22b8a7ad292f04f3150416bca55e64bdfc9cc",
+      "speaker": 10008,
+      "pcmPeak": 21110
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "決まらないまま終わる局もありますね。",
+      "spoken": "決まらないまま終わる局もありますね。",
+      "file": "shion/c64f56bdd4b16abf.mp3",
+      "bytes": 21164,
+      "seconds": 2.549,
+      "sha256": "75ad289cb885a253f32ab4b5ae065e3d124297b4f531de3c7c62f7fbfaa01159",
+      "speaker": 10008,
+      "pcmPeak": 17487
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "ここまでですね。おつかれさまでした。",
+      "spoken": "ここまでですね。おつかれさまでした。",
+      "file": "shion/7bb5ad1e9063cb69.mp3",
+      "bytes": 23468,
+      "seconds": 2.848,
+      "sha256": "8b96784295282782b0e415638a4d8d64a369908b55e234c203c28158cf594e21",
+      "speaker": 10008,
+      "pcmPeak": 9251
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "どうぞ、気が済むまで考えてください。",
+      "spoken": "どうぞ、気が済むまで考えてください。",
+      "file": "shion/d48e6921ca5d9dce.mp3",
+      "bytes": 25772,
+      "seconds": 3.125,
+      "sha256": "7cf900915f7919f56ee70dfdff2d94b9b0e984807c3546b3e3ce3b889bcb21c7",
+      "speaker": 10008,
+      "pcmPeak": 17526
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "大丈夫です。待っていますよ。",
+      "spoken": "大丈夫です。待っていますよ。",
+      "file": "shion/9d947cdc77579c21.mp3",
+      "bytes": 21548,
+      "seconds": 2.603,
+      "sha256": "c2b1d91f0017276fd22f306377a3b9f4618d6b18b5372deacf846a5f358efd8b",
+      "speaker": 10008,
+      "pcmPeak": 16935
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "私も考えるのが好きです。ゆっくりどうぞ。",
+      "spoken": "私も考えるのが好きです。ゆっくりどうぞ。",
+      "file": "shion/70d569cf9c398b2a.mp3",
+      "bytes": 29804,
+      "seconds": 3.648,
+      "sha256": "7788ed44a60b545eb04bc371169e99be2b924c957ee9562173089c79c159d631",
+      "speaker": 10008,
+      "pcmPeak": 11082
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "なるほど。覚えておきたい一手です。",
+      "spoken": "なるほど。覚えておきたい一手です。",
+      "file": "shion/693223f0c09c750e.mp3",
+      "bytes": 21740,
+      "seconds": 2.624,
+      "sha256": "1543a3e0d6995b83d97e33271fef1b5764a0eab0d82a1499b3ce9e0dd24a7cb4",
+      "speaker": 10008,
+      "pcmPeak": 14012
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "静かだけど、いい勝負ですね。",
+      "spoken": "静かだけど、いい勝負ですね。",
+      "file": "shion/72275aeff799dd61.mp3",
+      "bytes": 21932,
+      "seconds": 2.656,
+      "sha256": "c1df5712416eec2918dd3697e2f6dcaa2b69df39f1f7de07f9ffe8fe0fc3d671",
+      "speaker": 10008,
+      "pcmPeak": 12366
+    },
+    {
+      "stageId": 5,
+      "slug": "shion",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "先が読めないのは、楽しいですね。",
+      "spoken": "先が読めないのは、楽しいですね。",
+      "file": "shion/a1a9e1f162155af9.mp3",
+      "bytes": 24428,
+      "seconds": 2.955,
+      "sha256": "b5d9eda0284abed03b469f3245a87ca2a51e6d1b7ac5afa2df9b875fd30ab71a",
+      "speaker": 10008,
+      "pcmPeak": 17040
     },
     {
       "stageId": 6,
-      "file": "nagi/6cf2965c9b00c520.mp3",
-      "bytes": 57168,
-      "sha256": "f09d84e6f6a1526457d8ff60914594e3b01ee9c940a985ca7b27b11e6e9df73f"
+      "slug": "nagi",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "いらっしゃい。朝比奈凪やで。ピアノ弾いてへん日は、だいたいここにおるねん。",
+      "spoken": "いらっしゃい。あさひななぎやで。ピアノ弾いてへん日は、だいたいここにおるねん。",
+      "file": "nagi/94769465cbd72c20.mp3",
+      "bytes": 39980,
+      "seconds": 4.907,
+      "sha256": "97a044a23d6df8c6a2d42e36199135646fd764011423d184d93bb19f6174e251",
+      "speaker": 10006,
+      "pcmPeak": 15258
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "うまい下手は気にせんでええよ。気楽にやろ。",
+      "spoken": "うまい下手は気にせんでええよ。気楽にやろ。",
+      "file": "nagi/b67523029c865bee.mp3",
+      "bytes": 23276,
+      "seconds": 2.827,
+      "sha256": "07a471616cc5b1ba6a89387bc90a7beabf3ea7ff772e6c623425ef91b1ee094b",
+      "speaker": 10006,
+      "pcmPeak": 14403
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "ほな、打とっか。うちも楽しみやわ。",
+      "spoken": "ほな、打とっか。うちも楽しみやわ。",
+      "file": "nagi/1c8ec418cabca9f7.mp3",
+      "bytes": 23084,
+      "seconds": 2.805,
+      "sha256": "324ac1127ad0247cffc56fcd9ca1a258b6577eceae78c05deb78060a1414938f",
+      "speaker": 10006,
+      "pcmPeak": 14924
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "さっきの一局、ええテンポやったなあ。",
+      "spoken": "さっきの一局、ええテンポやったなあ。",
+      "file": "nagi/7a7ad932071302c9.mp3",
+      "bytes": 21356,
+      "seconds": 2.581,
+      "sha256": "7b76bd2cc24f6a483706560c9c8d4f1c17eddf0f0141ae73d368ec5010debfb1",
+      "speaker": 10006,
+      "pcmPeak": 13742
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "次はうちも、ちょっと仕掛けてみるで。",
+      "spoken": "次はうちも、ちょっと仕掛けてみるで。",
+      "file": "nagi/48bd75f137b5dcbd.mp3",
+      "bytes": 19436,
+      "seconds": 2.347,
+      "sha256": "e8bc851da52cb7cc27607d452f7b3b39926d6bed12996f0252025d802ae71e19",
+      "speaker": 10006,
+      "pcmPeak": 13192
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "もう三局目か。早いもんやねえ。",
+      "spoken": "もう三局目か。早いもんやねえ。",
+      "file": "nagi/a19cb8c830e13ab9.mp3",
+      "bytes": 19436,
+      "seconds": 2.336,
+      "sha256": "ac87c2f7fbe9e2928e7995e58b55db74c8c7c104f0822e984e47c7411e03ee6d",
+      "speaker": 10006,
+      "pcmPeak": 12151
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "ほな、最後まで楽しくいこか。",
+      "spoken": "ほな、最後まで楽しくいこか。",
+      "file": "nagi/7eecaf9b13a65d42.mp3",
+      "bytes": 18476,
+      "seconds": 2.219,
+      "sha256": "4bd53709098e33b0c6be670f496abd8999401a8f89934f803ac55ba329ed4eb8",
+      "speaker": 10006,
+      "pcmPeak": 14261
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "おかえり。お、もう一回打つ？ ええよ！",
+      "spoken": "おかえり。お、もう一回打つ？ ええよ！",
+      "file": "nagi/eb5ea8453cf91cbe.mp3",
+      "bytes": 25964,
+      "seconds": 3.147,
+      "sha256": "5777dd59274fcd6006a85efbe7941fdc5ffbac9697d67883fac787d7f0e7dda3",
+      "speaker": 10006,
+      "pcmPeak": 11726
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "さっきのは気にせんと、いこか。",
+      "spoken": "さっきのは気にせんと、いこか。",
+      "file": "nagi/ae4f85be0af584bd.mp3",
+      "bytes": 17900,
+      "seconds": 2.155,
+      "sha256": "3c45cb107474864b2e9409a4f32d63450343a64b95db148613f08ea8e45a8dc8",
+      "speaker": 10006,
+      "pcmPeak": 12018
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "いらっしゃい。ピアノ弾いてへん日は、だいたいここにおるねん。",
+      "spoken": "いらっしゃい。ピアノ弾いてへん日は、だいたいここにおるねん。",
+      "file": "nagi/e97a93439102411d.mp3",
+      "bytes": 30764,
+      "seconds": 3.765,
+      "sha256": "6551a102dec37bbd37b82e022de0e9b19119f6c758dd1d9a3caebb34c6fa28f3",
+      "speaker": 10006,
+      "pcmPeak": 14313
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "win-1",
+      "direction": "win",
+      "text": "ええやん！ 一勝目、気持ちよう決まったなあ。",
+      "spoken": "ええやん！ 一勝目、気持ちよう決まったなあ。",
+      "file": "nagi/aeefc37451d27087.mp3",
+      "bytes": 26540,
+      "seconds": 3.232,
+      "sha256": "3e2ec64c29901be0aa4b780e0fbc803cb3c0843e599a347bfbabd030adce48da",
+      "speaker": 10006,
+      "pcmPeak": 13735
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "win-2",
+      "direction": "win",
+      "text": "またやられたわ。二勝目、おめでとう。",
+      "spoken": "またやられたわ。二勝目、おめでとう。",
+      "file": "nagi/b069c74ece28bb7f.mp3",
+      "bytes": 23276,
+      "seconds": 2.816,
+      "sha256": "410c730b78dbe1da43f9ef272eb5a356b94270509c5ecfe55a2d5b81727852bd",
+      "speaker": 10006,
+      "pcmPeak": 13127
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "win-3",
+      "direction": "win",
+      "text": "うちから三勝も取ったん？ やるやん！ また一緒に打とこな。",
+      "spoken": "うちから三勝も取ったん？ やるやん！ また一緒に打とこな。",
+      "file": "nagi/bf3d5c21840924cd.mp3",
+      "bytes": 33068,
+      "seconds": 4.043,
+      "sha256": "6f3cb3b657a92480e8299b83c41378878650d323e53ca2e93cb0416f847b0860",
+      "speaker": 10006,
+      "pcmPeak": 13982
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計したら、うちの負けやね。おめでとう！ これ、ご褒美や。見ていってな。",
+      "spoken": "合計したら、うちの負けやね。おめでとう！ これ、ご褒美や。見ていってな。",
+      "file": "nagi/ba5ccee7c0b7668a.mp3",
+      "bytes": 46700,
+      "seconds": 5.76,
+      "sha256": "02295600e4b8cc05b348be1ecf8a1b2412e76a5ad389190cace7cb19c1947ed2",
+      "speaker": 10006,
+      "pcmPeak": 12312
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "ほな、始めよか。よろしゅう。",
+      "spoken": "ほな、始めよか。よろしゅう。",
+      "file": "nagi/cf9342c723849b3e.mp3",
+      "bytes": 18284,
+      "seconds": 2.197,
+      "sha256": "a2719560b5f3dcf10eb167847cc1eeb278ce9c7460c4c50add6362938ae06ec5",
+      "speaker": 10006,
+      "pcmPeak": 10856
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "肩の力抜いてな。ぼちぼちいこか。",
+      "spoken": "肩の力抜いてな。ぼちぼちいこか。",
+      "file": "nagi/b2c05d795f95f958.mp3",
+      "bytes": 20780,
+      "seconds": 2.517,
+      "sha256": "a2533c79d2dce11ef4c22ea9f83737ee7cd4e459c0772bc748dbcb99120b1d1a",
+      "speaker": 10006,
+      "pcmPeak": 14831
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "準備できた？ ほな、一局やろか。",
+      "spoken": "準備できた？ ほな、一局やろか。",
+      "file": "nagi/74fdeaa73703bdc2.mp3",
+      "bytes": 23084,
+      "seconds": 2.805,
+      "sha256": "ec3a282d70ec2ad88ccaa28da290f8fc8335df23f851a8782bf70a98594ad391",
+      "speaker": 10006,
+      "pcmPeak": 13160
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "おっ、リーチか。やるやん！",
+      "spoken": "おっ、リーチか。やるやん！",
+      "file": "nagi/1617e92fbb967196.mp3",
+      "bytes": 15212,
+      "seconds": 1.824,
+      "sha256": "1c744ad11f9d955348b6b1058601e8c6d20681b6d295f46f9feacfc7dc8a7aba",
+      "speaker": 10006,
+      "pcmPeak": 8381
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "来たなあ。うちも少し考えよ。",
+      "spoken": "来たなあ。うちも少し考えよ。",
+      "file": "nagi/c997b9dde8345c1a.mp3",
+      "bytes": 19436,
+      "seconds": 2.336,
+      "sha256": "7956c5c2fbd8ae1aedf7da5b396bec2672b70b9ea1258b08734c8c1ab4934bdd",
+      "speaker": 10006,
+      "pcmPeak": 14027
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "へえ、そこでリーチか。おもろなってきたな。",
+      "spoken": "へえ、そこでリーチか。おもろなってきたな。",
+      "file": "nagi/d7343822e1eff9cf.mp3",
+      "bytes": 24812,
+      "seconds": 3.008,
+      "sha256": "aacc8d5a419b13fd0e79c58f33ced42280b449452af18fe45562cbcd29b74909",
+      "speaker": 10006,
+      "pcmPeak": 11324
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "ほな、リーチや。",
+      "spoken": "ほな、リーチや。",
+      "file": "nagi/e850bb8c4e7712e5.mp3",
+      "bytes": 10988,
+      "seconds": 1.291,
+      "sha256": "849e1cdfae797141e156abcc97b7089f594c9c02f7928fb381ba69c29d372854",
+      "speaker": 10006,
+      "pcmPeak": 8280
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "お、欲しかった牌や。リーチ！",
+      "spoken": "お、欲しかった牌や。リーチ！",
+      "file": "nagi/489e3b1b49795708.mp3",
+      "bytes": 17900,
+      "seconds": 2.144,
+      "sha256": "d888cb778c94c136371874fea64675eb22a0085b68e233798a5dacc216686be2",
+      "speaker": 10006,
+      "pcmPeak": 8798
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "よし、ここでいこ。リーチやで。",
+      "spoken": "よし、ここでいこ。リーチやで。",
+      "file": "nagi/730df9301aa90fa3.mp3",
+      "bytes": 19052,
+      "seconds": 2.304,
+      "sha256": "1d8b38d2aca598b87b90c9609a33b7fb19382d039863822e8f92e90176065ae3",
+      "speaker": 10006,
+      "pcmPeak": 11673
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "よっしゃ。今回はうちの勝ちやね。",
+      "spoken": "よっしゃ。今回はうちの勝ちやね。",
+      "file": "nagi/0d955619ae4ebe9b.mp3",
+      "bytes": 19628,
+      "seconds": 2.357,
+      "sha256": "b0f48f9143ef022bbf062618489c4a38b180c290524e39cb3d13f677288a0732",
+      "speaker": 10006,
+      "pcmPeak": 12242
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "あがれたわ。最後までええ勝負やった。",
+      "spoken": "あがれたわ。最後までええ勝負やった。",
+      "file": "nagi/0dc47173d6c0fb89.mp3",
+      "bytes": 20396,
+      "seconds": 2.453,
+      "sha256": "877c65432c2b47be40f2c1c1b75923c3702d1d25f0a7d01ba886c64e71e2310f",
+      "speaker": 10006,
+      "pcmPeak": 13204
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "決まったなあ。付き合ってくれて、おおきに。",
+      "spoken": "決まったなあ。付き合ってくれて、おおきに。",
+      "file": "nagi/a076fd3be6a8aeea.mp3",
+      "bytes": 23660,
+      "seconds": 2.859,
+      "sha256": "e280304e3b38f42fe630a9090627ed300ee4c75666946073ee2ca4b509b3f89c",
+      "speaker": 10006,
+      "pcmPeak": 13423
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "あら、流局やね。おつかれさん。",
+      "spoken": "あら、りゅうきょくやね。おつかれさん。",
+      "file": "nagi/1bc5bb82f50c04c6.mp3",
+      "bytes": 20972,
+      "seconds": 2.539,
+      "sha256": "20697c66e2adc8a3f95e3a30a5f2e049c2c9fc5460a68bc35acc11a2eadcb841",
+      "speaker": 10006,
+      "pcmPeak": 11624
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "結局どっちもあがられへんかったな。",
+      "spoken": "結局どっちもあがられへんかったな。",
+      "file": "nagi/96891c2d2a05490f.mp3",
+      "bytes": 17516,
+      "seconds": 2.112,
+      "sha256": "b6bf2322d9b22948529e17c5dc0ad0459ceb826f95defff92eaea2260160e510",
+      "speaker": 10006,
+      "pcmPeak": 15921
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "ここまでかあ。ちょっと休もか。",
+      "spoken": "ここまでかあ。ちょっと休もか。",
+      "file": "nagi/d995d24ac019f382.mp3",
+      "bytes": 17900,
+      "seconds": 2.155,
+      "sha256": "24158edd8dcc317ef0d7e7ec9bcb6ddf9ebe9bd62fdd18e1267e4b11ee32f9df",
+      "speaker": 10006,
+      "pcmPeak": 12724
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "急がんでええよ。待ってるから。",
+      "spoken": "急がんでええよ。待ってるから。",
+      "file": "nagi/223f83011d7c6427.mp3",
+      "bytes": 17132,
+      "seconds": 2.048,
+      "sha256": "695183b34c788f2db1ba5edda47f886f98c43216db0f39f19905db4d0c657906",
+      "speaker": 10006,
+      "pcmPeak": 16465
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "そこ迷うよなあ。ゆっくり考え。",
+      "spoken": "そこ迷うよなあ。ゆっくり考え。",
+      "file": "nagi/790e6b2bd1b787a3.mp3",
+      "bytes": 19052,
+      "seconds": 2.304,
+      "sha256": "315514fe5c0cee38c3beb784a0eae878d8e68cf2c8a6d29dd64ed2b35422ee86",
+      "speaker": 10006,
+      "pcmPeak": 12178
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "自分のペースでええで。",
+      "spoken": "自分のペースでええで。",
+      "file": "nagi/0bff7f65ac0fe41e.mp3",
+      "bytes": 11948,
+      "seconds": 1.408,
+      "sha256": "384658f9bf964733d19e27c84624ef9ee2b1e5e8183823edf9ae1d41e2de022f",
+      "speaker": 10006,
+      "pcmPeak": 12237
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "おっ、ええ感じやん。",
+      "spoken": "おっ、ええ感じやん。",
+      "file": "nagi/6f8996f28dbb41de.mp3",
+      "bytes": 11948,
+      "seconds": 1.408,
+      "sha256": "0494b14f10baa12d4f72da5c4cfee28518cc2243a175ee6b7c7d82ee18605e86",
+      "speaker": 10006,
+      "pcmPeak": 8032
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "ええリズムで打つなあ。",
+      "spoken": "ええリズムで打つなあ。",
+      "file": "nagi/7aaf79bf0d354837.mp3",
+      "bytes": 11372,
+      "seconds": 1.323,
+      "sha256": "f4e7798ee89150e116aa502a2706c9347d8cd5702fa7710f5da65b54357c5527",
+      "speaker": 10006,
+      "pcmPeak": 12528
+    },
+    {
+      "stageId": 6,
+      "slug": "nagi",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "うん、おもろい一局やな。",
+      "spoken": "うん、おもろい一局やな。",
+      "file": "nagi/f75d42bee7a356f5.mp3",
+      "bytes": 14828,
+      "seconds": 1.76,
+      "sha256": "414ce1fde9957f995f5ece1ffb227b246ec9f614e69729f2234c9dfaf7bd6c58",
+      "speaker": 10006,
+      "pcmPeak": 12913
     },
     {
       "stageId": 7,
-      "file": "sara/35aee376e026925a.mp3",
-      "bytes": 69408,
-      "sha256": "e6a2aaa9af1baa3b55a3058b4a16cac1c0c44e51ff3ccd335ae3cf17dbf28bf4"
+      "slug": "sara",
+      "name": "encounter-1-1",
+      "direction": "friendly",
+      "text": "お待ちしておりました。九条沙羅と申します。どうぞ、こちらのお席へ。",
+      "spoken": "お待ちしておりました。くじょうさらと申します。どうぞ、こちらのお席へ。",
+      "file": "sara/d4d883c1089655d3.mp3",
+      "bytes": 55148,
+      "seconds": 6.816,
+      "sha256": "3a1d231263d5d43d0a619acb5caa1b668afe47cd69d564aef08e265e2a4c5cfa",
+      "speaker": 10007,
+      "pcmPeak": 10160
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "encounter-1-2",
+      "direction": "friendly",
+      "text": "ここまで勝ち進んでこられた方ですもの。どうぞご遠慮なく。",
+      "spoken": "ここまで勝ち進んでこられた方ですもの。どうぞご遠慮なく。",
+      "file": "sara/802360303a921276.mp3",
+      "bytes": 41324,
+      "seconds": 5.088,
+      "sha256": "fd07838ce9e3376a7258228fd9830aa477b8b79761a87fdfecaba72f88fa2842",
+      "speaker": 10007,
+      "pcmPeak": 11707
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "encounter-1-3",
+      "direction": "friendly",
+      "text": "私も精いっぱいお相手します。それでは、始めましょう。",
+      "spoken": "私も精いっぱいお相手します。それでは、始めましょう。",
+      "file": "sara/88288be3c55559e4.mp3",
+      "bytes": 46124,
+      "seconds": 5.685,
+      "sha256": "9fcf17d36074c3a03288452785edaaf428f8abc2cd605d81e47f30870db85570",
+      "speaker": 10007,
+      "pcmPeak": 12019
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "encounter-2-1",
+      "direction": "friendly",
+      "text": "見事な打ち方でした。お強いんですね。",
+      "spoken": "見事な打ち方でした。お強いんですね。",
+      "file": "sara/bc17656f64a6dd12.mp3",
+      "bytes": 30188,
+      "seconds": 3.68,
+      "sha256": "3717eaa6f10ab297f15d384f3e487765d69aeb21c4a78562ab4ff05ca2ea0c85",
+      "speaker": 10007,
+      "pcmPeak": 10207
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "encounter-2-2",
+      "direction": "friendly",
+      "text": "次は私も、少し思い切って打ってみます。",
+      "spoken": "次は私も、少し思い切って打ってみます。",
+      "file": "sara/82aa74674d5052f6.mp3",
+      "bytes": 34028,
+      "seconds": 4.16,
+      "sha256": "a0ef0b7676bf2c31b9224d76b3b2384a9d31ece841b2647aef2173d5edd673d9",
+      "speaker": 10007,
+      "pcmPeak": 12684
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "encounter-3-1",
+      "direction": "friendly",
+      "text": "いよいよ最後の一局ですね。ここまでお疲れさまでした。",
+      "spoken": "いよいよ最後の一局ですね。ここまでお疲れさまでした。",
+      "file": "sara/9387f5ae4f32ab4b.mp3",
+      "bytes": 41132,
+      "seconds": 5.056,
+      "sha256": "873bfc968bc12f3f0caacca898087a9424c053ea21f76c4bebb758866bbe47ef",
+      "speaker": 10007,
+      "pcmPeak": 10981
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "encounter-3-2",
+      "direction": "friendly",
+      "text": "あと一局、どうぞお付き合いください。",
+      "spoken": "あと一局、どうぞお付き合いください。",
+      "file": "sara/ec1dce20c812ceed.mp3",
+      "bytes": 29036,
+      "seconds": 3.541,
+      "sha256": "fd927861bc9300e5514466f24b025a3cdbf6a708abeb296136500a304ce490fd",
+      "speaker": 10007,
+      "pcmPeak": 11051
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "retry-1",
+      "direction": "friendly",
+      "text": "お戻りくださって、うれしいです。お席はご用意しております。",
+      "spoken": "お戻りくださって、うれしいです。お席はご用意しております。",
+      "file": "sara/87cb680e91864ec5.mp3",
+      "bytes": 48620,
+      "seconds": 5.995,
+      "sha256": "0d35f4f4bf8bdc5f76e4d49d2ccf4805892180d9b334a3a087eb9853504237d2",
+      "speaker": 10007,
+      "pcmPeak": 9194
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "retry-2",
+      "direction": "friendly",
+      "text": "それでは、改めてお相手いたしましょう。",
+      "spoken": "それでは、改めてお相手いたしましょう。",
+      "file": "sara/b3bf2afd3fd22f53.mp3",
+      "bytes": 29804,
+      "seconds": 3.637,
+      "sha256": "b84b2bd6c5009cf80fe6388a5be5e7aed11d7ef05d81589e5b45fc302119879d",
+      "speaker": 10007,
+      "pcmPeak": 12191
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "welcome-custom",
+      "direction": "friendly",
+      "text": "お待ちしておりました。どうぞ、こちらのお席へ。",
+      "spoken": "お待ちしておりました。どうぞ、こちらのお席へ。",
+      "file": "sara/afd8f968a6ef84d6.mp3",
+      "bytes": 36332,
+      "seconds": 4.448,
+      "sha256": "e614dc21732b1c9a7a30cc47a0d30a6a1d6465bde767d055821a4ea963e1aec2",
+      "speaker": 10007,
+      "pcmPeak": 9717
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "win-1",
+      "direction": "win",
+      "text": "お見事です。まずは一勝、おめでとうございます。",
+      "spoken": "お見事です。まずは一勝、おめでとうございます。",
+      "file": "sara/9a9c3b744d67a883.mp3",
+      "bytes": 41324,
+      "seconds": 5.067,
+      "sha256": "f90a6878a150396db53e0a5bdb43d8587fce299e55a7da70ffb7c75d472fa5b0",
+      "speaker": 10007,
+      "pcmPeak": 10807
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "win-2",
+      "direction": "win",
+      "text": "これで二勝目ですね。見事な打ち方でした。",
+      "spoken": "これで二勝目ですね。見事な打ち方でした。",
+      "file": "sara/6a30858a28c3c709.mp3",
+      "bytes": 34028,
+      "seconds": 4.16,
+      "sha256": "35ecdf692f12e303140018f7aebe6bdddb317f25bd5aa8819e8a0c1e7f4cdb9c",
+      "speaker": 10007,
+      "pcmPeak": 11018
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "win-3",
+      "direction": "win",
+      "text": "この卓で三勝。お見事でした。お相手できて光栄です。",
+      "spoken": "この卓で三勝。お見事でした。お相手できて光栄です。",
+      "file": "sara/c66c47cc584b3c24.mp3",
+      "bytes": 46316,
+      "seconds": 5.696,
+      "sha256": "be167b7c54bd407d80b7e264cfeeaf04b44cf6f1c040c3e90e3368d790a3fd70",
+      "speaker": 10007,
+      "pcmPeak": 12171
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "stage-gallery",
+      "direction": "warm",
+      "text": "合計では私の負けですね。おめでとうございます。ささやかですが、ご褒美をどうぞ。",
+      "spoken": "合計では私の負けですね。おめでとうございます。ささやかですが、ご褒美をどうぞ。",
+      "file": "sara/2ad7bd1c06e1ac99.mp3",
+      "bytes": 69740,
+      "seconds": 8.619,
+      "sha256": "b4699b1084299f4ca74e8b8552c67a5b569d3bf85490efb3ec394fb34c5f02da",
+      "speaker": 10007,
+      "pcmPeak": 12499
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "roundStart-1",
+      "direction": "start",
+      "text": "それでは始めましょうか。よろしくお願いいたします。",
+      "spoken": "それでは始めましょうか。よろしくお願いいたします。",
+      "file": "sara/8d5834f8e315e063.mp3",
+      "bytes": 37484,
+      "seconds": 4.597,
+      "sha256": "f1366f9ddb128374d4e32aa81a6ba5223cc9c0d4eac47d70a5afee6486a9db4a",
+      "speaker": 10007,
+      "pcmPeak": 11416
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "roundStart-2",
+      "direction": "start",
+      "text": "準備はよろしいですか。では、始めましょう。",
+      "spoken": "準備はよろしいですか。では、始めましょう。",
+      "file": "sara/1d9519db4d26e611.mp3",
+      "bytes": 37100,
+      "seconds": 4.555,
+      "sha256": "a5c07b3d472e8bebc8efb5ae12a7f6faddc2c832888cfb32d87ca6e8bd956caf",
+      "speaker": 10007,
+      "pcmPeak": 11567
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "roundStart-3",
+      "direction": "start",
+      "text": "お待たせいたしました。どうぞよろしく。",
+      "spoken": "お待たせいたしました。どうぞよろしく。",
+      "file": "sara/3f328928f21368ba.mp3",
+      "bytes": 26348,
+      "seconds": 3.2,
+      "sha256": "0602aca734660ca36cc2497f4c6e05b26d08bd3c0683b6c94786c4a9bcfd827c",
+      "speaker": 10007,
+      "pcmPeak": 8339
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerRiichi-1",
+      "direction": "surprised",
+      "text": "リーチですね。私も慎重にまいります。",
+      "spoken": "リーチですね。私も慎重にまいります。",
+      "file": "sara/d7564794f13fe68e.mp3",
+      "bytes": 33644,
+      "seconds": 4.117,
+      "sha256": "b824ad1591c2bd8713c9ee55913e1be96248ca13c6b3463726e6a8cf9dc33a6c",
+      "speaker": 10007,
+      "pcmPeak": 10950
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerRiichi-2",
+      "direction": "surprised",
+      "text": "そう来ましたか。少し考えさせてください。",
+      "spoken": "そう来ましたか。少し考えさせてください。",
+      "file": "sara/067edf88f4bc58b2.mp3",
+      "bytes": 31532,
+      "seconds": 3.851,
+      "sha256": "02ef371364a86ec17b2769bf341baf460d47abaed10bfd833528f45da566363e",
+      "speaker": 10007,
+      "pcmPeak": 10352
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerRiichi-3",
+      "direction": "surprised",
+      "text": "思い切りましたね。私も気を引き締めます。",
+      "spoken": "思い切りましたね。私も気を引き締めます。",
+      "file": "sara/6655733044f5d3c7.mp3",
+      "bytes": 34604,
+      "seconds": 4.245,
+      "sha256": "14b88dc5120e1df29fd29a97a2c202e534a2cb639a3efea2d037eeb4d000f2f8",
+      "speaker": 10007,
+      "pcmPeak": 10754
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "cpuRiichi-1",
+      "direction": "decisive",
+      "text": "ここで勝負いたします。リーチです。",
+      "spoken": "ここで勝負いたします。リーチです。",
+      "file": "sara/ab0075cc0aa8a5a4.mp3",
+      "bytes": 28076,
+      "seconds": 3.424,
+      "sha256": "5635f67541c3b8b6e68bddc19edaaa3e289d25883182469f8925b68033193fde",
+      "speaker": 10007,
+      "pcmPeak": 10405
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "cpuRiichi-2",
+      "direction": "decisive",
+      "text": "手がそろいました。リーチ。",
+      "spoken": "手がそろいました。リーチ。",
+      "file": "sara/303cb0c2a382f9be.mp3",
+      "bytes": 20588,
+      "seconds": 2.475,
+      "sha256": "8ef4ee5eb2a2c4e538b90a82d4d3b6f1b61312a7319cacc97c5ffb447c3b2821",
+      "speaker": 10007,
+      "pcmPeak": 7749
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "cpuRiichi-3",
+      "direction": "decisive",
+      "text": "決めました。リーチにいたします。",
+      "spoken": "決めました。リーチにいたします。",
+      "file": "sara/b819dfc981c40e11.mp3",
+      "bytes": 23852,
+      "seconds": 2.891,
+      "sha256": "0d00984daaa418334f058abd07cb5070688f38d0b5cd27b09be3c83212c299f6",
+      "speaker": 10007,
+      "pcmPeak": 7869
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "cpuWin-1",
+      "direction": "win",
+      "text": "この局は私がいただきました。ありがとうございました。",
+      "spoken": "この局は私がいただきました。ありがとうございました。",
+      "file": "sara/4738ed4540924d4a.mp3",
+      "bytes": 39020,
+      "seconds": 4.789,
+      "sha256": "5bcef67a1b784cf753565bb18853c16619147551295ed8ef31015f9f6dc866a6",
+      "speaker": 10007,
+      "pcmPeak": 11954
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "cpuWin-2",
+      "direction": "win",
+      "text": "あがれました。最後まで気が抜けませんでしたね。",
+      "spoken": "あがれました。最後まで気が抜けませんでしたね。",
+      "file": "sara/9017ecddf4515bf3.mp3",
+      "bytes": 33644,
+      "seconds": 4.107,
+      "sha256": "e0294a550284f55c839462d4ca74b57bdbb95e0108c686b580845f5f1a4ffc8c",
+      "speaker": 10007,
+      "pcmPeak": 11499
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "cpuWin-3",
+      "direction": "win",
+      "text": "勝ててほっとしました。いい対局でしたね。",
+      "spoken": "勝ててほっとしました。いい対局でしたね。",
+      "file": "sara/8729743ab1c503fe.mp3",
+      "bytes": 30956,
+      "seconds": 3.787,
+      "sha256": "31cd7f6f64accaecfcf9823679003b3958036f4d5d95079eb39ea272ad9591b8",
+      "speaker": 10007,
+      "pcmPeak": 11028
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "draw-1",
+      "direction": "calm",
+      "text": "流局でございますね。いい対局でした。",
+      "spoken": "りゅうきょくでございますね。いい対局でした。",
+      "file": "sara/33193d6c5660282b.mp3",
+      "bytes": 32684,
+      "seconds": 3.989,
+      "sha256": "bb7d12b59eadbd3eb0135d576b01e22206a6dc5061deff1aa064ea736e1d26cd",
+      "speaker": 10007,
+      "pcmPeak": 12262
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "draw-2",
+      "direction": "calm",
+      "text": "最後まで決まりませんでしたね。",
+      "spoken": "最後まで決まりませんでしたね。",
+      "file": "sara/713a2210bb7412a7.mp3",
+      "bytes": 21164,
+      "seconds": 2.56,
+      "sha256": "8f22a82184145d7b79f3da3666442a678d20922d06eb88f6091e943ba7e94ce7",
+      "speaker": 10007,
+      "pcmPeak": 12924
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "draw-3",
+      "direction": "calm",
+      "text": "ここまでですね。お相手いただき、ありがとうございます。",
+      "spoken": "ここまでですね。お相手いただき、ありがとうございます。",
+      "file": "sara/6951432676c3b4c7.mp3",
+      "bytes": 45548,
+      "seconds": 5.6,
+      "sha256": "a410be5c8a5715ab2d18c4c19d73fa85b3c705442373f03c3b2d92ec6e50ae2a",
+      "speaker": 10007,
+      "pcmPeak": 9736
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerTurn-1",
+      "direction": "calm",
+      "text": "どうぞ、ごゆっくりお考えください。",
+      "spoken": "どうぞ、ごゆっくりお考えください。",
+      "file": "sara/cd503453adcf83c7.mp3",
+      "bytes": 27116,
+      "seconds": 3.307,
+      "sha256": "87eee70903a2cac22cc961f2981b2f54602b1980a0ce5548a831fee63e751a9d",
+      "speaker": 10007,
+      "pcmPeak": 12197
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerTurn-2",
+      "direction": "calm",
+      "text": "お急ぎにならなくても大丈夫ですよ。",
+      "spoken": "お急ぎにならなくても大丈夫ですよ。",
+      "file": "sara/c676e3be5dfdffaa.mp3",
+      "bytes": 25004,
+      "seconds": 3.029,
+      "sha256": "bda8b95c57f5a03acf24f946e1235c6bc999bf40b6b9bb1d38f7f9b8d6a0d75c",
+      "speaker": 10007,
+      "pcmPeak": 12749
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerTurn-3",
+      "direction": "calm",
+      "text": "お待ちしていますので、ゆっくりどうぞ。",
+      "spoken": "お待ちしていますので、ゆっくりどうぞ。",
+      "file": "sara/9a9ab79e7e247e71.mp3",
+      "bytes": 27692,
+      "seconds": 3.371,
+      "sha256": "86d838470dd7e5a9a22bb10c9f77e86d28fc30c47d2614cb2a77e4a05720373b",
+      "speaker": 10007,
+      "pcmPeak": 11660
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerGoodHand-1",
+      "direction": "friendly",
+      "text": "落ち着いて打たれますね。",
+      "spoken": "落ち着いて打たれますね。",
+      "file": "sara/4ac303fcfd244f60.mp3",
+      "bytes": 15980,
+      "seconds": 1.92,
+      "sha256": "78652ac7939743b87e4211810195ebab28fbbc3f45837174d54e7abfc9e211b4",
+      "speaker": 10007,
+      "pcmPeak": 7792
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerGoodHand-2",
+      "direction": "friendly",
+      "text": "丁寧な一手ですね。",
+      "spoken": "丁寧な一手ですね。",
+      "file": "sara/5e0ed608c7d22d14.mp3",
+      "bytes": 15596,
+      "seconds": 1.856,
+      "sha256": "510b9fbe3ba60e60eadc9d400bbc4ba0ab6c07dd770391389571ebf42cba178c",
+      "speaker": 10007,
+      "pcmPeak": 9263
+    },
+    {
+      "stageId": 7,
+      "slug": "sara",
+      "name": "playerGoodHand-3",
+      "direction": "friendly",
+      "text": "いい対局になりましたね。",
+      "spoken": "いい対局になりましたね。",
+      "file": "sara/d95d09447cb2648a.mp3",
+      "bytes": 17708,
+      "seconds": 2.123,
+      "sha256": "e4597eb1b85fdc2e22e981b334fe4f5b61990df53a644bbeade3f7f186f676e9",
+      "speaker": 10007,
+      "pcmPeak": 9405
     }
   ]
 }
