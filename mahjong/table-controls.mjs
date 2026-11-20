@@ -70,7 +70,7 @@ export function createTableControls(canvas, targets, onPick) {
   async function openScene() {
     loading = true;
     try {
-      const { createTableScene } = await import('./table-scene.mjs?v=20261119-3d');
+      const { createTableScene } = await import('./table-scene.mjs?v=20261120-duel');
       table.classList.add('has-3d');
       scene = createTableScene(canvas, { onUnavailable: fallback });
       if (!scene || unavailable) { fallback(); return; }

@@ -1,7 +1,7 @@
 import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261107-mahjong';
 import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261108-gallery';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
-import {createTableControls} from './table-controls.mjs?v=20261119-3d';
+import {createTableControls} from './table-controls.mjs?v=20261120-duel';
 import {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL} from './cast.mjs?v=20261108-gallery';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261108-cast';
 import {CharacterVoice} from './voice.mjs?v=20261108-gallery';
@@ -195,7 +195,7 @@ function render(){
  });
  $('doraIndicator').innerHTML=round?tileHTML(view.doraIndicator,{small:true}):'—';
  $('windLabel').textContent=round?.dealer===1?'あなた：南家 / CPU：東家':'あなた：東家 / CPU：南家';
- $('wallCount').textContent=round?.wall?.length??108;
+ $('wallCount').textContent=round?.wall?.length??'—';
  $('playerPoints').textContent=fmt(round?.points?.[0]??25000)+' 点';$('cpuPoints').textContent=fmt(round?.points?.[1]??25000);
  $('discardButton').disabled=!live||!legal.includes(selected)||(riichiPicking&&!riichiLegal.includes(selected));
  $('riichiButton').disabled=!live||!riichiLegal.length;$('riichiButton').classList.toggle('is-armed',riichiPicking);$('riichiButton').textContent=riichiPicking?'リーチを取り消す':'リーチ';

@@ -4,6 +4,11 @@ import { makeTableArt } from './table-art.mjs';
 // Local +Z is the printed face of a standing tile. Table +Z is the player's seat.
 const W = 1.02, H = 1.43, D = .64;
 const OWN = 1.14, CPU = .94, WARE = .64, RIVER = .70;
+// After two 13-tile hands are dealt, 96 live tiles and the 14-tile dead wall remain.
+const NEAR_STACKS = 27, FAR_LIVE_STACKS = 21, DEAD_STACKS = 7;
+const WALL_CAPACITY = (NEAR_STACKS + FAR_LIVE_STACKS) * 2;
+const WALL_STEP = .70, DEAD_GAP = .28, WALL_Z = 4.64;
+const FAR_START = -((FAR_LIVE_STACKS + DEAD_STACKS - 1) * WALL_STEP + DEAD_GAP) / 2;
 const UP = new THREE.Vector3(0, 1, 0), X = new THREE.Vector3(1, 0, 0);
 const validTile = id => Number.isInteger(id) && id >= 0 && id < 34;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -220,20 +225,18 @@ export function createTableScene(canvas, {onPick,onHover,onUnavailable} = {}) {
         }
       }
     }
-    // Live wall comes off one end in stacks of two. The 14-tile dead wall is independent.
-    const count=Math.min(108,Math.max(0,Number(m.wallCount)||0));
-    const stacks=[...Array.from({length:16},(_,i)=>[-5.38+i*.72,-4.64,0]),
-      ...Array.from({length:11},(_,i)=>[8.48,-3.65+i*.72,Math.PI/2]),
-      ...Array.from({length:16},(_,i)=>[5.38-i*.72,4.64,Math.PI]),
-      ...Array.from({length:11},(_,i)=>[-8.48,3.55-i*.72,-Math.PI/2])];
-    for(let n=108-count;n<108;n++){
-      const [x,z,yaw]=stacks[n>>1], upper=(n%2===0);
-      output.push(tile('w'+n,null,x,.053+WARE*D*(upper?1.5:.5),z,Math.PI/2,yaw,WARE));
+    // Keep both side rails clear. Draw through the near bank, then the far bank.
+    const count=Math.min(WALL_CAPACITY,Math.max(0,m.wallCount));
+    for(let n=WALL_CAPACITY-count;n<WALL_CAPACITY;n++){
+      const column=Math.floor(n/2), near=column<NEAR_STACKS, upper=n%2===0;
+      const x=near ? ((NEAR_STACKS-1)/2-column)*WALL_STEP : FAR_START+(column-NEAR_STACKS)*WALL_STEP;
+      output.push(tile('w'+n,null,x,.053+WARE*D*(upper?1.5:.5),near?WALL_Z:-WALL_Z,Math.PI/2,near?Math.PI:0,WARE));
     }
-    for(let n=0;n<14;n++){
+    for(let n=0;n<DEAD_STACKS*2;n++){
       const upper=n%2===1, col=n>>1, dora=col===2&&upper&&validTile(m.dora);
-      output.push(tile('d'+n,dora?m.dora:null,-6.01, .053+WARE*D*(upper?1.5:.5),-2.14+col*.72,
-        dora?-Math.PI/2:Math.PI/2,Math.PI/2,WARE));
+      const x=FAR_START+(FAR_LIVE_STACKS+col)*WALL_STEP+DEAD_GAP;
+      output.push(tile('d'+n,dora?m.dora:null,x,.053+WARE*D*(upper?1.5:.5),-WALL_Z,
+        dora?-Math.PI/2:Math.PI/2,0,WARE));
     }
     return {output,own};
   }
