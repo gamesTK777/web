@@ -7,7 +7,6 @@ import * as arcade from './arcade.mjs';
 import * as tiles from './tiles.mjs';
 import * as cast from './cast.mjs';
 import * as encounterModule from './encounter.mjs';
-import * as voiceModule from './recorded-voice.mjs';
 import * as voiceLines from './voice-lines.mjs';
 import * as rewardMedia from './reward-media.mjs';
 
@@ -56,16 +55,16 @@ async function harness({mediaTypes={}, withTable=false}={}) {
   document.querySelector = selector => document.querySelectorAll(selector)[0] || null;
   const timers = new Map(); let timerId = 0;
   const context = vm.createContext({ document, window: new Element('window'), console, structuredClone, AbortController,
-    __engine: engine, __arcade: arcade, __tiles: tiles, __cast: cast, __encounter: encounterModule, __voice: voiceModule, __voiceLines: voiceLines,__rewardMedia:rewardMedia, createdRounds: 0,
+    __engine: engine, __arcade: arcade, __tiles: tiles, __cast: cast, __encounter: encounterModule, __voiceLines: voiceLines,__rewardMedia:rewardMedia, createdRounds: 0,
     setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { fn, delay }); return id; }, clearTimeout(id) { timers.delete(id); },
     fetch: async url => ({ ok: true, json: async () => String(url).endsWith('/config') ? { version: 0, mediaTypes, stages: cast.CAST.map(p => ({ id: p.id, name: `ステージ${p.id}の対戦相手`, portrait: null, rewards: [null, null, null], accent: '#315f6b' })) } : { id: 'test-session', entries: [] } })
   });
-  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {RecordedCharacterVoice}=__voice;const VOICE_ASSETS={}; const {chooseVoiceLine,getVoiceProfile}=__voiceLines;const {createRewardMediaController,rewardMediaKind,isVideoControlEvent}=__rewardMedia;`;
+  const imports = `const {actRound,legalActions,publicView}=__engine; const createRound=options=>{createdRounds++;return __engine.createRound({...options,seed:1});}; const {createArcade,finishBattle,advanceArcade,retryStage}=__arcade; const {tileHTML,tileName,portraitPlaceholder}=__tiles; const {CAST,getCast,displayStageName,defaultPortraitURL,defaultRewardURL}=__cast; const {createEncounter,advanceEncounter,skipEncounter}=__encounter; const {chooseVoiceLine}=__voiceLines;const {createStageRewardVideo,stageRewardVideoId}=__rewardMedia;`;
   const hooks = `globalThis.hooks={ready:configReady,startRun,startBattle,nextEncounter,skipConversation,beginBattleRound,step,scheduleCpu,
     begin({stage=1,battle=1,portrait=null,name,retries=0}={}){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();run=createArcade();Object.assign(run,{stage,battle,retries,totalBattles:battle-1});runConfig=structuredClone(defaults);if(portrait)runConfig.stages[stage-1].portrait=portrait;if(name)runConfig.stages[stage-1].name=name;started=true;ended=false;encounter=null;round=null;startBattle();},
-    reward(stage,win,custom=null,types={}){const result={winner:0,points:2000,han:1,fu:30};run={...createArcade(),stage,battle:win,wins:win-1};run=finishBattle(run,result);round={result};runConfig=structuredClone(defaults);if(custom)runConfig.stages[stage-1].rewards[win-1]=custom;runConfig.mediaTypes=structuredClone(types);showBattleResult();},
     finish(result,points){for(const d of document.querySelectorAll('dialog[open]'))d.close();encounter=null;round={...__engine.createRound({stage:run.stage,seed:1}),phase:'finished',result:structuredClone(result),points:[...points]};run=finishBattle(run,{...result,finalPoints:points});render();showBattleResult();},
-    configure(stage,patch){Object.assign(config.stages[stage-1],structuredClone(patch));},
+    configure(stage,patch,mediaTypes={}){Object.assign(config.stages[stage-1],structuredClone(patch));Object.assign(config.mediaTypes,mediaTypes);},
+    stageConfig(stage,patch,mediaTypes={}){Object.assign(runConfig.stages[stage-1],structuredClone(patch));Object.assign(runConfig.mediaTypes,mediaTypes);},
     setupRound(value){stopTimers();for(const d of document.querySelectorAll('dialog[open]'))d.close();encounter=null;round=structuredClone(value);started=true;ended=false;render();},
     state(){return{run,round,encounter,createdRounds,ended};}};`;
   let tableSource = '';
@@ -304,18 +303,6 @@ test('dialog cannot escape into gameplay, and repeated keys do not skip dialogue
   assert.equal(f.hooks.state().round, null); assert.equal(f.hooks.state().createdRounds, 0);
 });
 
-test('all 21 win slots select the matching person and image; custom images fall back safely', async () => {
-  const f = await harness();
-  for (let stage = 1; stage <= 7; stage++) for (let win = 1; win <= 3; win++) {
-    f.hooks.reward(stage, win); assert.equal(f.node('rewardImage').src, cast.defaultRewardURL(stage, win));
-    assert.ok(f.node('rewardDescription').textContent.includes(cast.getCast(stage).rewards[win - 1]));
-    assert.equal(f.node('rewardImage').hidden, false);
-  }
-  f.hooks.reward(2, 2, 'test-upload'); assert.match(f.node('rewardImage').src, /\/api\/mahjong\/assets\/test-upload$/);
-  f.node('rewardImage').onerror(); assert.equal(f.node('rewardImage').src, cast.defaultRewardURL(2, 2));
-  f.node('rewardImage').onerror(); assert.equal(f.node('rewardImage').hidden, true); assert.equal(f.node('rewardPlaceholder').hidden, false);
-});
-
 test('custom characters keep their displayed name and use a dedicated greeting and portrait', async () => {
   const f = await harness(); f.hooks.begin({ stage: 3, name: '独自のキャラクター', portrait: 'portrait-upload' });
   assert.equal(f.node('encounterName').textContent, '独自のキャラクター');
@@ -327,94 +314,92 @@ test('custom characters keep their displayed name and use a dedicated greeting a
 
 
 const completeResult=(winner,points)=>({winner,points,han:winner===null?0:1,fu:winner===null?0:30,yaku:[],winningHand:[]});
-const galleryIds=stage=>Array.from({length:10},(_,index)=>`stage-${stage}-gallery-${index+1}`);
-async function beginConfigured(f,stage=1,gallery=galleryIds(stage)){
- f.hooks.configure(stage,{gallery});await f.hooks.startRun();
- if(stage!==1)f.hooks.begin({stage});
-}
-function finishThree(f,{lastWinner=1}={}){
- f.hooks.finish(completeResult(1,1000),[24000,26000]);assert.equal(f.hooks.state().run.phase,'battle-result');
- f.node('nextRoundButton').click();f.hooks.finish(completeResult(0,16000),[41000,9000]);f.node('rewardContinue').click();
- f.node('nextRoundButton').click();f.hooks.finish(completeResult(lastWinner,lastWinner===0?1000:1000),lastWinner===0?[26000,24000]:[24000,26000]);
- if(lastWinner===0)f.node('rewardContinue').click();
-}
-
-test('a loss keeps the campaign alive and one large win can unlock a gated stage gallery after three battles',async()=>{
- const f=await harness();await beginConfigured(f);
- f.hooks.finish(completeResult(1,1000),[24000,26000]);assert.equal(f.hooks.state().ended,false);assert.equal(f.hooks.state().run.battle,1);assert.equal(f.node('resultDialog').open,true);assert.equal(f.node('nextRoundButton').hidden,false);assert.equal(f.node('stageGalleryDialog').open,false);
- f.node('nextRoundButton').click();assert.equal(f.hooks.state().run.battle,2);assert.equal(f.node('encounterDialog').open,true);
- f.hooks.finish(completeResult(0,16000),[41000,9000]);assert.equal(f.node('rewardDialog').open,true);assert.equal(f.node('rewardImage').src,cast.defaultRewardURL(1,1));
- f.node('rewardContinue').click();f.node('nextRoundButton').click();f.hooks.finish(completeResult(1,1000),[24000,26000]);
- assert.equal(f.hooks.state().run.phase,'stage-clear');assert.equal(f.hooks.state().run.wins,1);assert.equal(f.hooks.state().run.stage,1);assert.match(f.node('stageResultTotal').textContent,/89,000.*61,000/);
- const rounds=f.hooks.state().createdRounds;f.node('nextStageButton').click();assert.equal(f.node('stageGalleryDialog').open,true);assert.equal(f.hooks.state().run.stage,1);assert.equal(f.hooks.state().createdRounds,rounds);assert.equal(f.node('encounterDialog').open,false);assert.equal([...f.timers.values()].filter(t=>t.delay===650).length,0);
- assert.equal(f.node('stageGallerySpeech').textContent,cast.getCast(1).stageReward);assert.match(f.node('stageGallerySpeech').textContent,/ご褒美/);
- f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);assert.equal(f.node('stageGalleryDialog').open,false);assert.equal(f.node('encounterDialog').open,true);assert.equal(f.hooks.state().createdRounds,rounds);assert.deepEqual(Array.from(f.hooks.state().run.stageTotals),[0,0]);
- f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);assert.equal(f.hooks.state().createdRounds,rounds);
-});
-
-test('the gallery has ten ordered slots, clamps navigation and retains the run-start image configuration',async()=>{
- const f=await harness(),ids=galleryIds(1);await beginConfigured(f,1,ids);
- f.hooks.configure(1,{gallery:galleryIds(7)});finishThree(f);f.node('nextStageButton').click();
- assert.equal(f.node('stageGallerySlots').children.length,10);assert.equal(f.node('stageGalleryPrevious').disabled,true);
- for(let i=0;i<10;i++){
-  assert.match(f.node('stageGalleryImage').src,new RegExp(`/stage-1-gallery-${i+1}$`));assert.match(f.node('stageGalleryCounter').textContent,new RegExp(`^${i+1} / 10`));assert.equal(f.hooks.state().run.stage,1);
-  if(i<9)f.node('stageGalleryNext').click();
+function finishThree(f, balances=[[24000,26000],[41000,9000],[24000,26000]]){
+ for(const [index,finalPoints] of balances.entries()){
+  const [you,rival]=finalPoints;
+  f.hooks.finish(completeResult(you===rival?null:you>rival?0:1,Math.abs(you-25000)),finalPoints);
+  if(index<2){
+   assert.equal(f.hooks.state().run.phase,'battle-result');
+   assert.equal(f.node('resultDialog').open,true);
+   assert.equal(f.node('stageRewardDialog').open,false);
+   assert.equal(f.node('stageRewardVideo').src,undefined);
+   f.node('nextRoundButton').click();
+  }
  }
- assert.equal(f.node('stageGalleryNext').disabled,true);f.node('stageGalleryNext').click();assert.match(f.node('stageGalleryCounter').textContent,/^10 \/ 10/);
- f.node('stageGallerySlots').children[3].click();assert.match(f.node('stageGalleryImage').src,/stage-1-gallery-4$/);
- f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowRight',repeat:true});assert.match(f.node('stageGalleryCounter').textContent,/^4 \/ 10/);
- f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowRight'});assert.match(f.node('stageGalleryCounter').textContent,/^5 \/ 10/);
- f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowLeft'});assert.match(f.node('stageGalleryCounter').textContent,/^4 \/ 10/);
- assert.equal(f.node('stageGalleryDialog').dispatch('cancel').defaultPrevented,true);
+}
+
+test('a single win can automatically play exactly one muted stage reward after the third result',async()=>{
+ const f=await harness();
+ f.hooks.configure(1,{gallery:['stage-movie','other-movie'],rewards:['old-image',null,null]},
+   {'stage-movie':'video/mp4','other-movie':'video/mp4'});
+ await f.hooks.startRun();
+ f.hooks.configure(1,{gallery:['later-movie']},{'later-movie':'video/mp4'});
+ finishThree(f);
+ const video=f.node('stageRewardVideo');
+ assert.equal(f.hooks.state().run.phase,'stage-clear');
+ assert.equal(f.hooks.state().run.wins,1);
+ assert.equal(f.node('stageRewardDialog').open,true);
+ assert.match(f.node('stageRewardSummary').textContent,/89,000.*61,000/);
+ assert.match(video.src,/stage-movie$/);
+ assert.equal(video.playCalls,1);
+ assert.equal(video.muted,true);
+ f.node('stageRewardContinue').click();
+ assert.equal(f.hooks.state().run.stage,2);
+ assert.equal(f.node('stageRewardDialog').open,false);
+ assert.equal(f.node('encounterDialog').open,true);
+ assert.equal(video.paused,true);
+ assert.equal(video.src,undefined);
+ f.node('stageRewardContinue').click();
+ assert.equal(f.hooks.state().run.stage,2);
 });
 
-test('empty and failed gallery images stay navigable and a stale image error cannot hide a later slot',async()=>{
- const f=await harness();await beginConfigured(f,1,['available-first',null,'available-third',...Array(7).fill(null)]);finishThree(f);f.node('nextStageButton').click();
- const oldError=f.node('stageGalleryImage').onerror;assert.equal(f.node('stageGalleryImage').hidden,false);
- f.node('stageGalleryNext').click();assert.equal(f.node('stageGalleryImage').hidden,true);assert.equal(f.node('stageGalleryEmpty').hidden,false);assert.match(f.node('stageGalleryEmpty').textContent,/未登録/);
- f.node('stageGalleryNext').click();oldError();assert.equal(f.node('stageGalleryImage').hidden,false);assert.match(f.node('stageGalleryImage').src,/available-third$/);
- f.node('stageGalleryImage').onerror();assert.equal(f.node('stageGalleryImage').hidden,true);assert.match(f.node('stageGalleryEmpty').textContent,/読み込めません/);assert.equal(f.node('stageGalleryContinue').disabled,false);
- f.node('stageGalleryNext').click();assert.match(f.node('stageGalleryCounter').textContent,/^4 \/ 10/);f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);
+test('tie and loss show the result and offer a retry without loading the reward',async()=>{
+ for (const end of [[25000,25000],[24000,26000]]){
+  const f=await harness();
+  f.hooks.begin();
+  f.hooks.stageConfig(1,{gallery:['stage-movie']},{'stage-movie':'video/mp4'});
+  finishThree(f,[[24000,26000],[26000,24000],end]);
+  assert.equal(f.hooks.state().run.phase,'stage-failed');
+  assert.equal(f.node('stageRewardDialog').open,false);
+  assert.equal(f.node('stageRewardVideo').src,undefined);
+  assert.equal(f.node('retryStageButton').hidden,false);
+ }
 });
 
-test('the final stage shows its gallery before the complete-run record can open',async()=>{
- const f=await harness();f.hooks.begin({stage:7});finishThree(f);assert.equal(f.hooks.state().run.phase,'complete');assert.equal(f.hooks.state().ended,false);assert.equal(f.node('finalDialog').open,false);
- f.node('endRunButton').click();assert.equal(f.node('stageGalleryDialog').open,true);assert.equal(f.hooks.state().run.stage,7);assert.equal(f.hooks.state().ended,false);assert.equal(f.node('stageGallerySpeech').textContent,cast.getCast(7).stageReward);
- f.node('stageGalleryContinue').click();assert.equal(f.node('finalDialog').open,true);assert.equal(f.hooks.state().ended,true);assert.equal(f.hooks.state().run.stage,7);assert.match(f.node('finalTitle').textContent,/完全制覇/);
+test('an empty or legacy image slot leaves stage advancement available without other gallery items',async()=>{
+ for(const first of [null,'photo']){
+  const f=await harness();
+  f.hooks.begin();
+  f.hooks.stageConfig(1,{gallery:[first,'other-video']},{photo:'image/webp','other-video':'video/mp4'});
+  finishThree(f);
+  assert.equal(f.node('stageRewardDialog').open,false);
+  assert.equal(f.node('stageRewardVideo').src,undefined);
+  assert.equal(f.node('nextStageButton').hidden,false);
+  f.node('nextStageButton').click();
+  assert.equal(f.hooks.state().run.stage,2);
+ }
 });
 
+test('the last stage reward can show results and complete the run without playing twice',async()=>{
+ const f=await harness();
+ f.hooks.begin({stage:7});
+ f.hooks.stageConfig(7,{gallery:['final-movie']},{'final-movie':'video/mp4'});
+ finishThree(f);
+ assert.equal(f.hooks.state().run.phase,'complete');
+ assert.match(f.node('stageRewardVideo').src,/final-movie$/);
+ assert.equal(f.node('stageRewardVideo').playCalls,1);
+ f.node('stageRewardDetails').click();
+ assert.equal(f.node('resultDialog').open,true);
+ assert.equal(f.node('stageRewardVideo').src,undefined);
+ assert.equal(f.node('stageRewardVideo').playCalls,1);
+ f.node('endRunButton').click();
+ assert.equal(f.node('finalDialog').open,true);
+ assert.equal(f.hooks.state().ended,true);
+});
 
 test('actual round completion passes held points including unclaimed riichi deposits into stage totals',async()=>{
  const f=await harness();f.hooks.begin();f.hooks.skipConversation();
  const drawn=engine.createRound({stage:1,seed:13,dealer:1});drawn.wall=[];drawn.points=[24000,25000];drawn.riichiPot=1000;drawn.riichi[0]=true;
  f.hooks.setupRound(drawn);f.hooks.step({type:'cpu'});
  assert.equal(f.hooks.state().round.result.winner,null);assert.deepEqual(Array.from(f.hooks.state().run.stageTotals),[24000,25000]);assert.deepEqual(Array.from(f.hooks.state().run.results[0].finalPoints),[24000,25000]);assert.equal(f.node('resultDialog').open,true);assert.equal(f.hooks.state().run.phase,'battle-result');
-});
-
-test('a victory MP4 is inline and manual, then is released when the player continues to the round result',async()=>{
- const f=await harness();f.hooks.reward(2,1,'victory-movie',{'victory-movie':'video/mp4'});
- const video=f.node('rewardVideo');assert.equal(video.hidden,false);assert.equal(f.node('rewardImage').hidden,true);assert.match(video.src,/victory-movie$/);assert.equal(video.controls,true);assert.equal(video.playsInline,true);assert.equal(video.autoplay,false);assert.equal(video.playCalls||0,0);assert.match(f.node('rewardMediaKind').textContent,/動画/);
- await video.play();const loaded=video.loadCalls;f.node('rewardContinue').click();assert.equal(f.node('rewardDialog').open,false);assert.equal(f.node('resultDialog').open,true);assert.equal(video.paused,true);assert.equal(video.src,undefined);assert.ok(video.loadCalls>loaded);
-});
-
-test('the real stage gallery mixes images and MP4 while focused video arrow keys keep native seeking',async()=>{
- const f=await harness({mediaTypes:{movie:'video/mp4'}});await beginConfigured(f,1,['photo','movie','last-photo',...Array(7).fill(null)]);finishThree(f);f.node('nextStageButton').click();
- assert.equal(f.node('stageGalleryImage').hidden,false);assert.equal(f.node('stageGalleryVideo').hidden,true);assert.equal(f.node('stageGallerySlots').children.length,10);assert.match(f.node('stageGallerySlots').children[1].textContent,/▶/);
- f.node('stageGalleryNext').click();const video=f.node('stageGalleryVideo');assert.equal(video.hidden,false);assert.equal(f.node('stageGalleryImage').hidden,true);assert.match(video.src,/movie$/);assert.match(f.node('stageGalleryCounter').textContent,/2 \/ 10 · 動画/);
- const key=f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowRight',target:video});assert.notEqual(key.defaultPrevented,true);assert.match(f.node('stageGalleryCounter').textContent,/^2 \/ 10/);
- await video.play();const moved=f.node('stageGalleryDialog').dispatch('keydown',{key:'ArrowRight'});assert.equal(moved.defaultPrevented,true);assert.match(f.node('stageGalleryCounter').textContent,/^3 \/ 10/);assert.equal(video.paused,true);assert.equal(video.src,undefined);assert.equal(f.node('stageGalleryImage').hidden,false);assert.match(f.node('stageGalleryImage').src,/last-photo$/);
-});
-
-test('background and page navigation unload gallery video; resume keeps playback paused and closing prevents reattachment',async()=>{
- const f=await harness({mediaTypes:{movie:'video/mp4'}});await beginConfigured(f,1,['movie',...Array(9).fill(null)]);finishThree(f);f.node('nextStageButton').click();const video=f.node('stageGalleryVideo');await video.play();video.currentTime=12.5;
- f.document.hidden=true;f.document.dispatch('visibilitychange');assert.equal(video.paused,true);assert.equal(video.src,undefined);assert.equal(video.hidden,true);
- f.document.hidden=false;f.document.dispatch('visibilitychange');assert.match(video.src,/movie$/);assert.equal(video.paused,true);assert.equal(video.playCalls,1);video.onloadedmetadata();assert.equal(video.currentTime,12.5);
- await video.play();f.window.dispatch('pagehide');assert.equal(video.src,undefined);f.window.dispatch('pageshow');assert.match(video.src,/movie$/);assert.equal(video.paused,true);assert.equal(video.playCalls,2);
- f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);assert.equal(video.src,undefined);f.window.dispatch('pageshow');assert.equal(video.src,undefined);
-});
-
-test('MP4 failures retain next and continue controls, and a late old error cannot hide the following image',async()=>{
- const f=await harness({mediaTypes:{broken:'video/mp4'}});await beginConfigured(f,1,['broken','following-image',...Array(8).fill(null)]);finishThree(f);f.node('nextStageButton').click();const video=f.node('stageGalleryVideo'),oldError=video.onerror;video.onerror();assert.match(f.node('stageGalleryEmpty').textContent,/動画を読み込めません/);assert.equal(video.hidden,true);assert.equal(f.node('stageGalleryNext').disabled,false);assert.equal(f.node('stageGalleryContinue').disabled,false);
- f.node('stageGalleryNext').click();oldError();assert.equal(f.node('stageGalleryImage').hidden,false);assert.match(f.node('stageGalleryImage').src,/following-image$/);f.node('stageGalleryContinue').click();assert.equal(f.hooks.state().run.stage,2);
- f.hooks.reward(2,1,'broken',{broken:'video/mp4'});f.node('rewardVideo').onerror();assert.match(f.node('rewardMediaStatus').textContent,/動画を読み込めません/);assert.equal(f.node('rewardContinue').disabled,false);f.node('rewardContinue').click();assert.equal(f.node('resultDialog').open,true);
 });

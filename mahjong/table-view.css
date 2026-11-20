@@ -239,7 +239,7 @@ body:not(.game-fullscreen):has(.has-3d) .brand-mark { width: 29px; height: 35px;
 body:not(.game-fullscreen):has(.has-3d) .game-shell {
   display: grid;
   grid-template-columns: auto minmax(190px, 1fr) auto;
-  grid-template-areas: "score stages sound" "game game game" "footer footer footer";
+  grid-template-areas: "score stages controls" "game game game" "footer footer footer";
   align-items: center;
   gap: 12px clamp(10px, 2vw, 26px);
   padding: 14px clamp(10px, 2.2vw, 32px);
@@ -253,9 +253,8 @@ body:not(.game-fullscreen):has(.has-3d) .stage-node { gap: 5px; }
 body:not(.game-fullscreen):has(.has-3d) .stage-node b { width: 25px; height: 25px; font-size: 11px; }
 body:not(.game-fullscreen):has(.has-3d) .stage-node small { display: none; }
 body:not(.game-fullscreen):has(.has-3d) .stage-node::after { margin-inline: 0 5px; }
-body:not(.game-fullscreen):has(.has-3d) .voice-toolbar { grid-area: sound; display: block; margin: 0; padding: 0; border: 0; background: none; }
-body:not(.game-fullscreen):has(.has-3d) .voice-toolbar button { min-height: 36px; }
-body:not(.game-fullscreen):has(.has-3d) .voice-toolbar > p { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+body:not(.game-fullscreen):has(.has-3d) .game-view-controls { grid-area: controls; display: block; margin: 0; padding: 0; border: 0; background: none; }
+body:not(.game-fullscreen):has(.has-3d) .game-view-controls button { min-height: 36px; }
 body:not(.game-fullscreen):has(.has-3d) .game-layout { grid-area: game; grid-template-columns: clamp(185px, 18vw, 240px) minmax(0, 1fr); gap: clamp(10px, 1.4vw, 22px); }
 body:not(.game-fullscreen):has(.has-3d) .rival-column, body:not(.game-fullscreen):has(.has-3d) .play-column { gap: 10px; }
 body:not(.game-fullscreen):has(.has-3d) footer { grid-area: footer; }
@@ -270,10 +269,10 @@ body:not(.game-fullscreen):has(.has-3d) .round-notice { min-height: 22px; }
 @media (max-width: 850px) {
   body:not(.game-fullscreen):has(.has-3d) .game-shell {
     grid-template-columns: auto 1fr;
-    grid-template-areas: "score sound" "stages stages" "game game" "footer footer";
+    grid-template-areas: "score controls" "stages stages" "game game" "footer footer";
     gap: 9px;
   }
-  body:not(.game-fullscreen):has(.has-3d) .voice-toolbar { justify-self: end; }
+  body:not(.game-fullscreen):has(.has-3d) .game-view-controls { justify-self: end; }
   body:not(.game-fullscreen):has(.has-3d) .game-layout {
     display: grid;
     grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
@@ -293,7 +292,6 @@ body:not(.game-fullscreen):has(.has-3d) .round-notice { min-height: 22px; }
   body:not(.game-fullscreen):has(.has-3d) .rival-commentary::before { display: none; }
   body:not(.game-fullscreen):has(.has-3d) .commentary-heading { margin: 0; }
   body:not(.game-fullscreen):has(.has-3d) #characterCaption { margin: 2px 0; font-size: 11px; line-height: 1.45; }
-  body:not(.game-fullscreen):has(.has-3d) .rival-commentary button { min-height: 24px; padding: 0 6px; }
   body:not(.game-fullscreen):has(.has-3d) .play-column { grid-area: play; }
   body:not(.game-fullscreen):has(.has-3d) .stage-card { grid-area: stage; margin: 0; }
 }
@@ -334,8 +332,7 @@ body:not(.game-fullscreen):has(.has-3d) .round-notice { min-height: 22px; }
   body:not(.game-fullscreen):has(.has-3d) .game-shell { padding: 8px; }
   body:not(.game-fullscreen):has(.has-3d) .score-pill { padding: 3px 6px; }
   body:not(.game-fullscreen):has(.has-3d) .score-pill small { display: inline; margin: 0; font-size: 9px; letter-spacing: .6px; }
-  body:not(.game-fullscreen):has(.has-3d) .voice-toolbar-buttons { gap: 3px; }
-  body:not(.game-fullscreen):has(.has-3d) .voice-toolbar button { min-height: 32px; padding: 3px 6px; font-size: 10px; }
+  body:not(.game-fullscreen):has(.has-3d) .game-view-controls button { min-height: 32px; padding: 3px 6px; font-size: 10px; }
 }
 @media (max-width: 365px) {
   body:not(.game-fullscreen):has(.has-3d) .rival-details h2 { font-size: 12px; }

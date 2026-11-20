@@ -27,47 +27,42 @@ async function harness(){
 const config=()=>({version:0,stages:cast.CAST.map(profile=>({id:profile.id,name:`ステージ${profile.id}の対戦相手`,portrait:null,rewards:[null,null,null],accent:'#e89cae',difficulty:profile.id}))});
 const base='https://gamestk777.github.io/web/mahjong/assets/cast/';
 
-test('all seven management stages show the assigned portrait and three distinct default rewards',async()=>{
+test('all seven stages show a default portrait and one empty video field',async()=>{
   const f=await harness(),input=config(),before=JSON.stringify(input);f.qa.configure(input);
   for(const profile of cast.CAST){
     f.qa.select(profile.id);
     assert.equal(f.node('characterName').value,profile.name);
     assert.equal(f.node('portraitPreview').src,cast.defaultPortraitURL(profile.id,base));
     assert.equal(f.node('portraitPreview').hidden,false);
-    for(let win=1;win<=3;win++){
-      assert.equal(f.node('rewardPreview'+win).src,cast.defaultRewardURL(profile.id,win,base));
-      assert.equal(f.node('rewardPreview'+win).hidden,false);
-    }
+    assert.equal(f.node('stageRewardState').textContent,'未登録');
+    assert.equal(f.node('stageRewardPreview').hidden,true);
   }
   assert.equal(JSON.stringify(input),before,'Viewing defaults must not mutate the received config');
 });
 
-test('registered names and images override defaults, and resetting one slot preserves every other slot',async()=>{
+test('registered names and portraits override defaults, and resetting the portrait does not edit legacy slots',async()=>{
   const f=await harness(),input=config();input.version=12;
   input.stages[4]={...input.stages[4],name:'カスタム対戦相手',portrait:'portrait-id',rewards:['first-id','second-id','third-id']};
   const before=JSON.stringify(input);f.qa.configure(input);f.qa.select(5);
   assert.equal(f.node('characterName').value,'カスタム対戦相手');
   assert.equal(f.node('portraitPreview').src,'/api/mahjong/assets/portrait-id');
-  assert.equal(f.node('rewardPreview2').src,'/api/mahjong/assets/second-id');
-  f.node('removeReward2').onclick();
-  assert.equal(f.node('rewardPreview2').src,cast.defaultRewardURL(5,2,base));
-  assert.equal(f.node('rewardPreview1').src,'/api/mahjong/assets/first-id');
-  assert.equal(f.node('rewardPreview3').src,'/api/mahjong/assets/third-id');
-  assert.equal(f.node('portraitPreview').src,'/api/mahjong/assets/portrait-id');
+  f.node('removePortraitButton').onclick();
+  assert.equal(f.node('portraitPreview').src,cast.defaultPortraitURL(5,base));
+  assert.deepEqual(Array.from(f.qa.state().draft.stages[4].rewards),input.stages[4].rewards);
   assert.equal(f.qa.state().draft.version,12);
   assert.equal(f.qa.state().draft.stages[4].name,'カスタム対戦相手');
   assert.equal(f.qa.state().dirty,true);
   assert.equal(JSON.stringify(input),before);
 });
 
-test('the signed-out reference gallery exposes all 28 correctly assigned public images',async()=>{
+test('the signed-out reference gallery exposes the seven correctly assigned public portraits',async()=>{
   const f=await harness(),cards=f.node('initialCastGallery').children;
   assert.equal(cards.length,7);
   const urls=[];
   cards.forEach((card,i)=>{
     assert.ok(card.children[0].textContent.includes(cast.CAST[i].name));
-    assert.equal(card.children[1].children.length,4);
+    assert.equal(card.children[1].children.length,1);
     card.children[1].children.forEach(figure=>{urls.push(figure.children[0].src);assert.equal(figure.children[0].loading,'lazy');});
   });
-  assert.equal(new Set(urls).size,28);
+  assert.equal(new Set(urls).size,7);
 });
