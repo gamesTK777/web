@@ -34,6 +34,18 @@ test("movement respects flat feet, normalized directions and sprint speed", () =
   assert.ok(travel({forward:1,sprint:true}) > 6);
 });
 
+test("the tag chaser's sprint bonus does not change ordinary or invalid-input speeds", () => {
+  const w = new FloorWorld();
+  const speed = (sprintMultiplier?: number, sprint = true) => {
+    const p = createPlayer(pose);
+    for (let n = 0; n < 60; n++) stepPlayer(w, p, { ...idle, forward: 1, sprint }, 1 / 60, { sprintMultiplier });
+    return -p.vz;
+  };
+  assert.ok(Math.abs(speed(1.25) / speed() - 1.25) < .001);
+  assert.equal(speed(Infinity), speed());
+  assert.equal(speed(1.25, false), speed(undefined, false));
+});
+
 test("jump buffering consumes a quick tap on landing, and cannot repeat in midair", () => {
   const w=new FloorWorld(),p=createPlayer({...pose,y:1.19});
   p.vy=-4;

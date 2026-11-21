@@ -20,8 +20,8 @@ function env(t) {
       body:opts.rawBody ?? body
     }), db, {now:opts.now ?? epoch})
   }
-  async function create(nickname = '作り手', mode, now = epoch) {
-    const res = await run('rooms', {name:'みんなの丘', seed:'hill', nickname, mode}, {now})
+  async function create(nickname = '作り手', mode, now = epoch, protocol) {
+    const res = await run('rooms', {name:'みんなの丘', seed:'hill', nickname, mode, protocol}, {now})
     assert.equal(res.status, 201)
     return res.json()
   }
@@ -32,6 +32,22 @@ function env(t) {
     return run('sync', {protocol,code:actor.room.code, token:actor.token, since, pose:at, edit}, {now})
   }
   return {sql,run,create,join,sync}
+}
+
+async function tagSession(t) {
+  const service = env(t)
+  const host = await service.create('おにの候補', 'tag', epoch, 3)
+  const guest = await (await service.join(host, '探検仲間', epoch, 3)).json()
+  async function frame(actor, now, at) {
+    const result = await service.sync(actor, {protocol:3,now,at})
+    assert.equal(result.status, 200)
+    return result.json()
+  }
+  async function pair(now, hostPose, guestPose) {
+    await frame(guest, now, guestPose)
+    return frame(host, now, hostPose)
+  }
+  return {...service,host,guest,frame,pair}
 }
 
 test('room code, seeds, and player positions work with distinct room-only credentials', async t => {
@@ -55,6 +71,120 @@ test('room code, seeds, and player positions work with distinct room-only creden
   const another = await create('招待先')
   const cross = await run('sync', {code:another.room.code, token:host.token, since:0, pose:pose()})
   assert.equal(cross.status, 401)
+})
+
+test('tag requires current clients, rejects terrain edits and keeps other room modes independent', async t => {
+  const {run,create,join,sync,host,guest,frame,sql} = await tagSession(t)
+  const request = {name:'みんなの丘',seed:'hill',nickname:'新規',mode:'tag'}
+  assert.equal((await run('rooms', {...request,protocol:2})).status, 426)
+  assert.equal(host.room.mode, 'tag')
+  assert.deepEqual(host.room, guest.room)
+  assert.equal((await join(host, '前の版', epoch, 2)).status, 426)
+  assert.equal((await sync(host, {protocol:2})).status, 426)
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM webcraft_members WHERE room_code=?').get(host.room.code).n, 2)
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM webcraft_members WHERE pose IS NOT NULL').get().n, 0)
+  const edit = {key:voxel(132,33,130),fromRevision:0,before:0,block:8,axis:'y',actionId:crypto.randomUUID()}
+  assert.equal((await sync(host, {protocol:3,edit})).status, 403)
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM webcraft_cells WHERE room_code=?').get(host.room.code).n, 0)
+  assert.deepEqual((await frame(host,epoch+1,pose())).tag,
+    {it:null,phase:'waiting',hideUntil:0,seq:0,previousIt:null})
+  const explorer = await create('探索者', 'explore', epoch, 3)
+  assert.equal((await join(explorer, '前の版', epoch, 2)).status, 200)
+  const modified = await (await sync(explorer, {protocol:3,edit:{...edit,block:21}})).json()
+  assert.equal(modified.cells[0].block,21)
+  assert.equal('tag' in modified,false)
+  const builder = await create('自由建築', 'creative', epoch, 3)
+  const creative = await (await sync(builder, {protocol:3,edit:{...edit,block:31}})).json()
+  assert.equal(creative.cells[0].block,31)
+  assert.equal('tag' in creative,false)
+})
+
+test('tag waits for two players and a hiding period, tracks swept body contact and prevents tag-back', async t => {
+  const {host,guest,frame,pair} = await tagSession(t)
+  const hostStart = pose(128,33,129)
+  const guestStart = pose(129,33,128)
+  const starts = epoch + 100
+  const deadline = starts + 8000
+  assert.equal((await frame(host, epoch, hostStart)).tag.phase,'waiting')
+  assert.deepEqual((await frame(guest,starts,hostStart)).tag,
+    {it:host.id,phase:'hiding',hideUntil:deadline,seq:1,previousIt:null})
+  for (const elapsed of [3000,6000,7800]) {
+    const hiding = (await pair(starts+elapsed, hostStart, hostStart)).tag
+    assert.equal(hiding.it,host.id)
+    assert.equal(hiding.phase,'hiding')
+  }
+  assert.deepEqual((await pair(deadline,hostStart,guestStart)).tag,
+    {it:host.id,phase:'playing',hideUntil:deadline,seq:2,previousIt:null})
+  // No pair of end points is close enough. The paths cross between polls.
+  const swapped = (await pair(deadline+300,pose(130,33,129),pose(129,33,130))).tag
+  assert.deepEqual(swapped, {it:guest.id,phase:'playing',hideUntil:deadline,seq:3,previousIt:host.id})
+  for (const elapsed of [600,1400,2400,2700]) {
+    const protectedState = (await pair(deadline+elapsed,hostStart,hostStart)).tag
+    assert.equal(protectedState.it,guest.id)
+    assert.equal(protectedState.seq,3)
+  }
+  const back = (await pair(deadline+2850,hostStart,hostStart)).tag
+  assert.equal(back.it,host.id)
+  assert.equal(back.seq,4)
+  assert.equal(back.previousIt,guest.id)
+})
+
+test('tag ignores different levels, stale positions and out-of-order samples', async t => {
+  const {host,guest,frame,pair,sql} = await tagSession(t)
+  const start = epoch + 100
+  const deadline = start + 8000
+  const below = pose(128,33,129)
+  const above = pose(129,36,128)
+  for (const elapsed of [0,3000,6000,8000]) await pair(start+elapsed,below,above)
+  const crossed = (await pair(deadline+300,pose(130,33,129),pose(129,36,130))).tag
+  assert.equal(crossed.it,host.id)
+  assert.equal(crossed.seq,2)
+  await frame(guest,deadline+600,below)
+  await frame(host,deadline+1500,below)
+  const stale = (await frame(host,deadline+1750,below)).tag
+  assert.equal(stale.it,host.id)
+  assert.equal(stale.seq,2)
+  await frame(guest,deadline+1650,pose(132,33,130))
+  await frame(guest,deadline+1640,below)
+  assert.equal(sql.prepare('SELECT pose_at FROM webcraft_members WHERE id=?').get(guest.id).pose_at,deadline+1650)
+  assert.equal((await frame(host,deadline+1850,below)).tag.it,host.id)
+})
+
+test('concurrent contact changes the ghost once, and departure, rejoining and expiry stay isolated', async t => {
+  const {host,guest,frame,pair,join,run,create,sql} = await tagSession(t)
+  const third = await (await join(host,'三人目',epoch,3)).json()
+  const another = await create('別の部屋', 'tag', epoch, 3)
+  const start = epoch + 100
+  const deadline = start + 8000
+  const here = pose(128,33,129)
+  const there = pose(129.5,33,129)
+  await frame(host, epoch, here)
+  for (const elapsed of [0,3000,6000,8000]) {
+    await frame(third,start+elapsed,pose(125,33,130))
+    await pair(start+elapsed,here,there)
+  }
+  await Promise.all([host,guest,third].map(actor => frame(actor,deadline+300,here)))
+  const touched = (await frame(host,deadline+301,here)).tag
+  assert.equal(touched.seq,3)
+  assert.equal(touched.previousIt,host.id)
+  const departed = touched.it === guest.id ? guest : third
+  const remaining = departed === guest ? third : guest
+  assert.equal((await run('leave',{code:host.room.code,token:departed.token},{now:deadline+500})).status,200)
+  const replacement = (await frame(remaining,deadline+550,here)).tag
+  assert.equal(replacement.seq,4)
+  assert.equal(replacement.phase,'hiding')
+  assert.equal(replacement.it,host.id)
+  assert.equal(replacement.previousIt,null)
+  assert.equal((await run('leave',{code:host.room.code,token:host.token},{now:deadline+600})).status,200)
+  const waiting = (await frame(remaining,deadline+650,here)).tag
+  assert.deepEqual(waiting,{it:null,phase:'waiting',hideUntil:0,seq:5,previousIt:null})
+  const rejoined = await (await join(host,'再参加',deadline+700,3)).json()
+  const resumed = (await frame(rejoined,deadline+750,there)).tag
+  assert.equal(resumed.phase,'hiding')
+  assert.equal(resumed.seq,6)
+  assert.equal((await frame(another,deadline+750,here)).tag.seq,0)
+  await create('新しい部屋','creative',epoch+day+10_000)
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM webcraft_tag_state').get().n,0)
 })
 
 test('concurrent edits use one cell revision, and later snapshots include placements and removals', async t => {

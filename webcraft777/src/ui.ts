@@ -6,6 +6,8 @@ import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
 export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting' }
+export interface TagUIStatus { label:string; hint:string; it:boolean; mapOpen:boolean }
+type RoomUIPlayMode = Mode | 'tag'
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
 export interface RecipeView { id:string; name:string; ingredients:string; outputs:string; craftable:number; itemId:number; reason:string; equipment:string }
 export interface InventoryView { items:ItemView[]; bar:(ItemView|null)[]; recipes:RecipeView[]; selected:number; mode:Mode; benchUses?:number; chest?:Stack[]; palette?:ItemView[] }
@@ -120,7 +122,7 @@ export class GameUI {
   private worldName=''
   private kidsView=false
   private room:OnlineStatus|null=null
-  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as Mode}
+  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -185,7 +187,8 @@ export class GameUI {
       if(form.id==='online-create-form'){
         const name=String(data.get('name')??'').trim()
         const seed=String(data.get('seed')??'').trim()
-        const mode:Mode=data.get('mode')==='explore'?'explore':'creative'
+        const selected=data.get('mode')
+        const mode:RoomUIPlayMode=selected==='tag'||selected==='explore'?selected:'creative'
         Object.assign(this.onlineDraft,{name,seed,mode})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
         this.send('online-create',{name,seed,nickname,mode})
@@ -236,6 +239,7 @@ export class GameUI {
   title(hasWorlds:boolean) {
     this.worldName=''
     this.onlineSession(null)
+    this.tagMode(null)
     const link='<a class="portal" href="'+escapeText(this.portal)+'"><span aria-hidden="true">‹</span> TK777 ARCADE</a>'
     this.show('title', '<div class="title-stage">'+link+'<div class="title-main"><h1 aria-label="ウェブクラフト777"><span>ウェブクラフト</span><strong>777</strong></h1>'+
       '<div class="start-actions">'+button('goto-create','<span>新しく始める</span><b aria-hidden="true">＋</b>','primary')+
@@ -261,9 +265,9 @@ export class GameUI {
     if(code)this.onlineDraft.code=code.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)
     const draft=this.onlineDraft
     const nickname='<label class="entry">プレイヤー名<input name="nickname" value="'+escapeText(draft.nickname)+'" placeholder="ワールド内に表示される名前" maxlength="24" required autocomplete="nickname"></label>'
-    const modes=([['creative','建材を自由に使って建築する。'],['explore','素材を集めて道具や建材を作る。']] as const)
+    const modes=([['creative','建材を自由に使って建築する。'],['explore','素材を集めて道具や建材を作る。'],['tag','仲間と追いかけっこをする。']] as const)
       .map(([mode,detail])=>'<label><input type="radio" name="mode" value="'+mode+'"'+(draft.mode===mode?' checked':'')+
-        '><span><b>'+modeName(mode)+'</b><small>'+detail+'</small></span></label>').join('')
+        '><span><b>'+(mode==='tag'?'鬼ごっこ':modeName(mode))+'</b><small>'+detail+'</small></span></label>').join('')
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
@@ -291,6 +295,17 @@ export class GameUI {
     if(connection.textContent!==label)connection.textContent=label
     const paused=this.panel.querySelector('[data-online-status]')
     if(paused&&paused.textContent!==label)paused.textContent=label
+  }
+  tagMode(status:TagUIStatus|null) {
+    $('game').toggleAttribute('data-tag-play',!!status)
+    const panel=$('tag-status'), toggle=$('tag-map-toggle'), map=$('tag-map')
+    panel.hidden=toggle.hidden=!status
+    map.hidden=!status?.mapOpen
+    toggle.setAttribute('aria-pressed',String(!!status?.mapOpen))
+    panel.toggleAttribute('data-it',!!status?.it)
+    const role=$('tag-role'),hint=$('tag-hint')
+    if(role.textContent!==(status?.label??''))role.textContent=status?.label??''
+    if(hint.textContent!==(status?.hint??''))hint.textContent=status?.hint??''
   }
   worlds(list:UIWorld[]) {
     const rows=list.map(w=>{
@@ -370,7 +385,8 @@ export class GameUI {
     '<h2>タブレットモード</h2><p>一時停止画面の「タブレットモードでプレイ」から、PCでも画面のスティックやボタンを使えます。左下のスティックで移動し、景色をドラッグして見回します。照準を合わせて画面を短くタップすると、選択中のブロックを設置できます。右下のボタンからも設置・採掘・ジャンプ・しゃがみができます。クリエイティブでは「飛行」で切り替え、上昇・下降ボタンを長押しします。</p>'+
     '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
-    '<h2>マルチプレイ</h2><p>ルームを作るときにクリエイティブか探索を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
+    '<h2>マルチプレイ</h2><p>ルームを作るときに遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
+    '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」を選び、仲間が参加したら、鬼は逃げ役を追いかけます。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
     '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+
@@ -414,7 +430,8 @@ export class GameUI {
     this.inventoryState=view
     const item=view.bar[view.selected]
     $('hud-bar').innerHTML=this.slots(view)
-    $('mode-tag').textContent=(this.worldName?this.worldName+'　／　':'')+modeName(view.mode)
+    const mode=$('game').hasAttribute('data-tag-play')?'鬼ごっこ':modeName(view.mode)
+    $('mode-tag').textContent=(this.worldName?this.worldName+'　／　':'')+mode
     $('equipped').textContent=item?item.name+'　'+formattedCount(item.count)+(item.durability!==undefined?'　耐久 '+item.durability+'/'+item.maxDurability:''):'素手'
   }
   inventory(view:InventoryView) {

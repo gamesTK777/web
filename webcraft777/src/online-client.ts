@@ -1,5 +1,6 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
+export type OnlineMode = Mode|'tag'
 
 export interface NetPose {
   x: number
@@ -39,7 +40,7 @@ export interface RoomSummary {
   seed: string
   generator: 2
   createdAt: number
-  mode: Mode
+  mode: OnlineMode
 }
 
 export interface RoomConnection {
@@ -52,6 +53,14 @@ export interface RoomFrame {
   revision: number
   cells: RoomCell[]
   players: RoomPlayer[]
+  tag?: TagState
+}
+export interface TagState {
+  it:string|null
+  phase:'waiting'|'hiding'|'playing'
+  hideUntil:number
+  seq:number
+  previousIt:string|null
 }
 
 export interface EditOutcome {
@@ -69,6 +78,7 @@ export interface RoomHooks {
 }
 
 const POLL_INTERVAL = 900
+const TAG_POLL_INTERVAL = 260
 const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
@@ -81,7 +91,7 @@ const statusMessages: Record<number, string> = {
   404: '部屋が見つかりません。合言葉を確認してください。',
   409: '部屋が現在いっぱいです。',
   410: '部屋の有効期限が切れました。新しい部屋を作ってください。',
-  426: 'ゲームを再読み込みして、最新版で探索ルームに入り直してください。',
+  426: 'ゲームを再読み込みして、最新版でルームに入り直してください。',
   429: '通信が集中しています。少し待ってからお試しください。',
 }
 
@@ -121,7 +131,7 @@ function parseConnection(value: unknown): RoomConnection {
   const body = asRecord(value), room = asRecord(body?.room)
   if (!body || !room || typeof room.code !== 'string' || !/^[A-Z0-9]{8}$/.test(room.code) ||
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
-      (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative') ||
+      (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag') ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||
       !/^[a-z0-9_.-]+$/i.test(body.token)) return invalidResponse()
@@ -129,7 +139,7 @@ function parseConnection(value: unknown): RoomConnection {
     id: body.id,
     token: body.token,
     room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt,
-      mode:room.mode==='explore'?'explore':'creative' },
+      mode:room.mode==='explore'||room.mode==='tag'?room.mode:'creative' },
   }
 }
 
@@ -152,7 +162,15 @@ function parseCell(value: unknown, since: number, total: number): RoomCell {
   return { key: cell.key, block: cell.block, axis: cell.axis, revision: cell.revision }
 }
 
-function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean) {
+function parseTag(value:unknown):TagState {
+  const tag=asRecord(value)
+  if(!tag||(tag.it!==null&&!isMemberId(tag.it))||(tag.previousIt!==null&&!isMemberId(tag.previousIt))||
+    (tag.phase!=='waiting'&&tag.phase!=='hiding'&&tag.phase!=='playing')||
+    !isInteger(tag.hideUntil,0,Number.MAX_SAFE_INTEGER)||!isInteger(tag.seq,0,Number.MAX_SAFE_INTEGER))
+    return invalidResponse()
+  return {it:tag.it,previousIt:tag.previousIt,phase:tag.phase,hideUntil:tag.hideUntil,seq:tag.seq}
+}
+function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean, tagRoom=false) {
   const body = asRecord(value)
   if (!body || !isInteger(body.revision, since, Number.MAX_SAFE_INTEGER) ||
       !Array.isArray(body.cells) || body.cells.length > MAX_ROOM_CELLS ||
@@ -178,7 +196,7 @@ function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean
     const reason = typeof outcome.reason === 'string' && /^[a-z-]{1,32}$/.test(outcome.reason) ? outcome.reason : undefined
     result = { ok: outcome.ok, ...(reason ? { reason } : {}) }
   }
-  return { frame: { revision, cells, players }, result }
+  return { frame: { revision, cells, players, ...(tagRoom?{tag:parseTag(body.tag)}:{}) }, result }
 }
 
 function retryDelay(header: string | null) {
@@ -188,7 +206,7 @@ function retryDelay(header: string | null) {
 }
 
 type SyncRequest = {
-  protocol: 2
+  protocol: 3
   code: string
   token: string
   since: number
@@ -208,9 +226,9 @@ export class OnlineClient {
     this.origin = url.origin
   }
 
-  async create(input: { name: string; seed: string; nickname: string; mode?: Mode }): Promise<RoomConnection> {
-    const connection=parseConnection(await this.request('rooms', input))
-    if(input.mode==='explore'&&connection.room.mode!=='explore'){
+  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode }): Promise<RoomConnection> {
+    const connection=parseConnection(await this.request('rooms', {...input,protocol:3}))
+    if(input.mode&&connection.room.mode!==input.mode){
       void this.leave(connection)
       throw new OnlineError(426,'mode-unavailable')
     }
@@ -218,7 +236,7 @@ export class OnlineClient {
   }
 
   async join(input: { code: string; nickname: string }): Promise<RoomConnection> {
-    return parseConnection(await this.request('join', {...input,protocol:2}))
+    return parseConnection(await this.request('join', {...input,protocol:3}))
   }
 
   start(connection: RoomConnection, hooks: RoomHooks): RoomSync {
@@ -319,7 +337,8 @@ export class RoomSync {
     if (this.closed || this.running || isHidden()) return
     clearTimeout(this.timer)
     const now = performance.now()
-    const at = Math.max(now + delay, this.lastStart + EDIT_INTERVAL, this.retryAt)
+    const minimum=this.connection.room.mode==='tag'?TAG_POLL_INTERVAL:EDIT_INTERVAL
+    const at = Math.max(now + delay, this.lastStart + minimum, this.retryAt)
     this.timer = setTimeout(() => { void this.tick() }, at - now)
   }
 
@@ -353,10 +372,10 @@ export class RoomSync {
       attemptedEdit = Boolean(sent && pose)
       if (sent && !attemptedEdit) this.finishEdit({ ok: false, reason: 'offline' })
       const payload = await this.send({
-        protocol: 2, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
+        protocol: 3, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
       }, request.signal)
       if (this.closed) return
-      const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit)
+      const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit, room.mode==='tag')
       this.hooks.onFrame(frame)
       this.revision = frame.revision
       this.failures = this.retryAt = 0
@@ -382,7 +401,8 @@ export class RoomSync {
       this.retryAt = performance.now() + Math.max(error.retryAfter, Math.min(MAX_BACKOFF, POLL_INTERVAL * 2 ** (this.failures - 1)))
     } finally {
       this.running = undefined
-      if (!this.closed) this.schedule(this.pending ? 0 : Math.max(0, this.lastStart + POLL_INTERVAL - performance.now()))
+      const interval=room.mode==='tag'?TAG_POLL_INTERVAL:POLL_INTERVAL
+      if (!this.closed) this.schedule(this.pending ? 0 : Math.max(0, this.lastStart + interval - performance.now()))
     }
   }
 }

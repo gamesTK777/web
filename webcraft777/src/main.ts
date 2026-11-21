@@ -8,14 +8,16 @@ import { Soundscape } from './audio'
 import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining, consumeBlock, ITEMS, SLIDE_ITEM, blockItemId, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode, type Bag } from './inventory'
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
-import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomSync } from './online-client'
+import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
 import { readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
 import { validTerrainPreset, type TerrainPreset } from './stages'
 import { LandLife } from './land-life'
 import { AquaticLife } from './aquatic-life'
+import { TagMap } from './tag-map'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
 const hud = document.querySelector<HTMLElement>('#hud')!
+const tagCanvas = hud.querySelector<HTMLCanvasElement>('#tag-map-canvas')!
 const touchControls = hud.querySelector<HTMLElement>('#touch-controls')!
 const touchFly = hud.querySelector<HTMLButtonElement>('#touch-fly')!
 const lifeStatus=hud.querySelector<HTMLElement>('#life-status')!
@@ -38,9 +40,10 @@ const ui = new GameUI((action,value)=>{ void handle(action,value).catch(err=>ui.
 const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
 const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
+type TagGame = {map:TagMap;status?:TagState;peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string}
 type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
   ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>;
-  nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit}
+  nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit;tagGame?:TagGame}
 type Session = { data: ActiveSave; world: World; player: Player; view: SceneView;
   kids: boolean; originalPitch: number; kidsPitch: number; online?:SharedRoom; land?:LandLife; aquatic?:AquaticLife }
 let station:Hit|null=null, logAxis:Axis='y', slideFacing=0, progress=0, guideDue=0, tapSound=0
@@ -104,6 +107,7 @@ function viewInventory() {
 }
 function guide(){
   if(!session)return
+  if(session.online?.tagGame){ui.expedition('','','');return}
   const {world,data,player}=session,j=data.journey,cave=world.landmarks.find(l=>l.kind==='cave')
   const site=world.landmarks.find(l=>Math.hypot(l.x-player.x,l.z-player.z)<12)
   if(site&&site.kind!==currentSite&&input.active){ui.toast(site.name+'　'+({grove:'大樹の根元で建築用の原木を採れます。',cave:'坑道の壁に潮晶の鉱脈があります。',ruin:'回廊の床には持ち帰れる象眼タイルがあります。'}[site.kind]))}
@@ -112,7 +116,7 @@ function guide(){
     data.mode==='explore'&&!j.hidden&&j.toolMade&&!j.caveVisited&&cave?'岩窟 '+bearing(cave,player):'')
 }
 function interact(hit: Hit|null, explicit=false){
-  if(!session||!input.active)return false
+  if(!session||!input.active||session.online?.tagGame)return false
   if(session.online&&session.data.mode==='creative'){
     if(explicit)ui.toast('共同建築ルームでは、建材を自由に選んで建築できます。')
     return false
@@ -127,7 +131,7 @@ function interact(hit: Hit|null, explicit=false){
   station=hit;stopInput();ui.inventory(viewInventory());return true
 }
 function pick(){
-  if(!session)return
+  if(!session||session.online?.tagGame)return
   if(heldForSync(session)){ui.toast('素材の変更を確認しています。少し待ってください。');return}
   const {world,player,data}=session,hit=raycast(world,player)
   if(!hit){ui.toast('選びたい建材に照準を合わせてください。');return}
@@ -140,7 +144,7 @@ function pick(){
   else ui.toast('このブロックは選択できません。')
 }
 function undo(){
-  if(!session)return
+  if(!session||session.online?.tagGame)return
   if(session.online){ui.toast('共同建築では、置いたブロックを採掘して取り除けます。');return}
   if(session.data.mode!=='creative'){ui.toast('元に戻す操作はクリエイティブで使えます。');return}
   const s=session,r=s.world.undo((x,y,z)=>overlapsPlayer(s.player,x,y,z));resetMining();ui.toast(r.message)
@@ -171,7 +175,7 @@ function switchViewMode(){
   try {localStorage.setItem(viewPreferenceKey,s.kids?'kids':'original')} catch {}
 }
 function select(slot:number) {
-  if(!session||!Number.isInteger(slot)||slot<0||slot>8)return
+  if(!session||session.online?.tagGame||!Number.isInteger(slot)||slot<0||slot>8)return
   session.data.selected=slot;resetMining(); refreshBag()
   void persistRoomProgress(session)
 }
@@ -181,13 +185,13 @@ function pause() {
   stopInput(); ui.pause(false,controlMode)
 }
 function inventory() {
-  if(!session || !input.active)return
+  if(!session || !input.active || session.online?.tagGame)return
   station=null;stopInput(); ui.inventory(viewInventory())
 }
 function showTouchControls(drag:boolean) {
   const enabled=drag&&controlMode==='tablet'
   touchControls.hidden=!enabled
-  touchFly.hidden=session?.data.mode!=='creative'
+  touchFly.hidden=session?.data.mode!=='creative'||!!session.online?.tagGame
   const flying=Boolean(session?.player.flying)
   touchFly.setAttribute('aria-pressed',String(flying))
   touchButtons.jump.textContent=flying?'上昇':'ジャンプ'
@@ -197,6 +201,12 @@ function showTouchControls(drag:boolean) {
 function showPlay(fallback:boolean){
   if(!session||!input.active)return
   if(fallback&&controlMode==='lock')controlMode=recoverControlMode()
+  const game=session.online?.tagGame
+  if(game&&!game.started){
+    const {x,z}=session.player
+    if(game.peers.some(({pose})=>Math.hypot(x-pose.x,z-pose.z)<=1.2))separateSpawn(session,game.peers)
+    game.started=true
+  }
   ui.play(fallback,firstGuide,input.pending,showTouchControls(fallback));ui.hud(viewInventory());guide()
 }
 function resume(mode:ControlMode) {
@@ -206,7 +216,7 @@ function resume(mode:ControlMode) {
     ui.toast(session.online.ended?'退出してルームに参加し直してください。':'共有ワールドの読み込みが完了するまでお待ちください。');return
   }
   station=null
-  firstGuide=!session.data.guideSeen
+  firstGuide=!session.data.guideSeen&&!session.online?.tagGame
   controlMode=mode
   frameHalted=false;frameTime=0;lastStats=0;frameCount=0
   audio.unlock();audio.setPlaying(true)
@@ -277,7 +287,7 @@ function changeSharedBlock(s:Session,x:number,y:number,z:number,block:number,axi
     .finally(()=>{room.editing=false})
 }
 function place() {
-  if(!session||!input.active)return
+  if(!session||!input.active||session.online?.tagGame)return
   const {world,player,data,view}=session,hit=raycast(world,player)
   if(!player.crouched&&interact(hit))return
   if(hit&&session.land?.occupies(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz)){
@@ -308,7 +318,7 @@ function place() {
   ui.toast(result.message)
 }
 function rotateMaterial(){
-  if(!session||!input.active)return
+  if(!session||!input.active||session.online?.tagGame)return
   if(session.data.bag.hotbar[session.data.selected]===SLIDE_ITEM){
     slideFacing=(slideFacing+1)%4
     ui.toast('滑り台の下り方向　'+slideNames[slideFacing])
@@ -318,7 +328,7 @@ function rotateMaterial(){
   }
 }
 function advanceMine(dt:number) {
-  if(!session||!input.active)return
+  if(!session||!input.active||session.online?.tagGame)return
   const {world,player,data,view}=session
   const hit=raycast(world,player)
   if(!input.mining || !hit) { if(aimKey)resetMining(); return }
@@ -353,7 +363,7 @@ function advanceMine(dt:number) {
   ui.toast(result.message);resetMining(); cooldown=data.mode==='creative'?.15:.11
 }
 function toggleFly(){
-  if(!session||!input.active)return
+  if(!session||!input.active||session.online?.tagGame)return
   const {player,data}=session
   if(data.mode!=='creative'){ui.toast('飛行はクリエイティブモードで使えます。');return}
   player.flying=!player.flying
@@ -396,6 +406,7 @@ function showWildlife(s:Session,aimedShark:boolean){
 }
 const input=new InputController(canvas,{
   pause,inventory,place,select,look:aim, beginMine:()=>{if(!attackShark())advanceMine(0)},pick,undo,viewMode:switchViewMode,
+  tagMap:toggleTagMap,
   attack:()=>{if(!attackShark()&&session?.aquatic)ui.toast('近くのサメに照準を合わせてください。')},
   rotate:rotateMaterial,
   interact:()=>{if(session)interact(raycast(session.world,session.player),true)},
@@ -454,6 +465,39 @@ function disposeLife(s:Session){
 function showRoom(room:SharedRoom) {
   ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state})
 }
+function updateTagUI(s:Session,now=performance.now()){
+  const room=s.online,game=room?.tagGame
+  if(!room||!game)return
+  const state=game.status
+  const it=state?.it===room.connection.id
+  const hiding=state?.phase==='hiding', playing=state?.phase==='playing'
+  const label=playing||hiding?(it?'鬼':'逃げ役'):'参加者を待っています'
+  const seconds=hiding?Math.max(0,Math.ceil((state.hideUntil-Date.now())/1000)):0
+  const hint=hiding?(it?'鬼のスタートまで ':'隠れる時間 ')+seconds+'秒':
+    playing?(it?'逃げ役にぶつかるとタッチ':'鬼から逃げて隠れよう'):'2人以上で開始'
+  const key=[label,hint,game.open].join('/')
+  if(game.uiKey!==key){
+    ui.tagMode({label,hint,it,mapOpen:game.open})
+    game.uiKey=key
+  }
+  if(game.open&&now>=game.mapDue){
+    game.map.update(game.peers,s.player,playing)
+    game.mapDue=now+240
+  }
+}
+function toggleTagMap(){
+  const s=session,game=s?.online?.tagGame
+  if(!s||!game||!input.active)return
+  game.open=!game.open;game.mapDue=0;updateTagUI(s)
+}
+function separateSpawn({world,player}:Session,peers:RoomPlayer[]){
+  for(const [dx,dz] of [[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2],[2,-2]]){
+    const start=safeSpawn(world,{...player,x:player.x+dx,z:player.z+dz})
+    if(peers.every(({pose})=>Math.hypot(start.x-pose.x,start.z-pose.z)>1.2)){
+      Object.assign(player,{x:start.x,y:start.y,z:start.z});return
+    }
+  }
+}
 function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
   const {player,world}=s
   let collision=false
@@ -470,16 +514,19 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
     Object.assign(player,{x,y,z,vy:0});resetPlayerInput(player)
   }
   const peers=frame.players.filter(peer=>peer.id!==room.connection.id)
-  if(!room.ready&&!room.restoring&&peers.length){
-    // Start near the group without spawning directly inside another player.
-    for(const [dx,dz] of [[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2],[2,-2]]){
-      const start=safeSpawn(world,{...player,x:player.x+dx,z:player.z+dz})
-      if(peers.every(({pose})=>Math.hypot(start.x-pose.x,start.z-pose.z)>1.2)){
-        Object.assign(player,{x:start.x,y:start.y,z:start.z});break
-      }
+  const game=room.tagGame
+  if(!room.ready&&!room.restoring&&!game&&peers.length)separateSpawn(s,peers)
+  if(game){
+    const previous=game.status
+    game.status=frame.tag;game.peers=peers
+    if(previous&&frame.tag?.previousIt&&frame.tag.seq>previous.seq){
+      if(frame.tag.it===room.connection.id)ui.toast('タッチされました！ あなたが鬼です。')
+      else if(frame.tag.previousIt===room.connection.id)ui.toast('タッチ成功！ 逃げ役になりました。')
     }
+    updateTagUI(s)
   }
-  s.view.actors.setPlayers(peers)
+  const blinded=game?.status?.phase==='hiding'&&game.status.it===room.connection.id
+  s.view.actors.setPlayers(blinded?[]:peers,game?.status?.it)
   if(room.count!==peers.length+1){room.count=peers.length+1;showRoom(room)}
   room.ready=true;stillFrame=''
   if(station?.id===21&&world.get(station.x,station.y,station.z)!==21){
@@ -493,7 +540,7 @@ function connectRoom(s:Session,room:SharedRoom) {
   showRoom(room)
   room.sync=onlineClient.start(room.connection,{
     pose:()=>{
-      if(session!==s)return null
+      if(session!==s||(room.tagGame&&!room.tagGame.started))return null
       const {x,y,z,yaw,crouched,flying,vx,vz}=s.player
       return {x,y,z,yaw,crouched,flying,moving:Math.hypot(vx,vz)>.18}
     },
@@ -525,12 +572,14 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     },connection?.room.generator??loaded?.generator??2,stage)
     if(loaded){world.loadEdits(loaded.edits);world.loadFixtures(loaded.fixtures)}
     const start=world.spawn()
-    const mode=connection?.room.mode??(stage!=='classic'?'creative':args?.mode??loaded?.mode??'creative')
+    const tag=connection?.room.mode==='tag'
+    const mode=connection?(connection.room.mode==='explore'?'explore':'creative'):
+      stage!=='classic'?'creative':args?.mode??loaded?.mode??'creative'
     const profile=connection&&mode==='explore'?readRoomProfile(connection.room.code,nickname):undefined
     const data:ActiveSave=loaded??{format:'webcraft777',version:2,generator:2,id:crypto.randomUUID(),
       fixtures:emptyFixtures(),journey:profile?.journey??createJourney(),
       revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,stage,
-      pose:profile?.pose??start,flying:false,bag:profile?.bag??createBag(mode),selected:profile?.selected??0,
+      pose:profile?.pose??start,flying:false,bag:profile?.bag??createBag(tag?'explore':mode),selected:profile?.selected??0,
       edits:[],day:.39,settings:{...settings},guideSeen:false}
     if(!loaded&&stage!=='classic')data.bag.hotbar=[7,8,10,27,28,29,SLIDE_ITEM,9,12]
     if(!data.journey.home){const {x,y,z}=start;data.journey.home={x,y,z}}
@@ -545,7 +594,9 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     if(connection){
       const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map(),
         nickname,restoring:!!profile,pendingExplore:profile?.pending}
-      session.online=room;connectRoom(session,room)
+      session.online=room
+      if(tag){room.tagGame={map:new TagMap(tagCanvas,world),peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
+      connectRoom(session,room)
     }else if(stage!=='flat'){
       if(stage==='classic')session.land=new LandLife(world,view.scene,player)
       session.aquatic=new AquaticLife(world,view.scene,data.sharkDefeated)
@@ -559,6 +610,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     else if(connection)void onlineClient.leave(connection)
     if(session){disposeLife(session);session.view.dispose();session=null}
     ui.onlineSession(null)
+    ui.tagMode(null)
     if(connect)ui.onlineMenu(retryCode,reason(e))
     else{console.error(e);ui.error(reason(e))}
   } finally {busy=false}
@@ -614,6 +666,7 @@ async function handle(action:string,value?:any) {
     case 'online-create':audio.unlock();await openWorld(null,undefined,()=>onlineClient.create(value),'',value.nickname);break
     case 'online-join':audio.unlock();await openWorld(null,undefined,()=>onlineClient.join(value),value.code,value.nickname);break
     case 'online-copy':await copyInvitation();break
+    case 'tag-map':toggleTagMap();break
     case 'online-leave':if(session?.online){busy=true;try{await title()}finally{busy=false}}break
     case 'goto-worlds': await worldList();break
     case 'goto-help': ui.help();break
@@ -722,10 +775,19 @@ function frame(now:number){
 function tick(now:number){
   if(!session)return
   const s=session,elapsed=frameTime?(now-frameTime)/1000:0,dt=Math.min(elapsed,.1);frameTime=now
+  const tag=s.online?.tagGame
   if(input.active){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
     if(!input.frame(p,elapsed))return
-    stepPlayer(s.world,p,movement,dt,settings);audio.environment(s.world,p,dt)
+    const it=!!tag?.status?.it&&tag.status.it===s.online?.connection.id
+    if(tag){
+      movement.sprint=true
+      if(it&&tag.status?.phase==='hiding'){
+        movement.forward=movement.right=0;movement.jump=movement.jumpPressed=false
+      }
+      updateTagUI(s,now)
+    }
+    stepPlayer(s.world,p,movement,dt,it?{...settings,sprintMultiplier:1.25}:settings);audio.environment(s.world,p,dt)
     s.land?.update(p,dt,s.data.day)
     const water=s.aquatic
     water?.update(p,dt)
@@ -739,7 +801,7 @@ function tick(now:number){
     s.data.day=s.online ? (.39+Math.max(0,Date.now()-s.online.connection.room.createdAt)/600_000)%1 : (s.data.day+dt/600)%1
     cooldown=Math.max(0,cooldown-dt);advanceMine(dt)
   }
-  const target=input.active?raycast(s.world,s.player):null
+  const target=input.active&&!tag?raycast(s.world,s.player):null
   if(!input.active) {
     const key=canvas.clientWidth+'/'+canvas.clientHeight+'/'+s.data.id
     if(stillFrame===key && !s.view.stats.queued)return
@@ -748,7 +810,7 @@ function tick(now:number){
   const aimedShark=input.active&&!!s.aquatic?.canAttack(s.player)
   const aimedResident=input.active&&!aimedShark?s.land?.targetLabel(s.player,target?.distance):null
   if(input.active)showWildlife(s,aimedShark)
-  const held=s.data.bag.hotbar[s.data.selected]
+  const held=tag?0:s.data.bag.hotbar[s.data.selected]
   const use=target&&!s.player.crouched&&(!s.online?[21,22].includes(target.id):s.data.mode==='explore'&&target.id===21)
   const slide=held===SLIDE_ITEM
   touchRotate.hidden=!input.active||!input.drag||!slide||aimedShark
@@ -762,7 +824,7 @@ function tick(now:number){
     aimedResident?aimedResident+'　'+useAction+'で話す':use?useAction+(target!.id===21?'で作業台':'でチェスト'):'')
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,
-    moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined)
+    moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined,!!tag)
   if(s.kids)moveReticle(Math.round(s.view.kidsCamera.reticle.y*20)/20)
   if(input.active && debugging){
     frameCount++

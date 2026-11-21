@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS webcraft_rooms (
   expires_at INTEGER NOT NULL,
   revision INTEGER NOT NULL DEFAULT 0,
   cell_count INTEGER NOT NULL DEFAULT 0,
-  mode TEXT NOT NULL DEFAULT 'creative' CHECK (mode IN ('creative','explore'))
+  mode TEXT NOT NULL DEFAULT 'creative' CHECK (mode IN ('creative','explore')),
+  tag_enabled INTEGER NOT NULL DEFAULT 0 CHECK (tag_enabled IN (0,1))
 );
 
 CREATE INDEX IF NOT EXISTS webcraft_rooms_expiry ON webcraft_rooms(expires_at);
@@ -19,6 +20,9 @@ CREATE TABLE IF NOT EXISTS webcraft_members (
   nickname TEXT NOT NULL,
   last_seen INTEGER NOT NULL,
   pose TEXT,
+  pose_at INTEGER NOT NULL DEFAULT 0,
+  previous_pose TEXT,
+  previous_pose_at INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY(room_code, token_hash)
 );
 
@@ -65,3 +69,13 @@ BEGIN
   INSERT INTO webcraft_edit_receipts(room_code,action_id,voxel,block)
     VALUES(NEW.room_code,NEW.action_id,NEW.voxel,NEW.block);
 END;
+
+CREATE TABLE IF NOT EXISTS webcraft_tag_state (
+  room_code TEXT PRIMARY KEY NOT NULL REFERENCES webcraft_rooms(code) ON DELETE CASCADE,
+  it TEXT,
+  phase TEXT NOT NULL DEFAULT 'waiting' CHECK (phase IN ('waiting','hiding','playing')),
+  hide_until INTEGER NOT NULL DEFAULT 0,
+  seq INTEGER NOT NULL DEFAULT 0,
+  previous_it TEXT,
+  protected_until INTEGER NOT NULL DEFAULT 0
+);

@@ -206,7 +206,7 @@ export class SceneView {
     if(this.chips.count){this.chips.instanceMatrix.needsUpdate=true;if(this.chips.instanceColor)this.chips.instanceColor.needsUpdate=true;}
   }
   update(p:CameraPose & {fovOffset?:number},target:Position|null,day:number,dt:number,presentation?:Presentation,
-    kids?:{player:Player;hit:Hit|null}) {
+    kids?:{player:Player;hit:Hit|null},concealNames=false) {
     const w=Math.max(1,this.canvas.clientWidth),h=Math.max(1,this.canvas.clientHeight);
     if(w!==this.wt || h!==this.ht){
       this.wt=w;this.ht=h;
@@ -225,7 +225,8 @@ export class SceneView {
     const thirdPerson=kids ? this.kidsCamera.update(this.camera,this.world,kids.player,kids.hit,dt) : false;
     if(!kids)firstPerson(this.camera,p);
     this.sky.update(day,this.camera,this.t);
-    this.actors.animate(dt,.52+.48*this.sky.day.value);
+    if(concealNames)this.camera.updateMatrixWorld();
+    this.actors.animate(dt,.52+.48*this.sky.day.value,this.world,concealNames?this.camera:undefined);
     this.actionTime=Math.max(0,this.actionTime-dt);
     if(thirdPerson&&kids){
       if(!this.avatar){this.avatar=new KidsAvatar();this.scene.add(this.avatar.group);}

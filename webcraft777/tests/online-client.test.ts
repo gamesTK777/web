@@ -35,8 +35,8 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
   await assert.rejects(() => client.join({ code: 'NOEXISTS', nickname: 'あお' }),
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
-    { path: '/api/webcraft/rooms', body: fields },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:2 } },
+    { path: '/api/webcraft/rooms', body: {...fields,protocol:3} },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:3 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -70,8 +70,8 @@ test('同期した編集だけを適用し、編集は一つずつ送る', { tim
   assert.deepEqual(await pending, { ok: true })
   assert.deepEqual(frames, [empty, changed])
   assert.deepEqual(requests, [
-    { protocol:2,code: connection.room.code, token: connection.token, since: 0, pose },
-    { protocol:2,code: connection.room.code, token: connection.token, since: 0, pose, edit },
+    { protocol:3,code: connection.room.code, token: connection.token, since: 0, pose },
+    { protocol:3,code: connection.room.code, token: connection.token, since: 0, pose, edit },
   ])
   sync.close()
   await left.promise

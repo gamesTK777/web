@@ -161,6 +161,39 @@ input { accent-color: #2e745b; }
 .online-card button { margin-top: 14px; }
 .online-card input,.online-card button { min-height: 44px; }
 #online-code { font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; }
+#game[data-tag-play] :is(.belt,.trail,#guide,#life-status,#touch-fly,#mine-meter,[data-action="inventory"],#fallback > div) { display: none; }
+#game[data-tag-play]:has(#tag-map:not([hidden])) #crosshair { visibility: hidden; }
+#tag-status {
+  position: absolute; z-index: 1; top: calc(max(14px,env(safe-area-inset-top)) + 82px);
+  left: max(18px,env(safe-area-inset-left)); display: flex; align-items: center; flex-wrap: wrap;
+  gap: 4px 8px; max-width: min(480px,calc(100% - 36px)); padding: 6px 9px;
+  border: 1px solid #a6d1bd89; border-radius: 6px; color: #fff8ea; background: #142f2ae8;
+  font-size: .82rem; line-height: 1.45;
+}
+#tag-status #tag-role { padding: 1px 6px; border-radius: 4px; background: #285c56; color: #d6fcf3; }
+#tag-status[data-it] #tag-role { background: #723d30; color: #fff2bd; }
+#tag-hint:empty { display: none; }
+#tag-map-toggle { min-inline-size: 44px; }
+#tag-map-toggle[aria-pressed="true"] { background: #f1cb79; border-color: #ffe2a6; color: #2d3923; }
+#tag-map {
+  position: absolute; top: 50%; left: 50%; translate: -50% -50%; pointer-events: none;
+  inline-size: min(394px,calc(100vw - 48px),calc(100dvh - 92px));
+  padding: 9px; display: grid; gap: 6px;
+  background: #142f2ad9; color: #fff8ea; border: 1px solid #fff1c29e; border-radius: 12px;
+  box-shadow: 0 7px 25px #0b191773;
+}
+.tag-map-head,.tag-map-legend { display: flex; justify-content: space-between; gap: 4px 8px; align-items: center; }
+.tag-map-head { font-size: .91rem; }
+.tag-map-head span { color: #f3e2a8; font-size: .78rem; }
+#tag-map-canvas { display: block; width: 100%; height: auto; opacity: .89; border-radius: 4px; }
+.tag-map-legend { font-size: .71rem; flex-wrap: wrap; }
+.tag-map-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.tag-map-legend i { width: 15px; height: 15px; flex: 0 0 auto; text-align: center; line-height: 13px; font-style: normal; }
+.tag-map-self { border: 2px solid #d7f9ff; background: #74afb9; }
+.tag-map-people { border-radius: 50%; background: #ffe292; color: #263025; border: 1px solid #8c7445; font-weight: 800; }
+@media (max-width: 650px) {
+  #tag-status { top: calc(max(7px,env(safe-area-inset-top)) + 82px); left: max(7px,env(safe-area-inset-left)); }
+}
 .panel .online-error { margin-block: 8px 13px; padding: 8px 12px; border: 1px solid #c97964; border-radius: 6px; color: #7a352b; background: #ffefdc; overflow-wrap: anywhere; }
 .room-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; padding: 9px 11px; border: 1px solid #c8d2b6; border-radius: 6px; background: #edf2df; }
 .room-actions p { margin: 0; }

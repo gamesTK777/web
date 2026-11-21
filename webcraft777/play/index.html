@@ -7,8 +7,8 @@
   <meta name="description" content="素材を集めて道具を作り、自分のワールドに家を建てる一人用3Dゲーム。">
   <title>ウェブクラフト777 | TK777 ARCADE</title>
   <link rel="icon" href="./art/icon.webp" type="image/webp">
-  <script type="module" crossorigin src="./assets/index-BQ3RS4_t.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-D4pJYMuy.css">
+  <script type="module" crossorigin src="./assets/index-03NjOP8I.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-B-vrrD_e.css">
 </head>
 <body>
   <main id="game">
@@ -20,11 +20,18 @@
         <div id="mode-tag"></div>
         <div class="top-actions">
           <button type="button" id="view-mode" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false" title="視点モードを切り替え（K）"><span>オリジナルモード</span> <kbd aria-hidden="true">K</kbd></button>
+          <button type="button" id="tag-map-toggle" data-action="tag-map" aria-controls="tag-map" aria-pressed="false" title="エリア地図を開く・閉じる（M）" hidden>地図 <kbd aria-hidden="true">M</kbd></button>
           <button type="button" data-action="inventory" title="持ち物を開く（E）">持ち物 <kbd>E</kbd></button>
           <button type="button" data-action="pause" title="一時停止（Esc）">一時停止 <kbd>Esc</kbd></button>
         </div>
       </div>
       <div id="online-hud" role="status" hidden>ルーム <strong id="online-hud-code"></strong><span id="online-hud-status"></span></div>
+      <div id="tag-status" role="status" hidden><strong id="tag-role"></strong><span id="tag-hint"></span></div>
+      <aside id="tag-map" aria-label="鬼ごっこのエリア地図" hidden>
+        <div class="tag-map-head"><strong>エリア地図</strong><span>↑ 北</span></div>
+        <canvas id="tag-map-canvas" width="384" height="384" role="img" aria-label="地形、自分のエリア、他の参加者のエリアごとの人数"></canvas>
+        <div class="tag-map-legend"><span><i class="tag-map-self" aria-hidden="true"></i> 自分のエリア</span><span><i class="tag-map-people" aria-hidden="true">2</i> 他の参加者の人数</span></div>
+      </aside>
       <div id="life-status" hidden>
         <label>体力 <progress id="life-health" max="100" value="100"></progress><span id="life-health-number">100</span></label>
         <label id="shark-status" hidden>サメ <progress id="shark-health" max="100" value="100"></progress><span id="shark-health-number">100</span></label>

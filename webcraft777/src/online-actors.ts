@@ -2,8 +2,10 @@ import * as T from 'three'
 import { KidsAvatar } from './kids-avatar'
 import { createPlayer, type Player } from './physics'
 import type { NetPose, RoomPlayer } from './online-client'
+import { tagNameVisible } from './tag-visibility'
+import type { World } from './world'
 
-type Actor = { avatar:KidsAvatar; body:Player; label:T.Sprite; goal:NetPose }
+type Actor = { avatar:KidsAvatar; body:Player; label:T.Sprite; caption:string; goal:NetPose }
 
 function nameTag(name:string) {
   const canvas=document.createElement('canvas')
@@ -28,27 +30,34 @@ function nameTag(name:string) {
 
 export class OnlineActors {
   private readonly actors=new Map<string,Actor>()
+  private readonly sample=new T.Vector3()
   constructor(private readonly scene:T.Scene) {}
 
-  setPlayers(players:RoomPlayer[]) {
+  setPlayers(players:RoomPlayer[],it:string|null=null) {
     const seen=new Set<string>()
     for(const peer of players) {
       seen.add(peer.id)
+      const caption=peer.id===it?'鬼 '+peer.nickname:peer.nickname
       let actor=this.actors.get(peer.id)
       if(!actor) {
-        const avatar=new KidsAvatar(),label=nameTag(peer.nickname)
+        const avatar=new KidsAvatar(),label=nameTag(caption)
         avatar.group.visible=true
         avatar.group.name='online-player'
         avatar.group.add(label);this.scene.add(avatar.group)
-        actor={avatar,label,body:createPlayer({...peer.pose,pitch:0}),goal:peer.pose}
+        actor={avatar,label,caption,body:createPlayer({...peer.pose,pitch:0}),goal:peer.pose}
         this.actors.set(peer.id,actor)
+      }else if(actor.caption!==caption){
+        this.releaseLabel(actor.label)
+        actor.label=nameTag(caption)
+        actor.caption=caption
+        actor.avatar.group.add(actor.label)
       }
       actor.goal=peer.pose
     }
     for(const [id,actor] of this.actors)if(!seen.has(id))this.release(id,actor)
   }
 
-  animate(dt:number,daylight:number) {
+  animate(dt:number,daylight:number,world:World,camera?:T.PerspectiveCamera) {
     for(const {body,goal,avatar,label} of this.actors.values()) {
       const jump=Math.hypot(goal.x-body.x,goal.y-body.y,goal.z-body.z)>12
       const amount=jump||dt===0 ? 1 : 1-Math.exp(-6*dt)
@@ -63,6 +72,7 @@ export class OnlineActors {
       body.vx=goal.moving ? 3.3 : 0
       label.position.y=goal.crouched ? 1.23 : 2.02
       avatar.update(body,dt,false,daylight)
+      label.visible=!camera||tagNameVisible(world,camera,body,this.sample)
     }
   }
 
@@ -70,8 +80,11 @@ export class OnlineActors {
     for(const [id,actor] of this.actors)this.release(id,actor)
   }
   private release(id:string,{avatar,label}:Actor) {
-    label.material.map?.dispose();label.material.dispose()
+    this.releaseLabel(label)
     avatar.dispose()
     this.actors.delete(id)
+  }
+  private releaseLabel(label:T.Sprite){
+    label.removeFromParent();label.material.map?.dispose();label.material.dispose()
   }
 }

@@ -14,7 +14,7 @@ export interface Controls {
   dragChanged(drag:boolean): void; background(): void; recovery?(reason:string):void
   pick?(): void; undo?(): void; rotate?(): void; home?(): void; guide?(): void; interact?(): void
   viewMode?(): void
-  attack?(): void
+  attack?(): void; tagMap?(): void
 }
 
 type TouchButtons = { stick:HTMLElement; jump:HTMLButtonElement; down:HTMLButtonElement }
@@ -371,7 +371,7 @@ export class InputController {
       return
     }
     const number=/^Digit([1-9])$/.exec(e.code)
-    if(!['Escape','KeyE','KeyF','F3','KeyQ','KeyR','KeyB','KeyG','KeyV','KeyK','KeyX'].includes(e.code)&&!number)return
+    if(!['Escape','KeyE','KeyF','F3','KeyQ','KeyR','KeyB','KeyG','KeyV','KeyK','KeyX','KeyM'].includes(e.code)&&!number)return
     e.preventDefault();if(e.repeat)return
     if(number)this.controls.select(Number(number[1])-1)
     else switch(e.code){
@@ -385,6 +385,7 @@ export class InputController {
       case 'KeyV':this.controls.interact?.();break
       case 'KeyK':this.controls.viewMode?.();break
       case 'KeyX':this.controls.attack?.();break
+      case 'KeyM':this.controls.tagMap?.();break
       default:this.controls.debug()
     }
   }
