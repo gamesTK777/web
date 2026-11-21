@@ -3,7 +3,7 @@ import { validBag, type Bag, type Mode } from './inventory'
 import { defaults, upgradeSettings, validSettings, type Settings } from './preferences'
 import { emptyFixtures, validFixtures, editableId, type WorldFixtures } from './world'
 import { createJourney, validJourney } from './expedition'
-import { validTerrainPreset, type TerrainPreset } from './stages'
+import { validSoloTerrainPreset, type TerrainPreset } from './stages'
 export { defaults, validSettings, type Settings }
 export interface WorldSave {
   format: 'webcraft777'; version: 1|2; generator: 1|2; id: string; name: string; seed: string; mode: Mode
@@ -31,7 +31,7 @@ export function migrate(value: unknown): ActiveSave {
   const legacy=value.version===1 && value.generator===1
   if (!legacy && (value.version!==2 || (value.generator!==1 && value.generator!==2))) throw new Error('この保存形式または地形バージョンには対応していません。')
   const stage=value.stage===undefined?'classic':value.stage
-  if(!validTerrainPreset(stage)||(stage!=='classic'&&(value.generator!==2||value.mode!=='creative'))||
+  if(!validSoloTerrainPreset(stage)||(stage!=='classic'&&(value.generator!==2||value.mode!=='creative'))||
     (value.sharkDefeated!==undefined&&typeof value.sharkDefeated!=='boolean'))
     throw new Error('ステージまたは生き物の保存情報が正しくありません。')
   if(legacy && (!object(value.settings) || !['distance','scale','shadows','sensitivity','volume','muted'].every(k=>Object.hasOwn(value.settings as object,k))))

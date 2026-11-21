@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { eyeHeight, raycast, type Player } from './physics'
 import { SEA_LEVEL, scatter, type World } from './world'
 
-type WaterWorld = Pick<World, 'get' | 'spawn' | 'salt'> & { stage?: string }
+type WaterWorld = Pick<World, 'get' | 'spawn' | 'salt'> & Partial<Pick<World,'stage'>>
 type FishKind = 'jade' | 'amber' | 'shark'
 type Fish = {
   kind: FishKind

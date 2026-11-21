@@ -35,8 +35,8 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
   await assert.rejects(() => client.join({ code: 'NOEXISTS', nickname: 'あお' }),
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
-    { path: '/api/webcraft/rooms', body: {...fields,protocol:5} },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:5 } },
+    { path: '/api/webcraft/rooms', body: {...fields,protocol:6} },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:6 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -70,8 +70,8 @@ test('同期した編集だけを適用し、編集は一つずつ送る', { tim
   assert.deepEqual(await pending, { ok: true })
   assert.deepEqual(frames, [empty, changed])
   assert.deepEqual(requests, [
-    { protocol:5,code: connection.room.code, token: connection.token, since: 0, pose },
-    { protocol:5,code: connection.room.code, token: connection.token, since: 0, pose, edit },
+    { protocol:6,code: connection.room.code, token: connection.token, since: 0, pose },
+    { protocol:6,code: connection.room.code, token: connection.token, since: 0, pose, edit },
   ])
   sync.close()
   await left.promise
@@ -124,8 +124,8 @@ test('共有の遊具ブロックは向きを表すIDを保持する', { timeout
   assert.deepEqual((await ready.promise).cells,cells)
 })
 
-test('時間制の鬼ごっこはステージと終了結果を保持し、ルーム退出まで追跡の通信を止める', {timeout:3_000}, async t => {
-  const match:RoomConnection={...connection,room:{...connection.room,mode:'tag',tagMinutes:1,stage:'flat'}}
+test('学校の鬼ごっこはステージと終了結果を保持し、ルーム退出まで追跡の通信を止める', {timeout:3_000}, async t => {
+  const match:RoomConnection={...connection,room:{...connection.room,mode:'tag',tagMinutes:1,stage:'school'}}
   const end=1784600068000
   const result={it:'peer',previousIt:'local-player',phase:'finished',hideUntil:end-60_000,endsAt:end,
     serverNow:end+4,seq:4,enrolledIds:['peer','local-player'],winnerIds:['local-player'],
@@ -136,15 +136,15 @@ test('時間制の鬼ごっこはステージと終了結果を保持し、ル�
     const path=new URL(String(url)).pathname
     if(path.endsWith('/leave')){left.resolve();return json({ok:true})}
     const body=JSON.parse(String(options?.body))
-    assert.equal(body.protocol,5)
-    if(path.endsWith('/rooms')){assert.equal(body.tagMinutes,1);assert.equal(body.stage,'flat');return json(match)}
+    assert.equal(body.protocol,6)
+    if(path.endsWith('/rooms')){assert.equal(body.tagMinutes,1);assert.equal(body.stage,'school');return json(match)}
     if(path.endsWith('/join'))return json(match)
     polls++
     return json({...empty,tag:result})
   })
-  const created=await client.create({name:match.room.name,seed:match.room.seed,nickname:'はる',mode:'tag',tagMinutes:1,stage:'flat'})
-  assert.equal(created.room.stage,'flat')
-  assert.equal((await client.join({code:match.room.code,nickname:'あお'})).room.stage,'flat')
+  const created=await client.create({name:match.room.name,seed:match.room.seed,nickname:'はる',mode:'tag',tagMinutes:1,stage:'school'})
+  assert.equal(created.room.stage,'school')
+  assert.equal((await client.join({code:match.room.code,nickname:'あお'})).room.stage,'school')
   const sync=client.start(created,{pose:()=>pose,onFrame:frame=>received.resolve(frame),onState:()=>{}})
   t.after(()=>sync.close())
   assert.deepEqual((await received.promise).tag,result)
@@ -163,6 +163,9 @@ test('招待先の地形を検証し、旧ルームは森と湖として復元�
     error=>error instanceof OnlineError&&error.code==='mode-unavailable')
   const malformed=new OnlineClient('https://rooms.example.test',async ()=>json({...backup,room:{...oldRoom,stage:'void'}}))
   await assert.rejects(()=>malformed.join({code:connection.room.code,nickname:'あお'}),
+    error=>error instanceof OnlineError&&error.code==='invalid-response')
+  const invalidSchool=new OnlineClient('https://rooms.example.test',async ()=>json({...backup,room:{...oldRoom,stage:'school'}}))
+  await assert.rejects(()=>invalidSchool.join({code:connection.room.code,nickname:'あお'}),
     error=>error instanceof OnlineError&&error.code==='invalid-response')
 })
 

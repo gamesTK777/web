@@ -408,6 +408,9 @@ test('stage is authoritative for each room in every multiplayer mode', async t =
         assert.deepEqual((await legacy.json()).room,expected)
       }
       assert.equal((await sync(host,{protocol:5})).status,200)
+      const current=await join(host,'新版',epoch,6)
+      assert.equal(current.status,200)
+      assert.deepEqual((await current.json()).room,host.room)
     }
   }
 })
@@ -431,6 +434,61 @@ test('old clients cannot mutate alternate rooms before protocol validation', asy
   const legacy=await create()
   assert.equal(legacy.room.stage,undefined)
   assert.equal((await (await join(legacy,'新版',epoch,5)).json()).room.stage,'classic')
+})
+
+test('school is a timed tag stage shared by current hosts and guests', async t => {
+  const {sql,run,join,sync}=env(t)
+  const settings={name:'放課後の学校',nickname:'鬼の候補',seed:'after-school',stage:'school',mode:'tag'}
+  for(const mode of [undefined,'creative','explore']){
+    assert.equal((await run('rooms',{...settings,mode,protocol:6})).status,400)
+  }
+  assert.equal((await run('rooms',{...settings,tagMinutes:0,protocol:6})).status,400)
+  for(const protocol of [undefined,3,4,5]){
+    assert.equal((await run('rooms',{...settings,protocol})).status,426)
+  }
+  const created=await run('rooms',{...settings,protocol:6,tagMinutes:3})
+  assert.equal(created.status,201)
+  const host=await created.json()
+  assert.equal(host.room.mode,'tag')
+  assert.equal(host.room.stage,'school')
+  assert.equal(host.room.tagMinutes,3)
+  assert.deepEqual({...sql.prepare('SELECT stage,tag_stage FROM webcraft_rooms WHERE code=?').get(host.room.code)},
+    {stage:'classic',tag_stage:'school'})
+
+  const rejected=await join(host,'古いゲーム画面',epoch,5)
+  assert.equal(rejected.status,426)
+  const oldFrame=await sync(host,{protocol:5,now:epoch+5000})
+  assert.equal(oldFrame.status,426)
+  assert.deepEqual({...sql.prepare('SELECT last_seen,pose FROM webcraft_members WHERE room_code=?').get(host.room.code)},
+    {last_seen:epoch,pose:null})
+  assert.equal(sql.prepare('SELECT COUNT(*) n FROM webcraft_members WHERE room_code=?').get(host.room.code).n,1)
+  const joined=await run('join',{code:host.room.code,nickname:'探検仲間',protocol:6,stage:'flat'})
+  assert.equal(joined.status,200)
+  const guest=await joined.json()
+  assert.deepEqual(guest.room,host.room)
+
+  async function frame(actor,now,at) {
+    const response=await sync(actor,{protocol:6,now,at})
+    assert.equal(response.status,200)
+    return response.json()
+  }
+  assert.equal((await frame(host,epoch,pose(128))).tag.phase,'waiting')
+  const start=epoch+100
+  const hiding=(await frame(guest,start,pose(130))).tag
+  assert.equal(hiding.phase,'hiding')
+  assert.equal(hiding.it,host.id)
+  assert.equal(hiding.hideUntil,start+8000)
+  assert.equal(hiding.endsAt,hiding.hideUntil+3*60_000)
+  assert.equal((await join(host,'途中参加',start+5,6)).status,409)
+  const playing=(await frame(host,hiding.hideUntil,pose(128))).tag
+  assert.equal(playing.phase,'playing')
+  const edit={key:voxel(132,33,130),fromRevision:0,before:0,block:8,axis:'y'}
+  assert.equal((await sync(host,{protocol:6,edit,now:hiding.hideUntil+5})).status,403)
+  const finished=await frame(guest,hiding.endsAt,pose(130))
+  assert.equal(finished.tag.phase,'finished')
+  assert.equal(finished.tag.it,host.id)
+  assert.deepEqual(finished.tag.winnerIds,[guest.id])
+  assert.deepEqual(finished.cells,[])
 })
 
 test('edits validate bedrock, range, space occupied by a player and cursor before committing', async t => {

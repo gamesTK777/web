@@ -1,6 +1,8 @@
 import { activeStack, consumeBlock, ITEMS, stageMining } from "./inventory.ts";
 import type { Bag, Mode, Outcome } from "./inventory.ts";
 import { isSlide, jumpPadHeight, slideDirection, slideHeight } from "./playground.ts";
+import { schoolStairTop } from "./school.ts";
+import type { TerrainPreset } from "./stages.ts";
 
 export const WORLD_WIDTH = 256;
 export const WORLD_HEIGHT = 96;
@@ -20,6 +22,7 @@ export type Input = { forward: number; right: number; jump: boolean; jumpPressed
 export type Hit = { x: number; y: number; z: number; nx: number; ny: number; nz: number; id: number; distance: number };
 type ReadWorld = {
   get(x: number, y: number, z: number): number; spawn?(): Pose;
+  stage?:TerrainPreset;
   chestAt?(x: number, y: number, z: number): {length: number}|undefined;
 };
 type EditWorld = ReadWorld & { set(x: number, y: number, z: number, id: number): boolean };
@@ -154,6 +157,25 @@ function supported(world:ReadWorld,x:number,y:number,z:number,radius=BODY_RADIUS
 function walkAxis(world:ReadWorld,player:Player,axis:"x"|"z",distance:number,ground:Floor|null,guard:boolean,foot:number){
   if(!distance)return false;
   const x=player.x+(axis==="x"?distance:0),z=player.z+(axis==="z"?distance:0);
+  if(ground&&world.stage==="school"){
+    const edge=Math.sign(distance)*(BODY_RADIUS-EPS);
+    const ex=axis==="x"?edge:0,ez=axis==="z"?edge:0;
+    const next=schoolStairTop(Math.floor(x+ex),Math.floor(z+ez));
+    const previous=schoolStairTop(Math.floor(x-ex),Math.floor(z-ez));
+    const height=player.crouched?CROUCH_HEIGHT:BODY_HEIGHT;
+    if(next!==undefined&&Math.abs(next-player.y-1)<.003&&!occupied(world,x,next,z,height)){
+      player[axis]+=distance;player.y=next;return false;
+    }
+    if(next!==undefined||previous!==undefined){
+      const stillOnTread=supported(world,x,player.y,z);
+      if(!stillOnTread){
+        const lower=floorBetween(world,x,z,player.y-1.003,player.y-.997);
+        if(lower&&!occupied(world,x,lower.y,z,height)){
+          player[axis]+=distance;player.y=lower.y;return false;
+        }
+      }else if(guard)foot=BODY_RADIUS-EPS;
+    }
+  }
   if(ground){
     const rise=Math.abs(distance)+.054;
     const next=floorBetween(world,x,z,player.y-rise,player.y+rise);

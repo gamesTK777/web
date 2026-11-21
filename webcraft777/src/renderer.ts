@@ -31,7 +31,7 @@ export class SceneView {
   private readonly uniforms={
     lampPositions:{value:Array.from({length:4},()=>new T.Vector3())},lampCount:{value:0},
     lampColors:{value:Array.from({length:4},()=>new T.Vector3())},
-    fogEnd:{value:75},clock:{value:0},shadows:{value:1},extras:{value:1},submerged:{value:0},
+    fogEnd:{value:75},clock:{value:0},shadows:{value:1},extras:{value:1},submerged:{value:0},schoolLight:{value:0},
   };
   private readonly tools:InteractionView;
   readonly kidsCamera=new KidsCamera();
@@ -64,6 +64,7 @@ export class SceneView {
     this.atlas.anisotropy=Math.min(4,this.gl.capabilities.getMaxAnisotropy());
     this.gl.setClearColor(0xbcd7cd);
     this.sky=new Atmosphere(this.scene,world.salt);
+    this.uniforms.schoolLight.value=Number(world.stage==='school');
     for(let i=0;i<this.heights.length;i++)this.heights[i]=Math.max(0,world.highest[i]);
     this.heightTexture=new T.DataTexture(this.heights,256,256,T.RedFormat);
     this.heightTexture.magFilter=T.NearestFilter;this.heightTexture.minFilter=T.NearestFilter;
@@ -222,7 +223,7 @@ export class SceneView {
     }
     this.t+=dt;this.uniforms.clock.value=this.t;
     const eye=eyeHeight(p);
-    const thirdPerson=kids ? this.kidsCamera.update(this.camera,this.world,kids.player,kids.hit,dt) : false;
+    const thirdPerson=kids ? this.kidsCamera.update(this.camera,this.world,kids.player,kids.hit,dt,this.world.stage==='school') : false;
     if(!kids)firstPerson(this.camera,p);
     this.sky.update(day,this.camera,this.t);
     if(concealNames)this.camera.updateMatrixWorld();

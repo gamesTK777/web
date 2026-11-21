@@ -10,7 +10,7 @@ import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, 
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
 import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
 import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
-import { validTerrainPreset, type TerrainPreset } from './stages'
+import { validSoloTerrainPreset, type TerrainPreset } from './stages'
 import { LandLife } from './land-life'
 import { AquaticLife } from './aquatic-life'
 import { TagMap } from './tag-map'
@@ -18,6 +18,7 @@ import { TagMap } from './tag-map'
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
 const hud = document.querySelector<HTMLElement>('#hud')!
 const tagCanvas = hud.querySelector<HTMLCanvasElement>('#tag-map-canvas')!
+const tagMapLevel = hud.querySelector<HTMLElement>('#tag-map-level')!
 const touchControls = hud.querySelector<HTMLElement>('#touch-controls')!
 const touchFly = hud.querySelector<HTMLButtonElement>('#touch-fly')!
 const lifeStatus=hud.querySelector<HTMLElement>('#life-status')!
@@ -587,7 +588,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     if(id&&!loaded)throw new Error('ワールドが見つかりません。一覧を開き直してください。')
     const seed=connection?.room.seed||loaded?.seed||args?.seed?.trim().slice(0,128)||crypto.randomUUID().slice(0,8)
     const choice=args?.stage
-    const stage=connection?.room.stage??loaded?.stage??(validTerrainPreset(choice)?choice:'classic')
+    const stage=connection?.room.stage??loaded?.stage??(validSoloTerrainPreset(choice)?choice:'classic')
     let step=-1
     const world=await World.generate(seed,(fraction:number)=>{
       const n=Math.min(10,Math.floor(fraction*10));if(step!==n){ui.loading('地形を生成中　'+n*10+'%');step=n}
@@ -618,7 +619,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
       const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map(),
         nickname,restoring:!!profile,pendingExplore:profile?.pending}
       session.online=room
-      if(tag){room.tagGame={map:new TagMap(tagCanvas,world),receivedAt:0,peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
+      if(tag){room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),receivedAt:0,peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
       connectRoom(session,room)
     }else if(stage!=='flat'){
       if(stage==='classic')session.land=new LandLife(world,view.scene,player)

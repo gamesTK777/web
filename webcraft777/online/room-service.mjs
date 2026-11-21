@@ -13,7 +13,7 @@ const hideTime = 8000
 const tagCooldown = 2500
 const tagReach = .68
 const tagDurations = new Set([1,3,5,10,15])
-const roomStages = new Set(['classic','flat','lake'])
+const roomStages = new Set(['classic','flat','lake','school'])
 const playersLimit = 6
 const roomLimit = 128
 const cellsLimit = 8192
@@ -33,9 +33,11 @@ class RoomError extends Error {
 
 const prepared = (db, sql, ...values) => db.prepare(sql).bind(...values)
 const changed = result => result.meta.changes > 0
-const wireProtocol = value => [2,3,4,5].includes(value) ? value : 1
+const wireProtocol = value => [2,3,4,5,6].includes(value) ? value : 1
 const publicMode = room => room.tag_enabled ? 'tag' : room.mode
-const minimumProtocol = `CASE WHEN stage<>'classic' THEN 5 WHEN tag_minutes>0 THEN 4 WHEN tag_enabled=1 THEN 3 WHEN mode='explore' THEN 2 ELSE 1 END`
+const publicStage = room => room.tag_stage ?? room.stage
+const minimumProtocol = `CASE WHEN tag_stage IS NOT NULL THEN 6 WHEN stage<>'classic' THEN 5
+  WHEN tag_minutes>0 THEN 4 WHEN tag_enabled=1 THEN 3 WHEN mode='explore' THEN 2 ELSE 1 END`
 const validBlock = n => Number.isInteger(n) && ((n >= 1 && n <= 12) || n === 23 || (n >= 25 && n <= 33))
 const clean = (value, max, label) => {
   if (typeof value !== 'string') throw new RoomError(label + 'を入力してください。')
@@ -63,7 +65,7 @@ function publicRoom(row, seat, protocol) {
   return {
     room: {code:row.code, name:row.name, seed:row.seed, generator:2, createdAt:row.created_at, mode:publicMode(row),
       ...(row.tag_minutes>0?{tagMinutes:row.tag_minutes}:{}),
-      ...(protocol>=5?{stage:row.stage}:{})},
+      ...(protocol>=5?{stage:publicStage(row)}:{})},
     id:seat.id, token:seat.token
   }
 }
@@ -74,7 +76,9 @@ function checkRoom(room, now) {
 }
 
 function checkProtocol(room, protocol) {
-  if (room.stage !== undefined && room.stage !== 'classic' && protocol < 5) {
+  const stage = publicStage(room)
+  const stageProtocol = stage === 'school' ? 6 : stage && stage !== 'classic' ? 5 : 1
+  if (protocol < stageProtocol) {
     throw new RoomError('このステージで遊ぶには、ゲーム画面を再読み込みしてください。', 426)
   }
   if (room.tag_enabled && protocol < (room.tag_minutes>0 ? 4 : 3)) {
@@ -158,7 +162,7 @@ function canReach(p, e) {
 }
 
 const tagFields = 'it,phase,hide_until,seq,previous_it,protected_until,ends_at,round_roster,round_result'
-const roomInfo = `SELECT r.code,r.name,r.seed,r.created_at,r.expires_at,r.revision,r.cell_count,r.mode,r.tag_enabled,r.tag_minutes,r.stage,r.creator,${tagFields}
+const roomInfo = `SELECT r.code,r.name,r.seed,r.created_at,r.expires_at,r.revision,r.cell_count,r.mode,r.tag_enabled,r.tag_minutes,r.stage,r.tag_stage,r.creator,${tagFields}
   FROM webcraft_rooms r LEFT JOIN webcraft_tag_state t ON t.room_code=r.code WHERE r.code=?`
 const addSeat = `INSERT INTO webcraft_members(room_code,token_hash,id,nickname,last_seen)
   SELECT code,?,?,?,? FROM webcraft_rooms`
@@ -171,10 +175,13 @@ async function createRoom(db, body, now) {
   const mode = requested === 'tag' ? 'creative' : requested
   const tagEnabled = Number(requested === 'tag')
   const protocol = wireProtocol(body.protocol)
-  const stage = body.stage === undefined ? 'classic' : body.stage
-  if (!roomStages.has(stage)) throw new RoomError('ゲームのステージを選んでください。')
+  const selectedStage = body.stage === undefined ? 'classic' : body.stage
+  if (!roomStages.has(selectedStage)) throw new RoomError('ゲームのステージを選んでください。')
+  if (selectedStage === 'school' && !tagEnabled) throw new RoomError('学校は鬼ごっこルームで選べます。')
+  const stage = selectedStage === 'school' ? 'classic' : selectedStage
+  const tagStage = selectedStage === 'school' ? selectedStage : null
   const tagMinutes = tagEnabled && protocol>=4 ? (body.tagMinutes === undefined ? 5 : body.tagMinutes) : 0
-  checkProtocol({stage,tag_enabled:tagEnabled,tag_minutes:tagMinutes},protocol)
+  checkProtocol({stage,tag_stage:tagStage,tag_enabled:tagEnabled,tag_minutes:tagMinutes},protocol)
   if (tagEnabled) {
     if (body.tagMinutes!==undefined && protocol<4) checkProtocol({tag_enabled:1,tag_minutes:5},protocol)
     if (protocol>=4 && !tagDurations.has(tagMinutes)) throw new RoomError('鬼ごっこの制限時間を選んでください。')
@@ -185,15 +192,15 @@ async function createRoom(db, body, now) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = makeCode()
     const statements = [
-      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode,tag_enabled,tag_minutes,stage)
-        SELECT ?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
-      code, seat.id, name, seed, now, now + lifetime, mode, tagEnabled, tagMinutes, stage, roomLimit),
+      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode,tag_enabled,tag_minutes,stage,tag_stage)
+        SELECT ?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
+      code, seat.id, name, seed, now, now + lifetime, mode, tagEnabled, tagMinutes, stage, tagStage, roomLimit),
       prepared(db, addSeat + ' WHERE code=? AND creator=?', seat.hash, seat.id, seat.nickname, now, code, seat.id)
     ]
     if (tagEnabled) statements.push(prepared(db, `INSERT INTO webcraft_tag_state(room_code)
       SELECT code FROM webcraft_rooms WHERE code=? AND creator=?`, code, seat.id))
     const [created] = await db.batch([...statements, cleanup])
-    if (changed(created)) return publicRoom({code,name,seed,created_at:now,mode,tag_enabled:tagEnabled,tag_minutes:tagMinutes,stage},seat,protocol)
+    if (changed(created)) return publicRoom({code,name,seed,created_at:now,mode,tag_enabled:tagEnabled,tag_minutes:tagMinutes,stage,tag_stage:tagStage},seat,protocol)
   }
   throw new RoomError('現在ルームの空きがありません。少し待ってから再試行してください。', 503)
 }

@@ -1,5 +1,5 @@
 import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
-import { TERRAIN_PRESETS, validTerrainPreset, type TerrainPreset } from './stages'
+import { TERRAIN_PRESETS, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
@@ -11,7 +11,7 @@ export interface TagUIResult { outcome:'win'|'lose'|'spectator'; loser:string; w
 type RoomUIPlayMode = Mode | 'tag'
 const tagMinuteOptions = [1,3,5,10,15] as const
 const defaultTagMinutes = 5
-const onlineTerrainDetails:Record<TerrainPreset,string> = {
+const onlineTerrainDetails:Partial<Record<TerrainPreset,string>> = {
   classic:'森や丘、洞窟と湖が広がる地形。',
   flat:'見晴らしのよい、木や建物のない草原。',
   lake:'小さな砂島と、その周りに広がる大きな湖。',
@@ -48,12 +48,15 @@ const button = (action:string, text:string, css='')=>'<button type="button" clas
 const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻る','back')
 const sectionHead = (name:string) => '<header class="panel-head"><h1>'+name+'</h1>'+backButton()+'</header>'
 const terrainName = (stage:TerrainPreset|undefined) => TERRAIN_PRESETS.find(preset=>preset.id===stage)?.name??''
-function stagePicker(selected:TerrainPreset, online=false) {
-  const cards=TERRAIN_PRESETS.map(({id,name,detail,thumbnail})=>
-    '<label class="stage-card"><input type="radio" name="stage" value="'+id+'"'+(id===selected?' checked':'')+'>'+
-    '<img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
-    '<span><b>'+name+'</b><small>'+(online?onlineTerrainDetails[id]:detail)+'</small></span></label>').join('')
-  return '<fieldset class="stage-picker"><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
+function stagePicker(selected:TerrainPreset, mode?:RoomUIPlayMode) {
+  const cards=TERRAIN_PRESETS.filter(({id})=>mode!==undefined||id!=='school').map(({id,name,detail,thumbnail})=>{
+    const unavailable=id==='school'&&mode!=='tag'
+    return '<label class="stage-card"'+(unavailable?' hidden':'')+'><input type="radio" name="stage" value="'+id+'"'+
+      (unavailable?' disabled':id===selected?' checked':'')+'>'+
+      '<img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
+      '<span><b>'+name+'</b><small>'+(mode?onlineTerrainDetails[id]??detail:detail)+'</small></span></label>'
+  }).join('')
+  return '<fieldset class="stage-picker"'+(mode==='tag'?' data-school-choice':'')+'><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
 }
 const formattedCount=(count:number)=>Number.isFinite(count)?String(count):'∞'
 const icons = new Map<number,string>()
@@ -206,7 +209,8 @@ export class GameUI {
         const seed=String(data.get('seed')??'').trim()
         const selected=data.get('mode')
         const mode:RoomUIPlayMode=selected==='tag'||selected==='explore'?selected:'creative'
-        const selectedStage=data.get('stage'), stage=validTerrainPreset(selectedStage)?selectedStage:'classic'
+        const selectedStage=data.get('stage')
+        const stage=validTerrainPreset(selectedStage)&&(selectedStage!=='school'||mode==='tag')?selectedStage:'classic'
         const selectedMinutes=Number(data.get('tagMinutes'))
         const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
         Object.assign(this.onlineDraft,{name,seed,mode,stage,...(mode==='tag'?{tagMinutes}:{})})
@@ -222,7 +226,7 @@ export class GameUI {
     if(form.id!=='world-form')return
     const data=new FormData(form), name=String(data.get('name')??'').trim()
     if(!name){this.toast('ワールド名を入力してください。');form.querySelector('input')?.focus();return}
-    const selected=data.get('stage'),stage=validTerrainPreset(selected)?selected:'classic'
+    const selected=data.get('stage'),stage=validSoloTerrainPreset(selected)?selected:'classic'
     this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:stage!=='classic'||data.get('mode')==='creative'?'creative':'explore',stage})
   }
   private change(event:Event) {
@@ -240,6 +244,14 @@ export class GameUI {
       const isTag=input.value==='tag',minutes=$<HTMLSelectElement>('tag-minutes')
       this.onlineDraft.mode=isTag?'tag':input.value==='explore'?'explore':'creative'
       $('tag-time-option').hidden=minutes.disabled=!isTag
+      const picker=input.form.querySelector<HTMLFieldSetElement>('.stage-picker')!
+      const school=picker.querySelector<HTMLInputElement>('[name="stage"][value="school"]')!
+      if(!isTag&&school.checked){
+        picker.querySelector<HTMLInputElement>('[name="stage"][value="classic"]')!.checked=true
+        this.onlineDraft.stage='classic'
+      }
+      school.closest('label')!.hidden=school.disabled=!isTag
+      picker.toggleAttribute('data-school-choice',isTag)
       return
     }
     if(input.name==='stage' && input.form?.id==='world-form' && input.checked){
@@ -308,8 +320,8 @@ export class GameUI {
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
-      stagePicker(draft.stage,true)+
-      '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+tagTime+
+      '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+
+      stagePicker(draft.stage,draft.mode)+tagTime+
       '<button type="submit" class="primary full">ルームを作成</button></form>'
     const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
       '<h2 id="online-join-label">ルームに参加する</h2>'+nickname+
@@ -452,7 +464,7 @@ export class GameUI {
     '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
     '<h2>マルチプレイ</h2><p>ルームを作るときにステージと遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
-    '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」と制限時間を選びます。隠れる時間のあとに追いかけっこが始まり、時間切れのときに鬼だった人が負けです。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。</p>'+
+    '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」と制限時間を選びます。隠れる時間のあとに追いかけっこが始まり、時間切れのときに鬼だった人が負けです。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。学校では、自分がいる階の地図を表示します。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
     '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+

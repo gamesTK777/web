@@ -96,7 +96,7 @@ export class Atmosphere {
 }
 interface LightUniforms {
   lampPositions:Uniform<T.Vector3[]>; lampCount:Uniform<number>; fogEnd:Uniform<number>; clock:Uniform<number>;
-  shadows:Uniform<number>; submerged:Uniform<number>; extras:Uniform<number>; lampColors:Uniform<T.Vector3[]>;
+  shadows:Uniform<number>; submerged:Uniform<number>; extras:Uniform<number>; lampColors:Uniform<T.Vector3[]>; schoolLight:Uniform<number>;
 }
 export function terrainMaterial(atlas:T.DataTexture,heightMap:T.DataTexture,sky:Atmosphere,shared:LightUniforms,transparent:boolean) {
   return new T.ShaderMaterial({transparent,depthWrite:!transparent,uniforms:{
@@ -105,7 +105,7 @@ export function terrainMaterial(atlas:T.DataTexture,heightMap:T.DataTexture,sky:
     vertexShader:`
       attribute vec3 surface;
       uniform sampler2D columnHeights;uniform vec3 sun;uniform vec3 lampPositions[4],lampColors[4];
-      uniform float clock,lightness,sunset,shadows,extras;uniform int lampCount;
+      uniform float clock,lightness,sunset,shadows,extras,schoolLight;uniform int lampCount;
       // Material IDs are categorical; perspective interpolation can turn 13
       // into 12.999999 and break the water branch halfway across a triangle.
       varying vec2 tex;varying vec3 lighting;varying float depth;flat varying float kind;varying vec3 point;varying float waterDepth;
@@ -144,7 +144,8 @@ export function terrainMaterial(atlas:T.DataTexture,heightMap:T.DataTexture,sky:
         float diffuse=max(0.,dot(normal,sun));
         vec3 ambient=mix(vec3(.24,.32,.49),vec3(.61,.69,.70),lightness);
         vec3 sunlight=mix(vec3(.54,.47,.35),vec3(1.03,.36,.12),sunset);
-        lighting=(ambient*mix(1.,.30,cover)+sunlight*diffuse*lightness*shade*(1.-cover))*
+        vec3 ambientLight=max(ambient*mix(1.,.30,cover),schoolLight*vec3(.38,.43,.46));
+        lighting=(ambientLight+sunlight*diffuse*lightness*shade*(1.-cover))*
           surface.x*face*surface.y;
         for(int i=0;i<4;i++){
           if(i>=lampCount)break;

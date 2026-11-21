@@ -1,21 +1,18 @@
 import { SEA_LEVEL, SIZE, type World } from './world'
+import { SCHOOL_BOUNDS, SCHOOL_LEVELS } from './school'
 
-const ZONES = 8
-const ZONE_SIZE = SIZE / ZONES
-type Point = {x:number;z:number}
+const outdoorZones = 8
+const outdoorSize = SIZE / outdoorZones
+const worldBounds={minX:0,maxX:SIZE,minZ:0,maxZ:SIZE}
+type Point = {x:number;y:number;z:number}
 type Peer = {pose:Point}
 type RGB = readonly [number,number,number]
 
-function zoneAt({x,z}:Point) {
-  if (!Number.isFinite(x) || !Number.isFinite(z) || x<0 || z<0 || x>=SIZE || z>=SIZE) return -1
-  return Math.floor(x/ZONE_SIZE)+ZONES*Math.floor(z/ZONE_SIZE)
-}
-
 function terrainColor(world:World, startX:number, startZ:number) {
   const color=[0,0,0]
-  const sampleStep=ZONE_SIZE/4
-  for(let dz=sampleStep/2;dz<ZONE_SIZE;dz+=sampleStep){
-    for(let dx=sampleStep/2;dx<ZONE_SIZE;dx+=sampleStep){
+  const sampleStep=outdoorSize/4
+  for(let dz=sampleStep/2;dz<outdoorSize;dz+=sampleStep){
+    for(let dx=sampleStep/2;dx<outdoorSize;dx+=sampleStep){
       const x=startX+dx,z=startZ+dz,y=world.highest[x+z*SIZE],id=world.get(x,y,z)
       const water=world.get(x,SEA_LEVEL,z)===13
       const colors:RGB=water?[63,126,140]:id===4?[177,157,101]:id===5||id===6?[55,101,70]:[102,132,76]
@@ -26,55 +23,105 @@ function terrainColor(world:World, startX:number, startZ:number) {
   return 'rgb('+color.map(channel=>Math.round(channel/16)).join(',')+')'
 }
 
-export class TagMap {
-  private readonly terrain:HTMLCanvasElement
-  private readonly context:CanvasRenderingContext2D|null
-  private readonly counts=new Uint8Array(ZONES*ZONES)
-  private readonly drawnCounts=new Uint8Array(ZONES*ZONES)
-  private drawnSelf=-2
+function schoolColor(world:World,x:number,y:number,z:number) {
+  const below=world.get(x,y-1,z), eye=world.get(x,y+1,z), low=world.get(x,y,z)
+  if(eye&&eye!==10)return '#29444e'
+  if(eye===10)return '#66b6c1'
+  if(low)return '#8b6b51'
+  if(!below)return '#263f46'
+  if(below===5||below===7)return '#d9ad72'
+  if(below===1||below===6)return '#8baa70'
+  return '#b8b7a3'
+}
 
-  constructor(private readonly canvas:HTMLCanvasElement, world:World) {
+export class TagMap {
+  private readonly terrain:HTMLCanvasElement[]
+  private readonly context:CanvasRenderingContext2D|null
+  private readonly bounds:typeof worldBounds
+  private readonly columns:number
+  private readonly rows:number
+  private readonly school:boolean
+  private readonly counts:Uint8Array
+  private readonly drawnCounts:Uint8Array
+  private drawnSelf=-2
+  private drawnFloor=-1
+
+  constructor(private readonly canvas:HTMLCanvasElement, world:World, private readonly levelLabel?:HTMLElement) {
     this.context=canvas.getContext('2d')
-    this.terrain=canvas.ownerDocument.createElement('canvas')
-    this.terrain.width=canvas.width;this.terrain.height=canvas.height
-    const painter=this.terrain.getContext('2d')
-    if(!painter)return
-    const w=canvas.width/ZONES,h=canvas.height/ZONES
-    for(let z=0;z<ZONES;z++){
-      for(let x=0;x<ZONES;x++){
-        painter.fillStyle=terrainColor(world,x*ZONE_SIZE,z*ZONE_SIZE)
+    this.school=world.stage==='school'
+    this.bounds=this.school?SCHOOL_BOUNDS:worldBounds
+    this.columns=this.school?6:outdoorZones
+    this.rows=this.school?5:outdoorZones
+    this.counts=new Uint8Array(this.columns*this.rows)
+    this.drawnCounts=new Uint8Array(this.counts.length)
+    this.terrain=this.school?SCHOOL_LEVELS.map(y=>this.drawBase(world,y)):[this.drawBase(world)]
+    if(levelLabel)levelLabel.hidden=!this.school
+  }
+
+  private drawBase(world:World,floor?:number){
+    const canvas=this.canvas.ownerDocument.createElement('canvas')
+    canvas.width=this.canvas.width;canvas.height=this.canvas.height
+    const painter=canvas.getContext('2d')
+    if(!painter)return canvas
+    const w=canvas.width/this.columns,h=canvas.height/this.rows
+    if(floor!==undefined){
+      const {minX,maxX,minZ,maxZ}=this.bounds
+      const cellW=canvas.width/(maxX-minX),cellH=canvas.height/(maxZ-minZ)
+      for(let z=minZ;z<maxZ;z++)for(let x=minX;x<maxX;x++){
+        const left=Math.round((x-minX)*cellW),top=Math.round((z-minZ)*cellH)
+        painter.fillStyle=schoolColor(world,x,floor,z)
+        painter.fillRect(left,top,Math.round((x+1-minX)*cellW)-left,Math.round((z+1-minZ)*cellH)-top)
+      }
+    }else{
+      for(let z=0;z<this.rows;z++)for(let x=0;x<this.columns;x++){
+        painter.fillStyle=terrainColor(world,x*outdoorSize,z*outdoorSize)
         painter.fillRect(x*w,z*h,w,h)
       }
     }
-    painter.strokeStyle='#153b3666';painter.lineWidth=1
+    painter.strokeStyle=this.school?'#e8f4ce65':'#153b3666';painter.lineWidth=1
     painter.beginPath()
-    for(let step=1;step<ZONES;step++){
-      painter.moveTo(step*w+.5,0);painter.lineTo(step*w+.5,canvas.height)
-      painter.moveTo(0,step*h+.5);painter.lineTo(canvas.width,step*h+.5)
-    }
+    for(let step=1;step<this.columns;step++){painter.moveTo(step*w+.5,0);painter.lineTo(step*w+.5,canvas.height)}
+    for(let step=1;step<this.rows;step++){painter.moveTo(0,step*h+.5);painter.lineTo(canvas.width,step*h+.5)}
     painter.stroke()
+    return canvas
+  }
+
+  private zoneAt({x,z}:Point) {
+    const {minX,maxX,minZ,maxZ}=this.bounds
+    if(!Number.isFinite(x)||!Number.isFinite(z)||x<minX||z<minZ||x>=maxX||z>=maxZ)return -1
+    return Math.floor((x-minX)*this.columns/(maxX-minX))+this.columns*Math.floor((z-minZ)*this.rows/(maxZ-minZ))
+  }
+
+  private floorAt({y}:Point){
+    return this.school&&y>=(SCHOOL_LEVELS[0]+SCHOOL_LEVELS[1])/2?1:0
   }
 
   update(peers:readonly Peer[], self:Point, showPeers:boolean) {
     const ctx=this.context
     if(!ctx)return
-    const own=zoneAt(self)
+    const own=this.zoneAt(self),floor=this.floorAt(self)
+    let elsewhere=0
     this.counts.fill(0)
     if(showPeers){
       for(const {pose} of peers){
-        const zone=zoneAt(pose)
+        if(this.floorAt(pose)!==floor){elsewhere++;continue}
+        const zone=this.zoneAt(pose)
         if(zone>=0)this.counts[zone]++
       }
     }
-    if(own===this.drawnSelf&&this.counts.every((count,zone)=>count===this.drawnCounts[zone]))return
-    this.drawnSelf=own;this.drawnCounts.set(this.counts)
-    const w=this.canvas.width/ZONES,h=this.canvas.height/ZONES
+    if(this.school&&this.levelLabel){
+      const label='校舎 '+(floor+1)+'階'+(elsewhere?'　別の階に '+elsewhere+'人':'')
+      if(this.levelLabel.textContent!==label)this.levelLabel.textContent=label
+    }
+    if(own===this.drawnSelf&&floor===this.drawnFloor&&this.counts.every((count,zone)=>count===this.drawnCounts[zone]))return
+    this.drawnSelf=own;this.drawnFloor=floor;this.drawnCounts.set(this.counts)
+    const w=this.canvas.width/this.columns,h=this.canvas.height/this.rows
     ctx.clearRect(0,0,this.canvas.width,this.canvas.height)
-    ctx.globalAlpha=.53
-    ctx.drawImage(this.terrain,0,0)
+    ctx.globalAlpha=this.school ? .72 : .53
+    ctx.drawImage(this.terrain[floor],0,0)
     ctx.globalAlpha=1
     if(own>=0){
-      const x=(own%ZONES)*w,z=Math.floor(own/ZONES)*h
+      const x=(own%this.columns)*w,z=Math.floor(own/this.columns)*h
       ctx.fillStyle='#cef9ff4d';ctx.fillRect(x,z,w,h)
       ctx.strokeStyle='#d7f9ff';ctx.lineWidth=3
       ctx.strokeRect(x+2,z+2,w-4,h-4)
@@ -82,7 +129,7 @@ export class TagMap {
     ctx.font='800 24px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle'
     this.counts.forEach((count,zone)=>{
       if(!count)return
-      const x=(zone%ZONES+.5)*w,z=(Math.floor(zone/ZONES)+.5)*h
+      const x=(zone%this.columns+.5)*w,z=(Math.floor(zone/this.columns)+.5)*h
       ctx.beginPath();ctx.arc(x,z,Math.min(w,h)*.34,0,Math.PI*2)
       ctx.fillStyle='#ffe292';ctx.fill()
       ctx.strokeStyle='#4b4225';ctx.lineWidth=2;ctx.stroke()

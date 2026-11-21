@@ -92,7 +92,7 @@ const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
 const MAX_ROOM_CELLS = 10_000
-const PROTOCOL = 5
+const PROTOCOL = 6
 
 const statusMessages: Record<number, string> = {
   400: '部屋名・ニックネーム・合言葉を確認してください。',
@@ -148,6 +148,7 @@ function parseConnection(value: unknown): RoomConnection {
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
       (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag') ||
       (room.stage!==undefined&&!validTerrainPreset(room.stage)) ||
+      (room.stage==='school'&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
       (room.tagMinutes!==undefined&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||

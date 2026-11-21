@@ -1,6 +1,7 @@
 import { validStacks, type Stack, type Outcome } from "./inventory.ts";
 import { makeLandmarks, type Landmark } from "./landmarks.ts";
 import type { TerrainPreset } from "./stages.ts";
+import { buildSchool, schoolSpawn } from "./school.ts";
 
 export const SIZE = 256;
 export const HEIGHT = 96;
@@ -169,6 +170,14 @@ export class World {
     yield* this.indexTerrain();
   }
   private *generateTerrain(): Generator<number> {
+    if(this.stage==='school'){
+      this.data.fill(14,0,AREA);
+      this.data.fill(3,30*AREA,32*AREA);
+      this.data.fill(1,32*AREA,33*AREA);
+      buildSchool((x,y,z,id)=>this.write(x,y,z,id));
+      yield* this.indexTerrain();
+      return;
+    }
     if(this.stage!=='classic'){
       yield* this.generatePresetTerrain();
       return;
@@ -257,14 +266,16 @@ export class World {
   }
   private *indexTerrain():Generator<number> {
     this.highest.fill(-1);
+    const indexSchoolLights=this.stage==='school';
     for(let y=0;y<HEIGHT;y++) {
       for(let z=0;z<SIZE;z++) for(let x=0;x<SIZE;x++) {
-        const id=this.data[voxelIndex(x,y,z)];
+        const index=voxelIndex(x,y,z),id=this.data[index];
         if (!id) continue;
         const key=chunkKey(x>>4,y>>4,z>>4);
         this.occupied[key]++;
         if(isOpaque(id)) this.dense[key]++;
         if(isSolid(id) && id!==10) this.highest[x+SIZE*z]=y;
+        if(indexSchoolLights&&(id===12||id===25)) this.lamps.add(index);
       }
       if(y%4===3) yield .78+.22*(y+1)/HEIGHT;
     }
@@ -288,6 +299,7 @@ export class World {
     }
   }
   spawn(): Spawn {
+    if(this.stage==='school')return {...schoolSpawn};
     for(let radius=0;radius<32;radius++) for(let dz=-radius;dz<=radius;dz++) for(let dx=-radius;dx<=radius;dx++) {
       if(Math.max(Math.abs(dx),Math.abs(dz))!==radius) continue;
       const x=SPAWN_X+dx,z=SPAWN_Z+dz;
