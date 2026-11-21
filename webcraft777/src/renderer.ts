@@ -4,7 +4,9 @@ import {makeAtlas} from "./textures";
 import {meshChunk} from "./mesher";
 import {Atmosphere,terrainMaterial} from "./atmosphere";
 import {InteractionView,type Presentation} from "./interaction-view";
-import {eyeHeight} from "./physics";
+import {eyeHeight,type Hit,type Player} from "./physics";
+import {firstPerson,KidsCamera} from "./kids-camera";
+import {KidsAvatar} from "./kids-avatar";
 
 interface Position {x:number;y:number;z:number}
 interface CameraPose extends Position {yaw:number;pitch:number}
@@ -30,6 +32,9 @@ export class SceneView {
     fogEnd:{value:75},clock:{value:0},shadows:{value:1},extras:{value:1},submerged:{value:0},
   };
   private readonly tools:InteractionView;
+  readonly kidsCamera=new KidsCamera();
+  private avatar:KidsAvatar|undefined;
+  private actionTime=0;
   private readonly materials:[T.ShaderMaterial,T.ShaderMaterial];
   private readonly batches=new Map<number,ChunkMeshes>();
   private readonly pending:Task[]=[];
@@ -174,6 +179,7 @@ export class SceneView {
   }
   effect(x:number,y:number,z:number,id:number,kind:'mine'|'place'='mine') {
     this.tools.swing();
+    this.actionTime=.26;
     const n=this.quality.effects===false?0:kind==='place'?3:7;
     for(let i=0;i<n;i++){
       if(this.particles.length>=64)this.particles.shift();
@@ -197,7 +203,8 @@ export class SceneView {
     }
     if(this.chips.count){this.chips.instanceMatrix.needsUpdate=true;if(this.chips.instanceColor)this.chips.instanceColor.needsUpdate=true;}
   }
-  update(p:CameraPose & {fovOffset?:number},target:Position|null,day:number,dt:number,presentation?:Presentation) {
+  update(p:CameraPose & {fovOffset?:number},target:Position|null,day:number,dt:number,presentation?:Presentation,
+    kids?:{player:Player;hit:Hit|null}) {
     const w=Math.max(1,this.canvas.clientWidth),h=Math.max(1,this.canvas.clientHeight);
     if(w!==this.wt || h!==this.ht){
       this.wt=w;this.ht=h;
@@ -212,13 +219,20 @@ export class SceneView {
       this.gl.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();
     }
     this.t+=dt;this.uniforms.clock.value=this.t;
-    const eye=eyeHeight(p), fov=67+(p.fovOffset??0);
-    if(Math.abs(fov-this.camera.fov)>.01){this.camera.fov=fov;this.camera.updateProjectionMatrix();}
-    this.camera.position.set(p.x,p.y+eye,p.z);this.camera.rotation.set(p.pitch,p.yaw,0,"YXZ");
+    const eye=eyeHeight(p);
+    const thirdPerson=kids ? this.kidsCamera.update(this.camera,this.world,kids.player,kids.hit,dt) : false;
+    if(!kids)firstPerson(this.camera,p);
     this.sky.update(day,this.camera,this.t);
+    this.actionTime=Math.max(0,this.actionTime-dt);
+    if(thirdPerson&&kids){
+      if(!this.avatar){this.avatar=new KidsAvatar();this.scene.add(this.avatar.group);}
+      this.avatar.update(kids.player,dt,this.actionTime>0||!!presentation?.mining,.52+.48*this.sky.day.value);
+    }
+    if(this.avatar)this.avatar.group.visible=thirdPerson;
     this.selection.visible=Boolean(target);
     if(target)this.selection.position.set(target.x+.5,target.y+.5,target.z+.5);
-    this.uniforms.submerged.value=Number(this.world.get(p.x|0,(p.y+eye)|0,p.z|0)===13);
+    const waterView=this.camera.position;
+    this.uniforms.submerged.value=Number(this.world.get(Math.floor(waterView.x),Math.floor(waterView.y),Math.floor(waterView.z))===13);
     this.border.visible=Math.min(p.x,p.z,256-p.x,256-p.z)<12;
     this.schedule(p);this.pump();
     this.lampDue-=dt;
@@ -228,7 +242,7 @@ export class SceneView {
     this.updateParticles(dt);
     const indoors=this.world.highest[(p.x|0)+(p.z|0)*256]>p.y+eye+1.5;
     this.tools.update(this.camera,target,presentation,dt,
-      (indoors?.57:.70)+this.sky.day.value*(indoors?.13:.30),this.uniforms.extras.value>0);
+      (indoors?.57:.70)+this.sky.day.value*(indoors?.13:.30),this.uniforms.extras.value>0,!thirdPerson);
     this.visibleChunks.clear();this.gl.render(this.scene,this.camera);
     const info=this.gl.info;
     this.stats.draws=info.render.calls;this.stats.triangles=info.render.triangles;
@@ -240,6 +254,7 @@ export class SceneView {
   }
   dispose(){
     this.unsubscribe();
+    this.avatar?.dispose();
     for(const parts of this.batches.values())this.removeMeshes(parts);
     this.batches.clear();this.dirty.clear();this.wanted.clear();this.pending.length=0;
     this.selection.geometry.dispose();this.selection.material.dispose();

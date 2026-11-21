@@ -97,6 +97,7 @@ export class GameUI {
   private saveTimer=0
   private holding=false
   private worldName=''
+  private kidsView=false
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -108,6 +109,7 @@ export class GameUI {
     this.panel.addEventListener('input',event=>this.settingOutput(event.target))
     $('fallback').addEventListener('keydown',e=>{if((e.target as HTMLElement).closest('[data-hold]') && ['Enter',' '].includes(e.key)){e.preventDefault();this.startMining()}})
     $('fallback').addEventListener('keyup',()=>this.stopMining())
+    $('view-mode').addEventListener('keydown',e=>{if(e.code==='Space')e.stopPropagation()})
   }
   private portal:string
   private startMining(){if(!this.holding){this.holding=true;this.send('mine-down')}}
@@ -132,6 +134,7 @@ export class GameUI {
     const control=(event.target as Element).closest<HTMLButtonElement>('[data-action]')
     if(!control || control.disabled)return
     const action=control.dataset.action!
+    if(action==='view-mode'&&control.id==='view-mode'&&event.detail>0)$('scene').focus({preventScroll:true})
     if(action==='select'){this.send(action,Number(control.dataset.slot));return}
     const index=Number(control.dataset.index),side=control.dataset.side??'bag'
     if(action==='assign'){
@@ -223,7 +226,9 @@ export class GameUI {
       '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
       '<p class="control-mode">'+(drag?'ドラッグ操作で見回します。':'マウスを固定して見回します。')+'</p>'+
       (drag?button('resume-lock','視点を固定してプレイ'):button('resume-drag','ドラッグ操作でプレイ'))+
+      '<button type="button" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false"></button>'+
       (ready?'':button('save','手動保存')+button('export','ファイルへ書き出す')+button('goto-settings','設定')+button('goto-help','操作説明')+button('diagnostics','入力の診断・復旧'))+button('title','タイトルへ戻る')+'</div>')
+    this.showViewMode(this.kidsView)
   }
   diagnostics(summary:string,report:string){
     this.show('diagnostics',sectionHead('入力の診断・復旧')+
@@ -253,7 +258,7 @@ export class GameUI {
   }
   help() {
     this.show('help',sectionHead('操作説明')+'<dl class="keylist">'+[
-      ['W / A / S / D','移動'],['マウス / 矢印キー','視点を変える'],['Space / Shift','ジャンプ・水中で浮上 ／ ダッシュ'],
+      ['W / A / S / D','移動'],['マウス / 矢印キー','視点を変える'],['K / 画面上のモードボタン','オリジナルモードと見下ろし視点のキッズモードを切り替える'],['Space / Shift','ジャンプ・水中で浮上 ／ ダッシュ'],
       ['左クリック長押し','照準のブロックを採掘'],['右クリック','手に持っているブロックを設置'],['1 ～ 9 / ホイール','ホットバーを切り替える'],
       ['C 長押し','しゃがむ。足場の端で踏みとどまり、低い坑道を通れる'],['Q / 中クリック','照準の建材を選ぶ'],['R','原木を縦・東西・南北に切り替える'],
       ['右クリック / V','作業台・チェストを開く。しゃがんで右クリックすると隣に設置'],['Ctrl + Z','クリエイティブの通常ブロックを最大20回戻す。作業台とチェストは対象外'],
@@ -264,6 +269,18 @@ export class GameUI {
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
     '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+
     '<h2>保存とバックアップ</h2><p>進行はこのブラウザーに自動保存されます。一時停止から手動保存もできます。ブラウザーのデータ削除前や別のPCに移すときは、タイトルの「つづきから」でワールドを「書き出す」を選びます。復元は同じ一覧の「ファイルを読み込む」から行えます。</p>')
+  }
+  showViewMode(kids:boolean) {
+    this.kidsView=kids
+    const name=kids?'キッズモード':'オリジナルモード'
+    const hud=$<HTMLButtonElement>('view-mode')
+    hud.setAttribute('aria-pressed',String(kids))
+    hud.querySelector('span')!.textContent=name
+    const pause=this.panel.querySelector<HTMLButtonElement>('[data-action="view-mode"]')
+    if(pause) {
+      pause.setAttribute('aria-pressed',String(kids))
+      pause.textContent='視点切替　現在は'+name
+    }
   }
   expedition(goal:string,home:string,cave:string){
     const hint=$('journey'),route=$('bearing')

@@ -10,29 +10,36 @@ import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, 
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
+const hud = document.querySelector<HTMLElement>('#hud')!
 canvas.tabIndex = -1
 const saves = new SaveStore()
 const audio = new Soundscape()
 const ui = new GameUI((action,value)=>{ void handle(action,value).catch(err=>ui.toast(reason(err))) })
-type Session = { data: ActiveSave; world: World; player: Player; view: SceneView }
+type Session = { data: ActiveSave; world: World; player: Player; view: SceneView;
+  kids: boolean; originalPitch: number; kidsPitch: number }
 let station:Hit|null=null, logAxis:Axis='y', progress=0, guideDue=0, tapSound=0
 let currentSite=''
 const tuneAudio=()=>audio.configure(settings.volume,settings.muted,settings.effectsVolume,settings.ambientVolume)
 let session: Session|null=null
 let settings = settingsAtTitle()
 const lookPreferenceKey='tk777.webcraft.look'
+const viewPreferenceKey='tk777.webcraft.view'
+function preferKids(){
+  try {return localStorage.getItem(viewPreferenceKey)==='kids'} catch {return false}
+}
 function preferDrag(){
   try {
     const choice=localStorage.getItem(lookPreferenceKey)
     if(choice==='drag'||choice==='lock')return choice==='drag'
   } catch {}
-  return /^Mac/i.test(navigator.platform)
+  return /^Mac/i.test(navigator.platform)||window.matchMedia('(pointer: coarse)').matches
 }
 let busy = false, debugging = false, fallbackPreferred=preferDrag(), firstGuide=false
 let aimKey='', mining=0, cooldown=0, stepDistance=0
 let saveQueue: Promise<boolean> = Promise.resolve(true)
 let frameTime=0, lastStats=0, frameCount=0
 let stillFrame=''
+let reticleY=50
 let graphicsOK=false,frameHalted=false
 try {
   graphicsOK=!!canvas.getContext('webgl2',{alpha:false,antialias:false,powerPreference:'high-performance'})
@@ -91,6 +98,25 @@ function refreshBag() {
   else if(ui.screen==='play')ui.hud(viewInventory())
 }
 function resetMining(){ aimKey='';mining=0;progress=0;tapSound=0;ui.mining(0) }
+function moveReticle(y:number) {
+  if(y===reticleY)return
+  reticleY=y
+  hud.style.setProperty('--aim-y',y+'%')
+}
+function switchViewMode(){
+  const s=session
+  if(!s||!['play','pause','ready'].includes(ui.screen))return
+  if(s.kids){s.kidsPitch=s.player.pitch;s.player.pitch=s.originalPitch}
+  else {s.originalPitch=s.player.pitch;s.player.pitch=s.kidsPitch}
+  s.kids=!s.kids
+  input.rememberView(s.player)
+  // Keep movement and the current control method. A held mine must be pressed
+  // again after switching so it cannot edit a different face by accident.
+  input.mining=false;resetMining();cooldown=0
+  s.view.kidsCamera.reset();moveReticle(50);stillFrame=''
+  ui.showViewMode(s.kids)
+  try {localStorage.setItem(viewPreferenceKey,s.kids?'kids':'original')} catch {}
+}
 function select(slot:number) {
   if(!session||!Number.isInteger(slot)||slot<0||slot>8)return
   session.data.selected=slot;resetMining(); refreshBag()
@@ -169,7 +195,7 @@ function advanceMine(dt:number) {
   ui.toast(result.message);resetMining(); cooldown=data.mode==='creative'?.15:.11
 }
 const input=new InputController(canvas,{
-  pause,inventory,place,select,look:aim, beginMine:()=>advanceMine(0),pick,undo,
+  pause,inventory,place,select,look:aim, beginMine:()=>advanceMine(0),pick,undo,viewMode:switchViewMode,
   rotate:()=>{logAxis=logAxis==='y'?'x':logAxis==='x'?'z':'y';ui.toast('原木の向き　'+({x:'東西',y:'縦',z:'南北'}[logAxis]))},
   interact:()=>{if(session)interact(raycast(session.world,session.player),true)},
   home:()=>{if(session){const {x,y,z}=session.player;session.data.journey.home={x,y,z};guide();ui.toast('現在地を拠点に登録しました。')}},
@@ -184,7 +210,7 @@ const input=new InputController(canvas,{
 })
 function snapshot(s:Session): WorldSave {
   const {x,y,z,yaw,pitch}=s.player
-  return {...s.data,pose:{x,y,z,yaw,pitch,crouched:s.player.crouched},flying:s.player.flying,edits:s.world.exportEdits(),
+  return {...s.data,pose:{x,y,z,yaw,pitch:s.kids?s.originalPitch:pitch,crouched:s.player.crouched},flying:s.player.flying,edits:s.world.exportEdits(),
     fixtures:s.world.exportFixtures(),journey:structuredClone(s.data.journey),settings:{...settings},bag:structuredClone(s.data.bag)}
 }
 function persist(s:Session) {
@@ -234,9 +260,11 @@ async function openWorld(id:string|null, args?:{name:string;seed:string;mode:Mod
     settings={...data.settings};tuneAudio()
     const player=createPlayer(safeSpawn(world,data.pose,!!loaded));player.flying=data.mode==='creative'&&data.flying
     const view=new SceneView(canvas,world)
-    session={world,data,player,view}; view.configure(settings);stillFrame=''
+    session={world,data,player,view,kids:preferKids(),originalPitch:player.pitch,kidsPitch:-.43}
+    if(session.kids)player.pitch=session.kidsPitch
+    view.configure(settings);stillFrame='';moveReticle(50)
     input.rememberView(player);frameHalted=false;fallbackPreferred=preferDrag()
-    ui.setWorld(data.name); ui.pause(true,fallbackPreferred)
+    ui.setWorld(data.name);ui.showViewMode(session.kids);ui.pause(true,fallbackPreferred)
     if(!loaded) await persist(session)
     debugging=false
   } catch(e){
@@ -302,6 +330,7 @@ async function handle(action:string,value?:any) {
     case 'export-diagnostics': if(session)downloadJson('ウェブクラフト777-入力診断.json',JSON.stringify(input.report(),null,2));break
     case 'reset-input': if(session){stopInput();input.rememberView(session.player);fallbackPreferred=true;ui.pause(false,true,'入力をリセットしました。ドラッグ操作で再開できます。')}break
     case 'pause':pause();break
+    case 'view-mode':switchViewMode();break
     case 'inventory':inventory();break
     case 'select':select(value);break
     case 'assign':if(session&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();ui.toast('ホットバーに登録しました。')}break
@@ -399,7 +428,8 @@ function tick(now:number){
   ui.target(use?(target!.id===21?'右クリックで作業台':'右クリックでチェスト'): '')
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,
-    moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5})
+    moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined)
+  if(s.kids)moveReticle(Math.round(s.view.kidsCamera.reticle.y*20)/20)
   if(input.active && debugging){
     frameCount++
     if(!lastStats){lastStats=now;frameCount=0}

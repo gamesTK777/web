@@ -5,6 +5,7 @@ export interface Controls {
   cycle(direction:number): void; place(): void; beginMine():void; look(dx:number,dy:number): void
   dragChanged(drag:boolean): void; background(): void; recovery?(reason:string):void
   pick?(): void; undo?(): void; rotate?(): void; home?(): void; guide?(): void; interact?(): void
+  viewMode?(): void
 }
 
 type Contact = { id:number; element:HTMLElement; role:'look'|'mine'; x:number; y:number }
@@ -291,7 +292,7 @@ export class InputController {
       return
     }
     const number=/^Digit([1-9])$/.exec(e.code)
-    if(!['Escape','KeyE','KeyF','F3','KeyQ','KeyR','KeyB','KeyG','KeyV'].includes(e.code)&&!number)return
+    if(!['Escape','KeyE','KeyF','F3','KeyQ','KeyR','KeyB','KeyG','KeyV','KeyK'].includes(e.code)&&!number)return
     e.preventDefault();if(e.repeat)return
     if(number)this.controls.select(Number(number[1])-1)
     else switch(e.code){
@@ -303,6 +304,7 @@ export class InputController {
       case 'KeyB':this.controls.home?.();break
       case 'KeyG':this.controls.guide?.();break
       case 'KeyV':this.controls.interact?.();break
+      case 'KeyK':this.controls.viewMode?.();break
       default:this.controls.debug()
     }
   }

@@ -140,9 +140,9 @@ export class InteractionView {
     this.ghost.scale.setScalar(.993);this.ghost.visible=false;this.ghost.renderOrder=4;scene.add(this.ghost)
   }
   swing(){this.recoil=1}
-  update(camera:T.PerspectiveCamera,target:Position|null,p:Presentation|undefined,dt:number,bright:number,extras:boolean){
+  update(camera:T.PerspectiveCamera,target:Position|null,p:Presentation|undefined,dt:number,bright:number,extras:boolean,showHand=true){
     const active=!!p && p.active!==false
-    this.hand.visible=active
+    this.hand.visible=active && showHand
     this.cracking.visible=active && !!target && p.mining>0
     if(this.cracking.visible && target && p){
       this.cracking.position.set(target.x+.5,target.y+.5,target.z+.5)
@@ -165,12 +165,13 @@ export class InteractionView {
       }
     }
     if(!p||!active)return
+    this.recoil=Math.max(0,this.recoil-dt*4.8)
+    if(!showHand){this.phase=0;return}
     if(p.held!==this.lastItem){
       this.hand.geometry.dispose();this.hand.geometry=handMesh(this.cube,p.held);this.lastItem=p.held
     }
     this.clock+=dt
     this.phase=p.mining>0?this.phase+dt*16:0
-    this.recoil=Math.max(0,this.recoil-dt*4.8)
     const swing=extras?Math.max(Math.sin(this.phase*.5)**2,Math.sin(this.recoil*Math.PI)):0
     const bob=p.moving&&extras?Math.sin(this.clock*(p.sprinting?13:9))*.006:0
     const extent=.54*Math.tan(camera.fov*Math.PI/360)

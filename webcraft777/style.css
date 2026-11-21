@@ -99,6 +99,7 @@ input { accent-color: #2e745b; }
 .worlds li div:first-child { min-width: 0; overflow-wrap: anywhere; }
 .empty { color: #4c6558; }
 .pause-actions { display: grid; gap: 8px; margin-top: 18px; }
+.pause-actions [data-action="view-mode"][aria-pressed="true"] { background: #e6efd7; border-color: #809b68; }
 .control-mode,.input-message { margin: 0; font-size: .82rem; line-height: 1.55; }
 .input-message { margin-block: 8px; white-space: pre-line; }
 .input-trace { margin-top: 16px; }
@@ -116,14 +117,17 @@ input { accent-color: #2e745b; }
 @keyframes loading { to { background-position: 100% 0; } }
 #hud { z-index: 2; pointer-events: none; color: #fffbed; }
 #hud button,#hud a { pointer-events: auto; }
-.play-top { position: absolute; inset: 14px 18px auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.play-top { position: absolute; inset: max(14px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) auto max(18px,env(safe-area-inset-left)); display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
 #mode-tag,.top-actions button,#guide,#fallback,.belt #equipped,#debug,#save-status,#notice {
   color: #fff8ea; background: #142f2ae6; border: 1px solid #f0e7c84d; border-radius: 5px;
   box-shadow: 0 2px 6px #12362726;
 }
-#mode-tag { max-width: 48vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 10px; font-size: .81rem; font-weight: 700; }
-.top-actions { display: flex; gap: 5px; }
-.top-actions button { font-size: .78rem; min-height: 32px; padding: 5px 8px; }
+#mode-tag { min-width: 0; max-width: 48vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 10px; font-size: .81rem; font-weight: 700; }
+.top-actions { display: flex; flex: 0 0 auto; gap: 5px; }
+.top-actions button { font-size: .78rem; min-height: 32px; padding: 5px 8px; white-space: nowrap; touch-action: manipulation; }
+.top-actions #view-mode { min-inline-size: 10.6em; border-color: #e5c4789c; }
+.top-actions #view-mode[aria-pressed="true"] { background: #f1cb79; border-color: #ffe2a6; color: #2d3923; }
+.top-actions #view-mode[aria-pressed="true"]:hover { background: #ffdc94; }
 kbd { display: inline-block; border: 1px solid currentColor; border-radius: 3px; padding: 0 .23em; font: inherit; font-size: .8em; opacity: .84; }
 .top-actions button:hover,#guide button:hover,#fallback button:hover { background: #355a45; }
 #guide { position: absolute; top: 58px; left: 18px; max-width: min(395px,calc(100% - 36px)); padding: 10px 14px; font-size: .82rem; }
@@ -131,11 +135,11 @@ kbd { display: inline-block; border: 1px solid currentColor; border-radius: 3px;
 #guide p { margin: 4px 0; line-height: 1.55; }
 #guide a { display: inline-block; padding-block: 4px; color: #ffda90; }
 #guide .guide-close { min-height: 25px; padding: 2px 5px; font-size: .75rem; color: #ffebbf; border: 0; background: transparent; }
-#crosshair { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; translate: -50% -50%; filter: drop-shadow(0 0 1px black) drop-shadow(0 0 1px black); }
+#crosshair { position: absolute; top: var(--aim-y,50%); left: var(--aim-x,50%); width: 14px; height: 14px; translate: -50% -50%; filter: drop-shadow(0 0 1px black) drop-shadow(0 0 1px black); }
 #crosshair::before,#crosshair::after { position: absolute; content: ""; background: #fffbed; }
 #crosshair::before { width: 14px; height: 2px; top: 6px; }
 #crosshair::after { width: 2px; height: 14px; left: 6px; }
-#mine-meter { position: absolute; top: calc(50% + 20px); left: 50%; translate: -50% 0; width: 74px; height: 7px; border: 1px solid #fffadf; border-radius: 5px; background: #293c36bc; overflow: hidden; }
+#mine-meter { position: absolute; top: calc(var(--aim-y,50%) + 20px); left: var(--aim-x,50%); translate: -50% 0; width: 74px; height: 7px; border: 1px solid #fffadf; border-radius: 5px; background: #293c36bc; overflow: hidden; }
 #mine-meter i { display: block; width: var(--progress,0%); height: 100%; background: #ffce74; }
 .belt { position: absolute; bottom: max(16px,env(safe-area-inset-bottom)); left: 50%; translate: -50% 0; display: grid; justify-items: center; gap: 7px; }
 .belt #equipped { margin: 0; padding: 4px 12px; font-size: .83rem; font-weight: 700; }
@@ -185,13 +189,23 @@ dialog::backdrop { background: #122b28bb; }
   .inventory-columns { grid-template-columns: 1fr; gap: 4px; }
   .panel-overlay { padding: 8px; }
   .panel { padding: 15px; }
-  .play-top { inset: 7px 7px auto; }
-  #guide { top: 47px; left: 7px; }
-  #debug { right: 7px; top: 47px; }
+  .play-top { inset: max(7px,env(safe-area-inset-top)) max(7px,env(safe-area-inset-right)) auto max(7px,env(safe-area-inset-left)); }
+  #guide { top: calc(47px + env(safe-area-inset-top)); left: max(7px,env(safe-area-inset-left)); }
+  #debug { right: max(7px,env(safe-area-inset-right)); top: calc(47px + env(safe-area-inset-top)); }
   .slot { width: clamp(26px,9vw,52px); }
   .hotbar { gap: 2px; }
   #save-status { left: 6px; bottom: auto; top: 46px; }
   #guide:not([hidden]) ~ #save-status { top: auto; }
+}
+@media (pointer: coarse) {
+  .top-actions button { min-height: 44px; }
+  .top-actions kbd { display: none; }
+  .top-actions #view-mode { min-inline-size: 0; }
+  #guide,#debug { top: calc(max(14px,env(safe-area-inset-top)) + 49px); }
+}
+@media (max-width: 365px) {
+  .top-actions #view-mode { min-inline-size: 0; }
+  .top-actions button { padding-inline: 5px; }
 }
 @media (max-height: 470px) and (min-width: 610px) {
   .title-stage { padding: 8px 5vw; }
@@ -212,7 +226,7 @@ dialog::backdrop { background: #122b28bb; }
 .trail #bearing { color:#f4ddab; font-weight:650; }
 .trail span:empty { display:none; }
 #guide:not([hidden]) ~ .trail { top:auto; bottom:106px; left:12px; max-width:38vw; }
-#target-hint { position:absolute; top:55%; left:50%; transform:translateX(-50%); }
+#target-hint { position:absolute; top:calc(var(--aim-y,50%) + 5%); left:var(--aim-x,50%); transform:translateX(-50%); }
 .stack { min-width:0; border:1px solid var(--edge); border-radius:7px; background:#f3f2e3; overflow:hidden; }
 .stack .bag-item { width:100%; border:0; border-radius:0; }
 .stack > span { display:grid; justify-items:center; padding:5px; font-size:.82rem; }

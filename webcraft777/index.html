@@ -11,11 +11,18 @@
 </head>
 <body>
   <main id="game">
-    <canvas id="scene" tabindex="-1" aria-label="一人称のワールド画面"></canvas>
+    <canvas id="scene" tabindex="-1" aria-label="3Dワールドのゲーム画面"></canvas>
     <div id="cover" aria-hidden="true"></div>
     <section id="overlay" class="overlay" aria-label="ゲーム画面"></section>
     <section id="hud" aria-label="プレイ情報" hidden>
-      <div class="play-top"><div id="mode-tag"></div><div class="top-actions"><button data-action="inventory" title="持ち物を開く（E）">持ち物 <kbd>E</kbd></button><button data-action="pause" title="一時停止（Esc）">一時停止 <kbd>Esc</kbd></button></div></div>
+      <div class="play-top">
+        <div id="mode-tag"></div>
+        <div class="top-actions">
+          <button type="button" id="view-mode" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false" title="視点モードを切り替え（K）"><span>オリジナルモード</span> <kbd aria-hidden="true">K</kbd></button>
+          <button type="button" data-action="inventory" title="持ち物を開く（E）">持ち物 <kbd>E</kbd></button>
+          <button type="button" data-action="pause" title="一時停止（Esc）">一時停止 <kbd>Esc</kbd></button>
+        </div>
+      </div>
       <div id="guide" hidden></div>
       <div class="trail"><span id="bearing"></span><span id="journey" hidden></span></div>
       <div id="target-hint" hidden></div>
