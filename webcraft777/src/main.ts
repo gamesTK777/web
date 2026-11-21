@@ -20,12 +20,20 @@ let currentSite=''
 const tuneAudio=()=>audio.configure(settings.volume,settings.muted,settings.effectsVolume,settings.ambientVolume)
 let session: Session|null=null
 let settings = settingsAtTitle()
-let busy = false, debugging = false, fallbackPreferred=false, firstGuide=false
+const lookPreferenceKey='tk777.webcraft.look'
+function preferDrag(){
+  try {
+    const choice=localStorage.getItem(lookPreferenceKey)
+    if(choice==='drag'||choice==='lock')return choice==='drag'
+  } catch {}
+  return /^Mac/i.test(navigator.platform)
+}
+let busy = false, debugging = false, fallbackPreferred=preferDrag(), firstGuide=false
 let aimKey='', mining=0, cooldown=0, stepDistance=0
 let saveQueue: Promise<boolean> = Promise.resolve(true)
 let frameTime=0, lastStats=0, frameCount=0
 let stillFrame=''
-let graphicsOK=false
+let graphicsOK=false,frameHalted=false
 try {
   graphicsOK=!!canvas.getContext('webgl2',{alpha:false,antialias:false,powerPreference:'high-performance'})
 } catch {}
@@ -90,7 +98,7 @@ function select(slot:number) {
 function stopInput(){ input.stop(); if(session)resetPlayerInput(session.player);audio.setPlaying(false);resetMining();cooldown=0;stepDistance=0;frameTime=0 }
 function pause() {
   if(!session || !input.active)return
-  stopInput(); ui.pause()
+  stopInput(); ui.pause(false,fallbackPreferred)
 }
 function inventory() {
   if(!session || !input.active)return
@@ -98,22 +106,22 @@ function inventory() {
 }
 function showPlay(fallback:boolean){
   if(!session||!input.active)return
-  ui.play(fallback,firstGuide);ui.hud(viewInventory());guide()
+  fallbackPreferred=fallback
+  ui.play(fallback,firstGuide,input.pending);ui.hud(viewInventory());guide()
 }
 function resume(drag:boolean) {
   if(!session || !['ready','pause','inventory'].includes(ui.screen))return
+  if(!graphicsOK){ui.pause(false,fallbackPreferred,'描画の復旧を待っています。ワールドを書き出すこともできます。');return}
   station=null
   firstGuide=!session.data.guideSeen
   fallbackPreferred=drag
-  frameTime=0;lastStats=0;frameCount=0
-  ui.play(drag,firstGuide);ui.hud(viewInventory());guide();audio.unlock();audio.setPlaying(true)
+  frameHalted=false;frameTime=0;lastStats=0;frameCount=0
+  audio.unlock();audio.setPlaying(true)
   input.start(drag)
+  if(input.pending)showPlay(false)
 }
 function aim(dx:number,dy:number){
-  if(!session)return
-  const p=session.player, factor=.00235*settings.sensitivity
-  p.yaw=(p.yaw-dx*factor)%(2*Math.PI)
-  p.pitch=Math.max(-1.55,Math.min(1.55,p.pitch-dy*factor*(settings.invertY?-1:1)))
+  if(session)input.applyLook(session.player,dx,dy,settings.sensitivity,settings.invertY)
 }
 function place() {
   if(!session||!input.active)return
@@ -171,7 +179,8 @@ const input=new InputController(canvas,{
     if(data.mode!=='creative'){ui.toast('飛行はクリエイティブモードで使えます。');return}
     player.flying=!player.flying;player.vy=0;ui.toast(player.flying?'飛行中：Spaceで上昇、Ctrlで下降':'飛行を終了しました。')},
   debug:()=>{debugging=!debugging;if(!debugging)ui.debug('')},
-  dragChanged:showPlay,background:()=>{if(session) void persist(session)}
+  dragChanged:showPlay,background:()=>{if(session) void persist(session)},
+  recovery:message=>{if(session){stopInput();fallbackPreferred=true;ui.pause(false,true,message)}}
 })
 function snapshot(s:Session): WorldSave {
   const {x,y,z,yaw,pitch}=s.player
@@ -194,7 +203,7 @@ async function title() {
   if(session) {
     const s=session
     stopInput()
-    if(!await persist(s) && !window.confirm('保存できませんでした。キャンセルすると今の状態をファイルへ書き出せます。保存せずにタイトルへ戻りますか？')) {ui.pause();return}
+    if(!await persist(s) && !window.confirm('保存できませんでした。キャンセルすると今の状態をファイルへ書き出せます。保存せずにタイトルへ戻りますか？')) {ui.pause(false,fallbackPreferred);return}
     s.view.dispose();session=null
   }
   ui.title(false)
@@ -226,9 +235,10 @@ async function openWorld(id:string|null, args?:{name:string;seed:string;mode:Mod
     const player=createPlayer(safeSpawn(world,data.pose,!!loaded));player.flying=data.mode==='creative'&&data.flying
     const view=new SceneView(canvas,world)
     session={world,data,player,view}; view.configure(settings);stillFrame=''
-    ui.setWorld(data.name); ui.pause(true)
+    input.rememberView(player);frameHalted=false;fallbackPreferred=preferDrag()
+    ui.setWorld(data.name); ui.pause(true,fallbackPreferred)
     if(!loaded) await persist(session)
-    fallbackPreferred=false;debugging=false
+    debugging=false
   } catch(e){
     session?.view.dispose();session=null
     console.error(e);ui.error(reason(e))
@@ -256,25 +266,41 @@ async function exportWorld(id?:string,original=false) {
   const data=id?(original?await saves.original(id):await saves.get(id)):session?snapshot(session):undefined
   if(original&&!data){ui.toast('このワールドには旧版の保管データがありません。');return}
   if(!data)throw new Error('書き出すワールドが見つかりません。')
-  const url=URL.createObjectURL(new Blob([backupText(data)],{type:'application/json'}))
-  const link=document.createElement('a');link.href=url;link.download='ウェブクラフト777-'+data.name.replace(/[\\/:*?"<>|]/g,'_')+'.json'
-  document.body.append(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),60_000)
+  downloadJson('ウェブクラフト777-'+data.name.replace(/[\\/:*?"<>|]/g,'_')+'.json',backupText(data))
   ui.status('バックアップファイルを書き出しました。')
 }
+function downloadJson(filename:string,text:string){
+  const url=URL.createObjectURL(new Blob([text],{type:'application/json'}))
+  const link=document.createElement('a');link.href=url;link.download=filename
+  document.body.append(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),60_000)
+}
 async function handle(action:string,value?:any) {
-  if(busy && !['resume','resume-drag','dismiss-guide'].includes(action))return
+  if(busy && !['resume','resume-drag','resume-lock','dismiss-guide'].includes(action))return
   switch(action){
     case 'goto-create': ui.create();break
     case 'goto-worlds': await worldList();break
     case 'goto-help': ui.help();break
     case 'goto-settings': ui.settings(settings);break
     case 'back':
-      if(session){if(ui.screen==='inventory')resume(fallbackPreferred);else ui.pause()}
+      if(session){if(ui.screen==='inventory')resume(fallbackPreferred);else ui.pause(false,fallbackPreferred)}
       else await title();break
     case 'title': if(!busy){busy=true;try {await title()}finally{busy=false}}break
     case 'start': audio.unlock();await openWorld(null,value);break
     case 'load': audio.unlock();await openWorld(value);break
-    case 'resume':case 'resume-drag':resume(action==='resume-drag');break
+    case 'resume':resume(fallbackPreferred);break
+    case 'resume-drag':case 'resume-lock':{
+      const drag=action==='resume-drag'
+      try {localStorage.setItem(lookPreferenceKey,drag?'drag':'lock')} catch {}
+      resume(drag);break
+    }
+    case 'diagnostics': if(session){
+      input.setDiagnostics(true)
+      const report=input.report()
+      const summary='視点入力 '+report.lookEvents+' 回　フレーム '+report.frames+' 回　異常 '+report.anomalies+' 件'
+      ui.diagnostics(report.lastIssue?summary+'\n'+report.lastIssue:summary,JSON.stringify(report,null,2))
+    }break
+    case 'export-diagnostics': if(session)downloadJson('ウェブクラフト777-入力診断.json',JSON.stringify(input.report(),null,2));break
+    case 'reset-input': if(session){stopInput();input.rememberView(session.player);fallbackPreferred=true;ui.pause(false,true,'入力をリセットしました。ドラッグ操作で再開できます。')}break
     case 'pause':pause();break
     case 'inventory':inventory();break
     case 'select':select(value);break
@@ -317,8 +343,8 @@ document.addEventListener('keydown',e=>{
   const slot=/^Digit([1-9])$/.exec(e.code)
   if(ui.screen==='inventory'&&slot){e.preventDefault();select(Number(slot[1])-1);return}
   if(ui.screen==='inventory'&&(e.code==='KeyE'||e.code==='Escape')){
-    e.preventDefault();if(e.code==='Escape')ui.pause();else resume(fallbackPreferred)
-  }else if(e.code==='Escape'&&['settings','help','create','worlds'].includes(ui.screen)){
+    e.preventDefault();if(e.code==='Escape')ui.pause(false,fallbackPreferred);else resume(fallbackPreferred)
+  }else if(e.code==='Escape'&&['settings','help','create','worlds','diagnostics'].includes(ui.screen)){
     e.preventDefault();void handle('back')
   }
 })
@@ -326,17 +352,33 @@ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();graphicsOK=fal
   if(session)void persist(session)
   ui.error('3D描画が中断されました。ページを再読み込みし、「つづきから」再開してください。')
 })
+canvas.addEventListener('webglcontextlost',event=>{
+  event.preventDefault();graphicsOK=false;frameHalted=true;stopInput()
+  if(session){ui.pause(false,fallbackPreferred,'3D描画を中断しました。復旧後に再開できます。');void persist(session)}
+  else ui.error(gpuMessage)
+})
+canvas.addEventListener('webglcontextrestored',()=>{
+  graphicsOK=true;frameHalted=false;stillFrame=''
+  if(session){session.view.configure(settings);ui.pause(false,fallbackPreferred,'3D描画が復旧しました。操作を再開できます。')}
+  else void title()
+})
 window.addEventListener('pagehide',()=>{if(session){if(input.active)pause();void persist(session)}})
 window.setInterval(()=>{if(session && !document.hidden)void persist(session)},25000)
 function frame(now:number){
   requestAnimationFrame(frame)
-  if(!session||!graphicsOK||document.hidden){frameTime=0;return}
+  if(!session||!graphicsOK||frameHalted||document.hidden){frameTime=0;return}
+  try {tick(now)} catch(error) {
+    frameHalted=true
+    input.fail(error)
+    console.error(error)
+  }
+}
+function tick(now:number){
+  if(!session)return
   const s=session,elapsed=frameTime?(now-frameTime)/1000:0,dt=Math.min(elapsed,.1);frameTime=now
   if(input.active){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
-    const keys=input.keys
-    if(keys.has('ArrowRight')||keys.has('ArrowLeft'))p.yaw=(p.yaw+(Number(keys.has('ArrowLeft'))-Number(keys.has('ArrowRight')))*dt*1.65)%(2*Math.PI)
-    if(keys.has('ArrowUp')||keys.has('ArrowDown'))p.pitch=Math.min(1.55,Math.max(-1.55,p.pitch+(Number(keys.has('ArrowUp'))-Number(keys.has('ArrowDown')))*dt*1.3))
+    if(!input.frame(p,elapsed))return
     stepPlayer(s.world,p,movement,dt,settings);audio.environment(s.world,p,dt)
     guideDue-=dt
     if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}

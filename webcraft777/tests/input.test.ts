@@ -5,7 +5,10 @@ import {InputController} from "../src/input.ts";
 // Dispatch through the production event listeners. Node supplies EventTarget;
 // browser permission, pointer-lock ownership and timers are simulated here.
 function fire(target:EventTarget,type:string,fields:Record<string,unknown>={}) {
-  target.dispatchEvent(Object.assign(new Event(type,{cancelable:true}),fields));
+  const {target:source,...props}=fields;
+  const event=Object.assign(new Event(type,{cancelable:true}),props);
+  if(source)Object.defineProperty(event,'target',{value:source});
+  target.dispatchEvent(event);
 }
 function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
   const canvas=Object.assign(new EventTarget(),{focus(){},requestPointerLock:request});
@@ -18,17 +21,20 @@ function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
     Object.defineProperty(globalThis,name,{value,configurable:true});
     t.after(()=>{if(original)Object.defineProperty(globalThis,name,original);else Reflect.deleteProperty(globalThis,name);});
   }
-  const events={pauses:0,backgrounds:0,mines:0,places:0,picks:0,undos:0,rotates:0,looks:[] as number[][],drag:[] as boolean[]};
+  const events={pauses:0,backgrounds:0,mines:0,places:0,picks:0,undos:0,rotates:0,cycles:0,looks:[] as number[][],drag:[] as boolean[],recoveries:[] as string[]};
+  const pose={yaw:0,pitch:0};
   const input=new InputController(canvas as unknown as HTMLCanvasElement,{
     pause(){events.pauses++;input.stop();}, // Same stop-on-pause contract as the game.
     background(){events.backgrounds++;},beginMine(){events.mines++;},place(){events.places++;},
-    look(x,y){events.looks.push([x,y]);},dragChanged(on){events.drag.push(on);},
-    inventory(){},fly(){},debug(){},select(){},cycle(){},
+    look(x,y){events.looks.push([x,y]);input.applyLook(pose,x,y,1);},dragChanged(on){events.drag.push(on);},
+    inventory(){},fly(){},debug(){},select(){},cycle(direction){events.cycles+=direction;},
+    recovery(message){events.recoveries.push(message);},
     pick(){events.picks++;},undo(){events.undos++;},rotate(){events.rotates++;}
   });
   function grant(){doc.pointerLockElement=canvas;fire(doc,"pointerlockchange");}
   function hold(){fire(win,"keydown",{code:"KeyW"});fire(win,"keydown",{code:"ShiftLeft"});fire(canvas,"pointerdown",{button:0});}
-  return {canvas,doc,win,timers,events,input,grant,hold};
+  input.rememberView(pose);
+  return {canvas,doc,win,timers,events,input,pose,grant,hold};
 }
 
 test("Pointer Lock は要求後の所有権変更で有効になり、解除通知で一度だけ停止する",t=>{
@@ -102,4 +108,101 @@ test("結果が返らないときにも代替操作へ切り替え、停止後�
   assert.deepEqual(h.events.drag,[]);h.timers[0]();assert.deepEqual(h.events.drag,[true]);
   h.input.stop();h.grant();
   assert.equal(h.doc.pointerLockElement,null);assert.equal(h.input.active,false);assert.equal(h.events.pauses,0);
+});
+
+test("ドラッグ開始後に遅れて届いた固定許可は解放される",t=>{
+  const h=setup(t,()=>{});
+  h.input.start(false);
+  h.timers[0]();
+  h.grant();
+  assert.equal(h.doc.pointerLockElement,null);
+  assert.equal(h.input.drag,true);
+  assert.deepEqual(h.events.drag,[true]);
+});
+
+test("固定の解除通知を待たず視点や設置を停止し、ドラッグで復帰できる",t=>{
+  const h=setup(t,()=>{});
+  h.input.start(false);h.grant();h.hold();
+  h.doc.pointerLockElement=null;
+  fire(h.canvas,'pointerdown',{button:2,pointerType:'mouse'});
+  assert.equal(h.events.places,0);
+  assert.equal(h.events.pauses,1);
+  assert.equal(h.events.recoveries.length,1);
+  assert.equal(h.input.frame(h.pose,.016),false);
+  assert.equal(h.input.mining,false);
+  h.input.start(true);
+  fire(h.canvas,'pointerdown',{button:0,pointerId:1,pointerType:'mouse',clientX:10,clientY:20});
+  fire(h.canvas,'pointermove',{pointerId:1,pointerType:'mouse',buttons:1,clientX:40,clientY:10});
+  assert.deepEqual(h.events.looks,[[30,-10]]);
+  assert.equal(h.input.frame(h.pose,.016),true);
+});
+
+test("高速な切り返しを受け付け、固定カーソルの異常な移動や非有限値から復帰する",t=>{
+  const h=setup(t,()=>{});
+  h.input.start(false);h.grant();
+  for(let i=0;i<250;i++){
+    fire(h.doc,'mousemove',{movementX:85,movementY:-34});
+    fire(h.doc,'mousemove',{movementX:-85,movementY:34});
+  }
+  assert.equal(h.events.looks.length,500);
+  assert(Math.abs(h.pose.yaw)<1e-10&&Math.abs(h.pose.pitch)<1e-10);
+  fire(h.doc,'mousemove',{movementX:770,movementY:0});
+  assert(Math.abs(h.pose.yaw+770*.00235)<1e-10);
+  fire(h.doc,'mousemove',{movementX:-770,movementY:0});
+  fire(h.doc,'mousemove',{movementX:1024,movementY:630});
+  assert(Math.abs(Math.hypot(h.pose.yaw,h.pose.pitch)-2*Math.PI/3)<1e-10);
+  const safe={...h.pose};
+  fire(h.doc,'mousemove',{movementX:2147483647,movementY:0});
+  assert.deepEqual(h.pose,safe);
+  fire(h.doc,'mousemove',{movementX:NaN,movementY:0});
+  assert.deepEqual(h.pose,safe);
+  assert.equal(h.input.active,false);
+  assert.equal(h.doc.pointerLockElement,null);
+  h.input.start(true);
+  h.pose.yaw=Infinity;
+  assert.equal(h.input.frame(h.pose,.016),false);
+  assert.deepEqual(h.pose,safe);
+  assert(h.input.report().anomalies>=4 && h.input.report().events.length<=192);
+});
+
+test("マウス固定中は別ボタンを押したまま主ボタンを離しても採掘が止まる",t=>{
+  const h=setup(t,()=>{});
+  h.input.start(false);h.grant();
+  for(const release of ['mouseup','mousemove','pointerup'] as const){
+    fire(h.canvas,'pointerdown',{button:0,pointerId:1,pointerType:'mouse',buttons:1});
+    assert.equal(h.input.mining,true);
+    if(release==='mouseup')fire(h.win,release,{button:0,buttons:2});
+    if(release==='mousemove')fire(h.doc,release,{buttons:2,movementX:2,movementY:-1});
+    if(release==='pointerup')fire(h.win,release,{pointerId:1,button:2,buttons:0});
+    assert.equal(h.input.mining,false,release);
+  }
+});
+
+test("ドラッグと専用の採掘ボタンは主ボタンの状態とキャプチャを共有する",t=>{
+  const h=setup(t);
+  h.input.start(true);
+  fire(h.canvas,'pointerdown',{button:0,pointerId:1,pointerType:'mouse',clientX:10,clientY:20});
+  fire(h.canvas,'pointermove',{pointerId:1,buttons:2,clientX:40,clientY:10});
+  assert.deepEqual(h.events.looks,[]);
+  const mine={closest(){return mine;},disabled:false};
+  fire(h.doc,'pointerdown',{target:mine,button:0,pointerId:1,pointerType:'mouse'});
+  assert.equal(h.input.mining,true);
+  fire(h.win,'mouseup',{button:0,buttons:2});
+  assert.equal(h.input.mining,false);
+  fire(h.doc,'pointerdown',{target:mine,button:0,pointerId:1,pointerType:'mouse'});
+  assert.equal(h.input.mining,true);
+  fire(h.doc,'lostpointercapture',{target:mine,pointerId:1});
+  assert.equal(h.input.mining,false);
+});
+
+test("トラックパッドの横スワイプとピンチをホットバーから除外し、細かな縦入力はまとめる",t=>{
+  const h=setup(t);
+  h.input.start(true);
+  fire(h.canvas,'wheel',{deltaX:200,deltaY:12,deltaMode:0});
+  fire(h.canvas,'wheel',{deltaX:0,deltaY:100,deltaMode:0,ctrlKey:true});
+  for(let i=0;i<47;i++)fire(h.canvas,'wheel',{deltaX:0,deltaY:1,deltaMode:0});
+  assert.equal(h.events.cycles,0);
+  fire(h.canvas,'wheel',{deltaX:0,deltaY:1,deltaMode:0});
+  for(let i=0;i<30;i++)fire(h.canvas,'wheel',{deltaX:0,deltaY:200,deltaMode:0});
+  assert.equal(h.events.cycles,1);
 });

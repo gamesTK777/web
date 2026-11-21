@@ -106,16 +106,6 @@ export class GameUI {
     this.panel.addEventListener('submit',event=>this.submit(event))
     this.panel.addEventListener('change',event=>this.change(event))
     this.panel.addEventListener('input',event=>this.settingOutput(event.target))
-    const hold=(event:PointerEvent)=>{
-      const target=event.target as HTMLElement
-      if(!target.closest('[data-hold="mine"]') || this.screen!=='play')return
-      event.preventDefault();target.setPointerCapture?.(event.pointerId);this.startMining()
-    }
-    $('fallback').addEventListener('pointerdown',hold)
-    $('fallback').addEventListener('lostpointercapture',()=>this.stopMining())
-    window.addEventListener('pointerup',()=>this.stopMining())
-    window.addEventListener('pointercancel',()=>this.stopMining())
-    window.addEventListener('blur',()=>this.stopMining())
     $('fallback').addEventListener('keydown',e=>{if((e.target as HTMLElement).closest('[data-hold]') && ['Enter',' '].includes(e.key)){e.preventDefault();this.startMining()}})
     $('fallback').addEventListener('keyup',()=>this.stopMining())
   }
@@ -125,7 +115,7 @@ export class GameUI {
   private show(name:string,content:string,wide=false) {
     this.stopMining()
     window.clearTimeout(this.guideTimer)
-    const onWorld = ['pause','ready','inventory'].includes(name) || (['settings','help'].includes(name) && !$('game').classList.contains('home'))
+    const onWorld = ['pause','ready','inventory','diagnostics'].includes(name) || (['settings','help'].includes(name) && !$('game').classList.contains('home'))
     if(['title','create','worlds','error'].includes(name))$('game').classList.add('home')
     else if(onWorld)$('game').classList.remove('home')
     this.screen=name
@@ -227,16 +217,26 @@ export class GameUI {
   error(message:string) {
     this.show('error',sectionHead('ゲームを開始できません')+'<p class="error-message">'+escapeText(message)+'</p>'+button('title','タイトルへ戻る','primary'))
   }
-  pause(ready=false) {
+  pause(ready=false,drag=false,message='') {
     this.show(ready?'ready':'pause','<h1>'+(ready?'ワールドの準備ができました':'一時停止')+'</h1>'+
-      '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+button('resume-drag','ドラッグ操作でプレイ')+
-      (ready?'':button('save','手動保存')+button('export','ファイルへ書き出す')+button('goto-settings','設定')+button('goto-help','操作説明'))+button('title','タイトルへ戻る')+'</div>')
+      (message?'<p class="input-message" role="status">'+escapeText(message)+'</p>':'')+
+      '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
+      '<p class="control-mode">'+(drag?'ドラッグ操作で見回します。':'マウスを固定して見回します。')+'</p>'+
+      (drag?button('resume-lock','視点を固定してプレイ'):button('resume-drag','ドラッグ操作でプレイ'))+
+      (ready?'':button('save','手動保存')+button('export','ファイルへ書き出す')+button('goto-settings','設定')+button('goto-help','操作説明')+button('diagnostics','入力の診断・復旧'))+button('title','タイトルへ戻る')+'</div>')
   }
-  play(fallback:boolean,firstGuide=false) {
+  diagnostics(summary:string,report:string){
+    this.show('diagnostics',sectionHead('入力の診断・復旧')+
+      '<p class="input-message">'+escapeText(summary)+'</p>'+
+      '<div class="pause-actions">'+button('reset-input','入力をリセット','primary')+button('export-diagnostics','診断をファイルに書き出す')+'</div>'+
+      '<details class="input-trace"><summary>直近の入力記録</summary><pre>'+escapeText(report)+'</pre></details>')
+  }
+  play(fallback:boolean,firstGuide=false,pending=false) {
     this.stopMining()
     window.clearTimeout(this.guideTimer)
     this.screen='play'
     $('game').dataset.screen='play'
+    $('game').dataset.playInput=pending?'pending':fallback?'drag':'lock'
     $('game').classList.remove('home')
     this.panel.hidden=true;this.panel.replaceChildren();$('hud').hidden=false
     $('fallback').hidden=!fallback
@@ -261,7 +261,8 @@ export class GameUI {
     ].map(([key,text])=>'<div><dt>'+key+'</dt><dd>'+text+'</dd></div>').join('')+'</dl>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
-    '<h2>視点を固定できないとき</h2><p>画面をドラッグして見回し、画面上の採掘・設置ボタンを使えます。マウスによる自由な視点操作はゲームを独立したタブで開き、「再開」を押してください。</p>'+
+    '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
+    '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+
     '<h2>保存とバックアップ</h2><p>進行はこのブラウザーに自動保存されます。一時停止から手動保存もできます。ブラウザーのデータ削除前や別のPCに移すときは、タイトルの「つづきから」でワールドを「書き出す」を選びます。復元は同じ一覧の「ファイルを読み込む」から行えます。</p>')
   }
   expedition(goal:string,home:string,cave:string){

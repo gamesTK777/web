@@ -189,7 +189,8 @@ export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: n
 }
 
 export function raycast(world: ReadWorld, pose: Pose, max = REACH): Hit | null {
-  if (!Number.isFinite(max) || max < 0) return null;
+  if (!Number.isFinite(max) || max < 0 ||
+      ![pose.x, pose.y, pose.z, pose.yaw, pose.pitch].every(Number.isFinite)) return null;
   const ox = pose.x, oy = pose.y + eyeHeight(pose), oz = pose.z;
   const cp = Math.cos(pose.pitch);
   const dx = -Math.sin(pose.yaw) * cp, dy = Math.sin(pose.pitch), dz = -Math.cos(pose.yaw) * cp;
@@ -199,7 +200,9 @@ export function raycast(world: ReadWorld, pose: Pose, max = REACH): Hit | null {
   const first = (o: number, cell: number, dir: number) => dir === 0 ? Infinity : Math.max(0, ((dir > 0 ? cell + 1 : cell) - o) / dir);
   let nextX = first(ox, x, dx), nextY = first(oy, y, dy), nextZ = first(oz, z, dz);
   let nx = 0, ny = 0, nz = 0, distance = 0;
-  while (distance <= Math.min(REACH, max) && inside(x, y, z)) {
+  const reach = Math.min(REACH, max);
+  // A ray can cross at most ceil(reach) planes on each axis, plus the starting cell.
+  for (let steps = 0; steps <= 3 * Math.ceil(reach) + 1 && distance <= reach && inside(x, y, z); steps++) {
     const id = world.get(x, y, z);
     if (solid(id)) return { x, y, z, id, nx, ny, nz, distance };
     nx = ny = nz = 0;
