@@ -70,7 +70,9 @@ export class TagMap {
     this.drawnSelf=own;this.drawnCounts.set(this.counts)
     const w=this.canvas.width/ZONES,h=this.canvas.height/ZONES
     ctx.clearRect(0,0,this.canvas.width,this.canvas.height)
+    ctx.globalAlpha=.53
     ctx.drawImage(this.terrain,0,0)
+    ctx.globalAlpha=1
     if(own>=0){
       const x=(own%ZONES)*w,z=Math.floor(own/ZONES)*h
       ctx.fillStyle='#cef9ff4d';ctx.fillRect(x,z,w,h)
