@@ -63,6 +63,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,.file-btn:focus-within 
 .start-actions button:enabled:hover { background: #365c4e; color: white; border-color: #fff4cb; }
 .start-actions .primary:enabled:hover { background: #ffe09b; color: #23382b; }
 .start-actions b { font: bold 1.4em/.8 system-ui,sans-serif; }
+.start-actions small { color: #e7e6c8; font-size: .78em; }
 .title-sub { display: flex; gap: 20px; margin-top: 14px; }
 .title-sub button { padding: 3px 0; min-height: 36px; color: #fffbe8; border: 0; border-bottom: 1px solid #e4eed360; border-radius: 0; background: transparent; font-size: .92rem; }
 .title-sub button:hover { background: transparent; border-color: #ffe299; color: #ffe299; }
@@ -113,16 +114,47 @@ input { accent-color: #2e745b; }
 .keylist dt { font-weight: 750; color: #34624e; }
 .keylist dd { margin: 0; }
 .error-message { white-space: pre-line; }
+#game[data-screen="online"] .panel { width: min(100%,800px); }
+#game[data-screen="online"] .panel-head { margin-bottom: 6px; }
+#game[data-screen="online"] .online-description { margin: 8px 0 14px; }
+.online-forms { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.online-card { display: grid; align-content: start; padding: clamp(13px,2vw,20px); border: 1px solid #c8d2b6; border-radius: 8px; background: #f0f2e2; }
+.online-card h2 { margin: 0; font-size: 1.1rem; }
+.online-card .entry { margin: 11px 0 0; }
+.online-card small { color: #4e6658; font-weight: 650; }
+.online-card button { margin-top: 14px; }
+.online-card input,.online-card button { min-height: 44px; }
+#online-code { font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; }
+.panel .online-error { margin-block: 8px 13px; padding: 8px 12px; border: 1px solid #c97964; border-radius: 6px; color: #7a352b; background: #ffefdc; overflow-wrap: anywhere; }
+.room-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-top: 12px; padding: 9px 11px; border: 1px solid #c8d2b6; border-radius: 6px; background: #edf2df; }
+.room-actions p { margin: 0; }
+.room-actions strong,#online-hud-code { letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.room-actions [data-online-status] { margin-inline-start: 5px; color: #355c43; font-weight: 700; }
+.room-actions button { min-height: 40px; padding: 6px 12px; }
+@media (max-width: 650px) {
+  .online-forms { grid-template-columns: minmax(0,1fr); }
+  .room-actions button { min-height: 44px; }
+}
 .loading-mark { height: 4px; margin-bottom: 16px; background: linear-gradient(90deg,transparent,#5a9364,transparent) 0 0 / 40% 100% no-repeat,#d3dec8; animation: loading 1.2s ease-in-out infinite alternate; }
 @keyframes loading { to { background-position: 100% 0; } }
 #hud { z-index: 2; pointer-events: none; color: #fffbed; }
 #hud button,#hud a { pointer-events: auto; }
 .play-top { position: absolute; inset: max(14px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) auto max(18px,env(safe-area-inset-left)); display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
-#mode-tag,.top-actions button,#guide,#fallback,.belt #equipped,#debug,#save-status,#notice {
+#mode-tag,.top-actions button,#online-hud,#guide,#fallback,.belt #equipped,#debug,#save-status,#notice {
   color: #fff8ea; background: #142f2ae6; border: 1px solid #f0e7c84d; border-radius: 5px;
   box-shadow: 0 2px 6px #12362726;
 }
 #mode-tag { min-width: 0; max-width: 48vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 10px; font-size: .81rem; font-weight: 700; }
+#online-hud { position: absolute; top: calc(max(7px,env(safe-area-inset-top)) + 49px); left: max(18px,env(safe-area-inset-left)); display: flex; gap: 6px; padding: 5px 9px; max-width: calc(100% - 36px); font-size: .83rem; line-height: 1.4; }
+#online-hud-status { color: #ffe1a3; white-space: nowrap; }
+#game[data-online] #guide,#game[data-online] #debug,#game[data-online] #guide[hidden] ~ .trail { top: calc(max(7px,env(safe-area-inset-top)) + 86px); }
+@media (max-width: 650px) {
+  #online-hud { left: max(7px,env(safe-area-inset-left)); }
+}
+@media (pointer: coarse) and (min-width: 651px) {
+  #online-hud { top: calc(max(14px,env(safe-area-inset-top)) + 49px); }
+  #game[data-online] #guide,#game[data-online] #debug,#game[data-online] #guide[hidden] ~ .trail { top: calc(max(14px,env(safe-area-inset-top)) + 86px); }
+}
 .top-actions { display: flex; flex: 0 0 auto; gap: 5px; }
 .top-actions button { font-size: .78rem; min-height: 32px; padding: 5px 8px; white-space: nowrap; touch-action: manipulation; }
 .top-actions #view-mode { min-inline-size: 10.6em; border-color: #e5c4789c; }

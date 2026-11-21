@@ -3,6 +3,7 @@ import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBen
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean }
+export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting' }
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
 export interface RecipeView { id:string; name:string; ingredients:string; outputs:string; craftable:number; itemId:number; reason:string; equipment:string }
 export interface InventoryView { items:ItemView[]; bar:(ItemView|null)[]; recipes:RecipeView[]; selected:number; mode:Mode; benchUses?:number; chest?:Stack[]; palette?:ItemView[] }
@@ -98,6 +99,8 @@ export class GameUI {
   private holding=false
   private worldName=''
   private kidsView=false
+  private room:OnlineStatus|null=null
+  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:''}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -118,7 +121,7 @@ export class GameUI {
     this.stopMining()
     window.clearTimeout(this.guideTimer)
     const onWorld = ['pause','ready','inventory','diagnostics'].includes(name) || (['settings','help'].includes(name) && !$('game').classList.contains('home'))
-    if(['title','create','worlds','error'].includes(name))$('game').classList.add('home')
+    if(['title','create','worlds','online','error'].includes(name))$('game').classList.add('home')
     else if(onWorld)$('game').classList.remove('home')
     this.screen=name
     $('game').dataset.screen=name
@@ -154,6 +157,24 @@ export class GameUI {
   private submit(event:SubmitEvent) {
     event.preventDefault()
     const form=event.target as HTMLFormElement
+    if(form.id==='online-create-form'||form.id==='online-join-form'){
+      const data=new FormData(form)
+      const nickname=String(data.get('nickname')??'').trim()
+      this.onlineDraft.nickname=nickname
+      if(!nickname){this.toast('プレイヤー名を入力してください。');form.querySelector('input')?.focus();return}
+      if(form.id==='online-create-form'){
+        const name=String(data.get('name')??'').trim()
+        const seed=String(data.get('seed')??'').trim()
+        Object.assign(this.onlineDraft,{name,seed})
+        if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
+        this.send('online-create',{name,seed,nickname})
+      }else{
+        const code=String(data.get('code')??'').trim().toUpperCase()
+        this.onlineDraft.code=code
+        this.send('online-join',{code,nickname})
+      }
+      return
+    }
     if(form.id!=='world-form')return
     const data=new FormData(form), name=String(data.get('name')??'').trim()
     if(!name){this.toast('ワールド名を入力してください。');form.querySelector('input')?.focus();return}
@@ -183,10 +204,12 @@ export class GameUI {
   setWorld(name:string){this.worldName=name}
   title(hasWorlds:boolean) {
     this.worldName=''
+    this.onlineSession(null)
     const link='<a class="portal" href="'+escapeText(this.portal)+'"><span aria-hidden="true">‹</span> TK777 ARCADE</a>'
     this.show('title', '<div class="title-stage">'+link+'<div class="title-main"><h1 aria-label="ウェブクラフト777"><span>ウェブクラフト</span><strong>777</strong></h1>'+
       '<div class="start-actions">'+button('goto-create','<span>新しく始める</span><b aria-hidden="true">＋</b>','primary')+
-      button('goto-worlds','<span>つづきから</span><b aria-hidden="true">›</b>')+'</div>'+
+      button('goto-worlds','<span>つづきから</span><b aria-hidden="true">›</b>')+
+      button('online-menu','<span>マルチプレイ</span><small>最大6人</small>')+'</div>'+
       '<div class="title-sub">'+button('goto-settings','設定')+button('goto-help','操作説明')+'</div></div></div>')
     this.panel.querySelector('[data-action="goto-worlds"]')?.setAttribute('title',hasWorlds?'保存したワールドを開く':'ワールド一覧とバックアップの読み込み')
   }
@@ -196,6 +219,37 @@ export class GameUI {
       '<fieldset><legend>ゲームモード</legend><div class="modes"><label><input type="radio" name="mode" value="explore" checked><span><b>探索</b><small>木や石を集め、道具と建材を作る。</small></span></label>'+
       '<label><input type="radio" name="mode" value="creative"><span><b>クリエイティブ</b><small>素材は無制限。空を飛んで建築する。</small></span></label></div></fieldset>'+
       '<button type="submit" class="primary full">ワールドを作成</button></form>')
+  }
+  onlineMenu(code='',error='') {
+    if(code)this.onlineDraft.code=code.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)
+    const draft=this.onlineDraft
+    const nickname='<label class="entry">プレイヤー名<input name="nickname" value="'+escapeText(draft.nickname)+'" placeholder="ワールド内に表示される名前" maxlength="24" required autocomplete="nickname"></label>'
+    const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
+      '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
+      '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
+      '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
+      '<button type="submit" class="primary full">ルームを作成</button></form>'
+    const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
+      '<h2 id="online-join-label">ルームに参加する</h2>'+nickname+
+      '<label class="entry">ルームコード<input id="online-code" name="code" value="'+escapeText(draft.code)+'" placeholder="8文字の英数字" minlength="8" maxlength="8" pattern="[A-Za-z0-9]{8}" title="8文字の英数字" required autocapitalize="characters" autocorrect="off" autocomplete="off" spellcheck="false"></label>'+
+      '<button type="submit" class="full">ルームに参加</button></form>'
+    this.show('online',sectionHead('マルチプレイ')+
+      '<p class="online-description">最大6人で同じワールドを建築できます。建材を自由に使えるクリエイティブです。</p>'+
+      (error?'<p class="online-error" role="alert">'+escapeText(error)+'</p>':'')+
+      '<div class="online-forms">'+(code?join+create:create+join)+'</div>',true)
+  }
+  onlineSession(status:OnlineStatus|null) {
+    this.room=status
+    const hud=$('online-hud')
+    const label=status?(status.state==='connecting'?'接続中':status.state==='reconnecting'?'再接続中':status.count+' / 6人'):''
+    hud.hidden=!status
+    $('game').toggleAttribute('data-online',!!status)
+    const code=$('online-hud-code')
+    if(code.textContent!==(status?.code??''))code.textContent=status?.code??''
+    const connection=$('online-hud-status')
+    if(connection.textContent!==label)connection.textContent=label
+    const paused=this.panel.querySelector('[data-online-status]')
+    if(paused&&paused.textContent!==label)paused.textContent=label
   }
   worlds(list:UIWorld[]) {
     const rows=list.map(w=>{
@@ -221,14 +275,19 @@ export class GameUI {
     this.show('error',sectionHead('ゲームを開始できません')+'<p class="error-message">'+escapeText(message)+'</p>'+button('title','タイトルへ戻る','primary'))
   }
   pause(ready=false,drag=false,message='') {
+    const online=this.room
     this.show(ready?'ready':'pause','<h1>'+(ready?'ワールドの準備ができました':'一時停止')+'</h1>'+
       (message?'<p class="input-message" role="status">'+escapeText(message)+'</p>':'')+
+      (online?'<div class="room-actions"><p>ルーム <strong>'+escapeText(online.code)+'</strong> <span data-online-status role="status"></span></p>'+
+        button('online-copy','招待リンクをコピー')+'</div>':'')+
       '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
       '<p class="control-mode">'+(drag?'ドラッグ操作で見回します。':'マウスを固定して見回します。')+'</p>'+
       (drag?button('resume-lock','視点を固定してプレイ'):button('resume-drag','ドラッグ操作でプレイ'))+
       '<button type="button" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false"></button>'+
-      (ready?'':button('save','手動保存')+button('export','ファイルへ書き出す')+button('goto-settings','設定')+button('goto-help','操作説明')+button('diagnostics','入力の診断・復旧'))+button('title','タイトルへ戻る')+'</div>')
+      (ready?'':(online?'':button('save','手動保存')+button('export','ファイルへ書き出す'))+button('goto-settings','設定')+button('goto-help','操作説明')+button('diagnostics','入力の診断・復旧'))+
+      (online?button('online-leave','退出してタイトルへ','danger'):button('title','タイトルへ戻る'))+'</div>')
     this.showViewMode(this.kidsView)
+    if(online)this.onlineSession(online)
   }
   diagnostics(summary:string,report:string){
     this.show('diagnostics',sectionHead('入力の診断・復旧')+

@@ -7,6 +7,7 @@ import {InteractionView,type Presentation} from "./interaction-view";
 import {eyeHeight,type Hit,type Player} from "./physics";
 import {firstPerson,KidsCamera} from "./kids-camera";
 import {KidsAvatar} from "./kids-avatar";
+import {OnlineActors} from "./online-actors";
 
 interface Position {x:number;y:number;z:number}
 interface CameraPose extends Position {yaw:number;pitch:number}
@@ -19,6 +20,7 @@ const fragments=[0,0x83ac52,0xa87c54,0x929d92,0xdfbf89,0x96784e,0x639c52,0xc7975
 
 export class SceneView {
   readonly scene=new T.Scene();
+  readonly actors=new OnlineActors(this.scene);
   readonly camera=new T.PerspectiveCamera(67,1,.06,320);
   readonly stats={draws:0,chunks:0,geometries:0,textures:0,fps:0,queued:0,triangles:0,chunkMs:0,rebuilt:0};
   private readonly gl:T.WebGLRenderer;
@@ -223,6 +225,7 @@ export class SceneView {
     const thirdPerson=kids ? this.kidsCamera.update(this.camera,this.world,kids.player,kids.hit,dt) : false;
     if(!kids)firstPerson(this.camera,p);
     this.sky.update(day,this.camera,this.t);
+    this.actors.animate(dt,.52+.48*this.sky.day.value);
     this.actionTime=Math.max(0,this.actionTime-dt);
     if(thirdPerson&&kids){
       if(!this.avatar){this.avatar=new KidsAvatar();this.scene.add(this.avatar.group);}
@@ -254,6 +257,7 @@ export class SceneView {
   }
   dispose(){
     this.unsubscribe();
+    this.actors.dispose();
     this.avatar?.dispose();
     for(const parts of this.batches.values())this.removeMeshes(parts);
     this.batches.clear();this.dirty.clear();this.wanted.clear();this.pending.length=0;

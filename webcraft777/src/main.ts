@@ -1,4 +1,4 @@
-import { World, emptyFixtures, type Axis } from './world'
+import { World, emptyFixtures, isSolid, voxelIndex, type Axis } from './world'
 import { createJourney, currentGoal, homeBearing, bearing, placedDecor, recipeCrafted, visitCave } from './expedition'
 import { presets } from './preferences'
 import { SceneView } from './renderer'
@@ -8,6 +8,7 @@ import { Soundscape } from './audio'
 import { craft, createBag, assignHotbar, activeStack, miningSeconds, ITEMS, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode } from './inventory'
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
+import { OnlineClient, type OnlineState, type RoomConnection, type RoomFrame, type RoomSync } from './online-client'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
 const hud = document.querySelector<HTMLElement>('#hud')!
@@ -22,8 +23,13 @@ canvas.tabIndex = -1
 const saves = new SaveStore()
 const audio = new Soundscape()
 const ui = new GameUI((action,value)=>{ void handle(action,value).catch(err=>ui.toast(reason(err))) })
+const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
+const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
+const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
+type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
+  ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>}
 type Session = { data: ActiveSave; world: World; player: Player; view: SceneView;
-  kids: boolean; originalPitch: number; kidsPitch: number }
+  kids: boolean; originalPitch: number; kidsPitch: number; online?:SharedRoom }
 let station:Hit|null=null, logAxis:Axis='y', progress=0, guideDue=0, tapSound=0
 let currentSite=''
 const tuneAudio=()=>audio.configure(settings.volume,settings.muted,settings.effectsVolume,settings.ambientVolume)
@@ -61,8 +67,10 @@ function reason(err:unknown) {
   return err instanceof Error && /[ぁ-龯]/u.test(err.message) ? err.message : '処理を完了できませんでした。ページを開き直してお試しください。'
 }
 function context(s:Session){return {generator:s.world.generator,bench:station?.id===21}}
+function sharedMaterial(id:number){return !!ITEMS[id]?.block&&id!==21&&id!==22}
 function viewInventory() {
   const s=session!, v=inventoryView(s.data.bag,s.data.mode,s.data.selected,context(s))
+  if(s.online)v.items=v.items.filter(item=>sharedMaterial(item.id))
   if(station?.id===21)v.benchUses=s.world.benchUses(station.x,station.y,station.z)
   if(station?.id===22){
     v.chest=s.world.chestAt(station.x,station.y,station.z)
@@ -81,6 +89,10 @@ function guide(){
 }
 function interact(hit: Hit|null, explicit=false){
   if(!session||!input.active)return false
+  if(session.online){
+    if(explicit)ui.toast('共同建築ルームでは、建材を自由に選んで建築できます。')
+    return false
+  }
   if(!hit||![21,22].includes(hit.id)){if(explicit)ui.toast('作業台かチェストに照準を合わせてください。');return false}
   station=hit;stopInput();ui.inventory(viewInventory());return true
 }
@@ -88,6 +100,7 @@ function pick(){
   if(!session)return
   const {world,player,data}=session,hit=raycast(world,player)
   if(!hit){ui.toast('選びたい建材に照準を合わせてください。');return}
+  if(session.online&&!sharedMaterial(hit.id)){ui.toast('このブロックは共同建築で使えません。');return}
   const slot=data.bag.hotbar.indexOf(hit.id)
   if(data.mode==='explore'&&!activeStack(data.bag,hit.id)){ui.toast('この建材は所持品にありません。');return}
   if(slot>=0){select(slot);return}
@@ -96,6 +109,7 @@ function pick(){
 }
 function undo(){
   if(!session)return
+  if(session.online){ui.toast('共同建築では、置いたブロックを採掘して取り除けます。');return}
   if(session.data.mode!=='creative'){ui.toast('元に戻す操作はクリエイティブで使えます。');return}
   const s=session,r=s.world.undo((x,y,z)=>overlapsPlayer(s.player,x,y,z));resetMining();ui.toast(r.message)
 }
@@ -155,6 +169,9 @@ function showPlay(fallback:boolean){
 function resume(drag:boolean) {
   if(!session || !['ready','pause','inventory'].includes(ui.screen))return
   if(!graphicsOK){ui.pause(false,fallbackPreferred,'描画の復旧を待っています。ワールドを書き出すこともできます。');return}
+  if(session.online&&(!session.online.ready||session.online.ended)){
+    ui.toast(session.online.ended?'退出してルームに参加し直してください。':'共有ワールドの読み込みが完了するまでお待ちください。');return
+  }
   station=null
   firstGuide=!session.data.guideSeen
   fallbackPreferred=drag
@@ -166,12 +183,42 @@ function resume(drag:boolean) {
 function aim(dx:number,dy:number){
   if(session)input.applyLook(session.player,dx,dy,settings.sensitivity,settings.invertY)
 }
+const editMessages:Record<string,string>={
+  conflict:'ほかの人が先にこの場所を変更しました。照準を合わせ直してください。',
+  range:'ブロックにもう少し近づいてください。',
+  blocked:'ここは設置・採掘できません。建材や人が重なっていない場所を選んでください。',
+  limit:'このルームで共有できるブロック変更数に達しました。',
+  uncertain:'通信を確認しています。建築の結果が画面に反映されるまでお待ちください。',
+  offline:'接続が戻ると建築できます。',
+}
+function changeSharedBlock(s:Session,x:number,y:number,z:number,block:number,axis:Axis='y'){
+  const room=s.online
+  if(!room?.ready||room.ended||room.state!=='connected'||!room.sync){ui.toast(editMessages.offline);return}
+  if(room.editing)return
+  const before=s.world.get(x,y,z),key=voxelIndex(x,y,z)
+  room.editing=true
+  void room.sync.edit({key,before,fromRevision:room.versions.get(key)??0,block,axis}).then(result=>{
+    if(session!==s)return
+    if(!result.ok){ui.toast(editMessages[result.reason??'']??'共同建築の変更を確認できませんでした。');return}
+    const mining=block===0,id=mining?before:block
+    s.view.effect(x,y,z,id,mining?'mine':'place');audio.sound(mining?'mine':'place',id)
+    ui.toast(ITEMS[id].name+(mining?'を取り除きました。':'を置きました。'))
+  }).catch(error=>{if(session===s)ui.toast(reason(error))})
+    .finally(()=>{room.editing=false})
+}
 function place() {
   if(!session||!input.active)return
   const {world,player,data,view}=session,hit=raycast(world,player)
   if(!player.crouched&&interact(hit))return
   const before=hit&&data.mode==='creative'?world.capture(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz):null
   const id=data.bag.hotbar[data.selected]
+  if(session.online){
+    const issue=placementIssue(world,player,data.bag,data.mode,data.selected,hit)
+    if(issue||!hit){ui.toast(issue??'設置したい面に照準を合わせてください。');return}
+    if(!sharedMaterial(id)){ui.toast('共同建築用の建材を選んでください。');return}
+    changeSharedBlock(session,hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz,id,id===5?logAxis:'y')
+    resetMining();return
+  }
   const result=placeAt(world,player,data.bag,data.mode,data.selected,hit)
   if(result.ok&&hit){
     const x=hit.x+hit.nx,y=hit.y+hit.ny,z=hit.z+hit.nz
@@ -188,7 +235,7 @@ function advanceMine(dt:number) {
   const {world,player,data,view}=session
   const hit=raycast(world,player)
   if(!input.mining || !hit) { if(aimKey)resetMining(); return }
-  if(cooldown>0)return
+  if(cooldown>0||session.online?.editing)return
   const key=[hit.x,hit.y,hit.z,hit.id,data.selected].join('/')
   if(key!==aimKey){resetMining();aimKey=key}
   if(hit.id===14){ui.toast('岩盤は掘れません。');input.mining=false;resetMining();return}
@@ -200,6 +247,11 @@ function advanceMine(dt:number) {
   progress=Math.min(1,mining/duration);ui.mining(progress)
   tapSound-=dt;if(tapSound<=0&&dt>0&&progress<.96){audio.sound('tap',hit.id);tapSound=.32}
   if(mining<duration && !(data.mode==='creative' && dt===0)) return
+  if(session.online){
+    if(!sharedMaterial(hit.id)){ui.toast('このブロックは共同建築で取り除けません。');input.mining=false;resetMining();return}
+    if(session.online.state!=='connected')input.mining=false
+    changeSharedBlock(session,hit.x,hit.y,hit.z,0);resetMining();cooldown=.15;return
+  }
   const before=data.mode==='creative'?world.capture(hit.x,hit.y,hit.z):null
   const result=mineAt(world,player,data.bag,data.mode,data.selected,hit)
   if(result.ok){
@@ -238,6 +290,7 @@ function snapshot(s:Session): WorldSave {
     fixtures:s.world.exportFixtures(),journey:structuredClone(s.data.journey),settings:{...settings},bag:structuredClone(s.data.bag)}
 }
 function persist(s:Session) {
+  if(s.online)return Promise.resolve(true)
   saveQueue=saveQueue.then(async()=>{
     if(s!==session)return true
     ui.status('保存中…')
@@ -253,32 +306,86 @@ async function title() {
   if(session) {
     const s=session
     stopInput()
+    s.online?.sync?.close()
     if(!await persist(s) && !window.confirm('保存できませんでした。キャンセルすると今の状態をファイルへ書き出せます。保存せずにタイトルへ戻りますか？')) {ui.pause(false,fallbackPreferred);return}
     s.view.dispose();session=null
   }
+  ui.onlineSession(null)
   ui.title(false)
   try {const entries=await saves.list();if(ui.screen==='title') ui.title(!!entries.length)}
   catch(e){if(ui.screen==='title')ui.status('保存領域：'+reason(e))}
 }
-async function openWorld(id:string|null, args?:{name:string;seed:string;mode:Mode}) {
+function showRoom(room:SharedRoom) {
+  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state})
+}
+function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
+  const {player,world}=s
+  let collision=false
+  for(const change of frame.cells){
+    const {key,block,axis,revision}=change
+    if((room.versions.get(key)??0)>=revision)continue
+    const x=key&255,y=key>>>16,z=(key>>>8)&255
+    if(world.get(x,y,z)!==block&&world.set(x,y,z,block)&&isSolid(block)&&overlapsPlayer(player,x,y,z))collision=true
+    if(block===5)world.setAxis(x,y,z,axis)
+    room.versions.set(key,revision)
+  }
+  if(collision){
+    const {x,y,z}=safeSpawn(world,player,true)
+    Object.assign(player,{x,y,z,vy:0});resetPlayerInput(player)
+  }
+  const peers=frame.players.filter(peer=>peer.id!==room.connection.id)
+  if(!room.ready&&peers.length){
+    // Start near the group without spawning directly inside another player.
+    for(const [dx,dz] of [[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2],[2,-2]]){
+      const start=safeSpawn(world,{...player,x:player.x+dx,z:player.z+dz})
+      if(peers.every(({pose})=>Math.hypot(start.x-pose.x,start.z-pose.z)>1.2)){
+        Object.assign(player,{x:start.x,y:start.y,z:start.z});break
+      }
+    }
+  }
+  s.view.actors.setPlayers(peers)
+  if(room.count!==peers.length+1){room.count=peers.length+1;showRoom(room)}
+  room.ready=true;stillFrame=''
+}
+function connectRoom(s:Session,room:SharedRoom) {
+  showRoom(room)
+  room.sync=onlineClient.start(room.connection,{
+    pose:()=>{
+      if(session!==s)return null
+      const {x,y,z,yaw,crouched,flying,vx,vz}=s.player
+      return {x,y,z,yaw,crouched,flying,moving:Math.hypot(vx,vz)>.18}
+    },
+    onFrame:frame=>{if(session===s)applyRoomFrame(s,room,frame)},
+    onState:state=>{if(session===s){room.state=state;showRoom(room)}},
+    onEnd:error=>{
+      if(session!==s)return
+      room.ended=true;room.state='reconnecting';showRoom(room)
+      stopInput();ui.pause(false,fallbackPreferred,reason(error))
+    },
+  })
+}
+async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode},connect?:()=>Promise<RoomConnection>,retryCode='') {
   if(session || busy)return
   if(!graphicsOK){ui.error(gpuMessage);return}
   busy=true
+  let connection:RoomConnection|undefined
   try {
+    if(connect){ui.loading('ルームに接続中…');connection=await connect()}
     ui.loading('森と湖を準備しています…')
     const loaded=id?await saves.get(id):undefined
     if(id&&!loaded)throw new Error('ワールドが見つかりません。一覧を開き直してください。')
-    const seed=loaded?.seed||args?.seed?.trim().slice(0,128)||crypto.randomUUID().slice(0,8)
+    const seed=connection?.room.seed||loaded?.seed||args?.seed?.trim().slice(0,128)||crypto.randomUUID().slice(0,8)
     let step=-1
     const world=await World.generate(seed,(fraction:number)=>{
       const n=Math.min(10,Math.floor(fraction*10));if(step!==n){ui.loading('地形を生成中　'+n*10+'%');step=n}
-    },loaded?.generator??2)
+    },connection?.room.generator??loaded?.generator??2)
     if(loaded){world.loadEdits(loaded.edits);world.loadFixtures(loaded.fixtures)}
     const start=world.spawn()
+    const mode=connection?'creative':args?.mode??loaded?.mode??'creative'
     const data:ActiveSave=loaded??{format:'webcraft777',version:2,generator:2,id:crypto.randomUUID(),
       fixtures:emptyFixtures(),journey:createJourney(),
-      revision:0,updatedAt:Date.now(),name:args!.name.trim().slice(0,64)||'新しいワールド',seed,mode:args!.mode,
-      pose:start,flying:false,bag:createBag(args!.mode),selected:0,edits:[],day:.39,settings:{...settings},guideSeen:false}
+      revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,
+      pose:start,flying:false,bag:createBag(mode),selected:0,edits:[],day:.39,settings:{...settings},guideSeen:false}
     if(!data.journey.home){const {x,y,z}=start;data.journey.home={x,y,z}}
     station=null;logAxis='y';currentSite=''
     settings={...data.settings};tuneAudio()
@@ -288,13 +395,31 @@ async function openWorld(id:string|null, args?:{name:string;seed:string;mode:Mod
     if(session.kids)player.pitch=session.kidsPitch
     view.configure(settings);stillFrame='';moveReticle(50)
     input.rememberView(player);frameHalted=false;fallbackPreferred=preferDrag()
+    if(connection){
+      const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map()}
+      session.online=room;connectRoom(session,room)
+    }
     ui.setWorld(data.name);ui.showViewMode(session.kids);ui.pause(true,fallbackPreferred)
-    if(!loaded) await persist(session)
+    if(!loaded&&!connection)await persist(session)
     debugging=false
   } catch(e){
+    if(session?.online?.sync)session.online.sync.close()
+    else if(connection)void onlineClient.leave(connection)
     session?.view.dispose();session=null
-    console.error(e);ui.error(reason(e))
+    ui.onlineSession(null)
+    if(connect)ui.onlineMenu(retryCode,reason(e))
+    else{console.error(e);ui.error(reason(e))}
   } finally {busy=false}
+}
+async function copyInvitation(){
+  const code=session?.online?.connection.room.code
+  if(!code)return
+  const invite=new URL(location.href)
+  invite.searchParams.set('room',code)
+  try{
+    await navigator.clipboard.writeText(invite.href)
+    ui.toast('招待リンクをコピーしました。')
+  }catch{window.prompt('招待リンクをコピーしてください。',invite.href)}
 }
 async function worldList() {
   try { const list=await saves.list();ui.worlds(list) }
@@ -330,6 +455,11 @@ async function handle(action:string,value?:any) {
   if(busy && !['resume','resume-drag','resume-lock','dismiss-guide'].includes(action))return
   switch(action){
     case 'goto-create': ui.create();break
+    case 'online-menu':ui.onlineMenu(inviteCode);break
+    case 'online-create':audio.unlock();await openWorld(null,undefined,()=>onlineClient.create(value));break
+    case 'online-join':audio.unlock();await openWorld(null,undefined,()=>onlineClient.join(value),value.code);break
+    case 'online-copy':await copyInvitation();break
+    case 'online-leave':if(session?.online){busy=true;try{await title()}finally{busy=false}}break
     case 'goto-worlds': await worldList();break
     case 'goto-help': ui.help();break
     case 'goto-settings': ui.settings(settings);break
@@ -358,7 +488,7 @@ async function handle(action:string,value?:any) {
     case 'touch-fly':if(!touchControls.hidden)toggleFly();break
     case 'inventory':inventory();break
     case 'select':select(value);break
-    case 'assign':if(session&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();ui.toast('ホットバーに登録しました。')}break
+    case 'assign':if(session&&(!session.online||sharedMaterial(value.id))&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();ui.toast('ホットバーに登録しました。')}break
     case 'craft':if(session&&session.data.mode==='explore'&&ui.screen==='inventory'){
       const count=value.count??1, recipe=value.id??value
       const result=craft(session.data.bag,recipe,count,context(session))
@@ -398,7 +528,7 @@ document.addEventListener('keydown',e=>{
   if(ui.screen==='inventory'&&slot){e.preventDefault();select(Number(slot[1])-1);return}
   if(ui.screen==='inventory'&&(e.code==='KeyE'||e.code==='Escape')){
     e.preventDefault();if(e.code==='Escape')ui.pause(false,fallbackPreferred);else resume(fallbackPreferred)
-  }else if(e.code==='Escape'&&['settings','help','create','worlds','diagnostics'].includes(ui.screen)){
+  }else if(e.code==='Escape'&&['settings','help','create','worlds','diagnostics','online'].includes(ui.screen)){
     e.preventDefault();void handle('back')
   }
 })
@@ -416,7 +546,11 @@ canvas.addEventListener('webglcontextrestored',()=>{
   if(session){session.view.configure(settings);ui.pause(false,fallbackPreferred,'3D描画が復旧しました。操作を再開できます。')}
   else void title()
 })
-window.addEventListener('pagehide',()=>{if(session){if(input.active)pause();void persist(session)}})
+window.addEventListener('pagehide',event=>{if(session){
+  if(input.active)pause()
+  if(session.online){if(!event.persisted)session.online.sync?.close()}
+  else void persist(session)
+}})
 window.setInterval(()=>{if(session && !document.hidden)void persist(session)},25000)
 function frame(now:number){
   requestAnimationFrame(frame)
@@ -438,7 +572,7 @@ function tick(now:number){
     if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}
     stepDistance+=Math.hypot(ox-p.x,oz-p.z)
     if(stepDistance>1.8){stepDistance=0;if(p.grounded&&!p.flying)audio.sound('step',s.world.get(Math.floor(p.x),Math.floor(p.y-.05),Math.floor(p.z)))}
-    s.data.day=(s.data.day+dt/600)%1
+    s.data.day=s.online ? (.39+Math.max(0,Date.now()-s.online.connection.room.createdAt)/600_000)%1 : (s.data.day+dt/600)%1
     cooldown=Math.max(0,cooldown-dt);advanceMine(dt)
   }
   const target=input.active?raycast(s.world,s.player):null
@@ -447,7 +581,7 @@ function tick(now:number){
     if(stillFrame===key && !s.view.stats.queued)return
     stillFrame=key
   } else stillFrame=''
-  const held=s.data.bag.hotbar[s.data.selected],use=target&&[21,22].includes(target.id)&&!s.player.crouched
+  const held=s.data.bag.hotbar[s.data.selected],use=!s.online&&target&&[21,22].includes(target.id)&&!s.player.crouched
   const preview=target&&!use&&ITEMS[held]?.block&&!input.mining?{x:target.x+target.nx,y:target.y+target.ny,z:target.z+target.nz,
     id:held,axis:logAxis,valid:!placementIssue(s.world,s.player,s.data.bag,s.data.mode,s.data.selected,target)}:null
   const useAction=touchControls.hidden?'右クリック':'タップ'
@@ -469,5 +603,8 @@ function tick(now:number){
   }
 }
 tuneAudio()
-void title().then(()=>{if(!graphicsOK)ui.error(gpuMessage)})
+void title().then(()=>{
+  if(!graphicsOK)ui.error(gpuMessage)
+  else if(/^[A-HJ-NP-Z2-9]{8}$/.test(inviteCode)&&ui.screen==='title')ui.onlineMenu(inviteCode)
+})
 requestAnimationFrame(frame)
