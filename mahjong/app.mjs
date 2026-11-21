@@ -210,7 +210,6 @@ function render(){
  $('playerPoints').textContent=fmt(round?.points?.[0]??25000)+' 点';$('cpuPoints').textContent=fmt(round?.points?.[1]??25000);
  $('discardButton').disabled=!live||!legal.includes(selected)||(riichiPicking&&!riichiLegal.includes(selected));
  $('riichiButton').disabled=!live||!riichiLegal.length;$('riichiButton').classList.toggle('is-armed',riichiPicking);$('riichiButton').textContent=riichiPicking?'リーチを取り消す':'リーチ';
- $('kanButton').hidden=!live||!kanLegal.length;
  $('kanButton').disabled=!live||!kanLegal.length||riichiPicking;
  $('tsumoButton').disabled=!live||!a.canTsumo;$('ronButton').disabled=!live||!a.canRon;$('passButton').disabled=!live||!a.canPass;
  const message=!started?'ゲーム開始を待っています':encounter?'対戦相手と会話中です。会話が終わると対局が始まります。':ended?'今回の挑戦は終了しました':!live?'対局が終了しました':round.phase==='cpu'?'対戦相手の思考中…':a.canRon?'ロンできます。和了するか見送りを選択。':a.canTsumo?'ツモ和了できます。':kanLegal.length?'暗槓できます。カンするか、打牌する牌を選んでください。':'あなたの手番。打牌する牌を選んでください。';

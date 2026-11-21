@@ -210,10 +210,13 @@ test('3Dで牌を選び直して打牌ボタンを押すと、最後に選択し
 
 test('暗槓を宣言すると3D卓の手牌とドラが更新され、嶺上牌を打てる', async () => {
   const game = await harness({ withTable: true });
+  game.hooks.setupRound(engine.createRound({ seed: 1, dealer: 0 }));
+  const button = game.node('kanButton');
+  assert.equal(button.hidden, false);
+  assert.equal(button.disabled, true);
   const initial = engine.createRound({ seed: 276, dealer: 0 });
   game.hooks.setupRound(initial);
   await game.table.ready;
-  const button = game.node('kanButton');
   assert.equal(button.hidden, false);
   assert.equal(button.disabled, false);
   button.click();
@@ -227,7 +230,8 @@ test('暗槓を宣言すると3D卓の手牌とドラが更新され、嶺上牌
   assert.equal(table.drawnIndex, 10);
   assert.equal(table.hand[table.drawnIndex], initial.deadWall[0]);
   assert.equal(game.node('handTargets').children.length, 11);
-  assert.equal(button.hidden, true);
+  assert.equal(button.hidden, false);
+  assert.equal(button.disabled, true);
 
   game.table.press(table.drawnIndex);
   game.node('discardButton').click();
