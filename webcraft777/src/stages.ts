@@ -27,6 +27,6 @@ export function soloExploration(stage:unknown):boolean {
   return stage==='classic'||stage==='frontier'
 }
 
-export function stageSupportsTagBots(stage:unknown):boolean {
-  return stage==='flat'||stage==='school'
+export function stageSupportsBots(mode:unknown,stage:unknown):boolean {
+  return mode==='cops'?copsStage(stage):mode==='tag'&&(stage==='flat'||stage==='school')
 }

@@ -1,5 +1,7 @@
 export const copsStages = new Set(['park', 'crossing'])
 export const jailSpawn = {x:128.5, y:33, z:184.5}
+export const policeSpawn = {x:128.5, y:33, z:169.5}
+export const rescueExit = {x:128.5, y:33, z:171.5}
 const rescuePad = {x:128.5, y:33, z:177.5}
 const rescueReach = 2.3
 const hideTime = 20_000
@@ -28,15 +30,31 @@ export function publicCops(state, serverNow) {
   }
 }
 
+function startingPolice(room, players, members) {
+  const captain = players.find(player=>player.id===room.creator) ?? players[0]
+  if (room.cops_bots>0) {
+    const humans = players.filter(player=>!player.cpu)
+    const bots = players.filter(player=>player.cpu)
+    if (bots.length>=2) {
+      const secondOfficer = members.length>=4 && humans[0]
+      return secondOfficer ? [bots[0].id,secondOfficer.id] : [bots[0].id]
+    }
+    if (bots.length===1&&humans.length===1) {
+      const seedParity = [...room.seed].reduce((parity,char)=>parity^(char.codePointAt(0)&1),0)
+      return [seedParity===0?bots[0].id:humans[0].id]
+    }
+  }
+  const firstRunner = players.find(player=>player.id!==captain.id)
+  const secondOfficer = members.length>=4 && members.find(player=>player.id!==captain.id&&player.id!==firstRunner.id)
+  return secondOfficer?[captain.id,secondOfficer.id]:[captain.id]
+}
+
 export function advanceCopsState(state, room, players, members, now, touches) {
   if (state.phase==='finished') return null
 
   if (state.phase==='waiting') {
-    if (players.length<2) return null
-    const captain = players.find(player=>player.id===room.creator) ?? players[0]
-    const firstRunner = players.find(player=>player.id!==captain.id)
-    const secondOfficer = members.length>=4 && members.find(player=>player.id!==captain.id&&player.id!==firstRunner.id)
-    const policeIds = secondOfficer?[captain.id,secondOfficer.id]:[captain.id]
+    if (players.length<2||!players.some(player=>!player.cpu)) return null
+    const policeIds = startingPolice(room,players,members)
     const hideUntil = now+hideTime
     return {...state,phase:'hiding',hideUntil,endsAt:hideUntil+room.cops_minutes*60_000,
       roster:players.map(identity),policeIds}
@@ -61,9 +79,9 @@ export function advanceCopsState(state, room, players, members, now, touches) {
   const robbers = stillHere.filter(player=>!police.has(player.id))
   const jailed = new Set(state.jailedIds)
   if (robbers.every(player=>jailed.has(player.id))) return {...state,phase:'finished',winner:'police'}
-  if (now<state.protectedUntil) return null
-
   const enrolled = new Set(stillHere.map(player=>player.id))
+  if (now<state.protectedUntil||(room.cops_bots>0&&!players.some(player=>!player.cpu&&enrolled.has(player.id)))) return null
+
   const officers = players.filter(player=>enrolled.has(player.id)&&police.has(player.id))
   const runners = players.filter(player=>enrolled.has(player.id)&&!police.has(player.id)&&!jailed.has(player.id))
   const rescuer = jailed.size>0 && runners.find(player=>inRescueZone(player.current)&&

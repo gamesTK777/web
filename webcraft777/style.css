@@ -167,8 +167,8 @@ input { accent-color: #2e745b; }
 #park-ride { position:absolute; z-index:2; bottom:calc(max(12px,env(safe-area-inset-bottom)) + 112px); right:max(14px,env(safe-area-inset-right)); min-height:44px; padding:7px 14px; color:#fff4d0; background:#214f4bef; border:1px solid #efdc9e; border-radius:9px; }
 #park-ride[aria-pressed="true"] { background:#73502c; }
 .online-room-modes .modes label { min-height: 44px; padding: 5px 7px; }
-#tag-minutes { width: 100%; min-height: 44px; padding: 6px 10px; font-weight: 650; color: var(--ink); background: #fffdf5; border: 1px solid #a8bba8; border-radius: 5px; }
-#tag-time-help { font-size: .8rem; line-height: 1.4; }
+#tag-minutes,#tag-bots { width: 100%; min-height: 44px; padding: 6px 10px; font-weight: 650; color: var(--ink); background: #fffdf5; border: 1px solid #a8bba8; border-radius: 5px; }
+#tag-time-help,#tag-bot-help { font-size: .8rem; line-height: 1.4; }
 .online-card button { margin-top: 14px; }
 .online-card .entry input,.online-card button { min-height: 44px; }
 .online-card .stage-picker { margin-bottom: 0; }

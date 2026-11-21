@@ -1,5 +1,6 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
+import {readFileSync} from 'node:fs'
 import {handleWebcraft} from './room-service.mjs'
 import {createLocalRoomDb} from './sqlite-d1.mjs'
 import {tagBotPose,tagBotSeats} from './tag-bots.mjs'
@@ -54,6 +55,20 @@ async function copsSession(t,stage='park',count=3) {
   return {...service,body,host,guests,frame}
 }
 
+async function copsCpuSession(t,stage,tagBots=2,seed='b'){
+  const service=env(t)
+  const body={mode:'cops',stage,protocol:9,tagMinutes:1,tagBots,seed,nickname:'ひとりの参加者',name:'CPUドロケイ'}
+  const created=await service.run('rooms',body)
+  assert.equal(created.status,201)
+  const host=await created.json()
+  async function frame(now,at=pose(128.5,33,87.5)){
+    const response=await service.sync(host,{protocol:9,now,at})
+    assert.equal(response.status,200)
+    return response.json()
+  }
+  return {...service,body,host,frame}
+}
+
 test('cops rooms preserve stage, select duration and reject legacy clients and terrain edits',async t=>{
   const {run,host,guests,body,join,frame,sync}=await copsSession(t,'crossing',2)
   assert.equal(host.room.mode,'cops')
@@ -73,6 +88,112 @@ test('cops rooms preserve stage, select duration and reject legacy clients and t
   assert.equal(waiting.rides,undefined)
   assert.equal(waiting.cops.phase,'waiting')
   assert.deepEqual(waiting.cops.policeIds,[])
+})
+
+test('additive cops CPU migration leaves old rooms playable and enforces the new seat count',async t=>{
+  const {sql,host,frame}=await copsSession(t,'park',2)
+  sql.exec('ALTER TABLE webcraft_rooms DROP COLUMN cops_bots')
+  sql.exec(readFileSync(new URL('./cops-bots-migration.sql',import.meta.url),'utf8'))
+  const count=sql.prepare('SELECT cops_bots FROM webcraft_rooms WHERE code=?')
+  assert.equal(count.get(host.room.code).cops_bots,0)
+  assert.equal((await frame(host,epoch)).cops.phase,'waiting')
+  const set=sql.prepare('UPDATE webcraft_rooms SET cops_bots=? WHERE code=?')
+  for(const bad of [-1,1.5,5])assert.throws(()=>set.run(bad,host.room.code),/CHECK constraint failed/)
+})
+
+test('cops CPU count validates, reserves room seats and protects legacy clients',async t=>{
+  const {run,join,sync,frame,host,body,sql}=await copsCpuSession(t,'park',4)
+  for(const tagBots of [-1,1.5,5,'2',null])
+    assert.equal((await run('rooms',{...body,tagBots})).status,400)
+  assert.equal((await run('rooms',{...body,protocol:8})).status,426)
+  assert.equal((await join(host,'以前の画面',epoch,8)).status,426)
+  assert.equal((await sync(host,{protocol:8,now:epoch+1200})).status,426)
+  assert.equal(sql.prepare('SELECT pose FROM webcraft_members WHERE room_code=? AND id=?').get(host.room.code,host.id).pose,null)
+  const guest=await (await join(host,'仲間',epoch,9)).json()
+  assert.equal(guest.room.tagBots,4)
+  assert.equal((await join(host,'定員超過',epoch,9)).status,409)
+  const first=await frame(epoch,null)
+  const later=await frame(epoch+5000,null)
+  assert.equal(first.cops.phase,'waiting')
+  assert.equal(later.cops.phase,'waiting')
+  assert.deepEqual(later.players,first.players)
+  assert.equal(later.players.length,4)
+  assert(later.players.every(p=>p.cpu===true))
+})
+
+for(const stage of ['park','crossing'])test(`solo cops run with CPU officers and robbers in ${stage}`,async t=>{
+  const {host,frame}=await copsCpuSession(t,stage)
+  const start=await frame(epoch+1)
+  assert.equal(host.room.stage,stage)
+  assert.equal(host.room.tagBots,2)
+  assert.equal(start.cops.phase,'hiding')
+  assert.equal(start.cops.hideUntil,epoch+20_001)
+  assert.deepEqual(start.cops.policeIds,['cpu-1'])
+  assert.deepEqual(new Set(start.cops.enrolledIds),new Set([host.id,'cpu-1','cpu-2']))
+  const cpu=({players},id)=>players.find(p=>p.id===id).pose
+  assert.deepEqual([cpu(start,'cpu-1').x,cpu(start,'cpu-1').z],[128.5,169.5])
+  const hide=await frame(epoch+261)
+  assert.deepEqual(cpu(hide,'cpu-1'),cpu(start,'cpu-1'))
+  assert.notDeepEqual(cpu(hide,'cpu-2'),cpu(start,'cpu-2'))
+  assert.deepEqual(Object.keys(cpu(hide,'cpu-2')).sort(),Object.keys(pose()).sort())
+  const playing=await frame(start.cops.hideUntil)
+  assert.equal(playing.cops.phase,'playing')
+  const chase=await frame(start.cops.hideUntil+260)
+  assert.notDeepEqual(cpu(chase,'cpu-1'),cpu(playing,'cpu-1'))
+  assert.deepEqual((await frame(start.cops.hideUntil+5500,null)).players,chase.players)
+  const finished=await frame(start.cops.endsAt)
+  assert.equal(finished.cops.phase,'finished')
+  assert.equal(finished.cops.winner,'robbers')
+  assert.deepEqual(new Set(finished.cops.winnerIds),new Set([host.id,'cpu-2']))
+})
+
+test('one CPU can play either team in a solo match',async t=>{
+  const first=await copsCpuSession(t,'park',1,'b')
+  const second=await copsCpuSession(t,'crossing',1,'a')
+  assert.deepEqual((await first.frame(epoch+1)).cops.policeIds,['cpu-1'])
+  assert.deepEqual((await second.frame(epoch+1)).cops.policeIds,[second.host.id])
+})
+
+for(const stage of ['park','crossing'])test(`a CPU officer arrests and a CPU robber rescues in ${stage}`,async t=>{
+  const {host,frame,sql}=await copsCpuSession(t,stage)
+  const start=await frame(epoch+1)
+  await frame(start.cops.hideUntil)
+  const relocate=sql.prepare(`UPDATE webcraft_members SET pose=?,pose_at=?,previous_pose=NULL,previous_pose_at=0
+    WHERE room_code=? AND id=?`)
+  const contactAt=start.cops.hideUntil+260
+  const arrest=pose(128.5,33,130.5)
+  relocate.run(JSON.stringify(arrest),contactAt-1,host.room.code,'cpu-1')
+  relocate.run(JSON.stringify(pose(128.5,33,174.5)),contactAt-1,host.room.code,'cpu-2')
+  const capture=await frame(contactAt,arrest)
+  assert.deepEqual(capture.cops.event,{kind:'capture',ids:[host.id],by:'cpu-1'})
+  assert.equal(capture.cops.phase,'playing')
+  assert.deepEqual(capture.cops.jailedIds,[host.id])
+  let rescued=capture
+  for(let index=1;index<=12&&rescued.cops.jailedIds.length;index++)
+    rescued=await frame(contactAt+260*index,arrest)
+  assert.deepEqual(rescued.cops.event,{kind:'rescue',ids:[host.id],by:'cpu-2'})
+  assert.deepEqual(rescued.cops.jailedIds,[])
+})
+
+test('CPU prisoner waits in jail and returns through the shared exit on rescue',async t=>{
+  const {host,frame,sql}=await copsCpuSession(t,'park')
+  const start=await frame(epoch+1)
+  await frame(start.cops.hideUntil)
+  const contactAt=start.cops.hideUntil+260
+  const relocate=sql.prepare(`UPDATE webcraft_members SET pose=?,pose_at=?,previous_pose=NULL,previous_pose_at=0
+    WHERE room_code=? AND id=?`)
+  for(const bot of ['cpu-1','cpu-2'])
+    relocate.run(JSON.stringify(pose(128.5,33,130.5)),contactAt-1,host.room.code,bot)
+  const capture=await frame(contactAt,pose(128.5,33,174.5))
+  assert.deepEqual(capture.cops.event,{kind:'capture',ids:['cpu-2'],by:'cpu-1'})
+  const cpuPose=frame=>frame.players.find(p=>p.id==='cpu-2').pose
+  assert.equal(cpuPose(capture).z,184.5)
+  const jailed=await frame(contactAt+260,pose(128.5,33,174.5))
+  assert.deepEqual(cpuPose(jailed),cpuPose(capture))
+  const rescued=await frame(contactAt+520,pose(128.5,33,177.5))
+  assert.deepEqual(rescued.cops.event,{kind:'rescue',ids:['cpu-2'],by:host.id})
+  assert.equal(cpuPose(rescued).z,171.5)
+  assert.deepEqual(rescued.cops.jailedIds,[])
 })
 
 test('police are frozen for 20 seconds, arrests lock prisoners in jail and rescues give a shared grace',async t=>{

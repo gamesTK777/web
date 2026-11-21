@@ -35,8 +35,8 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
   await assert.rejects(() => client.join({ code: 'NOEXISTS', nickname: 'あお' }),
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
-    { path: '/api/webcraft/rooms', body: {...fields,protocol:8} },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:8 } },
+    { path: '/api/webcraft/rooms', body: {...fields,protocol:9} },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:9 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -70,8 +70,8 @@ test('同期した編集だけを適用し、編集は一つずつ送る', { tim
   assert.deepEqual(await pending, { ok: true })
   assert.deepEqual(frames, [empty, changed])
   assert.deepEqual(requests, [
-    { protocol:8,code: connection.room.code, token: connection.token, since: 0, pose },
-    { protocol:8,code: connection.room.code, token: connection.token, since: 0, pose, edit },
+    { protocol:9,code: connection.room.code, token: connection.token, since: 0, pose },
+    { protocol:9,code: connection.room.code, token: connection.token, since: 0, pose, edit },
   ])
   sync.close()
   await left.promise
@@ -136,7 +136,7 @@ test('学校の鬼ごっこはステージと終了結果を保持し、ルー�
     const path=new URL(String(url)).pathname
     if(path.endsWith('/leave')){left.resolve();return json({ok:true})}
     const body=JSON.parse(String(options?.body))
-    assert.equal(body.protocol,8)
+    assert.equal(body.protocol,9)
     if(path.endsWith('/rooms')){assert.equal(body.tagMinutes,1);assert.equal(body.stage,'school');return json(match)}
     if(path.endsWith('/join'))return json(match)
     polls++
@@ -167,6 +167,36 @@ test('招待先の地形を検証し、旧ルームは森と湖として復元�
   const invalidSchool=new OnlineClient('https://rooms.example.test',async ()=>json({...backup,room:{...oldRoom,stage:'school'}}))
   await assert.rejects(()=>invalidSchool.join({code:connection.room.code,nickname:'あお'}),
     error=>error instanceof OnlineError&&error.code==='invalid-response')
+})
+
+test('ドロケイの公園と渋谷でCPUの人数、役割、救出イベントを受け取れる', {timeout:3_000}, async t=>{
+  for(const stage of ['park','crossing'] as const){
+    const match:RoomConnection={...connection,room:{...connection.room,mode:'cops',stage,tagMinutes:1,tagBots:2}}
+    const ready=deferred<RoomFrame>(),clock=1784600000000
+    const peers=[{id:'cpu-1',nickname:'CPU 1',cpu:true,pose},{id:'cpu-2',nickname:'CPU 2',cpu:true,pose}]
+    const client=new OnlineClient('https://rooms.example.test',async(url,options)=>{
+      if(String(url).endsWith('/leave'))return json({ok:true})
+      const body=JSON.parse(String(options?.body))
+      assert.equal(body.protocol,9)
+      if(String(url).endsWith('/rooms')){
+        assert.equal(body.stage,stage)
+        assert.equal(body.tagBots,2)
+        return json(match)
+      }
+      return json({...empty,players:peers,cops:{phase:'playing',hideUntil:clock,endsAt:clock+60_000,serverNow:clock+3000,
+        seq:3,policeIds:['cpu-1'],jailedIds:[],enrolledIds:['cpu-1','cpu-2',match.id],winner:null,winnerIds:[],results:[],
+        event:{kind:'rescue',ids:[match.id],by:'cpu-2'}}})
+    })
+    const created=await client.create({name:match.room.name,seed:match.room.seed,nickname:'はる',mode:'cops',stage,tagMinutes:1,tagBots:2})
+    assert.equal(created.room.tagBots,2)
+    const sync=client.start(created,{pose:()=>pose,onFrame:frame=>ready.resolve(frame),onState:()=>{}})
+    t.after(()=>sync.close())
+    const frame=await ready.promise
+    assert.deepEqual(frame.players,peers)
+    assert.deepEqual(frame.cops?.policeIds,['cpu-1'])
+    assert.equal(frame.cops?.event?.by,'cpu-2')
+    sync.close()
+  }
 })
 
 test('非表示中は同期を始めず、復帰して部屋が失効していた場合は終了する', { timeout: 3_000 }, async t => {

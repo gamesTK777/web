@@ -577,7 +577,7 @@ function updateCopsUI(s:Session,room:SharedRoom,game:TagGame,now:number){
   const robbers=state?state.enrolledIds.filter(member=>!state.policeIds.includes(member)).length:0
   const hint=jailed?'仲間の救出を待とう':spectator?'対戦を見守っています':playing?
     (police?'ドロに触れて確保　'+count+'/'+robbers:count?'仲間を救出　'+bearing(COPS_RESCUE,s.player):'時間切れまで逃げよう'):
-    hiding||state?.phase==='finished'?'':'2人以上で開始'
+    hiding||state?.phase==='finished'?'':room.connection.room.tagBots?'プレイ開始を押すとCPUと対戦できます':'2人以上で開始'
   const key=[label,hint,game.open,remaining,hide?.remaining].join('/')
   if(game.uiKey!==key){
     ui.tagMode({label,hint,it:police,mapOpen:game.open,remaining,hide,cops:true})
@@ -641,7 +641,10 @@ function applyCopsFrame(s:Session,room:SharedRoom,game:TagGame,state:CopsState,s
   if(prior?.phase!==state.phase)game.mapDue=0
   if(state.seq!==prior?.seq&&state.event){
     if(state.event.kind==='capture')ui.toast(jailed&&!wasJailed?'確保された！ 仲間の救出を待とう。':'ケイがドロを確保！')
-    else ui.toast('仲間が牢屋から救出された！')
+    else {
+      const rescuer=state.event.by===id?room.nickname:game.peers.find(player=>player.id===state.event?.by)?.nickname
+      ui.toast(rescuer?rescuer+'が牢屋の仲間を救出！':'仲間が牢屋から救出された！')
+    }
   }
   if(state.phase==='finished'&&prior?.phase!=='finished'){
     game.open=false;parkRide.hidden=true

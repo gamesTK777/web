@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS webcraft_rooms (
     cops_stage IS NULL OR (cops_stage IN ('park','crossing') AND mode='creative' AND stage='classic'
       AND tag_stage IS NULL AND tag_enabled=0 AND tag_bots=0 AND tag_minutes=0)),
   cops_minutes INTEGER NOT NULL DEFAULT 0 CHECK (
-    (cops_stage IS NULL AND cops_minutes=0) OR (cops_stage IS NOT NULL AND cops_minutes IN (1,3,5,10,15)))
+    (cops_stage IS NULL AND cops_minutes=0) OR (cops_stage IS NOT NULL AND cops_minutes IN (1,3,5,10,15))),
+  cops_bots INTEGER NOT NULL DEFAULT 0 CHECK (typeof(cops_bots)='integer' AND cops_bots BETWEEN 0 AND 4
+    AND (cops_bots=0 OR cops_stage IS NOT NULL))
 );
 
 CREATE INDEX IF NOT EXISTS webcraft_rooms_expiry ON webcraft_rooms(expires_at);

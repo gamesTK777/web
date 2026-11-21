@@ -1,5 +1,5 @@
 import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, isFrontierEquipment, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
-import { TERRAIN_PRESETS, copsStage, soloExploration, stageSupportsTagBots, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
+import { TERRAIN_PRESETS, copsStage, soloExploration, stageSupportsBots, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
@@ -14,6 +14,9 @@ export interface TagUIResult { outcome:'win'|'lose'|'spectator'; loser:string; w
 type RoomUIPlayMode = Mode | 'tag' | 'cops'
 const onlineMode=(value:unknown):RoomUIPlayMode=>value==='tag'||value==='cops'||value==='explore'?value:'creative'
 const chaseMode=(mode:RoomUIPlayMode)=>mode==='tag'||mode==='cops'
+const botHelp=(mode:RoomUIPlayMode)=>mode==='cops'?
+  'CPUを加えると1人でも遊べます。CPUが2人以上なら、両チームにCPUが入ります。合計6人まで。':
+  'CPUを加えると、プレイヤー1人でも対戦を始められます。合計6人まで。'
 const roomStageAvailable=(stage:TerrainPreset,mode:RoomUIPlayMode)=>
   mode==='cops'?copsStage(stage):!copsStage(stage)&&stage!=='frontier'&&(stage!=='school'||mode==='tag')
 const tagMinuteOptions = [1,3,5,10,15] as const
@@ -234,10 +237,10 @@ export class GameUI {
         const selectedMinutes=Number(data.get('tagMinutes'))
         const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
         const selectedBots=Number(data.get('tagBots'))
-        const tagBots=stageSupportsTagBots(stage)&&Number.isInteger(selectedBots)&&selectedBots>=0&&selectedBots<=4?selectedBots:0
+        const tagBots=stageSupportsBots(mode,stage)&&Number.isInteger(selectedBots)&&selectedBots>=0&&selectedBots<=4?selectedBots:0
         Object.assign(this.onlineDraft,{name,seed,mode,stage,...(chaseMode(mode)?{tagMinutes,tagBots}:{})})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
-        this.send('online-create',{name,seed,nickname,mode,stage,...(chaseMode(mode)?{tagMinutes,...(mode==='tag'&&tagBots?{tagBots}:{})}:{})})
+        this.send('online-create',{name,seed,nickname,mode,stage,...(chaseMode(mode)?{tagMinutes,...(tagBots?{tagBots}:{})}:{})})
       }else{
         const code=String(data.get('code')??'').trim().toUpperCase()
         this.onlineDraft.code=code
@@ -301,8 +304,10 @@ export class GameUI {
     }
   }
   private updateBotSelector(){
-    const disabled=this.onlineDraft.mode!=='tag'||!stageSupportsTagBots(this.onlineDraft.stage)
+    const {mode,stage}=this.onlineDraft
+    const disabled=!stageSupportsBots(mode,stage)
     $('tag-bot-option').hidden=$<HTMLSelectElement>('tag-bots').disabled=disabled
+    $('tag-bot-help').textContent=botHelp(mode)
   }
   private settingOutput(target:EventTarget|null) {
     if(!(target instanceof HTMLInputElement) || target.type!=='range')return
@@ -348,11 +353,11 @@ export class GameUI {
       '<select name="tagMinutes" id="tag-minutes" aria-describedby="tag-time-help"'+(chaseMode(draft.mode)?'':' disabled')+'>'+
       tagMinuteOptions.map(minutes=>'<option value="'+minutes+'"'+(draft.tagMinutes===minutes?' selected':'')+'>'+minutes+'分</option>').join('')+
       '</select><small id="tag-time-help">隠れる時間が終わると制限時間が進みます。</small></div>'
-    const botsEnabled=draft.mode==='tag'&&stageSupportsTagBots(draft.stage)
+    const botsEnabled=stageSupportsBots(draft.mode,draft.stage)
     const bots='<div id="tag-bot-option" class="entry"'+(botsEnabled?'':' hidden')+'><label for="tag-bots">CPUの人数</label>'+
       '<select id="tag-bots" name="tagBots" aria-describedby="tag-bot-help"'+(botsEnabled?'':' disabled')+'>'+
       [0,1,2,3,4].map(count=>'<option value="'+count+'"'+(draft.tagBots===count?' selected':'')+'>'+count+'人</option>').join('')+
-      '</select><small id="tag-bot-help">CPUを加えると、プレイヤー1人でも対戦を始められます。合計6人まで。</small></div>'
+      '</select><small id="tag-bot-help">'+botHelp(draft.mode)+'</small></div>'
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+

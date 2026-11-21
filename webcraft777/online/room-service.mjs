@@ -1,5 +1,6 @@
 import { cpuTokenPrefix, tagBotInterval, tagBotPose, tagBotSeats, tagBotStages } from './tag-bots.mjs'
-import { advanceCopsState, copsStages, jailSpawn, publicCops, readCops } from './cops-rules.mjs'
+import { copsBotPose, copsBotSpawn } from './cops-bots.mjs'
+import { advanceCopsState, copsStages, jailSpawn, policeSpawn, publicCops, readCops, rescueExit } from './cops-rules.mjs'
 import { PARK_RIDES, PARK_RIDE_REACH } from './park-rides-config.mjs'
 
 const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -11,6 +12,7 @@ const localOrigin = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]{1,5
 const lifetime = 24 * 60 * 60 * 1000
 const presence = 20_000
 const tagPresence = 4000
+const copsBotInterval = 200
 const tagSamples = 750
 const tagSkew = 450
 const hideTime = 20_000
@@ -36,10 +38,10 @@ class RoomError extends Error {
 
 const prepared = (db, sql, ...values) => db.prepare(sql).bind(...values)
 const changed = result => result.meta.changes > 0
-const wireProtocol = value => [2,3,4,5,6,7,8].includes(value) ? value : 1
+const wireProtocol = value => [2,3,4,5,6,7,8,9].includes(value) ? value : 1
 const publicMode = room => room.cops_stage ? 'cops' : room.tag_enabled ? 'tag' : room.mode
 const publicStage = room => room.cops_stage ?? room.tag_stage ?? room.stage
-const minimumProtocol = `CASE WHEN cops_stage IS NOT NULL THEN 8 WHEN tag_bots>0 THEN 7 WHEN tag_stage IS NOT NULL THEN 6 WHEN stage<>'classic' THEN 5
+const minimumProtocol = `CASE WHEN cops_bots>0 THEN 9 WHEN cops_stage IS NOT NULL THEN 8 WHEN tag_bots>0 THEN 7 WHEN tag_stage IS NOT NULL THEN 6 WHEN stage<>'classic' THEN 5
   WHEN tag_minutes>0 THEN 4 WHEN tag_enabled=1 THEN 3 WHEN mode='explore' THEN 2 ELSE 1 END`
 const cpuSeat = `token_hash LIKE '${cpuTokenPrefix}%'`
 const validBlock = n => Number.isInteger(n) && ((n >= 1 && n <= 12) || n === 23 || (n >= 25 && n <= 33))
@@ -71,7 +73,7 @@ function publicRoom(row, seat, protocol) {
     room: {code:row.code, name:row.name, seed:row.seed, generator:2, createdAt:row.created_at, mode:publicMode(row),
       ...(minutes>0?{tagMinutes:minutes}:{}),
       ...(protocol>=5?{stage:publicStage(row)}:{}),
-      ...(protocol>=7?{tagBots:row.tag_bots}:{})},
+      ...(protocol>=7?{tagBots:row.cops_bots||row.tag_bots}:{})},
     id:seat.id, token:seat.token
   }
 }
@@ -85,7 +87,7 @@ function checkProtocol(room, protocol) {
   if (room.cops_stage && protocol<8) {
     throw new RoomError('ドロケイで遊ぶには、ゲーム画面を再読み込みしてください。', 426)
   }
-  if (room.tag_bots>0 && protocol<7) {
+  if ((room.cops_bots>0 && protocol<9) || (room.tag_bots>0 && protocol<7)) {
     throw new RoomError('CPUがいるルームで遊ぶには、ゲーム画面を再読み込みしてください。', 426)
   }
   const stage = publicStage(room)
@@ -175,7 +177,7 @@ function canReach(p, e) {
 
 const tagFields = 'it,phase,hide_until,seq,previous_it,protected_until,ends_at,round_roster,round_result'
 const roomInfo = `SELECT r.code,r.name,r.seed,r.created_at,r.expires_at,r.revision,r.cell_count,r.mode,r.tag_enabled,r.tag_minutes,
-  r.stage,r.tag_stage,r.tag_bots,r.cops_stage,r.cops_minutes,r.creator,${tagFields.split(',').map(field=>'t.'+field).join(',')},
+  r.stage,r.tag_stage,r.tag_bots,r.cops_stage,r.cops_minutes,r.cops_bots,r.creator,${tagFields.split(',').map(field=>'t.'+field).join(',')},
   c.phase AS cops_phase,c.ends_at AS cops_ends_at FROM webcraft_rooms r
   LEFT JOIN webcraft_tag_state t ON t.room_code=r.code LEFT JOIN webcraft_cops_state c ON c.room_code=r.code WHERE r.code=?`
 const addSeat = `INSERT INTO webcraft_members(room_code,token_hash,id,nickname,last_seen)
@@ -198,11 +200,14 @@ async function createRoom(db, body, now) {
   const copsStage = cops ? selectedStage : null
   const copsMinutes = cops ? (body.tagMinutes === undefined ? 5 : body.tagMinutes) : 0
   const tagMinutes = tagEnabled && protocol>=4 ? (body.tagMinutes === undefined ? 5 : body.tagMinutes) : 0
-  const tagBots = body.tagBots === undefined ? 0 : body.tagBots
-  if (!Number.isInteger(tagBots)||tagBots<0||tagBots>4) throw new RoomError('CPUの人数は0〜4人から選んでください。')
-  if (tagBots>0&&(!tagEnabled||!tagBotStages.has(selectedStage)))
-    throw new RoomError('CPUは平地または学校の鬼ごっこで参加できます。')
-  checkProtocol({stage,tag_stage:tagStage,tag_enabled:tagEnabled,tag_minutes:tagMinutes,tag_bots:tagBots,cops_stage:copsStage},protocol)
+  const botCount = body.tagBots === undefined ? 0 : body.tagBots
+  if (!Number.isInteger(botCount)||botCount<0||botCount>4) throw new RoomError('CPUの人数は0〜4人から選んでください。')
+  if (botCount>0&&!cops&&(!tagEnabled||!tagBotStages.has(selectedStage)))
+    throw new RoomError('CPUはドロケイと、平地または学校の鬼ごっこで参加できます。')
+  const tagBots = cops ? 0 : botCount
+  const copsBots = cops ? botCount : 0
+  checkProtocol({stage,tag_stage:tagStage,tag_enabled:tagEnabled,tag_minutes:tagMinutes,tag_bots:tagBots,
+    cops_stage:copsStage,cops_bots:copsBots},protocol)
   if (tagEnabled) {
     if (body.tagMinutes!==undefined && protocol<4) checkProtocol({tag_enabled:1,tag_minutes:5},protocol)
     if (protocol>=4 && !tagDurations.has(tagMinutes)) throw new RoomError('鬼ごっこの制限時間を選んでください。')
@@ -210,16 +215,18 @@ async function createRoom(db, body, now) {
     if (!tagDurations.has(copsMinutes)) throw new RoomError('ドロケイの制限時間を選んでください。')
   } else if (body.tagMinutes!==undefined) throw new RoomError('制限時間は鬼ごっこやドロケイで選べます。')
   const seat = await newSeat(body.nickname)
-  const bots=tagBotSeats(selectedStage,tagBots)
+  const bots=cops?Array.from({length:copsBots},(_,index)=>({
+    id:'cpu-'+(index+1),nickname:'CPU '+(index+1),hash:cpuTokenPrefix+(index+1),pose:copsBotSpawn(selectedStage,index)
+  })):tagBotSeats(selectedStage,tagBots)
   const cleanup = prepared(db, `DELETE FROM webcraft_rooms WHERE code IN
     (SELECT code FROM webcraft_rooms WHERE expires_at<=? ORDER BY expires_at LIMIT 4)`, now)
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = makeCode()
     const statements = [
-      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode,tag_enabled,tag_minutes,stage,tag_stage,tag_bots,cops_stage,cops_minutes)
-        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
+      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode,tag_enabled,tag_minutes,stage,tag_stage,tag_bots,cops_stage,cops_minutes,cops_bots)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
       code, seat.id, name, seed, now, now + lifetime, mode, tagEnabled, tagMinutes, stage, tagStage, tagBots,
-      copsStage,copsMinutes,roomLimit),
+      copsStage,copsMinutes,copsBots,roomLimit),
       prepared(db, addSeat + ' WHERE code=? AND creator=?', seat.hash, seat.id, seat.nickname, now, code, seat.id)
     ]
     for(const bot of bots)statements.push(prepared(db,
@@ -232,7 +239,8 @@ async function createRoom(db, body, now) {
       SELECT code FROM webcraft_rooms WHERE code=? AND creator=?`, code, seat.id))
     const [created] = await db.batch([...statements, cleanup])
     if (changed(created)) return publicRoom({code,name,seed,created_at:now,mode,tag_enabled:tagEnabled,
-      tag_minutes:tagMinutes,stage,tag_stage:tagStage,tag_bots:tagBots,cops_stage:copsStage,cops_minutes:copsMinutes},seat,protocol)
+      tag_minutes:tagMinutes,stage,tag_stage:tagStage,tag_bots:tagBots,cops_stage:copsStage,cops_minutes:copsMinutes,
+      cops_bots:copsBots},seat,protocol)
   }
   throw new RoomError('現在ルームの空きがありません。少し待ってから再試行してください。', 503)
 }
@@ -342,7 +350,7 @@ function poseStatement(db,code,digest,now,poseText,protocol) {
       WHEN EXISTS(SELECT 1 FROM json_each(c.jailed) WHERE value=m.id)
         THEN json_set(tick.pose,'$.x',${jailSpawn.x},'$.y',${jailSpawn.y},'$.z',${jailSpawn.z},'$.moving',json('false'),'$.flying',json('false'))
       WHEN c.phase='hiding' AND EXISTS(SELECT 1 FROM json_each(c.police) WHERE value=m.id)
-        THEN json_set(tick.pose,'$.x',128.5,'$.y',33,'$.z',169.5,'$.moving',json('false'),'$.flying',json('false'))
+        THEN json_set(tick.pose,'$.x',${policeSpawn.x},'$.y',${policeSpawn.y},'$.z',${policeSpawn.z},'$.moving',json('false'),'$.flying',json('false'))
       ELSE tick.pose END,
     previous_pose=CASE WHEN (r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL THEN m.pose ELSE m.previous_pose END,
     previous_pose_at=CASE WHEN (r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL THEN m.pose_at ELSE m.previous_pose_at END,
@@ -509,24 +517,95 @@ async function tickTagBots(db,room,participants,now,digest){
   return {room:latestRoom.results[0],members:latestMembers.results}
 }
 
+function publicBotPose({x,y,z,yaw,moving,crouched,flying}){
+  return {x,y,z,yaw,moving,crouched,flying}
+}
+
+async function tickCopsBots(db,room,state,participants,now,digest,selectState){
+  if((state.phase!=='hiding'&&state.phase!=='playing')||
+    (state.phase==='hiding'&&now>=state.hideUntil)||now>=state.endsAt)return null
+  const enrolled = new Set(state.roster.map(player=>player.id))
+  const police = new Set(state.policeIds)
+  const jailed = new Set(state.jailedIds)
+  if(!participants.some(p=>!p.cpu&&(enrolled.has(p.id)||state.phase==='hiding')))return null
+  const due=participants.filter(p=>p.cpu&&enrolled.has(p.id)&&!jailed.has(p.id)&&
+    (state.phase!=='hiding'||!police.has(p.id))&&now-p.pose_at>=copsBotInterval)
+  if(!due.length)return null
+  const players=participants.filter(p=>enrolled.has(p.id)).map(p=>({id:p.id,pose:p.current}))
+  const updates=due.map(bot=>{
+    const pose=copsBotPose({stage:room.cops_stage,id:bot.id,pose:bot.current,phase:state.phase,
+      elapsed:Math.min((now-bot.pose_at)/1000,.5),now,policeIds:state.policeIds,jailedIds:state.jailedIds,players})
+    return prepared(db,`UPDATE webcraft_members SET last_seen=?,previous_pose=pose,previous_pose_at=pose_at,pose_at=?,pose=?
+      WHERE room_code=? AND id=? AND ${cpuSeat} AND pose_at=? AND EXISTS(
+        SELECT 1 FROM webcraft_cops_state WHERE room_code=? AND seq=?
+      ) AND ${authenticated}`,now,now,JSON.stringify(pose),room.code,bot.id,bot.pose_at,room.code,state.seq,room.code,digest)
+  })
+  const results=await db.batch([...updates,selectState,prepared(db,activePlayers,room.code,now-presence,room.code,digest)])
+  return results.slice(-2)
+}
+
+function copsBotTeleports(state,next,participants){
+  const teleports=[]
+  for(const player of participants){
+    if(!player.cpu)continue
+    const startsAsPolice=state.phase==='waiting'&&next.policeIds.includes(player.id)
+    const wasJailed=state.jailedIds.includes(player.id)
+    const isJailed=next.jailedIds.includes(player.id)
+    const destination=startsAsPolice?policeSpawn:isJailed&&!wasJailed?jailSpawn:wasJailed&&!isJailed?rescueExit:null
+    if(!destination)continue
+    const pose={...publicBotPose(player.current),...destination,moving:false,crouched:false,flying:false}
+    teleports.push({id:player.id,pose})
+  }
+  return teleports
+}
+
 async function advanceCops(db,room,participants,now,digest){
   const selectState=prepared(db,'SELECT * FROM webcraft_cops_state WHERE room_code=?',room.code)
-  const [current,seats]=await db.batch([selectState,prepared(db,
-    'SELECT id,nickname,pose_at,last_seen FROM webcraft_members WHERE room_code=? ORDER BY rowid',room.code)])
+  const selectPlayers=()=>prepared(db,activePlayers,room.code,now-presence,room.code,digest)
+  const queries=[selectState,prepared(db,
+    `SELECT id,nickname,pose_at,last_seen,${cpuSeat} AS cpu FROM webcraft_members WHERE room_code=? ORDER BY rowid`,room.code)]
+  if(room.cops_bots)queries.push(selectPlayers())
+  const [current,seats,fresh]=await db.batch(queries)
   if(!current.results[0])throw new RoomError('ルームの有効期限が切れました。',410)
   const state=readCops(current.results[0])
-  const available=state.phase==='waiting'?seats.results.filter(seat=>seat.last_seen>now-presence):seats.results
+  const readParticipants=({results})=>{
+    now=Math.max(now,...results.map(player=>player.pose_at))
+    return gatherParticipants(room,results,now)
+  }
+  if(fresh)participants=readParticipants(fresh)
+  if(room.cops_bots){
+    const tick=await tickCopsBots(db,room,state,participants,now,digest,selectState)
+    if(tick){
+      const [status,players]=tick
+      if(!status.results[0])throw new RoomError('ルームの有効期限が切れました。',410)
+      participants=readParticipants(players)
+      if(status.results[0].seq!==state.seq)return {state:readCops(status.results[0]),participants,now}
+    }
+  }
+  const available=state.phase==='waiting'?seats.results.filter(seat=>seat.cpu||seat.last_seen>now-presence):seats.results
   const next=advanceCopsState(state,room,participants,available,now,bodiesTouch)
-  if(!next)return state
-  const [,latest]=await db.batch([prepared(db,`UPDATE webcraft_cops_state SET phase=?,hide_until=?,ends_at=?,
+  if(!next)return {state,participants,now}
+  const changes=[prepared(db,`UPDATE webcraft_cops_state SET phase=?,hide_until=?,ends_at=?,
     seq=seq+1,protected_until=?,roster=?,police=?,jailed=?,event=?,winner=?
     WHERE room_code=? AND seq=? AND EXISTS(SELECT 1 FROM webcraft_rooms WHERE code=? AND expires_at>?)
       AND ${authenticated}`,
     next.phase,next.hideUntil,next.endsAt,next.protectedUntil,JSON.stringify(next.roster),JSON.stringify(next.policeIds),
     JSON.stringify(next.jailedIds),next.event===null?null:JSON.stringify(next.event),next.winner,
-    room.code,state.seq,room.code,now,room.code,digest),selectState])
+    room.code,state.seq,room.code,now,room.code,digest)]
+  const teleports=copsBotTeleports(state,next,participants)
+  // Commit NPC jail and release positions with the same state transition. A
+  // stale poll cannot teleport them when its compare-and-swap failed.
+  if(teleports.length)changes.push(prepared(db,`UPDATE webcraft_members SET pose=json_extract(places.value,'$.pose'),
+    last_seen=?,pose_at=?,previous_pose=NULL,previous_pose_at=0 FROM json_each(?) places
+    WHERE changes()>0 AND room_code=? AND ${cpuSeat} AND webcraft_members.id=json_extract(places.value,'$.id')`,
+    now,now,JSON.stringify(teleports),room.code))
+  const index=changes.push(selectState)-1
+  if(room.cops_bots)changes.push(selectPlayers())
+  const results=await db.batch(changes)
+  const latest=results[index]
   if(!latest.results[0])throw new RoomError('ルームの有効期限が切れました。',410)
-  return readCops(latest.results[0])
+  if(room.cops_bots)participants=readParticipants(results[index+1])
+  return {state:readCops(latest.results[0]),participants,now}
 }
 
 function cleanRide(value) {
@@ -624,16 +703,18 @@ async function syncRoom(db, body, now) {
       participants=gatherParticipants(room,updated.members,frameTime)
     }
   }
-  const response = {revision:room.revision, cells:updates,
-    players:participants.filter(p=>p.id!==member.results[0].id).map(p=>{
-      if(!p.cpu)return {id:p.id,nickname:p.nickname,pose:p.current}
-      const {waypoint,...pose}=p.current
-      return {id:p.id,nickname:p.nickname,pose,cpu:true}
-    })}
+  const remotePlayers = () => participants.filter(p=>p.id!==member.results[0].id).map(p=>
+    p.cpu ? {id:p.id,nickname:p.nickname,pose:publicBotPose(p.current),cpu:true}
+      : {id:p.id,nickname:p.nickname,pose:p.current})
+  const response = {revision:room.revision,cells:updates,players:[]}
   if(room.cops_stage){
     if(edit)throw new RoomError('ドロケイではブロックを編集できません。',403)
     const ride=room.cops_stage==='park'?cleanRide(body.ride):undefined
-    const state=await advanceCops(db,room,participants,frameTime,digest)
+    const advanced=await advanceCops(db,room,participants,frameTime,digest)
+    const {state}=advanced
+    participants=advanced.participants
+    frameTime=advanced.now
+    response.players=remotePlayers()
     response.cops=publicCops(state,frameTime)
     if(state.phase==='playing')
       response.players=response.players.filter(player=>response.cops.enrolledIds.includes(player.id))
@@ -641,7 +722,7 @@ async function syncRoom(db, body, now) {
       if(state.jailedIds.includes(player.id))Object.assign(player.pose,jailSpawn,{moving:false,flying:false})
     const rides=await updateRides(db,room,state,frameTime,digest,member.results[0].id,pose,ride)
     if(rides!==undefined)response.rides=rides
-  }
+  }else response.players=remotePlayers()
   if (room.tag_enabled) {
     if (edit) throw new RoomError('かくれ鬼ではブロックを編集できません。', 403)
     response.tag = await advanceTag(db, room, participants, frameTime, protocol, digest)

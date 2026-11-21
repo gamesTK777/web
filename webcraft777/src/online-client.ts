@@ -1,6 +1,6 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
-import { copsStage, stageSupportsTagBots, validTerrainPreset, type TerrainPreset } from './stages'
+import { copsStage, stageSupportsBots, validTerrainPreset, type TerrainPreset } from './stages'
 export type OnlineMode = Mode|'tag'|'cops'
 export type TagMinutes = 1|3|5|10|15
 
@@ -108,7 +108,7 @@ const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
 const MAX_ROOM_CELLS = 10_000
-const PROTOCOL = 8
+const PROTOCOL = 9
 
 const timedMode=(mode:OnlineMode)=>mode==='tag'||mode==='cops'
 
@@ -172,7 +172,7 @@ function parseConnection(value: unknown): RoomConnection {
       (room.tagMinutes!==undefined&&(room.mode!=='tag'&&room.mode!=='cops'||!isTagMinutes(room.tagMinutes))) ||
       (room.mode==='cops'&&!isTagMinutes(room.tagMinutes)) ||
       (room.tagBots!==undefined&&(!isInteger(room.tagBots,0,4)||
-        room.tagBots>0&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes)||!stageSupportsTagBots(room.stage)))) ||
+        room.tagBots>0&&(!isTagMinutes(room.tagMinutes)||!stageSupportsBots(room.mode,room.stage)))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||
       !/^[a-z0-9_.-]+$/i.test(body.token)) return invalidResponse()
