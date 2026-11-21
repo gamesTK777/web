@@ -284,6 +284,9 @@
       color: var(--text-dim);
     }
 
+    .footer-privacy { display: inline-block; margin-top: .65rem; color: #9cece5; }
+    .footer-privacy:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+
     .footer-line {
       width: 280px;
       height: 1px;
@@ -296,6 +299,7 @@
       .games { grid-template-columns: 1fr; }
     }
   </style>
+  <script defer src="./shared/site-analytics.js?v=1" data-page="home"></script>
 </head>
 <body>
   <div class="bg-image"></div>
@@ -485,6 +489,7 @@
     <footer>
       <div class="footer-line"></div>
       &copy; 2026 GAME$ TK777 ARCADE
+      <div><a class="footer-privacy" href="privacy/">プライバシーとアクセス計測</a></div>
     </footer>
   </div>
 </body>

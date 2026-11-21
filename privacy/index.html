@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="TK777 ARCADEのアクセス計測の内容と、このブラウザーでの停止方法。">
+  <title>プライバシーとアクセス計測 | TK777 ARCADE</title>
+  <style>
+    :root {
+      background: #101425;
+      color: #ebeffb;
+      font: 100%/1.75 system-ui, sans-serif;
+    }
+    body { margin: 0; }
+    main { width: min(42rem, calc(100% - 2rem)); margin: 2rem auto 4rem; }
+    a { color: #85f4e1; text-underline-offset: .23em; }
+    a:focus-visible, button:focus-visible { outline: 3px solid #85f4e1; outline-offset: 4px; }
+    h1 { font-size: clamp(1.55rem, 6vw, 2.5rem); line-height: 1.35; margin-block: .9rem; }
+    h2 { font-size: 1.2rem; margin-block: 1.5rem .4rem; }
+    p { margin-block: .4rem .9rem; }
+    .settings {
+      background: #191e33;
+      border: 1px solid #454e73;
+      border-radius: .8rem;
+      margin-block: 1.5rem;
+      padding: 1rem 1.25rem;
+    }
+    .settings h2 { margin-top: 0; }
+    button {
+      background: #91f2df;
+      border: 1px solid transparent;
+      border-radius: .5rem;
+      color: #152030;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      min-height: 44px;
+      padding: .55rem .9rem;
+    }
+    button:disabled { background: #545f7a; color: #fff; cursor: default; }
+  </style>
+  <script defer src="../shared/site-analytics.js?v=1" data-privacy-controls></script>
+</head>
+<body>
+  <main>
+    <a href="../">ゲーム一覧へ戻る</a>
+    <h1>プライバシーとアクセス計測</h1>
+    <p>TK777 ARCADEでは、サイトの運営と改善のため、ゲームページの閲覧を集計します。</p>
+
+    <section class="settings" aria-labelledby="measurement-heading">
+      <h2 id="measurement-heading">このブラウザーの計測設定</h2>
+      <p id="measurement-status" role="status">設定を読み込んでいます。</p>
+      <button type="button" id="measurement-toggle" disabled>このブラウザーの計測を停止する</button>
+      <noscript><p>JavaScriptが無効のため、この閲覧は計測されません。</p></noscript>
+    </section>
+
+    <h2>集計する内容</h2>
+    <p>閲覧したゲーム、閲覧の時間帯、流入元の種類（検索、SNSなど）、端末の種類を集計します。アクセス集計には、URLのパラメーター、流入元の完全なURL、IPアドレス、ニックネーム、ゲームの記録を保存しません。</p>
+    <p>同じ日に同じブラウザーから閲覧した場合の重複を減らすため、日ごとに切り替わるランダムな番号をこのサイトのブラウザー保存領域に置きます。保存できない場合は閲覧数だけに含まれます。</p>
+
+    <h2>サイトを安全に運営するための記録</h2>
+    <p>ゲームの通信サービスでは、アクセス制限や認証エラーなどの件数を運営者が確認できるよう集計します。本サイトの配信元であるGitHub Pagesの取り扱いは、GitHubの説明をご確認ください。<a href="https://docs.github.com/ja/pages/getting-started-with-github-pages/what-is-github-pages#data-collection">GitHub Pagesのデータ収集</a></p>
+  </main>
+</body>
+</html>
