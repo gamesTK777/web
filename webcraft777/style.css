@@ -92,6 +92,9 @@ input { accent-color: #2e745b; }
 #game[data-screen="create"] .panel { width: min(100%,820px); }
 .stage-picker { padding: 9px 0 0; border: 0; margin-top: 10px; }
 .stage-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+@media (min-width: 611px) {
+  #world-form .stage-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+}
 .stage-card {
   position: relative; display: grid; align-content: start; overflow: hidden;
   border: 2px solid #cdd3bc; border-radius: 8px; background: #fffdf4; cursor: pointer;

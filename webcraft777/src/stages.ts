@@ -1,4 +1,4 @@
-export type SoloTerrainPreset = 'classic' | 'flat' | 'lake'
+export type SoloTerrainPreset = 'classic' | 'flat' | 'lake' | 'frontier'
 export type TerrainPreset = SoloTerrainPreset | 'school'
 
 export const TERRAIN_PRESETS = [
@@ -6,6 +6,7 @@ export const TERRAIN_PRESETS = [
   {id:'flat', name:'まっさらな平地', detail:'木や建物のない草原。自由な建築に。', thumbnail:'./art/stage-flat.webp'},
   {id:'lake', name:'湖だけ', detail:'小さな砂島から出発。湖の中で魚に出会えます。', thumbnail:'./art/stage-lake.webp'},
   {id:'school', name:'学校', detail:'教室や階段に隠れ、廊下を回り込んで逃げよう。', thumbnail:'./art/stage-school.webp'},
+  {id:'frontier', name:'西部の町', detail:'荒野と湖に囲まれた町。家を建て、保安官と町を守ろう。', thumbnail:'./art/stage-frontier.webp'},
 ] as const satisfies readonly {id:TerrainPreset;name:string;detail:string;thumbnail:string}[]
 
 export function validTerrainPreset(value:unknown):value is TerrainPreset {
@@ -14,4 +15,12 @@ export function validTerrainPreset(value:unknown):value is TerrainPreset {
 
 export function validSoloTerrainPreset(value:unknown):value is SoloTerrainPreset {
   return validTerrainPreset(value)&&value!=='school'
+}
+
+export function soloExploration(stage:unknown):boolean {
+  return stage==='classic'||stage==='frontier'
+}
+
+export function stageSupportsTagBots(stage:unknown):boolean {
+  return stage==='flat'||stage==='school'
 }

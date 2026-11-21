@@ -35,8 +35,8 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
   await assert.rejects(() => client.join({ code: 'NOEXISTS', nickname: 'あお' }),
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
-    { path: '/api/webcraft/rooms', body: {...fields,protocol:6} },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:6 } },
+    { path: '/api/webcraft/rooms', body: {...fields,protocol:7} },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:7 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -70,8 +70,8 @@ test('同期した編集だけを適用し、編集は一つずつ送る', { tim
   assert.deepEqual(await pending, { ok: true })
   assert.deepEqual(frames, [empty, changed])
   assert.deepEqual(requests, [
-    { protocol:6,code: connection.room.code, token: connection.token, since: 0, pose },
-    { protocol:6,code: connection.room.code, token: connection.token, since: 0, pose, edit },
+    { protocol:7,code: connection.room.code, token: connection.token, since: 0, pose },
+    { protocol:7,code: connection.room.code, token: connection.token, since: 0, pose, edit },
   ])
   sync.close()
   await left.promise
@@ -136,7 +136,7 @@ test('学校の鬼ごっこはステージと終了結果を保持し、ルー�
     const path=new URL(String(url)).pathname
     if(path.endsWith('/leave')){left.resolve();return json({ok:true})}
     const body=JSON.parse(String(options?.body))
-    assert.equal(body.protocol,6)
+    assert.equal(body.protocol,7)
     if(path.endsWith('/rooms')){assert.equal(body.tagMinutes,1);assert.equal(body.stage,'school');return json(match)}
     if(path.endsWith('/join'))return json(match)
     polls++

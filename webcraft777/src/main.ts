@@ -5,14 +5,16 @@ import { SceneView } from './renderer'
 import { GameUI, inventoryView } from './ui'
 import { InputController, preferredControlMode, type ControlMode } from './input'
 import { Soundscape } from './audio'
-import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining, consumeBlock, ITEMS, SLIDE_ITEM, blockItemId, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode, type Bag } from './inventory'
+import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining, consumeBlock, consumeItem, quantity, FRONTIER_ITEMS, isFrontierEquipment, ITEMS, SLIDE_ITEM, blockItemId, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode, type Bag } from './inventory'
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
 import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
 import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
-import { validSoloTerrainPreset, type TerrainPreset } from './stages'
+import { soloExploration, validSoloTerrainPreset, type TerrainPreset } from './stages'
 import { LandLife } from './land-life'
 import { AquaticLife } from './aquatic-life'
+import { FrontierLife } from './frontier-life'
+import { FRONTIER_FLOOR, FRONTIER_LOTS, FRONTIER_RESOURCES } from './frontier-world'
 import { TagMap } from './tag-map'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
@@ -47,7 +49,7 @@ type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
   ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>;
   nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit;tagGame?:TagGame}
 type Session = { data: ActiveSave; world: World; player: Player; view: SceneView;
-  kids: boolean; originalPitch: number; kidsPitch: number; online?:SharedRoom; land?:LandLife; aquatic?:AquaticLife }
+  kids: boolean; originalPitch: number; kidsPitch: number; online?:SharedRoom; land?:LandLife; aquatic?:AquaticLife; frontier?:FrontierLife }
 let station:Hit|null=null, logAxis:Axis='y', slideFacing=0, progress=0, guideDue=0, tapSound=0
 const slideNames=['北','東','南','西']
 let currentSite=''
@@ -93,7 +95,7 @@ function reason(err:unknown) {
   }
   return err instanceof Error && /[ぁ-龯]/u.test(err.message) ? err.message : '処理を完了できませんでした。ページを開き直してお試しください。'
 }
-function context(s:Session){return {generator:s.world.generator,bench:station?.id===21&&s.world.get(station.x,station.y,station.z)===21}}
+function context(s:Session){return {generator:s.world.generator,bench:station?.id===21&&s.world.get(station.x,station.y,station.z)===21,frontier:!!s.frontier}}
 function sharedMaterial(id:number,mode:Mode){return !!ITEMS[id]?.block&&id!==22&&(id!==21||mode==='explore')}
 function heldForSync(s:Session){return Boolean(s.online?.pendingExplore)}
 function viewInventory() {
@@ -111,6 +113,15 @@ function guide(){
   if(!session)return
   if(session.online?.tagGame){ui.expedition('','','');return}
   const {world,data,player}=session,j=data.journey,cave=world.landmarks.find(l=>l.kind==='cave')
+  if(session.frontier){
+    const learning=!j.toolMade&&data.mode==='explore'
+    const goal=learning?'林で原木を集め、町の作業台で道具を作れます。':'空き区画に家を建てられます。'
+    const lots=FRONTIER_LOTS.map(lot=>({x:(lot.minX+lot.maxX)/2,y:FRONTIER_FLOOR+1,z:(lot.minZ+lot.maxZ)/2}))
+    const nearest=lots.reduce((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)<=Math.hypot(b.x-player.x,b.z-player.z)?a:b)
+    const path=(learning?'作業場 ':'建築区画 ')+bearing(learning?FRONTIER_RESOURCES.workbench:nearest,player)
+    ui.expedition(!j.hidden?goal:'',homeBearing(j,player),j.hidden?'':path)
+    return
+  }
   if(world.stage!=='classic'){
     const goal=!j.toolMade?'支給された原木で、木材と棒を作って道具を作ろう':'石を集め、作業台で石の道具や建材を作ろう'
     ui.expedition(data.mode==='explore'&&!j.hidden?goal:'',homeBearing(j,player),'')
@@ -128,7 +139,7 @@ function interact(hit: Hit|null, explicit=false){
     if(explicit)ui.toast('共同建築ルームでは、建材を自由に選んで建築できます。')
     return false
   }
-  const response=session.land?.interact(session.player)
+  const response=session.frontier?.interact(session.player)??session.land?.interact(session.player)
   if(response){ui.toast(response);return true}
   if(!hit||!(hit.id===21||hit.id===22&&!session.online)){
     if(explicit)ui.toast(session.online?'作業台に照準を合わせてください。':
@@ -296,8 +307,9 @@ function changeSharedBlock(s:Session,x:number,y:number,z:number,block:number,axi
 function place() {
   if(!session||!input.active||session.online?.tagGame)return
   const {world,player,data,view}=session,hit=raycast(world,player)
-  if(!player.crouched&&interact(hit))return
-  if(hit&&session.land?.occupies(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz)){
+  if(useFrontierTool()||!player.crouched&&interact(hit))return
+  if(hit&&(session.land?.occupies(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz)||
+    session.frontier?.occupies(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz))){
     ui.toast('住民や動物がいる場所には置けません。');return
   }
   const before=hit&&data.mode==='creative'?world.capture(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz):null
@@ -389,7 +401,29 @@ function attackShark(){
   }
   return true
 }
-function returnToShore(s:Session){
+function useFrontierTool():boolean {
+  const s=session,life=s?.frontier
+  if(!s||!life||!input.active)return false
+  const {player,data}=s,held=data.bag.hotbar[data.selected],item=FRONTIER_ITEMS
+  if(!isFrontierEquipment(held))return false
+  input.mining=false;resetMining()
+  const ammo=held===item.revolver?item.rounds:held===item.torch?item.torch:item.fireArrow
+  if(data.mode==='explore'){
+    if(!activeStack(data.bag,held)){ui.toast('道具を持っていません。');return true}
+    if(ammo===item.fireArrow&&!activeStack(data.bag,item.bow)){ui.toast('火矢を使うには弓が必要です。');return true}
+    if(!activeStack(data.bag,ammo)){ui.toast(ITEMS[ammo].name+'がありません。');return true}
+  }
+  const result=life.action(player,held===item.bow?item.fireArrow:held)
+  if(result.ok){
+    if(data.mode==='explore')consumeItem(data.bag,ammo)
+    audio.sound(held===item.revolver?'break':'place')
+    refreshBag()
+    void persist(s)
+  }
+  if(result.message)ui.toast(result.message)
+  return true
+}
+function returnToSpawn(s:Session){
   const start=s.world.spawn()
   let pose:ReturnType<typeof safeSpawn>
   try {pose=safeSpawn(s.world,start)}
@@ -399,22 +433,26 @@ function returnToShore(s:Session){
   input.reset();input.rememberView(s.player)
   resetMining();cooldown=0;s.view.kidsCamera.reset()
   s.aquatic?.resetHealth()
-  ui.toast('岸に戻りました。持ち物は引き継がれています。')
+  s.frontier?.restoreHealth()
+  ui.toast((s.frontier?'町の入口':'岸')+'に戻りました。持ち物は引き継がれています。')
 }
 function showWildlife(s:Session,aimedShark:boolean){
   const water=s.aquatic
-  const health=water?.health??100, shark=water?.sharkHealth??100
-  const show=!!water?.hasAquaticLife&&(s.player.inWater||health<100)
+  const health=s.frontier?.health??water?.health??100, shark=water?.sharkHealth??100
+  const show=!!s.frontier||!!water?.hasAquaticLife&&(s.player.inWater||health<100)
   lifeStatus.hidden=!show&&!aimedShark
   sharkStatus.hidden=!aimedShark
-  touchAttack.hidden=!aimedShark||!input.drag
+  const equipped=!!s.frontier&&isFrontierEquipment(s.data.bag.hotbar[s.data.selected])
+  touchAttack.hidden=!input.active||!input.drag||(!aimedShark&&!equipped)
+  const label=equipped?'使う':'攻撃'
+  if(touchAttack.textContent!==label)touchAttack.textContent=label
   if(lifeHealth.value!==health){lifeHealth.value=health;lifeHealthNumber.textContent=String(health)}
   if(sharkHealth.value!==shark){sharkHealth.value=shark;sharkHealthNumber.textContent=String(shark)}
 }
 const input=new InputController(canvas,{
-  pause,inventory,place,select,look:aim, beginMine:()=>{if(!attackShark())advanceMine(0)},pick,undo,viewMode:switchViewMode,
+  pause,inventory,place,select,look:aim, beginMine:()=>{if(!useFrontierTool()&&!attackShark())advanceMine(0)},pick,undo,viewMode:switchViewMode,
   tagMap:toggleTagMap,
-  attack:()=>{if(!attackShark()&&session?.aquatic)ui.toast('近くのサメに照準を合わせてください。')},
+  attack:()=>{if(!useFrontierTool()&&!attackShark()&&session?.aquatic)ui.toast('近くのサメに照準を合わせてください。')},
   rotate:rotateMaterial,
   interact:()=>{if(session)interact(raycast(session.world,session.player),true)},
   home:()=>{if(session){const {x,y,z}=session.player;session.data.journey.home={x,y,z};guide();ui.toast('現在地を拠点に登録しました。')}},
@@ -428,6 +466,7 @@ const input=new InputController(canvas,{
 function snapshot(s:Session): WorldSave {
   const {x,y,z,yaw,pitch}=s.player
   return {...s.data,sharkDefeated:s.aquatic?.sharkDefeated??s.data.sharkDefeated,
+    frontier:s.frontier?.save()??s.data.frontier,
     pose:{x,y,z,yaw,pitch:s.kids?s.originalPitch:pitch,crouched:s.player.crouched},flying:s.player.flying,edits:s.world.exportEdits(),
     fixtures:s.world.exportFixtures(),journey:structuredClone(s.data.journey),settings:{...settings},bag:structuredClone(s.data.bag)}
 }
@@ -468,9 +507,10 @@ async function title() {
 function disposeLife(s:Session){
   s.land?.dispose()
   s.aquatic?.dispose()
+  s.frontier?.dispose()
 }
 function showRoom(room:SharedRoom) {
-  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state,stage:room.connection.room.stage})
+  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state,stage:room.connection.room.stage,tagBots:room.connection.room.tagBots})
 }
 function updateTagUI(s:Session,now=performance.now()){
   const room=s.online,game=room?.tagGame
@@ -501,7 +541,7 @@ function updateTagUI(s:Session,now=performance.now()){
     game.remaining=hiding?secondsLeft:Math.min(game.remaining??secondsLeft,secondsLeft)
   }
   const hint=finished||hiding?'':spectator?'結果を待っています':
-    playing?(it?'逃げ役にぶつかるとタッチ':'鬼から逃げて隠れよう'):'2人以上で開始'
+    playing?(it?'逃げ役にぶつかるとタッチ':'鬼から逃げて隠れよう'):room.connection.room.tagBots?'プレイ開始を押すとCPUと対戦できます':'2人以上で開始'
   const key=[label,hint,game.open,game.remaining,hide?.remaining,hide?.title].join('/')
   if(game.uiKey!==key){
     ui.tagMode({label,hint,it,mapOpen:game.open,remaining:game.remaining,hide})
@@ -616,7 +656,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     const start=world.spawn()
     const tag=connection?.room.mode==='tag'
     const mode=connection?(connection.room.mode==='explore'?'explore':'creative'):
-      stage!=='classic'?'creative':args?.mode??loaded?.mode??'creative'
+      !soloExploration(stage)?'creative':args?.mode??loaded?.mode??'creative'
     const profile=connection&&mode==='explore'?readRoomProfile(connection.room.code,nickname):undefined
     const newBag=()=>connection&&mode==='explore'?createRoomExplorationBag(stage):createBag(tag?'explore':mode)
     const data:ActiveSave=loaded??{format:'webcraft777',version:2,generator:2,id:crypto.randomUUID(),
@@ -624,7 +664,9 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
       revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,stage,
       pose:profile?.pose??start,flying:false,bag:profile?.bag??newBag(),selected:profile?.selected??0,
       edits:[],day:.39,settings:{...settings},guideSeen:false}
-    if(!loaded&&!tag&&mode==='creative'&&stage!=='classic')data.bag.hotbar=[7,8,10,27,28,29,SLIDE_ITEM,9,12]
+    if(!loaded&&!tag&&mode==='creative'&&stage!=='classic'){
+      data.bag.hotbar=stage==='frontier'?[7,8,10,5,9,12,38,36,34]:[7,8,10,27,28,29,SLIDE_ITEM,9,12]
+    }
     if(!data.journey.home){const {x,y,z}=start;data.journey.home={x,y,z}}
     station=null;logAxis='y';slideFacing=0;currentSite=''
     settings={...data.settings};tuneAudio()
@@ -640,6 +682,9 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
       session.online=room
       if(tag){room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),receivedAt:0,peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
       connectRoom(session,room)
+    }else if(stage==='frontier'){
+      session.frontier=new FrontierLife(world,view.scene)
+      if(data.frontier)session.frontier.restore(data.frontier)
     }else if(stage!=='flat'){
       if(stage==='classic')session.land=new LandLife(world,view.scene,player)
       session.aquatic=new AquaticLife(world,view.scene,data.sharkDefeated)
@@ -736,13 +781,13 @@ async function handle(action:string,value?:any) {
     case 'export-diagnostics': if(session)downloadJson('ウェブクラフト777-入力診断.json',JSON.stringify(input.report(),null,2));break
     case 'reset-input': if(session){stopInput();input.rememberView(session.player);controlMode=recoverControlMode();ui.pause(false,controlMode,'入力をリセットしました。「再開」から操作できます。')}break
     case 'pause':pause();break
-    case 'attack-shark':attackShark();break
+    case 'attack-shark':if(!useFrontierTool())attackShark();break
     case 'rotate-material':rotateMaterial();break
     case 'view-mode':switchViewMode();break
     case 'touch-fly':if(!touchControls.hidden)toggleFly();break
     case 'inventory':inventory();break
     case 'select':select(value);break
-    case 'assign':if(session&&(!session.online||sharedMaterial(value.id,session.data.mode))&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();void persistRoomProgress(session);ui.toast('ホットバーに登録しました。')}break
+    case 'assign':if(session&&(!session.online||sharedMaterial(value.id,session.data.mode))&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode,!!session.frontier)){refreshBag();void persistRoomProgress(session);ui.toast('ホットバーに登録しました。')}break
     case 'craft':if(session&&session.data.mode==='explore'&&ui.screen==='inventory'){
       const count=value.count??1, recipe=value.id??value
       if(session.online&&recipe==='chest'){ui.toast('共有ワールドでは作業台を使えます。');break}
@@ -834,9 +879,10 @@ function tick(now:number){
     s.land?.update(p,dt,s.data.day)
     const water=s.aquatic
     water?.update(p,dt)
-    const wildlifeEvent=water?.consumeEvent()
+    s.frontier?.update(p,dt,s.data.day)
+    const wildlifeEvent=s.frontier?.consumeEvent()??water?.consumeEvent()
     if(wildlifeEvent)ui.toast(wildlifeEvent)
-    if(water&&water.health<=0)returnToShore(s)
+    if(water&&water.health<=0||s.frontier&&s.frontier.health<=0)returnToSpawn(s)
     guideDue-=dt
     if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore'&&s.world.stage==='classic')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}
     stepDistance+=Math.hypot(ox-p.x,oz-p.z)
@@ -851,7 +897,7 @@ function tick(now:number){
     stillFrame=key
   } else stillFrame=''
   const aimedShark=input.active&&!!s.aquatic?.canAttack(s.player)
-  const aimedResident=input.active&&!aimedShark?s.land?.targetLabel(s.player,target?.distance):null
+  const aimedResident=input.active&&!aimedShark?(s.frontier?.targetLabel(s.player)??s.land?.targetLabel(s.player,target?.distance)):null
   if(input.active)showWildlife(s,aimedShark)
   const held=tag?0:s.data.bag.hotbar[s.data.selected]
   const use=target&&!s.player.crouched&&(!s.online?[21,22].includes(target.id):s.data.mode==='explore'&&target.id===21)
@@ -863,8 +909,11 @@ function tick(now:number){
     id:slide?SLIDE_ITEM+slideFacing:held,axis:logAxis,valid:!placementIssue(s.world,s.player,s.data.bag,s.data.mode,s.data.selected,target)&&
       !s.land?.occupies(target.x+target.nx,target.y+target.ny,target.z+target.nz)}:null
   const useAction=touchControls.hidden?'右クリック':'タップ'
+  const ammo=held===FRONTIER_ITEMS.revolver?FRONTIER_ITEMS.rounds:held===FRONTIER_ITEMS.torch?FRONTIER_ITEMS.torch:FRONTIER_ITEMS.fireArrow
+  const frontierAction=input.active&&s.frontier&&isFrontierEquipment(held)?
+    ITEMS[held].name+' ×'+(s.data.mode==='creative'?'∞':quantity(s.data.bag,ammo))+'　'+(input.drag?'使うボタン / X':'左クリック / X'):''
   ui.target(aimedShark?(input.drag?'サメ　攻撃ボタン / X':'サメ　左クリック / X'):
-    aimedResident?aimedResident+'　'+useAction+'で話す':use?useAction+(target!.id===21?'で作業台':'でチェスト'):'')
+    frontierAction|| (aimedResident?aimedResident+'　'+(s.frontier?'V / '+useAction:useAction+'で話す'):use?useAction+(target!.id===21?'で作業台':'でチェスト'):''))
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,
     moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined,!!tag)

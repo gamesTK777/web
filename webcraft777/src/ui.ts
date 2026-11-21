@@ -1,11 +1,11 @@
-import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
-import { TERRAIN_PRESETS, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
+import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, isFrontierEquipment, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
+import { TERRAIN_PRESETS, soloExploration, stageSupportsTagBots, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
-export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting'; stage?:TerrainPreset }
+export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting'; stage?:TerrainPreset;tagBots?:number }
 export interface TagUIStatus {
   label:string; hint:string; it:boolean; mapOpen:boolean; remaining?:number
   hide?: {remaining:number;title:string;detail:string}
@@ -21,7 +21,7 @@ const onlineTerrainDetails:Partial<Record<TerrainPreset,string>> = {
 }
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
 export interface RecipeView { id:string; name:string; ingredients:string; outputs:string; craftable:number; itemId:number; reason:string; equipment:string }
-export interface InventoryView { items:ItemView[]; bar:(ItemView|null)[]; recipes:RecipeView[]; selected:number; mode:Mode; benchUses?:number; chest?:Stack[]; palette?:ItemView[] }
+export interface InventoryView { items:ItemView[]; bar:(ItemView|null)[]; recipes:RecipeView[]; selected:number; mode:Mode; benchUses?:number; chest?:Stack[]; palette?:ItemView[];frontier?:boolean }
 
 export function inventoryView(bag:Bag, mode:Mode, selected:number,ctx:CraftContext):InventoryView {
   const creative = mode === 'creative'
@@ -31,12 +31,12 @@ export function inventoryView(bag:Bag, mode:Mode, selected:number,ctx:CraftConte
     return {id, name:def.name, count:creative ? Infinity : quantity(bag,id), durability:creative ? undefined : activeStack(bag,id)?.durability, maxDurability:def.maxDurability}
   }
   const items = creative
-    ? Object.keys(ITEMS).map(Number).filter(id=>ITEMS[id].block&&blockItemId(id)===id).map(item).filter((i):i is ItemView=>!!i)
+    ? Object.keys(ITEMS).map(Number).filter(id=>ITEMS[id].block&&blockItemId(id)===id||ctx.frontier&&isFrontierEquipment(id)).map(item).filter((i):i is ItemView=>!!i)
     : bag.slots.map(s=>({id:s.id,name:ITEMS[s.id].name,count:s.count,durability:s.durability,maxDurability:ITEMS[s.id].maxDurability}))
-  const recipes = creative ? [] : RECIPES.filter(r=>!r.legacy||ctx.generator===1).map(r=>({id:r.id, name:r.name, itemId:r.output.id,
+  const recipes = creative ? [] : RECIPES.filter(r=>(!r.legacy||ctx.generator===1)&&(!r.frontier||ctx.frontier)).map(r=>({id:r.id, name:r.name, itemId:r.output.id,
     ingredients:r.inputs.map(i=>ITEMS[i.id].name+' '+quantity(bag,i.id)+'/'+i.count).join(' ・ '),
     outputs:ITEMS[r.output.id].name+' ×'+r.output.count, craftable:craftable(bag,r,ctx),reason:craftReason(bag,r,ctx),equipment:needsBench(r,ctx.generator)?'作業台':'手作り'}))
-  return {items, bar:bag.hotbar.map(item), recipes, mode, selected}
+  return {items, bar:bag.hotbar.map(item), recipes, mode, selected,frontier:ctx.frontier}
 }
 
 const escapeText = (value:unknown) => String(value ?? '').replace(/[&<>"']/g, character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[character]!)
@@ -52,7 +52,7 @@ const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻�
 const sectionHead = (name:string) => '<header class="panel-head"><h1>'+name+'</h1>'+backButton()+'</header>'
 const terrainName = (stage:TerrainPreset|undefined) => TERRAIN_PRESETS.find(preset=>preset.id===stage)?.name??''
 function stagePicker(selected:TerrainPreset, mode?:RoomUIPlayMode) {
-  const cards=TERRAIN_PRESETS.filter(({id})=>mode!==undefined||id!=='school').map(({id,name,detail,thumbnail})=>{
+  const cards=TERRAIN_PRESETS.filter(({id})=>mode===undefined?id!=='school':id!=='frontier').map(({id,name,detail,thumbnail})=>{
     const unavailable=id==='school'&&mode!=='tag'
     return '<label class="stage-card"'+(unavailable?' hidden':'')+'><input type="radio" name="stage" value="'+id+'"'+
       (unavailable?' disabled':id===selected?' checked':'')+'>'+
@@ -115,6 +115,20 @@ function icon(id:number):string {
     poly('#f5ca70',[[3,12],[16,5],[29,12],[16,28]])
     poly('#e5f2ca',[[5,12],[9,10],[19,25],[16,28]])
     poly('#e5f2ca',[[14,6],[16,5],[29,12],[27,15]])
+  } else if(id===34){
+    poly('#45362c',[[7,15],[15,14],[13,26],[6,29],[4,26]])
+    poly('#4b5b63',[[6,10],[28,10],[28,15],[17,15],[14,19],[6,18]])
+    poly('#b9ced1',[[8,9],[29,9],[29,12],[8,12]])
+  } else if(id===35||id===36){
+    poly('#bc834b',[[6,29],[2,25],[19,8],[23,12]])
+    poly('#e45631',[[15,13],[16,6],[25,2],[23,8],[29,7],[25,15],[19,18]])
+    poly('#ffd681',[[17,14],[20,8],[24,7],[23,13],[20,16]])
+  } else if(id===37){
+    poly('#5c4428',[[4,24],[11,6],[16,7],[11,27],[7,29]])
+    poly('#e1ad54',[[13,27],[20,7],[25,8],[21,28],[17,30]])
+  } else if(id===38){
+    poly('#a4643a',[[6,5],[14,2],[22,7],[27,15],[23,25],[15,30],[8,28],[17,25],[22,16],[18,8]])
+    poly('#e9d8b8',[[6,5],[8,28],[10,28],[8,5]])
   } else if(id===24){poly('#438c9a',[[7,16],[17,2],[25,13],[17,30],[10,26]]);poly('#a6fff0',[[7,16],[17,2],[15,18],[10,26]]);poly('#74ddd4',[[15,18],[17,2],[23,13]])}
   else if (id===15) {poly('#25323d',[[4,17],[9,8],[20,5],[28,12],[25,23],[14,27],[6,24]]);poly('#53626c',[[5,16],[11,9],[20,7],[18,14],[10,20]]);poly('#36454d',[[12,23],[19,16],[25,14],[24,21],[15,25]])}
   else {
@@ -145,7 +159,7 @@ export class GameUI {
   private kidsView=false
   private room:OnlineStatus|null=null
   private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode,
-    stage:'classic' as TerrainPreset,tagMinutes:defaultTagMinutes}
+    stage:'classic' as TerrainPreset,tagMinutes:defaultTagMinutes,tagBots:0}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -213,12 +227,14 @@ export class GameUI {
         const selected=data.get('mode')
         const mode:RoomUIPlayMode=selected==='tag'||selected==='explore'?selected:'creative'
         const selectedStage=data.get('stage')
-        const stage=validTerrainPreset(selectedStage)&&(selectedStage!=='school'||mode==='tag')?selectedStage:'classic'
+        const stage=validTerrainPreset(selectedStage)&&selectedStage!=='frontier'&&(selectedStage!=='school'||mode==='tag')?selectedStage:'classic'
         const selectedMinutes=Number(data.get('tagMinutes'))
         const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
-        Object.assign(this.onlineDraft,{name,seed,mode,stage,...(mode==='tag'?{tagMinutes}:{})})
+        const selectedBots=Number(data.get('tagBots'))
+        const tagBots=stageSupportsTagBots(stage)&&Number.isInteger(selectedBots)&&selectedBots>=0&&selectedBots<=4?selectedBots:0
+        Object.assign(this.onlineDraft,{name,seed,mode,stage,...(mode==='tag'?{tagMinutes,tagBots}:{})})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
-        this.send('online-create',{name,seed,nickname,mode,stage,...(mode==='tag'?{tagMinutes}:{})})
+        this.send('online-create',{name,seed,nickname,mode,stage,...(mode==='tag'?{tagMinutes,...(tagBots?{tagBots}:{})}:{})})
       }else{
         const code=String(data.get('code')??'').trim().toUpperCase()
         this.onlineDraft.code=code
@@ -230,7 +246,7 @@ export class GameUI {
     const data=new FormData(form), name=String(data.get('name')??'').trim()
     if(!name){this.toast('ワールド名を入力してください。');form.querySelector('input')?.focus();return}
     const selected=data.get('stage'),stage=validSoloTerrainPreset(selected)?selected:'classic'
-    this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:stage!=='classic'||data.get('mode')==='creative'?'creative':'explore',stage})
+    this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:!soloExploration(stage)||data.get('mode')==='creative'?'creative':'explore',stage})
   }
   private change(event:Event) {
     const input=event.target
@@ -238,9 +254,14 @@ export class GameUI {
       this.onlineDraft.tagMinutes=tagMinuteOptions.find(minutes=>minutes===Number(input.value))??defaultTagMinutes
       return
     }
+    if(input instanceof HTMLSelectElement&&input.id==='tag-bots'){
+      this.onlineDraft.tagBots=Number(input.value)
+      return
+    }
     if(!(input instanceof HTMLInputElement))return
     if(input.name==='stage'&&input.form?.id==='online-create-form'&&input.checked&&validTerrainPreset(input.value)){
       this.onlineDraft.stage=input.value
+      this.updateBotSelector()
       return
     }
     if(input.name==='mode'&&input.form?.id==='online-create-form'&&input.checked){
@@ -255,10 +276,11 @@ export class GameUI {
       }
       school.closest('label')!.hidden=school.disabled=!isTag
       picker.toggleAttribute('data-school-choice',isTag)
+      this.updateBotSelector()
       return
     }
     if(input.name==='stage' && input.form?.id==='world-form' && input.checked){
-      const form=input.form,onlyCreative=input.value!=='classic'
+      const form=input.form,onlyCreative=!soloExploration(input.value)
       const explore=form.querySelector<HTMLInputElement>('[name="mode"][value="explore"]')!
       const creative=form.querySelector<HTMLInputElement>('[name="mode"][value="creative"]')!
       if(onlyCreative&&explore.checked)creative.checked=true
@@ -274,6 +296,10 @@ export class GameUI {
         vegetation:data.has('vegetation'),effects:data.has('effects'),invertY:data.has('invertY'),bob:data.has('bob'),sprintFov:data.has('sprintFov'),
         ambientVolume:Number(data.get('ambientVolume')),effectsVolume:Number(data.get('effectsVolume'))})
     }
+  }
+  private updateBotSelector(){
+    const disabled=this.onlineDraft.mode!=='tag'||!stageSupportsTagBots(this.onlineDraft.stage)
+    $('tag-bot-option').hidden=$<HTMLSelectElement>('tag-bots').disabled=disabled
   }
   private settingOutput(target:EventTarget|null) {
     if(!(target instanceof HTMLInputElement) || target.type!=='range')return
@@ -319,12 +345,17 @@ export class GameUI {
       '<select name="tagMinutes" id="tag-minutes" aria-describedby="tag-time-help"'+(draft.mode==='tag'?'':' disabled')+'>'+
       tagMinuteOptions.map(minutes=>'<option value="'+minutes+'"'+(draft.tagMinutes===minutes?' selected':'')+'>'+minutes+'分</option>').join('')+
       '</select><small id="tag-time-help">鬼が追いかけている間だけ時間が進みます。</small></div>'
+    const botsEnabled=draft.mode==='tag'&&stageSupportsTagBots(draft.stage)
+    const bots='<div id="tag-bot-option" class="entry"'+(botsEnabled?'':' hidden')+'><label for="tag-bots">CPUの人数</label>'+
+      '<select id="tag-bots" name="tagBots" aria-describedby="tag-bot-help"'+(botsEnabled?'':' disabled')+'>'+
+      [0,1,2,3,4].map(count=>'<option value="'+count+'"'+(draft.tagBots===count?' selected':'')+'>'+count+'人</option>').join('')+
+      '</select><small id="tag-bot-help">CPUを加えると、プレイヤー1人でも対戦を始められます。合計6人まで。</small></div>'
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
       '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+
-      stagePicker(draft.stage,draft.mode)+tagTime+
+      stagePicker(draft.stage,draft.mode)+tagTime+bots+
       '<button type="submit" class="primary full">ルームを作成</button></form>'
     const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
       '<h2 id="online-join-label">ルームに参加する</h2>'+nickname+
@@ -338,7 +369,8 @@ export class GameUI {
   onlineSession(status:OnlineStatus|null) {
     this.room=status
     const hud=$('online-hud')
-    const label=status?(status.state==='connecting'?'接続中':status.state==='reconnecting'?'再接続中':status.count+' / 6人'):''
+    const label=status?(status.state==='connecting'?'接続中':status.state==='reconnecting'?'再接続中':
+      status.count+' / 6人'+(status.tagBots?'（CPU '+status.tagBots+'）':'')):''
     hud.hidden=!status
     $('game').toggleAttribute('data-online',!!status)
     const code=$('online-hud-code')
@@ -423,13 +455,14 @@ export class GameUI {
   pause(ready=false,mode:ControlMode='lock',message='') {
     const online=this.room
     const tagReady=ready&&$('game').hasAttribute('data-tag-play')
+    const joinHint=tagReady?(online?.tagBots?'「プレイ開始」を押すとCPUも参加します。':'遊ぶ人がそろってから「プレイ開始」を押してください。'):''
     const alternatives=Object.entries(controlChoices).filter(([choice])=>choice!==mode)
       .map(([choice,{label}])=>button('resume-'+choice,label)).join('')
     this.show(ready?'ready':'pause','<h1>'+(ready?'ワールドの準備ができました':'一時停止')+'</h1>'+
       (message?'<p class="input-message" role="status">'+escapeText(message)+'</p>':'')+
       (online?'<div class="room-actions"><p>ルーム <strong>'+escapeText(online.code)+'</strong> <span data-online-status role="status"></span>'+
         '<small data-online-stage hidden></small></p>'+
-        button('online-copy','招待リンクをコピー')+(tagReady?'<p>遊ぶ人がそろってから「プレイ開始」を押してください。</p>':'')+'</div>':'')+
+        button('online-copy','招待リンクをコピー')+(joinHint?'<p>'+joinHint+'</p>':'')+'</div>':'')+
       '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
       '<p class="control-mode">操作方法　<strong>'+controlChoices[mode].name+'</strong></p>'+alternatives+
       '<button type="button" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false"></button>'+
@@ -476,6 +509,7 @@ export class GameUI {
     '<h2>タブレットモード</h2><p>一時停止画面の「タブレットモードでプレイ」から、PCでも画面のスティックやボタンを使えます。左下のスティックで移動し、景色をドラッグして見回します。照準を合わせて画面を短くタップすると、選択中のブロックを設置できます。右下のボタンからも設置・採掘・ジャンプ・しゃがみができます。クリエイティブでは「飛行」で切り替え、上昇・下降ボタンを長押しします。</p>'+
     '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
+    '<h2>西部の町</h2><p>案内に沿って作業場や建築区画に行けます。道具をホットバーで選び、左クリック、X、または画面の「使う」で使用します。探索でリボルバーを使うには弾、弓を使うには火矢が必要です。Vで町の人に話しかけたり、狙った炎を消したりできます。</p>'+
     '<h2>マルチプレイ</h2><p>ルームを作るときにステージと遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
     '<h2>鬼ごっこ</h2><p>最初と鬼が交代するたびに、20秒の隠れる時間が始まります。鬼はその場で待機し、逃げ役は移動できます。画面のカウントダウンが終わると追跡が始まり、制限時間の計測も進みます。時間切れのときに鬼だった人が負けです。</p><p>Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。学校では、自分がいる階の地図を表示します。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
@@ -539,7 +573,7 @@ export class GameUI {
       return '<div class="stack-actions">'+(view.chest?'<button data-action="transfer"'+attr+'>'+(side==='bag'?'預ける':'取る')+'</button><button data-action="transfer" data-half="yes"'+attr+'>半分</button>':
         '<button data-action="split"'+attr+'>分割</button>')+'</div>'
     }
-    const title=view.chest?'チェスト':view.benchUses!==undefined?'作業台':view.mode==='creative'?'ブロック一覧':'持ち物とクラフト'
+    const title=view.chest?'チェスト':view.benchUses!==undefined?'作業台':view.mode==='creative'?(view.frontier?'建材と道具':'ブロック一覧'):'持ち物とクラフト'
     const chest=view.chest?'<section><h2>チェスト　'+view.chest.length+' / 27 枠</h2>'+bagTools('chest')+
       (view.chest.length?'<div class="bag-grid">'+view.chest.map((s,i)=>'<div class="stack"><span>'+stamp(s.id)+' '+escapeText(ITEMS[s.id].name)+' ×'+s.count+(s.durability?'　耐久 '+s.durability:'')+'</span>'+controls(i,'chest')+'</div>').join('')+'</div>':'<p class="empty">まだ空です。所持品から預けられます。</p>')+'</section>':''
     const supply=view.palette?'<details class="supply" '+(paletteOpen?'open':'')+'><summary>建材を補充</summary><p>クリックで1個、Shift＋クリックで64個を所持品に加えます。</p><div class="bag-grid">'+view.palette.map(item=>'<button class="bag-item" data-action="supply" data-id="'+item.id+'">'+stamp(item.id)+escapeText(item.name)+'</button>').join('')+'</div></details>':''
@@ -549,7 +583,7 @@ export class GameUI {
       (r.craftable>1?'<button data-action="craft" data-id="'+r.id+'" data-count="'+r.craftable+'">まとめて ×'+r.craftable+'</button>':'')+'</div></li>').join('')
     this.show('inventory','<header class="panel-head"><h1>'+title+'</h1>'+button('back','閉じる <kbd>E</kbd>','back')+'</header>'+
       '<div class="inventory-bar"><h2>ホットバー</h2><div class="hotbar">'+this.slots(view)+'</div><p>数字1〜9かクリックで枠を選び、アイコンを押すと登録。'+(view.mode==='explore'?' Shift＋クリックで'+(view.chest?'移動':'分割')+'。':'')+(view.benchUses!==undefined?'　この作業台で制作 '+view.benchUses+' 回':'')+'</p></div>'+
-      supply+'<div class="inventory-columns'+(view.mode==='creative'&&!view.chest?' palette':'')+'"><section><h2>'+(view.mode==='creative'&&!view.chest?'建築ブロック':'所持品')+'</h2>'+(view.mode==='explore'||view.chest?bagTools('bag'):'')+
+      supply+'<div class="inventory-columns'+(view.mode==='creative'&&!view.chest?' palette':'')+'"><section><h2>'+(view.mode==='creative'&&!view.chest?(view.frontier?'建材と道具':'建築ブロック'):'所持品')+'</h2>'+(view.mode==='explore'||view.chest?bagTools('bag'):'')+
       (items?'<div class="bag-grid">'+items+'</div>':'<p class="empty">'+(view.palette?'「建材を補充」を開くと、ここに素材を用意できます。':'まだ何も持っていません。木や土を採掘して集めましょう。')+'</p>')+'</section>'+
       (chest|| (view.mode==='creative'?'':'<section><h2>クラフト</h2><p class="ingredient-key">材料は所持数 / 必要数で表示します。</p><ul class="recipes">'+recipes+'</ul></section>'))+'</div>',true)
     const fresh=this.panel.querySelector('.panel')

@@ -2,6 +2,7 @@ import { validStacks, type Stack, type Outcome } from "./inventory.ts";
 import { makeLandmarks, type Landmark } from "./landmarks.ts";
 import type { TerrainPreset } from "./stages.ts";
 import { buildSchool, schoolSpawn } from "./school.ts";
+import { buildFrontierTerrain, buildFrontierTown, frontierSpawn, type FrontierStructureCell } from "./frontier-world.ts";
 
 export const SIZE = 256;
 export const HEIGHT = 96;
@@ -91,6 +92,7 @@ export class World {
   readonly salt: number;
   readonly generator: GeneratorVersion;
   landmarks: Landmark[]=[];
+  frontierStructures: readonly FrontierStructureCell[]=[];
   private axes=new Map<number,'x'|'z'>();
   private chests=new Map<number,Stack[]>();
   private benches=new Map<number,number>();
@@ -175,6 +177,15 @@ export class World {
       this.data.fill(3,30*AREA,32*AREA);
       this.data.fill(1,32*AREA,33*AREA);
       buildSchool((x,y,z,id)=>this.write(x,y,z,id));
+      yield* this.indexTerrain();
+      return;
+    }
+    if(this.stage==='frontier'){
+      yield* buildFrontierTerrain({
+        size:SIZE,seaLevel:SEA_LEVEL,seed:this.salt,heights:this.heights,noise,scatter,
+        write:(x,y,z,id)=>this.write(x,y,z,id),tree:(x,z,broad)=>this.tree(x,z,broad),
+      });
+      this.frontierStructures=buildFrontierTown((x,y,z,id)=>this.write(x,y,z,id));
       yield* this.indexTerrain();
       return;
     }
@@ -266,7 +277,7 @@ export class World {
   }
   private *indexTerrain():Generator<number> {
     this.highest.fill(-1);
-    const indexSchoolLights=this.stage==='school';
+    const indexLandmarkLights=this.stage==='school'||this.stage==='frontier';
     for(let y=0;y<HEIGHT;y++) {
       for(let z=0;z<SIZE;z++) for(let x=0;x<SIZE;x++) {
         const index=voxelIndex(x,y,z),id=this.data[index];
@@ -275,7 +286,7 @@ export class World {
         this.occupied[key]++;
         if(isOpaque(id)) this.dense[key]++;
         if(isSolid(id) && id!==10) this.highest[x+SIZE*z]=y;
-        if(indexSchoolLights&&(id===12||id===25)) this.lamps.add(index);
+        if(indexLandmarkLights&&(id===12||id===25)) this.lamps.add(index);
       }
       if(y%4===3) yield .78+.22*(y+1)/HEIGHT;
     }
@@ -300,6 +311,7 @@ export class World {
   }
   spawn(): Spawn {
     if(this.stage==='school')return {...schoolSpawn};
+    if(this.stage==='frontier')return {...frontierSpawn};
     for(let radius=0;radius<32;radius++) for(let dz=-radius;dz<=radius;dz++) for(let dx=-radius;dx<=radius;dx++) {
       if(Math.max(Math.abs(dx),Math.abs(dz))!==radius) continue;
       const x=SPAWN_X+dx,z=SPAWN_Z+dz;
@@ -377,7 +389,10 @@ export class World {
   benchUses(x:number,y:number,z:number):number {return this.benches.get(voxelIndex(x,y,z)) ?? 0;}
   useBench(x:number,y:number,z:number,craftCount=1):void {
     if (this.get(x,y,z)!==21 || !Number.isSafeInteger(craftCount) || craftCount<1) return;
-    this.benches.set(voxelIndex(x,y,z),Math.min(Number.MAX_SAFE_INTEGER,this.benchUses(x,y,z)+craftCount));
+    const key=voxelIndex(x,y,z);
+    // A prebuilt public workbench is part of the terrain, not a saved placement.
+    if(this.stage==='frontier'&&!this.edits.has(key))return;
+    this.benches.set(key,Math.min(Number.MAX_SAFE_INTEGER,this.benchUses(x,y,z)+craftCount));
   }
   exportFixtures():WorldFixtures {
     return {axes:[...this.axes],benches:[...this.benches],chests:[...this.chests].filter(([,slots])=>slots.length)

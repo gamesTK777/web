@@ -2,6 +2,7 @@ import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {handleWebcraft} from './room-service.mjs'
 import {createLocalRoomDb} from './sqlite-d1.mjs'
+import {tagBotPose,tagBotSeats} from './tag-bots.mjs'
 
 const origin = 'https://gamestk777.github.io'
 const epoch = 1_799_000_000_000
@@ -532,6 +533,103 @@ test('school is a timed tag stage shared by current hosts and guests', async t =
   assert.equal(finished.tag.it,host.id)
   assert.deepEqual(finished.tag.winnerIds,[guest.id])
   assert.deepEqual(finished.cells,[])
+})
+
+test('CPU tag validates counts, reserves seats and waits for a real player to start',async t=>{
+  const {run,join,sync}=env(t)
+  const args={name:'CPUと鬼ごっこ',nickname:'ホスト',mode:'tag',stage:'flat',protocol:7,tagMinutes:1}
+  for(const tagBots of [-1,1.5,5,'2',null])
+    assert.equal((await run('rooms',{...args,tagBots})).status,400)
+  for(const choice of [{mode:'creative',tagMinutes:undefined},{mode:'explore',tagMinutes:undefined},{stage:'lake'},{stage:'classic'}])
+    assert.equal((await run('rooms',{...args,...choice,tagBots:1})).status,400)
+  assert.equal((await run('rooms',{...args,protocol:6,tagBots:1})).status,426)
+  const result=await run('rooms',{...args,tagBots:4})
+  assert.equal(result.status,201)
+  const host=await result.json()
+  assert.equal(host.room.tagBots,4)
+  assert.equal((await join(host,'旧版',epoch,6)).status,426)
+  const guest=await (await join(host,'ひとりの仲間',epoch,7)).json()
+  assert.equal(guest.room.tagBots,4)
+  assert.equal((await join(host,'定員超過',epoch,7)).status,409)
+  const frames=[]
+  for(const who of [host,guest]){
+    const waiting=await (await sync(who,{protocol:7,at:null})).json()
+    assert.equal(waiting.tag.phase,'waiting')
+    assert.equal(waiting.players.length,4)
+    assert(waiting.players.every(bot=>bot.cpu===true&&bot.nickname.startsWith('CPU ')))
+    assert(waiting.players.every(bot=>!Object.hasOwn(bot,'token')&&!Object.hasOwn(bot.pose,'waypoint')))
+    frames.push(waiting)
+  }
+  assert.deepEqual(frames[0].players,frames[1].players)
+})
+
+test('a solo player and a server CPU share starts, movement, handoffs, countdown and results',async t=>{
+  const {run,sync,sql}=env(t)
+  const host=await (await run('rooms',{name:'CPUと鬼ごっこ',nickname:'ひとりの鬼',mode:'tag',stage:'flat',
+    protocol:7,tagMinutes:1,tagBots:1})).json()
+  const start=epoch+10
+  const atHome=pose(128.5,33,139.5)
+  const frame=async(now,at=atHome)=>{
+    const response=await sync(host,{protocol:7,now,at})
+    assert.equal(response.status,200)
+    return response.json()
+  }
+  const first=await frame(start)
+  const cpu=first.players[0]
+  assert.equal(first.tag.phase,'hiding')
+  assert.equal(first.tag.it,host.id)
+  assert.equal(first.tag.hideUntil,start+20_000)
+  assert.deepEqual(new Set(first.tag.enrolledIds),new Set([host.id,cpu.id]))
+  const escape=await frame(start+260)
+  assert.notDeepEqual(escape.players[0].pose,cpu.pose)
+  const before=await frame(first.tag.hideUntil)
+  assert.equal(before.tag.phase,'playing')
+  const locate=await frame(first.tag.hideUntil+250)
+  const catchAt=first.tag.hideUntil+251
+  const hit=await frame(catchAt,locate.players[0].pose)
+  assert.equal(hit.tag.it,cpu.id)
+  assert.equal(hit.tag.previousIt,host.id)
+  assert.equal(hit.tag.phase,'hiding')
+  assert.equal(hit.tag.hideUntil,catchAt+20_000)
+  assert.equal(hit.tag.endsAt,first.tag.endsAt+20_000)
+  const frozen=await frame(catchAt+1000)
+  assert.equal(frozen.players[0].pose.moving,false)
+  assert.equal(frozen.players[0].pose.x,hit.players[0].pose.x)
+  assert.equal(frozen.players[0].pose.z,hit.players[0].pose.z)
+  const away=pose(Math.min(250,frozen.players[0].pose.x+4),33,frozen.players[0].pose.z)
+  await frame(hit.tag.hideUntil-500,away)
+  const release=await frame(hit.tag.hideUntil,away)
+  assert.equal(release.tag.phase,'playing')
+  const pursuitAt=hit.tag.hideUntil+250
+  const repeated=await Promise.all([frame(pursuitAt,away),frame(pursuitAt,away)])
+  assert.deepEqual(repeated[0].players,repeated[1].players)
+  assert.notEqual(repeated[0].players[0].pose.x,frozen.players[0].pose.x)
+  assert.equal(sql.prepare('SELECT pose_at FROM webcraft_members WHERE room_code=? AND id=?').get(host.room.code,cpu.id).pose_at,pursuitAt)
+  const finish=await frame(hit.tag.endsAt)
+  assert.equal(finish.tag.phase,'finished')
+  assert.equal(finish.tag.it,cpu.id)
+  assert.deepEqual(finish.tag.winnerIds,[host.id])
+  assert.deepEqual(finish.tag.results,[{id:cpu.id,nickname:cpu.nickname},{id:host.id,nickname:'ひとりの鬼'}])
+})
+
+test('school CPUs climb the staircase and stop against the matching target floor',()=>{
+  const bot=tagBotSeats('school',1)[0]
+  const player={id:'person',current:pose(106.5,40,118.5)}
+  const room={phase:'playing',it:bot.id}
+  let now=epoch
+  let current=bot.pose
+  const heights=new Set()
+  for(let i=0;i<240;i++){
+    const next=tagBotPose('school',{...bot,current,pose_at:now},[player],room,now+200)
+    assert(Math.abs(next.y-current.y)<=1)
+    assert(Math.hypot(next.x-current.x,next.z-current.z)<=1.421)
+    current=next
+    heights.add(next.y)
+    now+=200
+  }
+  assert.deepEqual([...heights],[33,34,35,36,37,38,39,40])
+  assert.equal(current.x,player.current.x)
+  assert.equal(current.z,player.current.z)
 })
 
 test('edits validate bedrock, range, space occupied by a player and cursor before committing', async t => {

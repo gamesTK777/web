@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS webcraft_rooms (
   tag_enabled INTEGER NOT NULL DEFAULT 0 CHECK (tag_enabled IN (0,1)),
   tag_minutes INTEGER NOT NULL DEFAULT 0 CHECK (tag_minutes IN (0,1,3,5,10,15)),
   stage TEXT NOT NULL DEFAULT 'classic' CHECK (stage IN ('classic','flat','lake')),
-  tag_stage TEXT CHECK (tag_stage IS NULL OR (tag_stage='school' AND tag_enabled=1 AND tag_minutes>0 AND stage='classic'))
+  tag_stage TEXT CHECK (tag_stage IS NULL OR (tag_stage='school' AND tag_enabled=1 AND tag_minutes>0 AND stage='classic')),
+  tag_bots INTEGER NOT NULL DEFAULT 0 CHECK (typeof(tag_bots)='integer' AND tag_bots BETWEEN 0 AND 4 AND
+    (tag_bots=0 OR (tag_enabled=1 AND tag_minutes>0 AND (stage='flat' OR tag_stage IS 'school'))))
 );
 
 CREATE INDEX IF NOT EXISTS webcraft_rooms_expiry ON webcraft_rooms(expires_at);

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activeStack, assignHotbar, CAPACITY, craft, craftable, createBag, miningSeconds, quantity, RECIPES, stageMining, validBag } from "../src/inventory.ts";
+import { activeStack, assignHotbar, CAPACITY, consumeItem, craft, craftable, createBag, FRONTIER_ITEMS, miningSeconds, quantity, RECIPES, stageMining, validBag } from "../src/inventory.ts";
 import type { Bag } from "../src/inventory.ts";
 
 function gather(bag: Bag, id: number, tool = 0) {
@@ -102,7 +102,7 @@ test("creative hotbar only admits placeable blocks and swaps assigned positions"
 
 test("save validation rejects invalid ids, capacities, counts and tool durability", () => {
   const bag = createBag("explore");
-  for (const slots of [[{id:34,count:1}], [{id:33,count:1}], [{id:2,count:0}], [{id:2,count:65}], [{id:14,count:1}],
+  for (const slots of [[{id:39,count:1}], [{id:33,count:1}], [{id:2,count:0}], [{id:2,count:65}], [{id:14,count:1}],
     [{id:13,count:1}], [{id:18,count:2,durability:1}], [{id:17,count:1,durability:37}],
     [{id:17,count:1,durability:0}], [{id:7,count:10,durability:4}], Array(28).fill({id:1,count:1})]) {
     assert.equal(validBag({...bag,slots}),false);
@@ -110,4 +110,20 @@ test("save validation rejects invalid ids, capacities, counts and tool durabilit
   assert.equal(validBag({...bag,hotbar:Array(8).fill(0)}),false);
   assert.equal(validBag({...bag,hotbar:Array(9).fill("5")}),false);
   assert.equal(validBag({...bag,slots:[{id:19,count:1,durability:2}]}),true);
+});
+
+test("western recipes use the frontier and the workbench where applicable",()=>{
+  const bag=createBag("explore");
+  bag.slots=[{id:16,count:12},{id:7,count:12},{id:8,count:12},{id:15,count:6}];
+  const town={generator:2,bench:true,frontier:true} as const;
+  const before=structuredClone(bag);
+  assert.equal(craft(bag,"frontier-torch",1,{...town,frontier:false}).ok,false);
+  assert.equal(craft(bag,"frontier-revolver",1,{...town,bench:false}).ok,false);
+  assert.deepEqual(bag,before);
+  for(const recipe of ["frontier-bow","frontier-arrow","frontier-revolver","frontier-rounds","frontier-torch"])
+    assert(craft(bag,recipe,1,town).ok);
+  assert(validBag(bag));
+  assert(consumeItem(bag,FRONTIER_ITEMS.fireArrow));
+  assert.equal(quantity(bag,FRONTIER_ITEMS.fireArrow),5);
+  assert.equal(quantity(bag,FRONTIER_ITEMS.rounds),10);
 });

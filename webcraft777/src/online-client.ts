@@ -1,6 +1,6 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
-import { validTerrainPreset, type TerrainPreset } from './stages'
+import { stageSupportsTagBots, validTerrainPreset, type TerrainPreset } from './stages'
 export type OnlineMode = Mode|'tag'
 export type TagMinutes = 1|3|5|10|15
 
@@ -34,6 +34,7 @@ export interface RoomPlayer {
   id: string
   nickname: string
   pose: NetPose
+  cpu?:boolean
 }
 
 export interface RoomSummary {
@@ -45,6 +46,7 @@ export interface RoomSummary {
   mode: OnlineMode
   stage: TerrainPreset
   tagMinutes?: TagMinutes
+  tagBots?:number
 }
 
 export interface RoomConnection {
@@ -92,7 +94,7 @@ const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
 const MAX_ROOM_CELLS = 10_000
-const PROTOCOL = 6
+const PROTOCOL = 7
 
 const statusMessages: Record<number, string> = {
   400: '部屋名・ニックネーム・合言葉を確認してください。',
@@ -148,8 +150,11 @@ function parseConnection(value: unknown): RoomConnection {
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
       (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag') ||
       (room.stage!==undefined&&!validTerrainPreset(room.stage)) ||
+      room.stage==='frontier' ||
       (room.stage==='school'&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
       (room.tagMinutes!==undefined&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
+      (room.tagBots!==undefined&&(!isInteger(room.tagBots,0,4)||
+        room.tagBots>0&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes)||!stageSupportsTagBots(room.stage)))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||
       !/^[a-z0-9_.-]+$/i.test(body.token)) return invalidResponse()
@@ -159,7 +164,8 @@ function parseConnection(value: unknown): RoomConnection {
     room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt,
       mode:room.mode==='explore'||room.mode==='tag'?room.mode:'creative',
       stage:validTerrainPreset(room.stage)?room.stage:'classic',
-      ...(isTagMinutes(room.tagMinutes)?{tagMinutes:room.tagMinutes}:{}) },
+      ...(isTagMinutes(room.tagMinutes)?{tagMinutes:room.tagMinutes}:{}),
+      ...(isInteger(room.tagBots,1,4)?{tagBots:room.tagBots}:{}) },
   }
 }
 
@@ -170,7 +176,8 @@ function parsePlayer(value: unknown): RoomPlayer | undefined {
       !isNumber(pose.yaw, -Math.PI * 2, Math.PI * 2) ||
       typeof pose.moving !== 'boolean' || typeof pose.crouched !== 'boolean' || typeof pose.flying !== 'boolean') return undefined
   const {x, y, z, yaw, moving, crouched, flying} = pose
-  return { id: member.id, nickname: member.nickname, pose: { x, y, z, yaw, moving, crouched, flying } }
+  return { id: member.id, nickname: member.nickname, pose: { x, y, z, yaw, moving, crouched, flying },
+    ...(member.cpu===true?{cpu:true}:{}) }
 }
 
 function parseCell(value: unknown, since: number, total: number): RoomCell {
@@ -274,11 +281,11 @@ export class OnlineClient {
     this.origin = url.origin
   }
 
-  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode; tagMinutes?:TagMinutes; stage?:TerrainPreset }): Promise<RoomConnection> {
+  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode; tagMinutes?:TagMinutes; stage?:TerrainPreset;tagBots?:number }): Promise<RoomConnection> {
     const timed=input.mode==='tag'
     const connection=parseConnection(await this.request('rooms', {...input,protocol:PROTOCOL}))
     if((input.mode&&connection.room.mode!==input.mode)||(timed&&connection.room.tagMinutes!==(input.tagMinutes??5))||
-      (input.stage&&connection.room.stage!==input.stage)){
+      (input.stage&&connection.room.stage!==input.stage)||(input.tagBots??0)!==(connection.room.tagBots??0)){
       void this.leave(connection)
       throw new OnlineError(426,'mode-unavailable')
     }

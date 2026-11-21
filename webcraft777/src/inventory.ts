@@ -3,13 +3,17 @@ export type Amount = { id: number; count: number };
 export type Stack = Amount & { durability?: number };
 export type Bag = { slots: Stack[]; hotbar: number[] };
 export type Outcome = { ok: boolean; message: string };
-export type CraftContext = { bench: boolean; generator: 1 | 2 };
-export type Recipe = { id: string; name: string; inputs: Amount[]; output: Amount; bench?: boolean; legacy?: boolean };
+export type CraftContext = { bench: boolean; generator: 1 | 2; frontier?:boolean };
+export type Recipe = { id: string; name: string; inputs: Amount[]; output: Amount; bench?: boolean; legacy?: boolean; frontier?:boolean };
 type Kind = { name: string; color: string; block: boolean; maxDurability?: number };
 
 export const CAPACITY = 27;
 export const STACK_LIMIT = 64;
 export const SLIDE_ITEM = 30;
+export const FRONTIER_ITEMS={revolver:34,fireArrow:35,torch:36,rounds:37,bow:38} as const;
+export function isFrontierEquipment(id:number):boolean {
+  return id===FRONTIER_ITEMS.revolver||id===FRONTIER_ITEMS.torch||id===FRONTIER_ITEMS.bow||id===FRONTIER_ITEMS.fireArrow;
+}
 const slidePart = { name: "滑り台パーツ", color: "#e5ab52", block: true };
 export const blockItemId = (id:number) => id>=31&&id<=33 ? SLIDE_ITEM : id;
 export const ITEMS: Record<number, Kind> = {
@@ -43,6 +47,11 @@ export const ITEMS: Record<number, Kind> = {
   28: { name: "ジャンプ台（中）", color: "#6eaee8", block: true },
   29: { name: "ジャンプ台（大）", color: "#d892dd", block: true },
   30: slidePart, 31: slidePart, 32: slidePart, 33: slidePart,
+  34: { name: "リボルバー", color: "#65747e", block: false },
+  35: { name: "火矢", color: "#ed8243", block: false },
+  36: { name: "たいまつ", color: "#fdb35a", block: false },
+  37: { name: "リボルバーの弾", color: "#d8ab66", block: false },
+  38: { name: "弓", color: "#a86943", block: false },
 };
 
 const amount = (id: number, count: number): Amount => ({ id, count });
@@ -68,6 +77,11 @@ export const RECIPES: Recipe[] = [
   { ...recipe("crystal-lamp", amount(25, 2), amount(24, 1), amount(12, 1)), bench: true },
   { ...recipe("inlaid-tile", amount(26, 8), amount(24, 1), amount(8, 4)), bench: true },
   { ...recipe("crystal-cut", amount(24, 2), amount(10, 2), amount(15, 1)), bench: true, legacy: true },
+  { ...recipe("frontier-revolver", amount(34,1), amount(8,5), amount(7,3)), bench:true, frontier:true },
+  { ...recipe("frontier-rounds", amount(37,10), amount(8,2), amount(15,1)), bench:true, frontier:true },
+  { ...recipe("frontier-torch", amount(36,4), amount(16,2), amount(15,1)), frontier:true },
+  { ...recipe("frontier-arrow", amount(35,6), amount(16,3), amount(15,1)), frontier:true },
+  { ...recipe("frontier-bow", amount(38,1), amount(16,4), amount(7,2)), frontier:true },
 ];
 
 function itemId(id: unknown): id is number {
@@ -97,9 +111,9 @@ export function activeStack(bag: Bag, id: number): Stack | undefined {
 export function quantity(bag: Bag, id: number): number {
   return bag.slots.reduce((sum, item) => sum + (item.id === id ? item.count : 0), 0);
 }
-export function assignHotbar(bag: Bag, slot: number, id: number, mode: Mode): boolean {
+export function assignHotbar(bag: Bag, slot: number, id: number, mode: Mode, frontier=false): boolean {
   if (!Number.isInteger(slot) || slot < 0 || slot >= 9 || !itemId(id)) return false;
-  if (mode === "creative" ? !ITEMS[id].block : !activeStack(bag, id)) return false;
+  if (mode === "creative" ? !ITEMS[id].block&&!(frontier&&isFrontierEquipment(id)) : !activeStack(bag, id)) return false;
   const prior = bag.hotbar.indexOf(id);
   if (prior >= 0) bag.hotbar[prior] = bag.hotbar[slot];
   bag.hotbar[slot] = id;
@@ -152,6 +166,7 @@ function makeOne(draft: Bag, rec: Recipe) {
   return store(draft, rec.output.id, rec.output.count);
 }
 export function craftReason(bag: Bag, rec: Recipe, ctx?: CraftContext): string {
+  if (rec.frontier && !ctx?.frontier) return "西部の町で作れます。";
   if (rec.legacy && ctx?.generator !== 1) return "旧ワールド専用の加工です。";
   // The old world's hand recipes are part of its original progression.
   if (needsBench(rec,ctx?.generator ?? 1) && !ctx?.bench) return "作業台を右クリックして作ります。";
@@ -213,7 +228,10 @@ export function stageMining(bag: Bag, block: number, tool: number): { draft?: Ba
   return { draft, message: ITEMS[drop].name + " +" + count + (broken ? " ／ " + ITEMS[tool].name + "が壊れました。" : "") };
 }
 export function consumeBlock(bag: Bag, id: number): boolean {
-  if (!ITEMS[id]?.block || !activeStack(bag, id)) return false;
+  return !!ITEMS[id]?.block&&consumeItem(bag,id);
+}
+export function consumeItem(bag:Bag,id:number):boolean {
+  if (!activeStack(bag,id)) return false;
   spend(bag, id, 1);
   return true;
 }
