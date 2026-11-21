@@ -1,5 +1,6 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
+import { validTerrainPreset, type TerrainPreset } from './stages'
 export type OnlineMode = Mode|'tag'
 export type TagMinutes = 1|3|5|10|15
 
@@ -42,6 +43,7 @@ export interface RoomSummary {
   generator: 2
   createdAt: number
   mode: OnlineMode
+  stage: TerrainPreset
   tagMinutes?: TagMinutes
 }
 
@@ -90,6 +92,7 @@ const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
 const MAX_ROOM_CELLS = 10_000
+const PROTOCOL = 5
 
 const statusMessages: Record<number, string> = {
   400: '部屋名・ニックネーム・合言葉を確認してください。',
@@ -144,6 +147,7 @@ function parseConnection(value: unknown): RoomConnection {
   if (!body || !room || typeof room.code !== 'string' || !/^[A-Z0-9]{8}$/.test(room.code) ||
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
       (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag') ||
+      (room.stage!==undefined&&!validTerrainPreset(room.stage)) ||
       (room.tagMinutes!==undefined&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||
@@ -153,6 +157,7 @@ function parseConnection(value: unknown): RoomConnection {
     token: body.token,
     room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt,
       mode:room.mode==='explore'||room.mode==='tag'?room.mode:'creative',
+      stage:validTerrainPreset(room.stage)?room.stage:'classic',
       ...(isTagMinutes(room.tagMinutes)?{tagMinutes:room.tagMinutes}:{}) },
   }
 }
@@ -248,7 +253,7 @@ function retryDelay(header: string | null) {
 }
 
 type SyncRequest = {
-  protocol: 3|4
+  protocol: typeof PROTOCOL
   code: string
   token: string
   since: number
@@ -268,10 +273,11 @@ export class OnlineClient {
     this.origin = url.origin
   }
 
-  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode; tagMinutes?:TagMinutes }): Promise<RoomConnection> {
+  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode; tagMinutes?:TagMinutes; stage?:TerrainPreset }): Promise<RoomConnection> {
     const timed=input.mode==='tag'
-    const connection=parseConnection(await this.request('rooms', {...input,protocol:timed?4:3}))
-    if((input.mode&&connection.room.mode!==input.mode)||(timed&&connection.room.tagMinutes!==(input.tagMinutes??5))){
+    const connection=parseConnection(await this.request('rooms', {...input,protocol:PROTOCOL}))
+    if((input.mode&&connection.room.mode!==input.mode)||(timed&&connection.room.tagMinutes!==(input.tagMinutes??5))||
+      (input.stage&&connection.room.stage!==input.stage)){
       void this.leave(connection)
       throw new OnlineError(426,'mode-unavailable')
     }
@@ -279,7 +285,7 @@ export class OnlineClient {
   }
 
   async join(input: { code: string; nickname: string }): Promise<RoomConnection> {
-    return parseConnection(await this.request('join', {...input,protocol:4}))
+    return parseConnection(await this.request('join', {...input,protocol:PROTOCOL}))
   }
 
   start(connection: RoomConnection, hooks: RoomHooks): RoomSync {
@@ -416,7 +422,7 @@ export class RoomSync {
       attemptedEdit = Boolean(sent && pose)
       if (sent && !attemptedEdit) this.finishEdit({ ok: false, reason: 'offline' })
       const payload = await this.send({
-        protocol: room.mode==='tag'?4:3, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
+        protocol: PROTOCOL, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
       }, request.signal)
       if (this.closed) return
       const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit, room)

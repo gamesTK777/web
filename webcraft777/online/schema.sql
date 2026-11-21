@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS webcraft_rooms (
   cell_count INTEGER NOT NULL DEFAULT 0,
   mode TEXT NOT NULL DEFAULT 'creative' CHECK (mode IN ('creative','explore')),
   tag_enabled INTEGER NOT NULL DEFAULT 0 CHECK (tag_enabled IN (0,1)),
-  tag_minutes INTEGER NOT NULL DEFAULT 0 CHECK (tag_minutes IN (0,1,3,5,10,15))
+  tag_minutes INTEGER NOT NULL DEFAULT 0 CHECK (tag_minutes IN (0,1,3,5,10,15)),
+  stage TEXT NOT NULL DEFAULT 'classic' CHECK (stage IN ('classic','flat','lake'))
 );
 
 CREATE INDEX IF NOT EXISTS webcraft_rooms_expiry ON webcraft_rooms(expires_at);

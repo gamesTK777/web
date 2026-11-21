@@ -379,6 +379,60 @@ test('concurrent edits use one cell revision, and later snapshots include placem
   assert.deepEqual(simultaneous.cells.map(cell => cell.key).sort(), [first,second])
 })
 
+test('stage is authoritative for each room in every multiplayer mode', async t => {
+  const {run,join,sync}=env(t)
+  const base={name:'選べる地形',nickname:'ホスト',seed:'shared-stage',protocol:5}
+  const withoutStage=await run('rooms',base)
+  assert.equal(withoutStage.status,201)
+  assert.equal((await withoutStage.json()).room.stage,'classic')
+  for(const stage of ['','ocean',5,null]){
+    assert.equal((await run('rooms',{...base,stage})).status,400)
+  }
+  for(const mode of ['creative','explore','tag']){
+    for(const stage of ['classic','flat','lake']){
+      const created=await run('rooms',{...base,stage,mode})
+      assert.equal(created.status,201)
+      const host=await created.json()
+      assert.equal(host.room.stage,stage)
+      assert.equal(host.room.mode,mode)
+      assert.equal(host.room.generator,2)
+      assert.equal(host.room.seed,base.seed)
+      const joined=await run('join',{code:host.room.code,nickname:'ゲスト',protocol:5,stage:'unknown'})
+      assert.equal(joined.status,200)
+      assert.deepEqual((await joined.json()).room,host.room)
+      const legacyProtocol={creative:1,explore:2,tag:4}[mode]
+      const legacy=await join(host,'旧バージョン',epoch,legacyProtocol)
+      assert.equal(legacy.status,stage==='classic'?200:426)
+      if(legacy.ok){
+        const {stage:_stage,...expected}=host.room
+        assert.deepEqual((await legacy.json()).room,expected)
+      }
+      assert.equal((await sync(host,{protocol:5})).status,200)
+    }
+  }
+})
+
+test('old clients cannot mutate alternate rooms before protocol validation', async t => {
+  const {sql,run,create,join,sync}=env(t)
+  const selected={name:'まっさらな平地',nickname:'ホスト',stage:'flat'}
+  assert.equal((await run('rooms',{...selected,protocol:4})).status,426)
+  const response=await run('rooms',{...selected,protocol:5})
+  assert.equal(response.status,201)
+  const host=await response.json()
+  const edit={key:voxel(132,33,130),fromRevision:0,before:0,block:8,axis:'y'}
+  assert.equal((await sync(host,{edit,protocol:4,now:epoch+5_000})).status,426)
+  assert.deepEqual({...sql.prepare('SELECT last_seen,pose FROM webcraft_members WHERE room_code=?').get(host.room.code)},
+    {last_seen:epoch,pose:null})
+  const initial=await (await sync(host,{protocol:5})).json()
+  assert.equal(initial.revision,0)
+  assert.deepEqual(initial.cells,[])
+  assert.deepEqual((await (await sync(host,{edit,protocol:5})).json()).result,{ok:true})
+
+  const legacy=await create()
+  assert.equal(legacy.room.stage,undefined)
+  assert.equal((await (await join(legacy,'新版',epoch,5)).json()).room.stage,'classic')
+})
+
 test('edits validate bedrock, range, space occupied by a player and cursor before committing', async t => {
   const {create,join,sync} = env(t)
   const host = await create()

@@ -5,12 +5,17 @@ export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
-export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting' }
+export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting'; stage?:TerrainPreset }
 export interface TagUIStatus { label:string; hint:string; it:boolean; mapOpen:boolean; remaining?:number }
 export interface TagUIResult { outcome:'win'|'lose'|'spectator'; loser:string; winners:string[]; minutes:number }
 type RoomUIPlayMode = Mode | 'tag'
 const tagMinuteOptions = [1,3,5,10,15] as const
 const defaultTagMinutes = 5
+const onlineTerrainDetails:Record<TerrainPreset,string> = {
+  classic:'森や丘、洞窟と湖が広がる地形。',
+  flat:'見晴らしのよい、木や建物のない草原。',
+  lake:'小さな砂島と、その周りに広がる大きな湖。',
+}
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
 export interface RecipeView { id:string; name:string; ingredients:string; outputs:string; craftable:number; itemId:number; reason:string; equipment:string }
 export interface InventoryView { items:ItemView[]; bar:(ItemView|null)[]; recipes:RecipeView[]; selected:number; mode:Mode; benchUses?:number; chest?:Stack[]; palette?:ItemView[] }
@@ -42,6 +47,14 @@ const $ = <T extends HTMLElement = HTMLElement>(id:string) => document.getElemen
 const button = (action:string, text:string, css='')=>'<button type="button" class="'+css+'" data-action="'+action+'">'+text+'</button>'
 const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻る','back')
 const sectionHead = (name:string) => '<header class="panel-head"><h1>'+name+'</h1>'+backButton()+'</header>'
+const terrainName = (stage:TerrainPreset|undefined) => TERRAIN_PRESETS.find(preset=>preset.id===stage)?.name??''
+function stagePicker(selected:TerrainPreset, online=false) {
+  const cards=TERRAIN_PRESETS.map(({id,name,detail,thumbnail})=>
+    '<label class="stage-card"><input type="radio" name="stage" value="'+id+'"'+(id===selected?' checked':'')+'>'+
+    '<img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
+    '<span><b>'+name+'</b><small>'+(online?onlineTerrainDetails[id]:detail)+'</small></span></label>').join('')
+  return '<fieldset class="stage-picker"><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
+}
 const formattedCount=(count:number)=>Number.isFinite(count)?String(count):'∞'
 const icons = new Map<number,string>()
 const toolEffect:Record<number,string>={17:'石や鉱石を素早く掘り、潮晶を採取',18:'石や鉱石をさらに速く掘り、潮晶を採取',19:'原木・木材の採掘を短縮',20:'原木・木材をさらに速く採掘',27:'約3ブロック跳び上がる',28:'約6ブロック跳び上がる',29:'約10ブロック跳び上がる',30:'1ブロックずつ高さを変えてつなぐ'}
@@ -125,7 +138,8 @@ export class GameUI {
   private worldName=''
   private kidsView=false
   private room:OnlineStatus|null=null
-  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode,tagMinutes:defaultTagMinutes}
+  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode,
+    stage:'classic' as TerrainPreset,tagMinutes:defaultTagMinutes}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -192,11 +206,12 @@ export class GameUI {
         const seed=String(data.get('seed')??'').trim()
         const selected=data.get('mode')
         const mode:RoomUIPlayMode=selected==='tag'||selected==='explore'?selected:'creative'
+        const selectedStage=data.get('stage'), stage=validTerrainPreset(selectedStage)?selectedStage:'classic'
         const selectedMinutes=Number(data.get('tagMinutes'))
         const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
-        Object.assign(this.onlineDraft,{name,seed,mode,...(mode==='tag'?{tagMinutes}:{})})
+        Object.assign(this.onlineDraft,{name,seed,mode,stage,...(mode==='tag'?{tagMinutes}:{})})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
-        this.send('online-create',{name,seed,nickname,mode,...(mode==='tag'?{tagMinutes}:{})})
+        this.send('online-create',{name,seed,nickname,mode,stage,...(mode==='tag'?{tagMinutes}:{})})
       }else{
         const code=String(data.get('code')??'').trim().toUpperCase()
         this.onlineDraft.code=code
@@ -217,8 +232,13 @@ export class GameUI {
       return
     }
     if(!(input instanceof HTMLInputElement))return
+    if(input.name==='stage'&&input.form?.id==='online-create-form'&&input.checked&&validTerrainPreset(input.value)){
+      this.onlineDraft.stage=input.value
+      return
+    }
     if(input.name==='mode'&&input.form?.id==='online-create-form'&&input.checked){
       const isTag=input.value==='tag',minutes=$<HTMLSelectElement>('tag-minutes')
+      this.onlineDraft.mode=isTag?'tag':input.value==='explore'?'explore':'creative'
       $('tag-time-option').hidden=minutes.disabled=!isTag
       return
     }
@@ -264,11 +284,8 @@ export class GameUI {
     this.panel.querySelector('[data-action="goto-worlds"]')?.setAttribute('title',hasWorlds?'保存したワールドを開く':'ワールド一覧とバックアップの読み込み')
   }
   create() {
-    const stages=TERRAIN_PRESETS.map(({id,name,detail,thumbnail})=>'<label class="stage-card"><input type="radio" name="stage" value="'+id+'"'+
-      (id==='classic'?' checked':'')+'><img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
-      '<span><b>'+name+'</b><small>'+detail+'</small></span></label>').join('')
     this.show('create',sectionHead('ワールドを作る')+'<form id="world-form">'+
-      '<fieldset class="stage-picker"><legend>ステージ</legend><div class="stage-grid">'+stages+'</div></fieldset>'+
+      stagePicker('classic')+
       '<div class="stage-fields"><label class="entry">ワールド名<input name="name" value="はじまりの谷" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry">地形のシード<input name="seed" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label></div>'+
       '<fieldset><legend>ゲームモード</legend><div class="modes"><label><input type="radio" name="mode" value="explore" checked aria-describedby="stage-mode-hint"><span><b>探索</b><small>木や石を集め、道具と建材を作る。</small></span></label>'+
@@ -291,6 +308,7 @@ export class GameUI {
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
+      stagePicker(draft.stage,true)+
       '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+tagTime+
       '<button type="submit" class="primary full">ルームを作成</button></form>'
     const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
@@ -300,7 +318,7 @@ export class GameUI {
     this.show('online',sectionHead('マルチプレイ')+
       '<p class="online-description">最大6人が同じワールドで遊べます。探索では持ち物を各自で管理し、掘った場所や設置した作業台は仲間と共有されます。</p>'+
       (error?'<p class="online-error" role="alert">'+escapeText(error)+'</p>':'')+
-      '<div class="online-forms">'+(code?join+create:create+join)+'</div>',true)
+      '<div class="online-forms"'+(code?' data-invited':'')+'>'+(code?join+create:create+join)+'</div>',true)
   }
   onlineSession(status:OnlineStatus|null) {
     this.room=status
@@ -312,8 +330,16 @@ export class GameUI {
     if(code.textContent!==(status?.code??''))code.textContent=status?.code??''
     const connection=$('online-hud-status')
     if(connection.textContent!==label)connection.textContent=label
+    const stage=terrainName(status?.stage), stageLabel=$('online-hud-stage')
+    stageLabel.hidden=!stage
+    if(stageLabel.textContent!==stage)stageLabel.textContent=stage
     const paused=this.panel.querySelector('[data-online-status]')
     if(paused&&paused.textContent!==label)paused.textContent=label
+    const pausedStage=this.panel.querySelector<HTMLElement>('[data-online-stage]')
+    if(pausedStage){
+      pausedStage.hidden=!stage
+      if(pausedStage.textContent!==stage)pausedStage.textContent=stage
+    }
   }
   tagMode(status:TagUIStatus|null) {
     $('game').toggleAttribute('data-tag-play',!!status)
@@ -376,7 +402,8 @@ export class GameUI {
       .map(([choice,{label}])=>button('resume-'+choice,label)).join('')
     this.show(ready?'ready':'pause','<h1>'+(ready?'ワールドの準備ができました':'一時停止')+'</h1>'+
       (message?'<p class="input-message" role="status">'+escapeText(message)+'</p>':'')+
-      (online?'<div class="room-actions"><p>ルーム <strong>'+escapeText(online.code)+'</strong> <span data-online-status role="status"></span></p>'+
+      (online?'<div class="room-actions"><p>ルーム <strong>'+escapeText(online.code)+'</strong> <span data-online-status role="status"></span>'+
+        '<small data-online-stage hidden></small></p>'+
         button('online-copy','招待リンクをコピー')+(tagReady?'<p>遊ぶ人がそろってから「プレイ開始」を押してください。</p>':'')+'</div>':'')+
       '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
       '<p class="control-mode">操作方法　<strong>'+controlChoices[mode].name+'</strong></p>'+alternatives+
@@ -424,7 +451,7 @@ export class GameUI {
     '<h2>タブレットモード</h2><p>一時停止画面の「タブレットモードでプレイ」から、PCでも画面のスティックやボタンを使えます。左下のスティックで移動し、景色をドラッグして見回します。照準を合わせて画面を短くタップすると、選択中のブロックを設置できます。右下のボタンからも設置・採掘・ジャンプ・しゃがみができます。クリエイティブでは「飛行」で切り替え、上昇・下降ボタンを長押しします。</p>'+
     '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
-    '<h2>マルチプレイ</h2><p>ルームを作るときに遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
+    '<h2>マルチプレイ</h2><p>ルームを作るときにステージと遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
     '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」と制限時間を選びます。隠れる時間のあとに追いかけっこが始まり、時間切れのときに鬼だった人が負けです。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+

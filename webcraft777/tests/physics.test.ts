@@ -165,6 +165,12 @@ test("swimming reduces travel and held jump raises the player", () => {
   stepPlayer(w,p,{...idle,forward:1,jump:true},.2);
   assert.ok(p.inWater);
   assert.ok(Math.abs(p.z - 16.1) < 1e-7);
+  const runner = createPlayer(pose), chaser = createPlayer(pose);
+  const swim = {...idle,forward:1,sprint:true};
+  stepPlayer(w,runner,swim,.2);
+  stepPlayer(w,chaser,swim,.2,{sprintMultiplier:1.25});
+  assert.equal(runner.vz,-2);
+  assert.equal(chaser.vz,-2.5);
   assert.ok(p.y > 1.8);
 });
 

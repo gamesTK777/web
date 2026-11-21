@@ -150,7 +150,11 @@ input { accent-color: #2e745b; }
 #game[data-screen="online"] .panel { width: min(100%,800px); }
 #game[data-screen="online"] .panel-head { margin-bottom: 6px; }
 #game[data-screen="online"] .online-description { margin: 8px 0 14px; }
-.online-forms { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.online-forms { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; align-items: start; }
+@media (min-width: 651px) {
+  .online-forms { grid-template-columns: minmax(0,1.7fr) minmax(0,1fr); }
+  .online-forms[data-invited] { grid-template-columns: minmax(0,1fr) minmax(0,1.7fr); }
+}
 .online-card { display: grid; align-content: start; padding: clamp(13px,2vw,20px); border: 1px solid #c8d2b6; border-radius: 8px; background: #f0f2e2; }
 .online-card h2 { margin: 0; font-size: 1.1rem; }
 .online-card .entry { margin: 11px 0 0; }
@@ -161,7 +165,14 @@ input { accent-color: #2e745b; }
 #tag-minutes { width: 100%; min-height: 44px; padding: 6px 10px; font-weight: 650; color: var(--ink); background: #fffdf5; border: 1px solid #a8bba8; border-radius: 5px; }
 #tag-time-help { font-size: .8rem; line-height: 1.4; }
 .online-card button { margin-top: 14px; }
-.online-card input,.online-card button { min-height: 44px; }
+.online-card .entry input,.online-card button { min-height: 44px; }
+.online-card .stage-picker { margin-bottom: 0; }
+@media (min-width: 611px) and (max-width: 850px) {
+  .online-card .stage-grid { grid-template-columns: minmax(0,1fr); gap: 6px; }
+  .online-card .stage-card { grid-template-columns: min(34%,134px) minmax(0,1fr); min-height: 74px; }
+  .online-card .stage-card img { height: 100%; min-height: 70px; }
+  .online-card .stage-card > span { align-self: center; padding: 7px 9px; }
+}
 #online-code { font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; }
 #game[data-tag-play] :is(.belt,.trail,#guide,#life-status,#touch-fly,#mine-meter,[data-action="inventory"],#fallback > div) { display: none; }
 #game[data-tag-play]:has(#tag-map:not([hidden])) #crosshair { visibility: hidden; }
@@ -219,9 +230,9 @@ input { accent-color: #2e745b; }
 .room-actions p { margin: 0; }
 .room-actions strong,#online-hud-code { letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .room-actions [data-online-status] { margin-inline-start: 5px; color: #355c43; font-weight: 700; }
+.room-actions [data-online-stage] { display: block; color: #355c43; font-size: .8rem; }
 .room-actions button { min-height: 40px; padding: 6px 12px; }
 @media (max-width: 650px) {
-  .online-forms { grid-template-columns: minmax(0,1fr); }
   .room-actions button { min-height: 44px; }
 }
 .loading-mark { height: 4px; margin-bottom: 16px; background: linear-gradient(90deg,transparent,#5a9364,transparent) 0 0 / 40% 100% no-repeat,#d3dec8; animation: loading 1.2s ease-in-out infinite alternate; }
@@ -236,6 +247,7 @@ input { accent-color: #2e745b; }
 #mode-tag { min-width: 0; max-width: 48vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 10px; font-size: .81rem; font-weight: 700; }
 #online-hud { position: absolute; top: calc(max(7px,env(safe-area-inset-top)) + 49px); left: max(18px,env(safe-area-inset-left)); display: flex; gap: 6px; padding: 5px 9px; max-width: calc(100% - 36px); font-size: .83rem; line-height: 1.4; }
 #online-hud-status { color: #ffe1a3; white-space: nowrap; }
+#online-hud-stage { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-inline-start: 6px; border-inline-start: 1px solid #f0e7c84d; }
 #game[data-online] #guide,#game[data-online] #debug,#game[data-online] #guide[hidden] ~ .trail { top: calc(max(7px,env(safe-area-inset-top)) + 86px); }
 @media (max-width: 650px) {
   #online-hud { left: max(7px,env(safe-area-inset-left)); }

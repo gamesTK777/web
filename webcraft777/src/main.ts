@@ -9,7 +9,7 @@ import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
 import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
-import { readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
+import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
 import { validTerrainPreset, type TerrainPreset } from './stages'
 import { LandLife } from './land-life'
 import { AquaticLife } from './aquatic-life'
@@ -109,6 +109,11 @@ function guide(){
   if(!session)return
   if(session.online?.tagGame){ui.expedition('','','');return}
   const {world,data,player}=session,j=data.journey,cave=world.landmarks.find(l=>l.kind==='cave')
+  if(world.stage!=='classic'){
+    const goal=!j.toolMade?'支給された原木で、木材と棒を作って道具を作ろう':'石を集め、作業台で石の道具や建材を作ろう'
+    ui.expedition(data.mode==='explore'&&!j.hidden?goal:'',homeBearing(j,player),'')
+    return
+  }
   const site=world.landmarks.find(l=>Math.hypot(l.x-player.x,l.z-player.z)<12)
   if(site&&site.kind!==currentSite&&input.active){ui.toast(site.name+'　'+({grove:'大樹の根元で建築用の原木を採れます。',cave:'坑道の壁に潮晶の鉱脈があります。',ruin:'回廊の床には持ち帰れる象眼タイルがあります。'}[site.kind]))}
   currentSite=site?.kind??''
@@ -463,7 +468,7 @@ function disposeLife(s:Session){
   s.aquatic?.dispose()
 }
 function showRoom(room:SharedRoom) {
-  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state})
+  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state,stage:room.connection.room.stage})
 }
 function updateTagUI(s:Session,now=performance.now()){
   const room=s.online,game=room?.tagGame
@@ -577,12 +582,12 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
   let connection:RoomConnection|undefined
   try {
     if(connect){ui.loading('ルームに接続中…');connection=await connect()}
-    ui.loading('森と湖を準備しています…')
+    ui.loading('ワールドを準備しています…')
     const loaded=id?await saves.get(id):undefined
     if(id&&!loaded)throw new Error('ワールドが見つかりません。一覧を開き直してください。')
     const seed=connection?.room.seed||loaded?.seed||args?.seed?.trim().slice(0,128)||crypto.randomUUID().slice(0,8)
     const choice=args?.stage
-    const stage=connection?'classic':loaded?.stage??(validTerrainPreset(choice)?choice:'classic')
+    const stage=connection?.room.stage??loaded?.stage??(validTerrainPreset(choice)?choice:'classic')
     let step=-1
     const world=await World.generate(seed,(fraction:number)=>{
       const n=Math.min(10,Math.floor(fraction*10));if(step!==n){ui.loading('地形を生成中　'+n*10+'%');step=n}
@@ -593,12 +598,13 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     const mode=connection?(connection.room.mode==='explore'?'explore':'creative'):
       stage!=='classic'?'creative':args?.mode??loaded?.mode??'creative'
     const profile=connection&&mode==='explore'?readRoomProfile(connection.room.code,nickname):undefined
+    const newBag=()=>connection&&mode==='explore'?createRoomExplorationBag(stage):createBag(tag?'explore':mode)
     const data:ActiveSave=loaded??{format:'webcraft777',version:2,generator:2,id:crypto.randomUUID(),
       fixtures:emptyFixtures(),journey:profile?.journey??createJourney(),
       revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,stage,
-      pose:profile?.pose??start,flying:false,bag:profile?.bag??createBag(tag?'explore':mode),selected:profile?.selected??0,
+      pose:profile?.pose??start,flying:false,bag:profile?.bag??newBag(),selected:profile?.selected??0,
       edits:[],day:.39,settings:{...settings},guideSeen:false}
-    if(!loaded&&stage!=='classic')data.bag.hotbar=[7,8,10,27,28,29,SLIDE_ITEM,9,12]
+    if(!loaded&&!tag&&mode==='creative'&&stage!=='classic')data.bag.hotbar=[7,8,10,27,28,29,SLIDE_ITEM,9,12]
     if(!data.journey.home){const {x,y,z}=start;data.journey.home={x,y,z}}
     station=null;logAxis='y';slideFacing=0;currentSite=''
     settings={...data.settings};tuneAudio()
@@ -815,7 +821,7 @@ function tick(now:number){
     if(wildlifeEvent)ui.toast(wildlifeEvent)
     if(water&&water.health<=0)returnToShore(s)
     guideDue-=dt
-    if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}
+    if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore'&&s.world.stage==='classic')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}
     stepDistance+=Math.hypot(ox-p.x,oz-p.z)
     if(stepDistance>1.8){stepDistance=0;if(p.grounded&&!p.flying)audio.sound('step',s.world.get(Math.floor(p.x),Math.floor(p.y-.05),Math.floor(p.z)))}
     s.data.day=s.online ? (.39+Math.max(0,Date.now()-s.online.connection.room.createdAt)/600_000)%1 : (s.data.day+dt/600)%1

@@ -1,11 +1,23 @@
-import { validBag, type Bag } from './inventory'
+import { createBag, validBag, type Bag } from './inventory'
 import { validJourney, type Journey } from './expedition'
 import { editableId, HEIGHT, SIZE } from './world'
 import type { Pose } from './physics'
 import type { RoomEdit } from './online-client'
+import type { TerrainPreset } from './stages'
 
 export type ExplorationEdit = {edit:RoomEdit & {actionId:string}; after:Bag; message?:string}
 export type RoomProfile = {bag:Bag;selected:number;journey:Journey;pose:Pose;pending?:ExplorationEdit}
+
+export function createRoomExplorationBag(stage:TerrainPreset):Bag {
+  const bag=createBag('explore')
+  // These stages have no trees or coal veins, so provide the materials for
+  // starter tools, a workbench and lighting without changing the terrain.
+  if(stage!=='classic'){
+    bag.slots=[{id:5,count:16},{id:15,count:8}]
+    bag.hotbar[0]=5
+  }
+  return bag
+}
 
 const profileKey=(code:string,nickname:string)=>'tk777.webcraft.exploration.'+JSON.stringify([code,nickname.trim()])
 const bounded=(value:unknown,min:number,max:number):value is number =>

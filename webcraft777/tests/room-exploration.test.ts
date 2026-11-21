@@ -1,8 +1,27 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createBag, stageMining } from '../src/inventory'
+import { craft, createBag, quantity, stageMining, validBag } from '../src/inventory'
 import { createJourney } from '../src/expedition'
-import { readRoomProfile, writeRoomProfile, type RoomProfile } from '../src/room-exploration'
+import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type RoomProfile } from '../src/room-exploration'
+
+test('木のないステージでも各参加者の初期素材から道具と作業台を作れる',()=>{
+  assert.deepEqual(createRoomExplorationBag('classic'),createBag('explore'))
+  for(const stage of ['flat','lake'] as const){
+    const host=createRoomExplorationBag(stage),guest=createRoomExplorationBag(stage)
+    assert(validBag(host))
+    assert.equal(host.hotbar[0],5)
+    assert.equal(quantity(host,5),16)
+    assert.equal(quantity(host,15),8)
+    assert(craft(host,'boards',3).ok)
+    assert(craft(host,'sticks').ok)
+    assert(craft(host,'wood-pick').ok)
+    assert(craft(host,'bench').ok)
+    assert.equal(quantity(host,17),1)
+    assert.equal(quantity(host,21),1)
+    assert.equal(quantity(guest,5),16)
+    assert.equal(quantity(guest,21),0)
+  }
+})
 
 test('探索ルーム用の持ち物は編集中の素材取得を反映せず、再読み込みから同じ受付番号を使える',t=>{
   const entries=new Map<string,string>()

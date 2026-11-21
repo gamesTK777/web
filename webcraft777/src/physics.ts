@@ -188,7 +188,7 @@ export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: n
     // Never unfold the collision body into a low lintel, even when starting flight.
     player.crouched = (!player.flying && !player.inWater && input.down && (!!ground || player.crouched)) ||
       (player.crouched && occupied(world,px,player.y,pz));
-    const speed = player.flying ? (input.sprint ? 13 : 8) : player.inWater ? 2 :
+    const speed = player.flying ? (input.sprint ? 13 : 8) : player.inWater ? 2 * (input.sprint ? multiplier : 1) :
       player.crouched ? 1.65 : input.sprint ? 6.4 * multiplier : 4.2;
     if (player.flying || player.inWater) {
       player.vx = dx*speed; player.vz = dz*speed;
