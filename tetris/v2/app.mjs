@@ -1,4 +1,4 @@
-import {GameAudio} from './audio.mjs';
+import {GameAudio,MUSIC_TRACKS} from './audio.mjs?v=20261122-vocal-bgm';
 import {ClearEffects} from './clear-effects.mjs';
 import {KeyboardInput,GestureInput,bindGestures,KEY_ACTIONS} from './input.mjs?v=touch-2';
 import {beginRankingRun, showRanking} from './ranking.mjs';
@@ -41,12 +41,12 @@ function tone(notes,duration,kind){soundtrack.tone(notes,duration,kind);}
 function syncAudioButtons(){
   $('sound').setAttribute('aria-pressed',soundtrack.sfxEnabled);$('sound').setAttribute('aria-label',`効果音を${soundtrack.sfxEnabled?'オフ':'オン'}にする`);$('sound').innerHTML=`SE <span>${soundtrack.sfxEnabled?'ON':'OFF'}</span>`;
   $('music').setAttribute('aria-pressed',soundtrack.musicEnabled);$('music').setAttribute('aria-label',`BGMを${soundtrack.musicEnabled?'オフ':'オン'}にする`);$('music').innerHTML=`♫ <span>BGM ${soundtrack.musicEnabled?'ON':'OFF'}</span>`;
-  $('music').title='NEON / AFTERHOURS · 126 BPM · プレイ中のみ再生';
+  $('music').title='ボーカルBGM · プレイ中のみ再生';
 }
 function saveAudioSettings(){try{localStorage.setItem('neonshift-audio',JSON.stringify({music:soundtrack.musicEnabled,sfx:soundtrack.sfxEnabled,volume:soundtrack.volume}));}catch{}}
 const musicButton=document.createElement('button');musicButton.id='music';musicButton.className='icon-button';$('sound').before(musicButton);
-const musicSetting=document.createElement('label');musicSetting.className='setting-row';musicSetting.innerHTML='<span>ハウスBGMの音量 <small style="display:block;color:#91a5bb;margin-top:5px">NEON / AFTERHOURS · 126 BPM</small></span><input id="music-volume" type="range" min="0" max="100" step="1" aria-label="BGM音量" style="width:120px;height:24px">';$('close-help-bottom').before(musicSetting);
-const musicNote=document.createElement('p');musicNote.textContent='BGMはプレイ中のみ再生。一時停止・別タブへの移動・ゲーム終了で止まります。画面上部のBGMとSEで、それぞれオン／オフを切り替えられます。';musicSetting.before(musicNote);
+const musicSetting=document.createElement('label');musicSetting.className='setting-row';musicSetting.innerHTML=`<span>BGMの音量 <small style="display:block;color:#91a5bb;margin-top:5px">歌入り${MUSIC_TRACKS.length}曲 · シャッフル再生</small></span><input id="music-volume" type="range" min="0" max="100" step="1" aria-label="BGM音量" style="width:120px;height:24px">`;$('close-help-bottom').before(musicSetting);
+const musicNote=document.createElement('p');musicNote.textContent='BGMはプレイ中のみ再生します。曲が終わると別の曲に切り替わり、一時停止・別タブへの移動・ゲーム終了で止まります。画面上部のBGMとSEで、それぞれオン／オフを切り替えられます。';musicSetting.before(musicNote);
 try{const saved=JSON.parse(localStorage.getItem('neonshift-audio')||'{}');soundtrack.musicEnabled=saved.music!==false;soundtrack.sfxEnabled=saved.sfx!==false;if(Number.isFinite(saved.volume))soundtrack.setVolume(saved.volume);}catch{}
 $('music-volume').value=Math.round(soundtrack.volume*100);$('music-volume').oninput=e=>{soundtrack.setVolume(Number(e.target.value)/100);saveAudioSettings();};
 $('music').onclick=()=>{soundtrack.setMusic(!soundtrack.musicEnabled);if(game?.state==='playing')initAudio();syncAudioButtons();saveAudioSettings();};
