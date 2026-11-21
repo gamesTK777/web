@@ -2,6 +2,7 @@ import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBen
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
+import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean }
 export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting' }
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
@@ -26,6 +27,11 @@ export function inventoryView(bag:Bag, mode:Mode, selected:number,ctx:CraftConte
 
 const escapeText = (value:unknown) => String(value ?? '').replace(/[&<>"']/g, character=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[character]!)
 const modeName = (mode:Mode) => mode === 'creative' ? 'クリエイティブ' : '探索'
+const controlChoices:Record<ControlMode,{name:string;label:string}> = {
+  lock:{name:'マウス固定',label:'視点を固定してプレイ'},
+  drag:{name:'ドラッグ操作',label:'ドラッグ操作でプレイ'},
+  tablet:{name:'タブレットモード',label:'タブレットモードでプレイ'},
+}
 const $ = <T extends HTMLElement = HTMLElement>(id:string) => document.getElementById(id) as T
 const button = (action:string, text:string, css='')=>'<button type="button" class="'+css+'" data-action="'+action+'">'+text+'</button>'
 const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻る','back')
@@ -274,15 +280,16 @@ export class GameUI {
   error(message:string) {
     this.show('error',sectionHead('ゲームを開始できません')+'<p class="error-message">'+escapeText(message)+'</p>'+button('title','タイトルへ戻る','primary'))
   }
-  pause(ready=false,drag=false,message='') {
+  pause(ready=false,mode:ControlMode='lock',message='') {
     const online=this.room
+    const alternatives=Object.entries(controlChoices).filter(([choice])=>choice!==mode)
+      .map(([choice,{label}])=>button('resume-'+choice,label)).join('')
     this.show(ready?'ready':'pause','<h1>'+(ready?'ワールドの準備ができました':'一時停止')+'</h1>'+
       (message?'<p class="input-message" role="status">'+escapeText(message)+'</p>':'')+
       (online?'<div class="room-actions"><p>ルーム <strong>'+escapeText(online.code)+'</strong> <span data-online-status role="status"></span></p>'+
         button('online-copy','招待リンクをコピー')+'</div>':'')+
       '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
-      '<p class="control-mode">'+(drag?'ドラッグ操作で見回します。':'マウスを固定して見回します。')+'</p>'+
-      (drag?button('resume-lock','視点を固定してプレイ'):button('resume-drag','ドラッグ操作でプレイ'))+
+      '<p class="control-mode">操作方法　<strong>'+controlChoices[mode].name+'</strong></p>'+alternatives+
       '<button type="button" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false"></button>'+
       (ready?'':(online?'':button('save','手動保存')+button('export','ファイルへ書き出す'))+button('goto-settings','設定')+button('goto-help','操作説明')+button('diagnostics','入力の診断・復旧'))+
       (online?button('online-leave','退出してタイトルへ','danger'):button('title','タイトルへ戻る'))+'</div>')
@@ -324,7 +331,7 @@ export class GameUI {
       ['右クリック / V','作業台・チェストを開く。しゃがんで右クリックすると隣に設置'],['Ctrl + Z','クリエイティブの通常ブロックを最大20回戻す。作業台とチェストは対象外'],
       ['B / G','現在地を拠点に登録 ／ 探索目標の表示切り替え'],['E','持ち物・クラフトを開閉'],['Esc','一時停止'],['F','クリエイティブで飛行を切り替える'],['Space / Ctrl','飛行中に上昇 ／ 下降'],['F3','FPS・描画回数・チャンク数を表示']
     ].map(([key,text])=>'<div><dt>'+key+'</dt><dd>'+text+'</dd></div>').join('')+'</dl>'+
-    '<h2>スマートフォン・タブレット</h2><p>左下のスティックで移動し、景色をドラッグして見回します。照準を合わせて画面を短くタップすると、選択中のブロックを設置できます。右下のボタンからも設置・採掘・ジャンプ・しゃがみができます。クリエイティブでは「飛行」で切り替え、上昇・下降ボタンを長押しします。</p>'+
+    '<h2>タブレットモード</h2><p>一時停止画面の「タブレットモードでプレイ」から、PCでも画面のスティックやボタンを使えます。左下のスティックで移動し、景色をドラッグして見回します。照準を合わせて画面を短くタップすると、選択中のブロックを設置できます。右下のボタンからも設置・採掘・ジャンプ・しゃがみができます。クリエイティブでは「飛行」で切り替え、上昇・下降ボタンを長押しします。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+

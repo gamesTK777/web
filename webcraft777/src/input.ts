@@ -1,5 +1,13 @@
 import { InputDiagnostics, pitchWithinView, yawWithinTurn, type Aim, type InputMode } from './input-diagnostics'
 
+export type ControlMode = 'lock'|'drag'|'tablet'
+export function preferredControlMode(saved:string|null,legacy:string|null,device:{coarse:boolean;touch:boolean;mac:boolean}):ControlMode {
+  if(saved==='lock'||saved==='drag'||saved==='tablet')return saved
+  if(legacy==='lock')return 'lock'
+  if(legacy==='drag')return device.touch?'tablet':'drag'
+  return device.coarse?'tablet':device.mac?'drag':'lock'
+}
+
 export interface Controls {
   pause(): void; inventory(): void; fly(): void; debug(): void; select(index:number): void
   cycle(direction:number): void; place(): void; beginMine():void; look(dx:number,dy:number): void

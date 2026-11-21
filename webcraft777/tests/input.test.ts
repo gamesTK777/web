@@ -1,6 +1,6 @@
 import test, {type TestContext} from "node:test";
 import assert from "node:assert/strict";
-import {InputController} from "../src/input.ts";
+import {InputController,preferredControlMode} from "../src/input.ts";
 
 // Dispatch through the production event listeners. Node supplies EventTarget;
 // browser permission, pointer-lock ownership and timers are simulated here.
@@ -23,6 +23,21 @@ function touchButton() {
     styles,captured
   });
 }
+
+test("タブレットモードの選択をPCでも保存し、既存のタッチ・マウス設定を引き継ぐ",()=>{
+  const desktop={coarse:false,touch:false,mac:false};
+  const hybrid={...desktop,touch:true};
+  const mobile={...hybrid,coarse:true};
+  assert.equal(preferredControlMode(null,null,desktop),'lock');
+  assert.equal(preferredControlMode('tablet',null,desktop),'tablet');
+  assert.equal(preferredControlMode('tablet','lock',hybrid),'tablet');
+  assert.equal(preferredControlMode('drag','tablet',hybrid),'drag');
+  assert.equal(preferredControlMode(null,'drag',hybrid),'tablet');
+  assert.equal(preferredControlMode(null,'drag',desktop),'drag');
+  assert.equal(preferredControlMode(null,null,mobile),'tablet');
+  assert.equal(preferredControlMode(null,'lock',mobile),'lock');
+  assert.equal(preferredControlMode(null,null,{...desktop,mac:true}),'drag');
+});
 function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
   const canvas=Object.assign(new EventTarget(),{focus(){},requestPointerLock:request});
   const doc=Object.assign(new EventTarget(),{hidden:false,pointerLockElement:null as EventTarget|null,

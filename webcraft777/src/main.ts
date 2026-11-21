@@ -3,7 +3,7 @@ import { createJourney, currentGoal, homeBearing, bearing, placedDecor, recipeCr
 import { presets } from './preferences'
 import { SceneView } from './renderer'
 import { GameUI, inventoryView } from './ui'
-import { InputController } from './input'
+import { InputController, preferredControlMode, type ControlMode } from './input'
 import { Soundscape } from './audio'
 import { craft, createBag, assignHotbar, activeStack, miningSeconds, ITEMS, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode } from './inventory'
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
@@ -36,18 +36,26 @@ const tuneAudio=()=>audio.configure(settings.volume,settings.muted,settings.effe
 let session: Session|null=null
 let settings = settingsAtTitle()
 const lookPreferenceKey='tk777.webcraft.look'
+const controlsPreferenceKey='tk777.webcraft.controls'
 const viewPreferenceKey='tk777.webcraft.view'
 function preferKids(){
   try {return localStorage.getItem(viewPreferenceKey)==='kids'} catch {return false}
 }
-function preferDrag(){
-  try {
-    const choice=localStorage.getItem(lookPreferenceKey)
-    if(choice==='drag'||choice==='lock')return choice==='drag'
-  } catch {}
-  return /^Mac/i.test(navigator.platform)||window.matchMedia('(pointer: coarse)').matches
+function controlDevice(){
+  const coarse=window.matchMedia('(pointer: coarse)').matches
+  return {coarse,touch:coarse||navigator.maxTouchPoints>0,mac:/^Mac/i.test(navigator.platform)}
 }
-let busy = false, debugging = false, fallbackPreferred=preferDrag(), firstGuide=false
+function loadControlMode():ControlMode{
+  const device=controlDevice()
+  try {
+    return preferredControlMode(localStorage.getItem(controlsPreferenceKey),localStorage.getItem(lookPreferenceKey),device)
+  } catch {}
+  return preferredControlMode(null,null,device)
+}
+let busy = false, debugging = false, controlMode=loadControlMode(), firstGuide=false
+function recoverControlMode():ControlMode {
+  return controlMode==='lock'?(controlDevice().touch?'tablet':'drag'):controlMode
+}
 let aimKey='', mining=0, cooldown=0, stepDistance=0
 let saveQueue: Promise<boolean> = Promise.resolve(true)
 let frameTime=0, lastStats=0, frameCount=0
@@ -145,14 +153,14 @@ function select(slot:number) {
 function stopInput(){ input.stop(); if(session)resetPlayerInput(session.player);audio.setPlaying(false);resetMining();cooldown=0;stepDistance=0;frameTime=0 }
 function pause() {
   if(!session || !input.active)return
-  stopInput(); ui.pause(false,fallbackPreferred)
+  stopInput(); ui.pause(false,controlMode)
 }
 function inventory() {
   if(!session || !input.active)return
   station=null;stopInput(); ui.inventory(viewInventory())
 }
 function showTouchControls(drag:boolean) {
-  const enabled=drag&&(window.matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>0)
+  const enabled=drag&&controlMode==='tablet'
   touchControls.hidden=!enabled
   touchFly.hidden=session?.data.mode!=='creative'
   const flying=Boolean(session?.player.flying)
@@ -163,21 +171,21 @@ function showTouchControls(drag:boolean) {
 }
 function showPlay(fallback:boolean){
   if(!session||!input.active)return
-  fallbackPreferred=fallback
+  if(fallback&&controlMode==='lock')controlMode=recoverControlMode()
   ui.play(fallback,firstGuide,input.pending,showTouchControls(fallback));ui.hud(viewInventory());guide()
 }
-function resume(drag:boolean) {
+function resume(mode:ControlMode) {
   if(!session || !['ready','pause','inventory'].includes(ui.screen))return
-  if(!graphicsOK){ui.pause(false,fallbackPreferred,'描画の復旧を待っています。ワールドを書き出すこともできます。');return}
+  if(!graphicsOK){ui.pause(false,controlMode,'描画の復旧を待っています。ワールドを書き出すこともできます。');return}
   if(session.online&&(!session.online.ready||session.online.ended)){
     ui.toast(session.online.ended?'退出してルームに参加し直してください。':'共有ワールドの読み込みが完了するまでお待ちください。');return
   }
   station=null
   firstGuide=!session.data.guideSeen
-  fallbackPreferred=drag
+  controlMode=mode
   frameHalted=false;frameTime=0;lastStats=0;frameCount=0
   audio.unlock();audio.setPlaying(true)
-  input.start(drag)
+  input.start(mode!=='lock')
   if(input.pending)showPlay(false)
 }
 function aim(dx:number,dy:number){
@@ -282,7 +290,7 @@ const input=new InputController(canvas,{
   fly:toggleFly,
   debug:()=>{debugging=!debugging;if(!debugging)ui.debug('')},
   dragChanged:showPlay,background:()=>{if(session) void persist(session)},
-  recovery:message=>{if(session){stopInput();fallbackPreferred=true;ui.pause(false,true,message)}}
+  recovery:message=>{if(session){stopInput();controlMode=recoverControlMode();ui.pause(false,controlMode,message)}}
 },touchButtons)
 function snapshot(s:Session): WorldSave {
   const {x,y,z,yaw,pitch}=s.player
@@ -307,7 +315,7 @@ async function title() {
     const s=session
     stopInput()
     s.online?.sync?.close()
-    if(!await persist(s) && !window.confirm('保存できませんでした。キャンセルすると今の状態をファイルへ書き出せます。保存せずにタイトルへ戻りますか？')) {ui.pause(false,fallbackPreferred);return}
+    if(!await persist(s) && !window.confirm('保存できませんでした。キャンセルすると今の状態をファイルへ書き出せます。保存せずにタイトルへ戻りますか？')) {ui.pause(false,controlMode);return}
     s.view.dispose();session=null
   }
   ui.onlineSession(null)
@@ -360,7 +368,7 @@ function connectRoom(s:Session,room:SharedRoom) {
     onEnd:error=>{
       if(session!==s)return
       room.ended=true;room.state='reconnecting';showRoom(room)
-      stopInput();ui.pause(false,fallbackPreferred,reason(error))
+      stopInput();ui.pause(false,controlMode,reason(error))
     },
   })
 }
@@ -394,12 +402,12 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     session={world,data,player,view,kids:preferKids(),originalPitch:player.pitch,kidsPitch:-.43}
     if(session.kids)player.pitch=session.kidsPitch
     view.configure(settings);stillFrame='';moveReticle(50)
-    input.rememberView(player);frameHalted=false;fallbackPreferred=preferDrag()
+    input.rememberView(player);frameHalted=false;controlMode=loadControlMode()
     if(connection){
       const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map()}
       session.online=room;connectRoom(session,room)
     }
-    ui.setWorld(data.name);ui.showViewMode(session.kids);ui.pause(true,fallbackPreferred)
+    ui.setWorld(data.name);ui.showViewMode(session.kids);ui.pause(true,controlMode)
     if(!loaded&&!connection)await persist(session)
     debugging=false
   } catch(e){
@@ -452,7 +460,7 @@ function downloadJson(filename:string,text:string){
   document.body.append(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),60_000)
 }
 async function handle(action:string,value?:any) {
-  if(busy && !['resume','resume-drag','resume-lock','dismiss-guide'].includes(action))return
+  if(busy && !['resume','resume-drag','resume-lock','resume-tablet','dismiss-guide'].includes(action))return
   switch(action){
     case 'goto-create': ui.create();break
     case 'online-menu':ui.onlineMenu(inviteCode);break
@@ -464,16 +472,16 @@ async function handle(action:string,value?:any) {
     case 'goto-help': ui.help();break
     case 'goto-settings': ui.settings(settings);break
     case 'back':
-      if(session){if(ui.screen==='inventory')resume(fallbackPreferred);else ui.pause(false,fallbackPreferred)}
+      if(session){if(ui.screen==='inventory')resume(controlMode);else ui.pause(false,controlMode)}
       else await title();break
     case 'title': if(!busy){busy=true;try {await title()}finally{busy=false}}break
     case 'start': audio.unlock();await openWorld(null,value);break
     case 'load': audio.unlock();await openWorld(value);break
-    case 'resume':resume(fallbackPreferred);break
-    case 'resume-drag':case 'resume-lock':{
-      const drag=action==='resume-drag'
-      try {localStorage.setItem(lookPreferenceKey,drag?'drag':'lock')} catch {}
-      resume(drag);break
+    case 'resume':resume(controlMode);break
+    case 'resume-drag':case 'resume-lock':case 'resume-tablet':{
+      const mode=action==='resume-tablet'?'tablet':action==='resume-drag'?'drag':'lock'
+      try {localStorage.setItem(controlsPreferenceKey,mode)} catch {}
+      resume(mode);break
     }
     case 'diagnostics': if(session){
       input.setDiagnostics(true)
@@ -482,7 +490,7 @@ async function handle(action:string,value?:any) {
       ui.diagnostics(report.lastIssue?summary+'\n'+report.lastIssue:summary,JSON.stringify(report,null,2))
     }break
     case 'export-diagnostics': if(session)downloadJson('ウェブクラフト777-入力診断.json',JSON.stringify(input.report(),null,2));break
-    case 'reset-input': if(session){stopInput();input.rememberView(session.player);fallbackPreferred=true;ui.pause(false,true,'入力をリセットしました。ドラッグ操作で再開できます。')}break
+    case 'reset-input': if(session){stopInput();input.rememberView(session.player);controlMode=recoverControlMode();ui.pause(false,controlMode,'入力をリセットしました。「再開」から操作できます。')}break
     case 'pause':pause();break
     case 'view-mode':switchViewMode();break
     case 'touch-fly':if(!touchControls.hidden)toggleFly();break
@@ -527,7 +535,7 @@ document.addEventListener('keydown',e=>{
   const slot=/^Digit([1-9])$/.exec(e.code)
   if(ui.screen==='inventory'&&slot){e.preventDefault();select(Number(slot[1])-1);return}
   if(ui.screen==='inventory'&&(e.code==='KeyE'||e.code==='Escape')){
-    e.preventDefault();if(e.code==='Escape')ui.pause(false,fallbackPreferred);else resume(fallbackPreferred)
+    e.preventDefault();if(e.code==='Escape')ui.pause(false,controlMode);else resume(controlMode)
   }else if(e.code==='Escape'&&['settings','help','create','worlds','diagnostics','online'].includes(ui.screen)){
     e.preventDefault();void handle('back')
   }
@@ -538,12 +546,12 @@ canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();graphicsOK=fal
 })
 canvas.addEventListener('webglcontextlost',event=>{
   event.preventDefault();graphicsOK=false;frameHalted=true;stopInput()
-  if(session){ui.pause(false,fallbackPreferred,'3D描画を中断しました。復旧後に再開できます。');void persist(session)}
+  if(session){ui.pause(false,controlMode,'3D描画を中断しました。復旧後に再開できます。');void persist(session)}
   else ui.error(gpuMessage)
 })
 canvas.addEventListener('webglcontextrestored',()=>{
   graphicsOK=true;frameHalted=false;stillFrame=''
-  if(session){session.view.configure(settings);ui.pause(false,fallbackPreferred,'3D描画が復旧しました。操作を再開できます。')}
+  if(session){session.view.configure(settings);ui.pause(false,controlMode,'3D描画が復旧しました。操作を再開できます。')}
   else void title()
 })
 window.addEventListener('pagehide',event=>{if(session){
