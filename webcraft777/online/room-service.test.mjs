@@ -102,7 +102,7 @@ test('deadline follows hiding, exact-time contact cannot tag, and each client ge
   const hiding=(await frame(guest,start,pose(130.5))).tag
   assert.equal(hiding.phase,'hiding')
   assert.equal(hiding.it,host.id)
-  assert.equal(hiding.hideUntil,start+8000)
+  assert.equal(hiding.hideUntil,start+20_000)
   assert.equal(hiding.endsAt,hiding.hideUntil+60000)
   assert.equal(hiding.serverNow,start)
   assert.deepEqual(new Set(hiding.enrolledIds),new Set([host.id,guest.id]))
@@ -171,24 +171,65 @@ test('timed tag preserves the last ghost and clock through sparse polls and expl
   assert.equal(finished.phase,'finished')
 })
 
-test('winning and losing follow the last successful touch before expiry', async t=>{
-  const {host,guest,frame}=await timedSession(t)
+test('a tag hides and pauses the chase for 20 seconds without reopening the roster', async t=>{
+  const {host,guest,enlist,join,frame}=await timedSession(t)
+  const spectator=await enlist('開始前に待機')
   await frame(host,epoch,pose(128))
   const hiding=(await frame(guest,epoch+1,pose(129))).tag
   await frame(host,hiding.hideUntil,pose(128))
   await frame(host,hiding.hideUntil+100,pose(128))
   await frame(guest,hiding.hideUntil+100,pose(129))
-  await frame(host,hiding.hideUntil+350,pose(128))
-  const tag=(await frame(guest,hiding.hideUntil+350,pose(128.3))).tag
-  assert.equal(tag.phase,'playing')
+  const taggedAt=hiding.hideUntil+350
+  await frame(host,taggedAt,pose(128))
+  const tag=(await frame(guest,taggedAt,pose(128.3))).tag
+  assert.equal(tag.phase,'hiding')
   assert.equal(tag.it,guest.id)
   assert.equal(tag.previousIt,host.id)
-  assert.equal(tag.endsAt,hiding.endsAt)
-  const finalized=(await frame(host,hiding.endsAt,pose(128))).tag
+  assert.equal(tag.hideUntil,taggedAt+20_000)
+  assert.equal(tag.endsAt,hiding.endsAt+20_000)
+  assert.equal(tag.endsAt-tag.hideUntil,hiding.endsAt-taggedAt)
+
+  for(const elapsed of [700,2500,8000,19_999]){
+    const now=taggedAt+elapsed
+    await frame(spectator,now,pose(128.3))
+    await frame(guest,now,pose(128.3))
+    const escaping=await frame(host,now,pose(128.3))
+    assert.equal(escaping.tag.seq,tag.seq)
+    assert.equal(escaping.tag.it,guest.id)
+    assert.equal(escaping.tag.phase,'hiding')
+    assert.equal(escaping.players.some(player=>player.id===spectator.id),false)
+  }
+  const resumed=(await frame(host,tag.hideUntil,pose(132))).tag
+  assert.equal(resumed.phase,'playing')
+  assert.equal(resumed.seq,tag.seq+1)
+  assert.deepEqual(new Set(resumed.enrolledIds),new Set([host.id,guest.id]))
+  assert.equal((await join(host,'途中参加',tag.hideUntil+1,4)).status,409)
+  assert.equal((await frame(host,hiding.endsAt,pose(132))).tag.phase,'playing')
+  const finalized=(await frame(host,tag.endsAt,pose(132))).tag
   assert.equal(finalized.phase,'finished')
   assert.equal(finalized.it,guest.id)
   assert.deepEqual(finalized.winnerIds,[host.id])
   assert.deepEqual(finalized.results,[{id:guest.id,nickname:'森の逃げ役'},{id:host.id,nickname:'ときの鬼'}])
+})
+
+test('a touch just before expiry extends the clock exactly once and retains its last millisecond', async t=>{
+  const {host,guest,frame}=await timedSession(t)
+  await frame(host,epoch,pose(128))
+  const hiding=(await frame(guest,epoch+1,pose(129))).tag
+  await frame(host,hiding.hideUntil,pose(128))
+  const end=hiding.endsAt
+  await frame(host,end-311,pose(128))
+  await frame(guest,end-311,pose(129))
+  await frame(host,end-1,pose(128))
+  const touch=(await frame(guest,end-1,pose(128.3))).tag
+  assert.equal(touch.it,guest.id)
+  assert.equal(touch.endsAt-touch.hideUntil,1)
+  assert.equal(touch.endsAt,end+20_000)
+  assert.equal((await frame(guest,end,pose(128.3))).tag.phase,'hiding')
+  assert.equal((await frame(host,touch.hideUntil,pose(128))).tag.phase,'playing')
+  const final=(await frame(host,touch.endsAt,pose(128))).tag
+  assert.equal(final.phase,'finished')
+  assert.deepEqual(final.winnerIds,[host.id])
 })
 
 test('a round can finish after an extended interruption without a chase-phase poll', async t=>{
@@ -258,11 +299,11 @@ test('tag waits for two players and a hiding period, tracks swept body contact a
   const hostStart = pose(128,33,129)
   const guestStart = pose(129,33,128)
   const starts = epoch + 100
-  const deadline = starts + 8000
+  const deadline = starts + 20_000
   assert.equal((await frame(host, epoch, hostStart)).tag.phase,'waiting')
   assert.deepEqual((await frame(guest,starts,hostStart)).tag,
     {it:host.id,phase:'hiding',hideUntil:deadline,seq:1,previousIt:null})
-  for (const elapsed of [3000,6000,7800]) {
+  for (const elapsed of [3000,6000,9000,12000,15000,18000,19_800]) {
     const hiding = (await pair(starts+elapsed, hostStart, hostStart)).tag
     assert.equal(hiding.it,host.id)
     assert.equal(hiding.phase,'hiding')
@@ -271,25 +312,27 @@ test('tag waits for two players and a hiding period, tracks swept body contact a
     {it:host.id,phase:'playing',hideUntil:deadline,seq:2,previousIt:null})
   // No pair of end points is close enough. The paths cross between polls.
   const swapped = (await pair(deadline+300,pose(130,33,129),pose(129,33,130))).tag
-  assert.deepEqual(swapped, {it:guest.id,phase:'playing',hideUntil:deadline,seq:3,previousIt:host.id})
-  for (const elapsed of [600,1400,2400,2700]) {
+  const release=deadline+300+20_000
+  assert.deepEqual(swapped, {it:guest.id,phase:'hiding',hideUntil:release,seq:3,previousIt:host.id})
+  for (const elapsed of [600,3000,6000,9000,12000,15000,18000,20_299]) {
     const protectedState = (await pair(deadline+elapsed,hostStart,hostStart)).tag
     assert.equal(protectedState.it,guest.id)
     assert.equal(protectedState.seq,3)
   }
-  const back = (await pair(deadline+2850,hostStart,hostStart)).tag
+  assert.equal((await pair(release,guestStart,hostStart)).tag.phase,'playing')
+  const back = (await pair(release+300,hostStart,hostStart)).tag
   assert.equal(back.it,host.id)
-  assert.equal(back.seq,4)
+  assert.equal(back.seq,5)
   assert.equal(back.previousIt,guest.id)
 })
 
 test('tag ignores different levels, stale positions and out-of-order samples', async t => {
   const {host,guest,frame,pair,sql} = await tagSession(t)
   const start = epoch + 100
-  const deadline = start + 8000
+  const deadline = start + 20_000
   const below = pose(128,33,129)
   const above = pose(129,36,128)
-  for (const elapsed of [0,3000,6000,8000]) await pair(start+elapsed,below,above)
+  for (const elapsed of [0,3000,6000,9000,12000,15000,18000,20_000]) await pair(start+elapsed,below,above)
   const crossed = (await pair(deadline+300,pose(130,33,129),pose(129,36,130))).tag
   assert.equal(crossed.it,host.id)
   assert.equal(crossed.seq,2)
@@ -309,11 +352,11 @@ test('concurrent contact changes the ghost once, and departure, rejoining and ex
   const third = await (await join(host,'三人目',epoch,3)).json()
   const another = await create('別の部屋', 'tag', epoch, 3)
   const start = epoch + 100
-  const deadline = start + 8000
+  const deadline = start + 20_000
   const here = pose(128,33,129)
   const there = pose(129.5,33,129)
   await frame(host, epoch, here)
-  for (const elapsed of [0,3000,6000,8000]) {
+  for (const elapsed of [0,3000,6000,9000,12000,15000,18000,20_000]) {
     await frame(third,start+elapsed,pose(125,33,130))
     await pair(start+elapsed,here,there)
   }
@@ -477,7 +520,7 @@ test('school is a timed tag stage shared by current hosts and guests', async t =
   const hiding=(await frame(guest,start,pose(130))).tag
   assert.equal(hiding.phase,'hiding')
   assert.equal(hiding.it,host.id)
-  assert.equal(hiding.hideUntil,start+8000)
+  assert.equal(hiding.hideUntil,start+20_000)
   assert.equal(hiding.endsAt,hiding.hideUntil+3*60_000)
   assert.equal((await join(host,'途中参加',start+5,6)).status,409)
   const playing=(await frame(host,hiding.hideUntil,pose(128))).tag

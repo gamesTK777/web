@@ -60,6 +60,16 @@
       <div id="fallback" hidden><span>ドラッグで視点を変更</span><div><button id="touch-attack" data-action="attack-shark" type="button" hidden>攻撃</button><button id="touch-rotate" data-action="rotate-material" type="button" aria-label="滑り台の下り方向を切り替える" hidden>向き</button><button data-hold="mine" title="押し続けて採掘">採掘</button><button data-action="place">設置</button></div></div>
       <div class="belt"><p id="equipped"></p><div class="hotbar" id="hud-bar" role="group" aria-label="ホットバー"></div></div>
     </section>
+    <div id="tag-hide" hidden>
+      <div class="tag-hide-card">
+        <p class="tag-hide-label">隠れる時間</p>
+        <p id="tag-hide-title" role="status" aria-atomic="true"></p>
+        <div class="tag-hide-clock" role="timer" aria-live="off" aria-label="隠れる時間の残り秒数">
+          <time id="tag-hide-count"></time><span aria-hidden="true">秒</span>
+        </div>
+        <p id="tag-hide-detail"></p>
+      </div>
+    </div>
     <output id="debug" aria-label="描画情報" hidden></output>
     <div id="notice" role="status" aria-live="polite" hidden></div>
     <div id="save-status" role="status" aria-live="polite" hidden></div>

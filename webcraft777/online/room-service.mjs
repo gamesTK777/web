@@ -9,8 +9,7 @@ const presence = 20_000
 const tagPresence = 4000
 const tagSamples = 750
 const tagSkew = 450
-const hideTime = 8000
-const tagCooldown = 2500
+const hideTime = 20_000
 const tagReach = .68
 const tagDurations = new Set([1,3,5,10,15])
 const roomStages = new Set(['classic','flat','lake','school'])
@@ -245,7 +244,7 @@ const rosterAtChase=`(SELECT json_group_array(json_object('id',id,'nickname',nic
 // Freeze the result and the explicitly remaining runners in one statement. The
 // original roster still provides the loser's name if the ghost already left.
 function finishTagStatement(db,code,now,digest=null) {
-  const roster=`CASE WHEN t.phase='hiding' THEN ${rosterAtChase} ELSE t.round_roster END`
+  const roster=`CASE WHEN t.phase='hiding' AND t.previous_it IS NULL THEN ${rosterAtChase} ELSE t.round_roster END`
   return prepared(db,`UPDATE webcraft_tag_state AS t SET seq=seq+1,previous_it=NULL,round_roster=${roster},round_result=(
       SELECT json_group_array(json_object('id',entrant.id,'nickname',entrant.nickname)) FROM (
         SELECT json_extract(value,'$.id') AS id,json_extract(value,'$.nickname') AS nickname
@@ -399,7 +398,9 @@ async function advanceTag(db, room, active, now, protocol, digest) {
     const earliest = Math.max(now - tagSamples, room.hide_until, room.protected_until)
     const touched = active.find(row => row.id !== room.it && bodiesTouch(currentIt, row, earliest))
     if (touched) {
-      next = {...room,it:touched.id,previous_it:room.it,protected_until:now+tagCooldown}
+      const hideUntil=now+hideTime
+      next = {...room,it:touched.id,phase:'hiding',hide_until:hideUntil,previous_it:room.it,
+        protected_until:hideUntil,ends_at:timedActive ? room.ends_at+hideTime : 0}
       swapped = 1
     }
   }
@@ -410,7 +411,7 @@ async function advanceTag(db, room, active, now, protocol, digest) {
     prepared(db, `UPDATE webcraft_tag_state AS t SET it=?,phase=?,hide_until=?,seq=seq+1,previous_it=?,protected_until=?,ends_at=?,
       round_roster=CASE WHEN t.ends_at=0 AND ?>0 THEN (
         SELECT json_group_array(json_object('id',id,'nickname',nickname)) FROM webcraft_members WHERE ${fresh}
-      ) WHEN t.ends_at>0 AND t.phase='hiding' AND ?='playing' THEN ${rosterAtChase}
+      ) WHEN t.ends_at>0 AND t.phase='hiding' AND t.previous_it IS NULL AND ?='playing' THEN ${rosterAtChase}
       ELSE round_roster END
       WHERE room_code=? AND seq=? AND EXISTS(SELECT 1 FROM webcraft_rooms WHERE code=? AND tag_enabled=1 AND expires_at>?)
       AND round_result IS NULL AND (ends_at=0 OR ends_at>?)
@@ -473,7 +474,7 @@ async function syncRoom(db, body, now) {
   const updates = protocol>=2 ? cells.results : cells.results.map(cell=>cell.block>=27&&cell.block<=33?{...cell,block:8}:cell)
   // A concurrent request can record a pose after this request's clock was sampled.
   const frameTime = room.tag_enabled ? Math.max(now, ...members.results.map(row => row.pose_at)) : now
-  const enrolling=room.phase==='hiding' && room.round_result===null
+  const enrolling=room.phase==='hiding' && room.previous_it===null && room.round_result===null
   const roster=room.round_roster===null || enrolling ? null : new Set(JSON.parse(room.round_roster).map(person=>person.id))
   const participants = members.results.filter(row => !room.tag_enabled ||
       (row.pose_at > 0 && row.pose_at >= frameTime - tagPresence && (!roster || roster.has(row.id))))

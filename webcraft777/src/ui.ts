@@ -6,7 +6,10 @@ import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
 export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting'; stage?:TerrainPreset }
-export interface TagUIStatus { label:string; hint:string; it:boolean; mapOpen:boolean; remaining?:number }
+export interface TagUIStatus {
+  label:string; hint:string; it:boolean; mapOpen:boolean; remaining?:number
+  hide?: {remaining:number;title:string;detail:string}
+}
 export interface TagUIResult { outcome:'win'|'lose'|'spectator'; loser:string; winners:string[]; minutes:number }
 type RoomUIPlayMode = Mode | 'tag'
 const tagMinuteOptions = [1,3,5,10,15] as const
@@ -315,7 +318,7 @@ export class GameUI {
     const tagTime='<div id="tag-time-option" class="entry"'+(draft.mode==='tag'?'':' hidden')+'><label for="tag-minutes">制限時間</label>'+
       '<select name="tagMinutes" id="tag-minutes" aria-describedby="tag-time-help"'+(draft.mode==='tag'?'':' disabled')+'>'+
       tagMinuteOptions.map(minutes=>'<option value="'+minutes+'"'+(draft.tagMinutes===minutes?' selected':'')+'>'+minutes+'分</option>').join('')+
-      '</select><small id="tag-time-help">隠れる時間が終わってから計測します。</small></div>'
+      '</select><small id="tag-time-help">鬼が追いかけている間だけ時間が進みます。</small></div>'
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
@@ -369,6 +372,16 @@ export class GameUI {
     if(seconds!==undefined){
       const display=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')
       if(value.textContent!==display){value.textContent=display;value.dateTime='PT'+seconds+'S'}
+    }
+    const hiding=status?.hide, notice=$('tag-hide')
+    notice.hidden=!hiding
+    notice.toggleAttribute('data-it',!!hiding&&!!status?.it)
+    if(hiding){
+      const count=$<HTMLTimeElement>('tag-hide-count'), title=$('tag-hide-title'), detail=$('tag-hide-detail')
+      const current=String(hiding.remaining)
+      if(count.textContent!==current){count.textContent=current;count.dateTime='PT'+current+'S'}
+      if(title.textContent!==hiding.title)title.textContent=hiding.title
+      if(detail.textContent!==hiding.detail)detail.textContent=hiding.detail
     }
   }
   tagResult({outcome,loser,winners,minutes}:TagUIResult) {
@@ -464,7 +477,7 @@ export class GameUI {
     '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
     '<h2>マルチプレイ</h2><p>ルームを作るときにステージと遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
-    '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」と制限時間を選びます。隠れる時間のあとに追いかけっこが始まり、時間切れのときに鬼だった人が負けです。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。学校では、自分がいる階の地図を表示します。</p>'+
+    '<h2>鬼ごっこ</h2><p>最初と鬼が交代するたびに、20秒の隠れる時間が始まります。鬼はその場で待機し、逃げ役は移動できます。画面のカウントダウンが終わると追跡が始まり、制限時間の計測も進みます。時間切れのときに鬼だった人が負けです。</p><p>Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。学校では、自分がいる階の地図を表示します。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
     '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+

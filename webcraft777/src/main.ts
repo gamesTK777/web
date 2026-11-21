@@ -41,7 +41,8 @@ const ui = new GameUI((action,value)=>{ void handle(action,value).catch(err=>ui.
 const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
 const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
-type TagGame = {map:TagMap;status?:TagState;receivedAt:number;remaining?:number;peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string}
+type TagGame = {map:TagMap;status?:TagState;receivedAt:number;remaining?:number;hideRemaining?:number;
+  peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string}
 type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
   ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>;
   nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit;tagGame?:TagGame}
@@ -474,25 +475,36 @@ function showRoom(room:SharedRoom) {
 function updateTagUI(s:Session,now=performance.now()){
   const room=s.online,game=room?.tagGame
   if(!room||!game)return
-  const state=game.status
-  const it=state?.it===room.connection.id
+  const state=game.status,localId=room.connection.id
+  const it=state?.it===localId
   const hiding=state?.phase==='hiding', playing=state?.phase==='playing'
   const finished=state?.phase==='finished'
-  const spectator=playing&&!!room.connection.room.tagMinutes&&state.enrolledIds&&!state.enrolledIds.includes(room.connection.id)
+  const spectator=(playing||hiding&&!!state.previousIt)&&!!room.connection.room.tagMinutes&&
+    state.enrolledIds&&!state.enrolledIds.includes(localId)
   const label=finished?'試合終了':playing||hiding?(it?'鬼':spectator?'観戦中':'逃げ役'):'参加者を待っています'
   const clock=state?.serverNow===undefined?Date.now():state.serverNow+Math.max(0,now-game.receivedAt)
-  const seconds=hiding?Math.max(0,Math.ceil((state.hideUntil-clock)/1000)):0
-  if(finished)game.remaining=0
-  else if(playing&&state.endsAt>0){
-    // A late response must not make the visible countdown gain a second.
-    const secondsLeft=Math.max(0,Math.ceil((state.endsAt-clock)/1000))
-    game.remaining=Math.min(game.remaining??secondsLeft,secondsLeft)
+  let hide
+  if(hiding){
+    const seconds=Math.max(0,Math.ceil((state.hideUntil-clock)/1000))
+    const remaining=game.hideRemaining=Math.min(game.hideRemaining??seconds,seconds)
+    const tagged=!!state.previousIt
+    const title=it?(tagged?'タッチされた！ あなたが鬼':'あなたが鬼'):
+      state.previousIt===localId?'タッチ成功！':tagged?'鬼が交代！':'あなたは逃げ役'
+    const detail=it?'カウントが終わるまでその場で待とう。':spectator?'追いかけっこの再開を待っています。':
+      state.previousIt===localId?'逃げ役になりました。すぐに逃げて隠れよう。':'鬼が動き出す前に隠れよう。'
+    hide={remaining,title,detail}
   }
-  const hint=finished?'':spectator?'結果を待っています':hiding?(it?'鬼のスタートまで ':'隠れる時間 ')+seconds+'秒':
+  if(finished)game.remaining=0
+  else if((playing||hiding)&&state.endsAt>0){
+    // A late response must not make the visible countdown gain a second.
+    const secondsLeft=Math.max(0,Math.ceil((state.endsAt-(hiding?state.hideUntil:clock))/1000))
+    game.remaining=hiding?secondsLeft:Math.min(game.remaining??secondsLeft,secondsLeft)
+  }
+  const hint=finished||hiding?'':spectator?'結果を待っています':
     playing?(it?'逃げ役にぶつかるとタッチ':'鬼から逃げて隠れよう'):'2人以上で開始'
-  const key=[label,hint,game.open,game.remaining].join('/')
+  const key=[label,hint,game.open,game.remaining,hide?.remaining,hide?.title].join('/')
   if(game.uiKey!==key){
-    ui.tagMode({label,hint,it,mapOpen:game.open,remaining:game.remaining})
+    ui.tagMode({label,hint,it,mapOpen:game.open,remaining:game.remaining,hide})
     game.uiKey=key
   }
   if(game.open&&now>=game.mapDue){
@@ -533,7 +545,14 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
   if(!room.ready&&!room.restoring&&!game&&peers.length)separateSpawn(s,peers)
   if(game&&frame.tag){
     const previous=game.status, state=frame.tag, localId=room.connection.id
-    if(previous?.endsAt!==state.endsAt)game.remaining=undefined
+    if(state.phase==='waiting')game.remaining=undefined
+    if(previous?.phase!==state.phase||previous.hideUntil!==state.hideUntil){
+      game.hideRemaining=undefined
+      game.mapDue=0
+    }
+    if(state.phase==='hiding'&&state.it===localId&&(previous?.phase!=='hiding'||previous.it!==localId)){
+      resetPlayerInput(player);player.vy=0;stepDistance=0
+    }
     game.status=state;game.receivedAt=performance.now();game.peers=peers
     if(state.phase==='finished'&&previous?.phase!=='finished'){
       game.open=false
@@ -803,18 +822,15 @@ function tick(now:number){
   const s=session,elapsed=frameTime?(now-frameTime)/1000:0,dt=Math.min(elapsed,.1);frameTime=now
   const tag=s.online?.tagGame
   if(tag?.status?.phase==='finished')return
+  if(tag)updateTagUI(s,now)
   if(input.active){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
     if(!input.frame(p,elapsed))return
     const it=!!tag?.status?.it&&tag.status.it===s.online?.connection.id
-    if(tag){
-      movement.sprint=true
-      if(it&&tag.status?.phase==='hiding'){
-        movement.forward=movement.right=0;movement.jump=movement.jumpPressed=false
-      }
-      updateTagUI(s,now)
-    }
-    stepPlayer(s.world,p,movement,dt,it?{...settings,sprintMultiplier:1.25}:settings);audio.environment(s.world,p,dt)
+    if(tag)movement.sprint=true
+    if(!it||tag?.status?.phase!=='hiding')
+      stepPlayer(s.world,p,movement,dt,it?{...settings,sprintMultiplier:1.25}:settings)
+    audio.environment(s.world,p,dt)
     s.land?.update(p,dt,s.data.day)
     const water=s.aquatic
     water?.update(p,dt)
