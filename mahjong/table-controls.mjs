@@ -77,7 +77,7 @@ export function createTableControls(canvas, targets, onPick) {
   async function openScene() {
     loading = true;
     try {
-      const { createTableScene } = await import('./table-scene.mjs?v=20261120-clarity');
+      const { createTableScene } = await import('./table-scene.mjs?v=20261121-kan');
       table.classList.add('has-3d');
       scene = createTableScene(canvas, { onReady: finishLoading, onUnavailable: fallback });
       if (!scene || unavailable) { fallback(); return; }
@@ -98,7 +98,7 @@ export function createTableControls(canvas, targets, onPick) {
   function choose(event) {
     // Touch/mouse events need the frontmost solid tile where projected buttons overlap.
     // Keyboard and screen-reader button activation already identify the intended tile.
-    if (event.detail > 0 && scene && targets.getClientRects().length) {
+    if (event.detail > 0 && scene && (event.currentTarget === canvas || targets.getClientRects().length)) {
       const index = scene.pickAt(event.clientX, event.clientY);
       if (model.active && model.legal.includes(index)) onPick(index);
       return;

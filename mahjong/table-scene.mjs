@@ -4,6 +4,7 @@ import { makeTableArt } from './table-art.mjs';
 // Local +Z is the printed face of a standing tile. Table +Z is the player's seat.
 const W = 1.02, H = 1.43, D = .64;
 const OWN = 1.14, CPU = .94, WARE = .64, RIVER = .70, CPU_RIVER = .79;
+const KAN_OWN = .76, KAN_CPU = .65, KAN_GAP = .26, HAND_KAN_GAP = .55;
 // After two 13-tile hands are dealt, 96 live tiles and the 14-tile dead wall remain.
 const NEAR_STACKS = 27, FAR_LIVE_STACKS = 21, DEAD_STACKS = 7;
 const WALL_CAPACITY = (NEAR_STACKS + FAR_LIVE_STACKS) * 2;
@@ -193,21 +194,37 @@ export function createTableScene(canvas, {onPick,onHover,onReady,onUnavailable} 
   function compose(m) {
     const output=[], own=[];
     for(const seat of [0,1]) {
-      const ids=seat===0?m.hand:m.cpu;
-      const size=seat===0?OWN:CPU, pitch=-.34;
-      const drawn=ids.length===14, gap=drawn ? .30 : 0, spacing=(W+.035)*size;
+      const isOwn=seat===0, side=isOwn?1:-1;
+      const ids=isOwn?m.hand:m.cpu;
+      const kans=(m.kans?.[seat]??[]).filter(validTile).slice(0,4);
+      const size=isOwn?OWN:CPU, kanSize=isOwn?KAN_OWN:KAN_CPU;
+      const drawnIndex=isOwn&&m.drawnIndex!==undefined?m.drawnIndex:ids.length===14?13:null;
+      const gap=Number.isInteger(drawnIndex)&&drawnIndex>0&&drawnIndex<ids.length ? .30 : 0;
+      const spacing=(W+.035)*size, kanSpacing=(W+.06)*kanSize;
+      const handWidth=ids.length*spacing+gap;
+      const kanWidth=kans.length?4*kanSpacing*kans.length+KAN_GAP*(kans.length-1):0;
+      const start=-(handWidth+kanWidth+(kans.length?HAND_KAN_GAP:0))/2;
+      const z=isOwn?5.67:-5.82;
       for(let i=0;i<ids.length;i++){
-        const isOwn=seat===0, selected=isOwn&&i===m.selected;
-        const x=(i-(ids.length-1)/2)*spacing+(drawn&&i===13?gap:0)-gap/2;
+        const selected=isOwn&&i===m.selected;
+        const x=start+(i+.5)*spacing+(drawnIndex!==null&&i>=drawnIndex?gap:0);
         // A revealed CPU hand is laid down facing the viewer at the end of a round.
-        const faceUp=!isOwn&&validTile(ids[i]), tilt=faceUp?-Math.PI/2:isOwn?pitch:.10;
+        const faceUp=!isOwn&&validTile(ids[i]), tilt=faceUp?-Math.PI/2:isOwn?-.34:.10;
         const y=.057+size*(Math.abs(Math.cos(tilt))*H+Math.abs(Math.sin(tilt))*D)/2;
-        const z=isOwn?5.67:-5.82;
         const restricted=isOwn&&m.active&&m.legal?.length&&!m.legal.includes(i);
-        const t=tile((isOwn?'h':'c')+i,ids[i],isOwn?x:-x,y+(selected ? .23 : 0),z-(selected ? .27 : 0),tilt,isOwn||faceUp?0:Math.PI,size,
+        const t=tile((isOwn?'h':'c')+i,ids[i],side*x,y+(selected ? .23 : 0),z-(selected ? .27 : 0),tilt,isOwn||faceUp?0:Math.PI,size,
           restricted ? .66 : 1);
         if(isOwn)own.push(t);
         output.push(t);
+      }
+      // A concealed kan is displayed outside the hand, with both end tiles turned over.
+      for(const [set,id] of kans.entries()){
+        const left=start+handWidth+HAND_KAN_GAP+set*(4*kanSpacing+KAN_GAP);
+        for(let i=0;i<4;i++){
+          const faceUp=i===1||i===2;
+          output.push(tile(`k${seat}-${set}-${i}`,faceUp?id:null,side*(left+(i+.5)*kanSpacing),
+            .057+D*kanSize/2,z,faceUp?-Math.PI/2:Math.PI/2,0,kanSize));
+        }
       }
     }
     // Three banks of conventional six-by-three rivers leave room for all 53 discards per seat.
@@ -238,9 +255,11 @@ export function createTableScene(canvas, {onPick,onHover,onReady,onUnavailable} 
       output.push(tile('w'+n,null,x,.053+WARE*D*(upper?1.5:.5),near?WALL_Z:-WALL_Z,Math.PI/2,near?Math.PI:0,WARE));
     }
     for(let n=0;n<DEAD_STACKS*2;n++){
-      const upper=n%2===1, col=n>>1, dora=col===2&&upper&&validTile(m.dora);
+      const upper=n%2===1, col=n>>1;
+      const indicator=upper&&col>=2?(m.doraIndicators?.[col-2]??(col===2?m.dora:null)):null;
+      const dora=validTile(indicator);
       const x=FAR_START+(FAR_LIVE_STACKS+col)*WALL_STEP+DEAD_GAP;
-      output.push(tile('d'+n,dora?m.dora:null,x,.053+WARE*D*(upper?1.5:.5),-WALL_Z,
+      output.push(tile('d'+n,dora?indicator:null,x,.053+WARE*D*(upper?1.5:.5),-WALL_Z,
         dora?-Math.PI/2:Math.PI/2,0,WARE));
     }
     return {output,own};
@@ -293,6 +312,7 @@ export function createTableScene(canvas, {onPick,onHover,onReady,onUnavailable} 
       }
     }
     motion=animations; tiles=fresh.output;hand=fresh.own;previous=next;model=next;
+    renderedHand.length=hand.length;
     for(let s=0;s<2;s++)deposits[s].visible=Number.isInteger(next.riichiAt[s])&&next.riichiAt[s]>=0;
     request();
   }

@@ -1,7 +1,7 @@
-import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261107-mahjong';
+import {createRound,actRound,legalActions,publicView} from './engine.mjs?v=20261121-kan';
 import {createArcade,finishBattle,advanceArcade,retryStage} from './arcade.mjs?v=20261108-gallery';
 import {tileHTML,tileName,portraitPlaceholder} from './tiles.mjs?v=20261107-mahjong';
-import {createTableControls} from './table-controls.mjs?v=20261120-clarity';
+import {createTableControls} from './table-controls.mjs?v=20261121-kan';
 import {CAST,getCast,displayStageName,defaultPortraitURL} from './cast.mjs?v=20261120-dialogue';
 import {createEncounter,advanceEncounter,skipEncounter} from './encounter.mjs?v=20261120-dialogue';
 import {chooseVoiceLine} from './voice-lines.mjs?v=20261120-dialogue';
@@ -130,6 +130,7 @@ function step(action){
  sound(action.type==='riichi'||action.riichi?'riichi':'tile');
  if(round.phase==='finished'){run=finishBattle(run,{...round.result,finalPoints:round.points});render();showBattleResult();return;}
  render();
+ if(action.type==='kan')notify(result.message);
  if(!before.riichi[0]&&round.riichi[0])showComment('playerRiichi',{important:true});
  else if(!before.riichi[1]&&round.riichi[1])showComment('cpuRiichi',{important:true});
  else if(action.type==='cpu'&&round.turnCount>0&&round.turnCount%8===0)showComment('playerTurn');
@@ -138,6 +139,14 @@ function step(action){
 function discard(){
  if(!Number.isInteger(selected)){notify('打牌する牌を選んでください。');return;}
  step({type:'discard',index:selected,riichi:riichiPicking});
+}
+function chooseKan(){
+ if(!round||$('kanButton').disabled)return;
+ const tiles=legalActions(round).kanTiles;
+ if(tiles.length===1){step({type:'kan',tile:tiles[0]});return;}
+ if(tiles.length===0)return;
+ $('kanChoices').innerHTML=tiles.map(id=>tileHTML(id,{button:true,label:tileName(id)+'を暗槓'})).join('');
+ show('kanDialog');
 }
 function pickHandTile(index){
  if(!round||!started||ended||encounter||run.phase!=='playing')return;
@@ -156,6 +165,10 @@ function riverHTML(view,seat){
   return `<span class="${classes}">${tileHTML(id,{small:true,label:notes.length?tileName(id)+'（'+notes.join('・')+'）':null})}</span>`;
  }).join('');
 }
+function showKans(element,kans=[]){
+ element.hidden=kans.length===0;
+ element.innerHTML=kans.map(id=>`<span class="kan-group" role="group" aria-label="${tileName(id)}の暗槓">${[null,id,id,null].map(tile=>tileHTML(tile,{small:true})).join('')}</span>`).join('');
+}
 function render(){
  const stage=currentStage(),profile=getCast(run.stage),name=displayStageName(stage);
  const view=round?publicView(round):null,a=view?.legal||{};
@@ -170,11 +183,13 @@ function render(){
  setPortrait($('cpuPortrait'),stage);
  const live=!!round&&!encounter&&!ended&&run.phase==='playing',hand=round?.hands?.[0]||[];
  const legal=a.discardIndices||[],riichiLegal=a.riichiDiscards||[];
+ const kanLegal=a.kanTiles||[],kans=view?.kans||[[],[]],doraIndicators=view?.doraIndicators||[];
  $('cpuHand').innerHTML=view?view.hands[1].map(id=>tileHTML(id,{small:true,hidden:id===null})).join(''):Array.from({length:13},()=>tileHTML(null,{small:true,hidden:true})).join('');
  $('playerHand').innerHTML=hand.map((id,index)=>{
   const disabled=!live||!legal.includes(index)||(riichiPicking&&!riichiLegal.includes(index));
-  return `<span class="hand-tile-wrap ${round.drawn?.[0]!==null&&index===13?'drawn-tile':''}">${tileHTML(id,{button:true,index,selected:selected===index,disabled})}</span>`;
+  return `<span class="hand-tile-wrap ${view.drawnIndex===index?'drawn-tile':''}">${tileHTML(id,{button:true,index,selected:selected===index,disabled})}</span>`;
  }).join('');
+ showKans($('playerKans'),kans[0]);showKans($('cpuKans'),kans[1]);
  for(const [id,seat] of [['playerRiver',0],['cpuRiver',1]])$(id).innerHTML=riverHTML(view,seat);
  const latest=$('latestCpuDiscard'),cpuTile=view?.discards[1].at(-1);
  if(latest.dataset.tile!==String(cpuTile)){
@@ -185,17 +200,20 @@ function render(){
  $('reviewRivers').disabled=!round;
  tableControls?.update({
   hand:view?.hands[0]||[], cpu:view?.hands[1]||[], rivers:view?.discards||[[],[]],
-  riichiAt:view?.riichiAt||[null,null], dora:view?.doraIndicator??null, wallCount:view?.wallRemaining??0,
+  riichiAt:view?.riichiAt||[null,null], dora:view?.doraIndicator??null, doraIndicators, kans,
+  drawnIndex:view?.drawnIndex??null, wallCount:view?.wallRemaining??0,
   selected, legal:riichiPicking?riichiLegal:legal, active:live, roundKey:String(generation),
  });
- $('doraIndicator').innerHTML=round?tileHTML(view.doraIndicator,{small:true}):'—';
+ $('doraIndicator').innerHTML=round?doraIndicators.map(id=>tileHTML(id,{small:true})).join(''):'—';
  $('windLabel').textContent=round?.dealer===1?'あなた：南家 / CPU：東家':'あなた：東家 / CPU：南家';
  $('wallCount').textContent=round?.wall?.length??'—';
  $('playerPoints').textContent=fmt(round?.points?.[0]??25000)+' 点';$('cpuPoints').textContent=fmt(round?.points?.[1]??25000);
  $('discardButton').disabled=!live||!legal.includes(selected)||(riichiPicking&&!riichiLegal.includes(selected));
  $('riichiButton').disabled=!live||!riichiLegal.length;$('riichiButton').classList.toggle('is-armed',riichiPicking);$('riichiButton').textContent=riichiPicking?'リーチを取り消す':'リーチ';
+ $('kanButton').hidden=!live||!kanLegal.length;
+ $('kanButton').disabled=!live||!kanLegal.length||riichiPicking;
  $('tsumoButton').disabled=!live||!a.canTsumo;$('ronButton').disabled=!live||!a.canRon;$('passButton').disabled=!live||!a.canPass;
- const message=!started?'ゲーム開始を待っています':encounter?'対戦相手と会話中です。会話が終わると対局が始まります。':ended?'今回の挑戦は終了しました':!live?'対局が終了しました':round.phase==='cpu'?'対戦相手の思考中…':a.canRon?'ロンできます。和了するか見送りを選択。':a.canTsumo?'ツモ和了できます。':'あなたの手番。打牌する牌を選んでください。';
+ const message=!started?'ゲーム開始を待っています':encounter?'対戦相手と会話中です。会話が終わると対局が始まります。':ended?'今回の挑戦は終了しました':!live?'対局が終了しました':round.phase==='cpu'?'対戦相手の思考中…':a.canRon?'ロンできます。和了するか見送りを選択。':a.canTsumo?'ツモ和了できます。':kanLegal.length?'暗槓できます。カンするか、打牌する牌を選んでください。':'あなたの手番。打牌する牌を選んでください。';
  $('turnStatus').textContent=message;$('roundNotice').textContent=riichiPicking?'リーチを宣言します。待ちが残る牌を選んで打牌してください。':message;
  $('tileHint').textContent=riichiPicking?'リーチできる牌だけを選択できます。':round?.riichi?.[0]?'リーチ中は引いた牌のみ打牌できます。':'牌を選んで打牌。同じ牌をもう一度押しても打牌できます。';
  $('logList').replaceChildren(...logs.slice().reverse().map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));
@@ -218,6 +236,7 @@ function renderResult(){
  $('resultDetails').textContent=`今回の和了点 ${fmt(result.points)} 点 · ${result.han||0}翻 ${result.fu||0}符${run.lastClearBonus?` · 突破ボーナス +${fmt(run.lastClearBonus)} pt`:''}`;
  $('yakuList').replaceChildren(...(result.yaku||[]).map(y=>{const li=document.createElement('li');li.textContent=typeof y==='string'?y:`${y.name} ${y.han}翻`;return li;}));
  $('resultWinningHand').innerHTML=(result.winningHand||[]).map(id=>tileHTML(id,{small:true})).join('');
+ showKans($('resultKans'),result.kans);
  $('stageResultRows').innerHTML=run.results.map((r,i)=>`<tr><th scope="row">第${i+1}戦 · ${r.won?'勝利':r.draw?'流局':'敗北'}</th><td>${fmt(r.finalPoints[0])}</td><td>${fmt(r.finalPoints[1])}</td></tr>`).join('');
  $('stageResultTotal').textContent=`合計 ${fmt(run.stageTotals[0])} 対 ${fmt(run.stageTotals[1])} 点`;
  $('nextRoundButton').hidden=run.phase!=='battle-result';$('nextStageButton').hidden=run.phase!=='stage-clear';$('retryStageButton').hidden=run.phase!=='stage-failed';
@@ -276,6 +295,13 @@ $('startButton').onclick=startRun;$('discardButton').onclick=discard;
 $('encounterNext').onclick=nextEncounter;$('encounterSkip').onclick=skipConversation;
 $('encounterDialog').addEventListener('keydown',event=>{if(event.key==='ArrowRight'||(['Enter',' '].includes(event.key)&&!event.target.closest('button'))){event.preventDefault();if(!event.repeat)nextEncounter();}});
 $('riichiButton').onclick=()=>{riichiPicking=!riichiPicking;selected=null;render();};$('tsumoButton').onclick=()=>step({type:'tsumo'});$('ronButton').onclick=()=>step({type:'ron'});$('passButton').onclick=()=>step({type:'pass'});
+$('kanButton').onclick=chooseKan;
+$('kanChoices').addEventListener('click',event=>{
+ const button=event.target.closest('button[data-tile]');
+ if(!button||!$('kanDialog').open)return;
+ close('kanDialog');
+ step({type:'kan',tile:Number(button.dataset.tile)});
+});
 for(const id of ['helpButton','welcomeHelpButton'])$(id).onclick=()=>show('helpDialog');
 for(const id of ['rankingButton','welcomeRankingButton'])$(id).onclick=()=>{show('rankingDialog');void loadRanking();};$('refreshRankingButton').onclick=()=>void loadRanking();
 $('nextRoundButton').onclick=()=>{close('resultDialog');run=advanceArcade(run);startBattle();};

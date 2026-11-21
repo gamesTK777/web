@@ -4,7 +4,8 @@ import {TILES,createRound,legalActions,actRound,publicView,tilesFromString,shant
 
 function freeze(v){if(v&&typeof v==='object'&&!Object.isFrozen(v)){Object.freeze(v);Object.values(v).forEach(freeze);}return v;}
 function conservation(s){
-  const counts=Array(34).fill(0);for(const t of [...s.wall,...s.deadWall,...s.hands.flat(),...s.discards.flat()]){assert.ok(Number.isInteger(t)&&t>=0&&t<34);counts[t]++;}
+  const kans=s.kans.flat().flatMap(tile=>Array(4).fill(tile));
+  const counts=Array(34).fill(0);for(const t of [...s.wall,...s.deadWall,...s.hands.flat(),...s.discards.flat(),...kans]){assert.ok(Number.isInteger(t)&&t>=0&&t<34);counts[t]++;}
   assert.deepEqual(counts,Array(34).fill(4));
   assert.equal(s.points[0]+s.points[1]+s.riichiPot,50000);
 }
@@ -22,6 +23,12 @@ function fixture(human,cpu=null,{phase='human-discard',stage=4,river=[[],[]],las
   return s;
 }
 const READY='m123456p789s12z11';
+
+function setDeadWallTile(s,index,tile){
+  const liveIndex=s.wall.indexOf(tile);
+  assert.ok(liveIndex>=0,'replacement fixture must preserve physical tile counts');
+  [s.deadWall[index],s.wall[liveIndex]]=[s.wall[liveIndex],s.deadWall[index]];
+}
 
 test('34 tiles and seeded deals retain every physical tile, including both dealer options',()=>{
   assert.equal(TILES.length,34);assert.equal(new Set(TILES.map(t=>t.code)).size,34);
@@ -44,6 +51,99 @@ test('regular hands, seven pairs and thirteen orphans complete and return scored
     assert.ok(score&&score.points>=1000,hand);assert.ok(score.yaku.some(y=>y.name.includes(expected)),JSON.stringify(score));
     assert.equal(score.winningHand.length,14);assert.equal(JSON.stringify(s),before);
   }
+});
+
+test('four matching tiles can be declared from a seeded deal and the hand continues with an eleventh tile',()=>{
+  const base=createRound({seed:276}),before=JSON.stringify(base);
+  assert.deepEqual(legalActions(base).kanTiles,[31]);
+  assert.equal(actRound(base,{type:'kan',tile:32}).ok,false);
+  const declared=actRound(freeze(base),{type:'kan',tile:31});
+  assert.equal(declared.ok,true);assert.equal(declared.event,'kan');assert.equal(JSON.stringify(base),before);
+  const s=declared.state,view=publicView(s);
+  assert.equal(s.phase,'human-discard');assert.equal(s.turn,0);assert.equal(s.turnCount,base.turnCount);
+  assert.deepEqual(s.kans,[[31],[]]);assert.equal(s.hands[0].length,11);assert.ok(!s.hands[0].includes(31));
+  assert.equal(s.hands[0].at(-1),base.deadWall[0]);assert.equal(s.drawn[0],base.deadWall[0]);assert.equal(view.drawnIndex,10);
+  assert.equal(s.deadWall.length,14);assert.equal(s.deadWall[0],base.wall[0]);assert.equal(s.wall.length,base.wall.length-1);
+  assert.deepEqual(view.doraIndicators,[base.doraIndicator,base.deadWall[6]]);
+  assert.ok(view.hands[1].every(id=>id===null));assert.ok(!('uraIndicator'in view));
+  view.kans[0].length=0;view.doraIndicators.length=0;
+  assert.equal(s.kans[0].length,1);assert.equal(publicView(s).doraIndicators.length,2);
+  assert.equal(analyzeHand(s.hands[0],{kans:s.kans[0],visibleKans:s.kans}).discardOptions.length,11);
+  const discarded=actRound(s,{type:'discard',index:10});
+  assert.equal(discarded.ok,true);assert.equal(discarded.state.phase,'cpu');assert.equal(discarded.state.hands[0].length,10);
+  assert.match(declared.message,/暗槓.+嶺上牌/);
+  const response=actRound(discarded.state,{type:'cpu'});
+  assert.equal(response.ok,true);
+  [s,discarded.state,response.state].forEach(conservation);
+});
+
+test('暗槓 remains closed, wins on a replacement draw and scores the new visible and hidden indicators',()=>{
+  const s=fixture('m222p123456s12z11m2',null,{riichi:[true,true]});
+  setDeadWallTile(s,0,20);setDeadWallTile(s,6,17);setDeadWallTile(s,7,26);
+  s.ippatsu=[true,true];
+  assert.deepEqual(legalActions(s).kanTiles,[1]);
+  const declared=actRound(s,{type:'kan',tile:1}).state;
+  assert.deepEqual(declared.ippatsu,[false,false]);
+  assert.deepEqual(legalActions(declared).discardIndices,[10]);
+  assert.deepEqual(winningTiles(declared.hands[0].slice(0,-1),declared.kans[0]),[20]);
+  const won=actRound(declared,{type:'tsumo'});
+  assert.equal(won.ok,true);assert.equal(won.state.result.winningTile,20);
+  assert.deepEqual(won.state.result.kans,[1]);assert.equal(won.state.result.winningHand.length,11);
+  const yaku=new Map(won.state.result.yaku.map(y=>[y.name,y.han]));
+  for(const name of ['リーチ','嶺上開花','門前ツモ','ドラ','裏ドラ'])assert.equal(yaku.get(name),1);
+  conservation(won.state);
+});
+
+test('first-turn 暗槓 permits ordinary riichi but prevents double riichi',()=>{
+  const s=fixture('m222p123456s12z11m2');
+  setDeadWallTile(s,0,33);
+  const kans=actRound(s,{type:'kan',tile:1}).state;
+  const declared=actRound(kans,{type:'riichi',index:10});
+  assert.equal(declared.ok,true);assert.equal(declared.state.riichi[0],true);
+  assert.equal(declared.state.doubleRiichi[0],false);
+  conservation(declared.state);
+});
+
+test('the discard after the final replacement draw does not score 河底ロン',()=>{
+  const s=fixture('m9999p456s456z2345',READY);
+  setDeadWallTile(s,0,20);
+  s.discards[0].push(...s.wall.splice(1));
+  const replaced=actRound(s,{type:'kan',tile:8}).state;
+  assert.equal(replaced.wall.length,0);
+  const discarded=actRound(replaced,{type:'discard',index:10}).state;
+  assert.equal(discarded.lastDiscard.afterKan,true);
+  const win={type:'ron',tile:20};
+  assert.equal(evaluateWin(discarded,1,win),null);
+  discarded.lastDiscard.afterKan=false;
+  assert.ok(evaluateWin(discarded,1,win)?.yaku.some(y=>y.name==='河底ロン'));
+  conservation(discarded);
+});
+
+test('暗槓 is blocked without four matching tiles, an available wall tile, or an unchanged riichi wait',()=>{
+  const waiting=fixture('m11123456p789z11m1',null,{riichi:[true,false]});
+  assert.ok(winningTiles(waiting.hands[0].slice(0,-1)).includes(0));
+  assert.deepEqual(legalActions(waiting).kanTiles,[]);
+  const oldQuad=fixture('m2222p123456s12z11',null,{riichi:[true,false]});
+  assert.deepEqual(legalActions(oldQuad).kanTiles,[]);
+  const exhausted=createRound({seed:276});exhausted.wall=[];
+  assert.equal(legalActions(exhausted).canKan,false);
+  const onCpu=createRound({seed:276});onCpu.phase='cpu';onCpu.turn=1;
+  assert.equal(legalActions(onCpu).canKan,false);
+});
+
+test('successive declarations retain all 136 tiles and reveal at most five dora indicators',()=>{
+  let s=fixture('m1111p1111s1111z22');
+  [28,28,31,31].forEach((id,index)=>setDeadWallTile(s,index,id));
+  for(const [index,tile] of [0,9,18,28].entries()){
+    assert.ok(legalActions(s).kanTiles.includes(tile));
+    const r=actRound(s,{type:'kan',tile});
+    assert.equal(r.ok,true);s=r.state;
+    assert.equal(s.kanCount,index+1);assert.equal(s.hands[0].length,11-index*3);
+    assert.equal(publicView(s).doraIndicators.length,index+2);
+    conservation(s);
+  }
+  assert.equal(legalActions(s).canKan,false);
+  assert.ok(evaluateWin(s,0)?.yaku.some(y=>y.name==='四槓子'));
 });
 
 test('an incomplete or no-yaku ron is rejected while the same hand can self-draw',()=>{

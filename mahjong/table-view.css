@@ -67,7 +67,7 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 4px #222c26;
 }
-.has-3d .cpu-hand, .has-3d .table-grain, .has-3d .river-zone,
+.has-3d .cpu-hand, .has-3d .table-melds, .has-3d .table-grain, .has-3d .river-zone,
 .has-3d .table-compass > div { display: none; }
 .has-3d .table-field { display: contents; }
 .has-3d .table-top, .has-3d .table-meta, .has-3d .table-compass {
@@ -326,7 +326,9 @@ body:not(.game-fullscreen):has(.has-3d) .round-notice { min-height: 22px; }
   .has-3d .table-actions { display: grid; grid-template-columns: 1fr auto; gap: 5px 8px; padding: 7px 8px 9px; }
   .has-3d .table-actions .primary { grid-area: 1 / 1; min-width: 0; padding: 7px 10px; }
   .has-3d .call-actions { grid-area: 2 / 1 / 3 / 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .has-3d .call-actions:has(.kan-action:not([hidden])) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .has-3d .call-actions button { min-width: 0; min-height: 40px; padding: 5px; font-size: 11px; }
+  .has-3d .call-actions .kan-action { min-height: 44px; }
   .has-3d .review-rivers { grid-area: 1 / 2; min-height: 38px; padding-inline: 8px; font-size: 11px; }
   body:not(.game-fullscreen):has(.has-3d) .topbar { height: 46px; }
   body:not(.game-fullscreen):has(.has-3d) .game-shell { padding: 8px; }

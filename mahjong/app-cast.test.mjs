@@ -208,6 +208,33 @@ test('3Dで牌を選び直して打牌ボタンを押すと、最後に選択し
   assert.equal(game.node('discardButton').disabled, true);
 });
 
+test('暗槓を宣言すると3D卓の手牌とドラが更新され、嶺上牌を打てる', async () => {
+  const game = await harness({ withTable: true });
+  const initial = engine.createRound({ seed: 276, dealer: 0 });
+  game.hooks.setupRound(initial);
+  await game.table.ready;
+  const button = game.node('kanButton');
+  assert.equal(button.hidden, false);
+  assert.equal(button.disabled, false);
+  button.click();
+
+  const after = game.hooks.state().round;
+  const table = game.table.model;
+  assert.equal(after.phase, 'human-discard');
+  assert.equal(table.hand.length, 11);
+  assert.deepEqual(table.kans, [[31], []]);
+  assert.deepEqual(table.doraIndicators, [initial.doraIndicator, initial.deadWall[6]]);
+  assert.equal(table.drawnIndex, 10);
+  assert.equal(table.hand[table.drawnIndex], initial.deadWall[0]);
+  assert.equal(game.node('handTargets').children.length, 11);
+  assert.equal(button.hidden, true);
+
+  game.table.press(table.drawnIndex);
+  game.node('discardButton').click();
+  assert.equal(game.hooks.state().round.phase, 'cpu');
+  assert.deepEqual(game.table.model.rivers[0], [initial.deadWall[0]]);
+});
+
 test('3Dのポインター操作は最前面の牌を選び、重なったボタン・隙間・CPU手番で誤打牌しない', async () => {
   const game = await harness({ withTable: true });
   const initial = engine.createRound({ seed: 6, dealer: 0 });

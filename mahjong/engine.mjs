@@ -11,8 +11,9 @@ export const TILES=Object.freeze(Array.from({length:34},(_,id)=>{
   return Object.freeze({id,suit,rank,name,label:name,short:suit==='z'?name:String(rank),suitName,code:suit+rank,unicode:String.fromCodePoint(cp)+'\uFE0E',terminal:suit!=='z'&&(rank===1||rank===9),honor:suit==='z'});
 }));
 export const TILE=TILES;
-export const RULES=Object.freeze({players:2,tiles:136,closedHandOnly:true,redFives:false,kan:false,chi:false,pon:false,deadWall:14,riichiCost:1000,startingPoints:25000});
-const CORE_RULE=rule({'赤牌':{m:0,p:0,s:0},'裏ドラあり':true,'カンドラあり':false,'カン裏あり':false,'場数':0});
+export const RULES=Object.freeze({players:2,tiles:136,closedHandOnly:true,redFives:false,kan:true,chi:false,pon:false,deadWall:14,riichiCost:1000,startingPoints:25000});
+const CORE_RULE=rule({'赤牌':{m:0,p:0,s:0},'裏ドラあり':true,'カンドラあり':true,'カン裏あり':true,'場数':0});
+const MAX_KANS=4;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const validTile=id=>Number.isInteger(id)&&id>=0&&id<34;
 const sorted=hand=>[...hand].sort((a,b)=>a-b);
@@ -27,41 +28,53 @@ export function tilesFromString(value){
     if(!validTile(id)||match[1]==='z'&&rank>7)throw Error('Invalid tile string');out.push(id);
   }return out;
 }
-function asHand(tiles){return new Shoupai(tiles.map(tileCode));}
-export function shanten(tiles){
+const quadCode=id=>TILES[id].suit+String(TILES[id].rank).repeat(4);
+const handSize=(kans,hasDraw=false)=>13-kans.length*3+Number(hasDraw);
+function asHand(tiles,kans=[]){
+  return kans.length?Shoupai.fromString([tiles.map(tileCode).join(''),...kans.map(quadCode)].join(',')):
+    new Shoupai(tiles.map(tileCode));
+}
+export function shanten(tiles,kans=[]){
   if(!Array.isArray(tiles)||tiles.some(t=>!validTile(t)))return 8;
-  const key=sorted(tiles).join(',');let value=handCache.get(key);
-  if(value===undefined){value=Util.xiangting(asHand(tiles));if(handCache.size>=4096)handCache.clear();handCache.set(key,value);}
+  const key=sorted(tiles).join(',')+(kans.length?'|'+sorted(kans).join(','):'');let value=handCache.get(key);
+  if(value===undefined){value=Util.xiangting(asHand(tiles,kans));if(handCache.size>=4096)handCache.clear();handCache.set(key,value);}
   return value;
 }
-export function winningTiles(hand){
-  if(hand.length!==13||shanten(hand)!==0)return[];
+export function winningTiles(hand,kans=[]){
+  if(hand.length!==handSize(kans)||shanten(hand,kans)!==0)return[];
   const counts=Array(34).fill(0);for(const t of hand)counts[t]++;
-  return TILES.filter(t=>counts[t.id]<4&&shanten([...hand,t.id])===-1).map(t=>t.id);
+  return TILES.filter(t=>counts[t.id]<4&&!kans.includes(t.id)&&shanten([...hand,t.id],kans)===-1).map(t=>t.id);
 }
 function doraOf(indicator){const t=TILES[indicator];if(!t)return-1;if(t.suit!=='z')return indicator%9===8?indicator-8:indicator+1;return indicator<31?(indicator===30?27:indicator+1):(indicator===33?31:indicator+1);}
+function indicators(state,ura=false){
+  const first=ura?state.uraIndicator:state.doraIndicator;
+  return [first,...Array.from({length:state.kanCount},(_,i)=>state.deadWall[6+i*2+Number(ura)])];
+}
 function yakuName(name){return({'立直':'リーチ','一発':'一発','門前清自摸和':'門前ツモ','断幺九':'タンヤオ','役牌 白':'役牌・白','役牌 發':'役牌・發','役牌 中':'役牌・中','海底摸月':'海底ツモ','河底撈魚':'河底ロン','ドラ':'ドラ','裏ドラ':'裏ドラ'})[name]||name;}
 /** Standard four-player win total, transferred by the single opponent here. */
 export function evaluateWin(state,player,{type='tsumo',tile}={}){
   try{
-    const hand=state.hands[player],isRon=type==='ron';
-    if(isRon?(hand.length!==13||!validTile(tile)):(hand.length!==14))return null;
-    let core;if(isRon)core=asHand(hand);else{core=asHand(hand.slice(0,-1));core.zimo(tileCode(hand.at(-1)));}
+    const hand=state.hands[player],isRon=type==='ron',kans=state.kans?.[player]??[];
+    if(hand.length!==handSize(kans,!isRon)||(isRon&&!validTile(tile)))return null;
+    const core=isRon?asHand(hand,kans):asHand(hand.slice(0,-1),kans);
+    if(!isRon)core.zimo(tileCode(hand.at(-1)));
+    const rinshan=!isRon&&!!state.drawnFromKan?.[player];
+    const lastLiveTile=state.wall.length===0&&!(isRon?state.lastDiscard?.afterKan:rinshan);
     const param=Util.hule_param({rule:CORE_RULE,zhuangfeng:0,menfeng:player===state.dealer?0:1,
       lizhi:state.riichi[player]?state.doubleRiichi?.[player]?2:1:0,yifa:!!state.ippatsu?.[player],
-      haidi:state.wall.length===0?(isRon?2:1):0,baopai:[tileCode(state.doraIndicator)],
-      fubaopai:state.riichi[player]?[tileCode(state.uraIndicator)]:null});
+      lingshang:rinshan,haidi:lastLiveTile?(isRon?2:1):0,baopai:indicators(state).map(tileCode),
+      fubaopai:state.riichi[player]?indicators(state,true).map(tileCode):null});
     const scored=Util.hule(core,isRon?tileCode(tile)+'+':null,param);
     if(!scored?.hupai?.length||!scored.defen)return null;
     const yaku=scored.hupai.map(y=>({name:yakuName(y.name),han:typeof y.fanshu==='number'?y.fanshu:13*String(y.fanshu).length,yakuman:typeof y.fanshu==='string'}));
     return{winner:player,type,han:scored.fanshu||13*(scored.damanguan||1),fu:scored.fu||0,points:scored.defen,yaku,
-      winningTile:isRon?tile:hand.at(-1),winningHand:sorted(isRon?[...hand,tile]:hand),yakuman:scored.damanguan||0,
+      winningTile:isRon?tile:hand.at(-1),winningHand:sorted(isRon?[...hand,tile]:hand),kans:[...kans],yakuman:scored.damanguan||0,
       message:`${player===0?'あなた':'CPU'}の${isRon?'ロン':'ツモ'}！ ${scored.defen.toLocaleString('ja-JP')}点`};
   }catch{return null;}
 }
 export function isFuriten(state,player){
   if(state.riichiFuriten?.[player]||state.temporaryFuriten?.[player])return true;
-  const waits=winningTiles(state.hands[player]);return waits.some(t=>state.discards[player].includes(t));
+  const waits=winningTiles(state.hands[player],state.kans?.[player]);return waits.some(t=>state.discards[player].includes(t));
 }
 function ronScore(state,player){
   const last=state.lastDiscard;if(!last||last.player===player||isFuriten(state,player))return null;
@@ -69,7 +82,7 @@ function ronScore(state,player){
 }
 function finishDraw(s){
   s.phase='finished';s.result={winner:null,type:'draw',han:0,fu:0,points:0,yaku:[],winningTile:null,
-    tenpai:s.hands.map(h=>shanten(h)===0),message:'流局。山の牌がなくなりました。'};return'draw';
+    tenpai:s.hands.map((h,i)=>shanten(h,s.kans[i])===0),message:'流局。山の牌がなくなりました。'};return'draw';
 }
 function cancelPendingRiichi(s){
   const p=s.pendingRiichi;if(p===null)return;s.points[p]+=1000;s.riichiPot-=1000;s.riichi[p]=false;s.doubleRiichi[p]=false;s.ippatsu[p]=false;s.riichiAt[p]=null;s.pendingRiichi=null;
@@ -79,15 +92,19 @@ function finishWin(s,result){
   s.phase='finished';s.points[1-result.winner]-=result.points;s.points[result.winner]+=result.points+s.riichiPot;
   s.result={...result,riichiBonus:s.riichiPot,pointsBefore:[...s.points].map((n,i)=>n+(i===result.winner?-result.points-s.riichiPot:result.points))};s.riichiPot=0;return result.type;
 }
+function receiveDraw(s,player,tile,rinshan=false){
+  s.hands[player]=sorted(s.hands[player]);s.hands[player].push(tile);s.drawn[player]=tile;s.drawnFromKan[player]=rinshan;s.drawCount++;
+  s.temporaryFuriten[player]=false;s.turn=player;s.phase=player===0?'human-discard':'cpu';
+}
 function drawFor(s,player){
   if(!s.wall.length)return false;
-  s.hands[player]=sorted(s.hands[player]);const tile=s.wall.pop();s.hands[player].push(tile);s.drawn[player]=tile;s.drawCount++;
-  s.temporaryFuriten[player]=false;s.turn=player;s.phase=player===0?'human-discard':'cpu';return true;
+  receiveDraw(s,player,s.wall.pop());return true;
 }
 export function createRound({stage=1,seed=Date.now(),dealer=0}={}){
   const n=(Number(seed)>>>0)||1;
   const s={version:1,stage:clamp(Math.floor(Number(stage)||1),1,7),seed:n,rng:n,dealer:dealer===1?1:0,
-    wall:[],deadWall:[],hands:[[],[]],discards:[[],[]],drawn:[null,null],riichi:[false,false],doubleRiichi:[false,false],
+    wall:[],deadWall:[],hands:[[],[]],discards:[[],[]],drawn:[null,null],drawnFromKan:[false,false],kans:[[],[]],kanCount:0,
+    riichi:[false,false],doubleRiichi:[false,false],
     riichiAt:[null,null],ippatsu:[false,false],temporaryFuriten:[false,false],riichiFuriten:[false,false],pendingRiichi:null,
     points:[25000,25000],riichiPot:0,turn:0,turnCount:0,drawCount:0,lastDiscard:null,phase:'human-discard',result:null};
   const wall=Array.from({length:136},(_,i)=>Math.floor(i/4));
@@ -98,22 +115,55 @@ export function createRound({stage=1,seed=Date.now(),dealer=0}={}){
   return s;
 }
 function riichiIndices(state,player){
-  const h=state.hands[player];if(h.length!==14||state.riichi[player]||state.points[player]<1000||state.wall.length<4)return[];
-  return h.map((_,i)=>i).filter(i=>shanten(h.filter((_,j)=>j!==i))===0);
+  const h=state.hands[player],kans=state.kans[player];
+  if(h.length!==handSize(kans,true)||state.riichi[player]||state.points[player]<1000||state.wall.length<4)return[];
+  return h.map((_,i)=>i).filter(i=>shanten(h.filter((_,j)=>j!==i),kans)===0);
+}
+function preservesRiichiWaits(hand,kans,tile){
+  if(hand.at(-1)!==tile)return false;
+  const before=hand.slice(0,-1),waits=winningTiles(before,kans);
+  const after=winningTiles(hand.filter(t=>t!==tile),[...kans,tile]);
+  if(!waits.length||waits.length!==after.length||waits.some((id,i)=>id!==after[i]))return false;
+  // A locked triplet cannot have been used in a sequence in another scoring shape.
+  const core=asHand(before,kans),triplet=quadCode(tile).slice(0,-1);
+  return waits.every(wait=>Util.hule_mianzi(core,tileCode(wait)+'+').every(shape=>shape.includes(triplet)));
+}
+function kanTiles(state,player){
+  const hand=state.hands[player],kans=state.kans[player];
+  if(state.turn!==player||state.drawn[player]===null||hand.length!==handSize(kans,true)||
+    state.kanCount>=MAX_KANS||state.wall.length===0||!validTile(state.deadWall[state.kanCount]))return[];
+  const counts=Array(34).fill(0);for(const id of hand)counts[id]++;
+  return TILES.filter(({id})=>counts[id]===4&&(!state.riichi[player]||preservesRiichiWaits(hand,kans,id))).map(({id})=>id);
+}
+function declareKan(state,player,tile){
+  // The first four dead-wall positions are the replacement tile stack.
+  const index=state.kanCount++,replacement=state.deadWall[index];
+  state.deadWall[index]=state.wall.shift();
+  state.kans[player].push(tile);
+  state.hands[player]=state.hands[player].filter(id=>id!==tile);
+  state.ippatsu.fill(false);
+  receiveDraw(state,player,replacement,true);
 }
 export function legalActions(state){
-  const h=state.hands[0],discard=state.phase==='human-discard';
+  const h=state.hands[0],discard=state.phase==='human-discard',kans=state.kans[0];
   const riichiDiscards=discard?riichiIndices(state,0):[];
   const indices=discard?(state.riichi[0]?[h.length-1]:h.map((_,i)=>i)):[];
+  const availableKans=discard?kanTiles(state,0):[];
   return{phase:state.phase,canDiscard:discard,discardIndices:indices,riichiDiscards,canRiichi:riichiDiscards.length>0,
+    kanTiles:availableKans,canKan:availableKans.length>0,
     canTsumo:discard&&!!evaluateWin(state,0),canRon:state.phase==='human-ron'&&!!ronScore(state,0),
-    canPass:state.phase==='human-ron',needsCpu:state.phase==='cpu',shanten:shanten(h),waits:h.length===13?winningTiles(h):[]};
+    canPass:state.phase==='human-ron',needsCpu:state.phase==='cpu',shanten:shanten(h,kans),waits:winningTiles(h,kans)};
 }
-function visibleCounts(view){const counts=Array(34).fill(0);for(const t of [...view.hand,...view.discards.flat(),view.doraIndicator])if(validTile(t))counts[t]++;return counts;}
-function efficiency(hand,visible){
-  const current=shanten(hand),counts=Array(34).fill(0);for(const t of hand)counts[t]++;
+function visibleCounts({hand,discards,doraIndicator,doraIndicators=[doraIndicator],kans=[]}){
+  const counts=Array(34).fill(0);
+  for(const t of [...hand,...discards.flat(),...doraIndicators])if(validTile(t))counts[t]++;
+  for(const t of kans.flat())if(validTile(t))counts[t]+=4;
+  return counts;
+}
+function efficiency(hand,visible,kans=[]){
+  const current=shanten(hand,kans),counts=Array(34).fill(0);for(const t of hand)counts[t]++;
   let ukeire=0;const improving=[];
-  for(let t=0;t<34;t++)if(counts[t]<4&&visible[t]<4&&shanten([...hand,t])<current){const left=Math.max(0,4-visible[t]);ukeire+=left;improving.push(t);}
+  for(let t=0;t<34;t++)if(counts[t]<4&&visible[t]<4&&shanten([...hand,t],kans)<current){const left=Math.max(0,4-visible[t]);ukeire+=left;improving.push(t);}
   return{shanten:current,ukeire,improving};
 }
 function tileShape(tile,hand){
@@ -132,41 +182,42 @@ function danger(tile,view,seen){
   return value;
 }
 /** Only public table information and the CPU's own hand enter its decision. */
-export function cpuDecisionView(state){return{hand:[...state.hands[1]],discards:state.discards.map(a=>[...a]),riichi:[...state.riichi],doraIndicator:state.doraIndicator,riichiAt:[...state.riichiAt],points:[...state.points]};}
+export function cpuDecisionView(state){return{hand:[...state.hands[1]],discards:state.discards.map(a=>[...a]),riichi:[...state.riichi],doraIndicator:state.doraIndicator,
+  doraIndicators:indicators(state),kans:state.kans.map(group=>[...group]),riichiAt:[...state.riichiAt],points:[...state.points]};}
 export function chooseCpuDiscard(view,{stage=1,random=.5}={}){
-  const level=clamp(Math.floor(Number(stage)||1),1,7),hand=view.hand;
-  if(hand.length!==14)return -1;if(view.riichi[1])return 13;
+  const level=clamp(Math.floor(Number(stage)||1),1,7),hand=view.hand,kans=view.kans?.[1]??[];
+  if(hand.length!==handSize(kans,true))return -1;if(view.riichi[1])return hand.length-1;
   const indices=hand.map((_,i)=>i).filter((i,_,all)=>all.find(j=>hand[j]===hand[i])===i);
   const noise=clamp(Number(random)||0,0,.999999);
   if(level===1&&noise<.75)return indices[Math.floor(noise/.75*indices.length)];
   if(level===2&&noise<.34)return indices[Math.floor(noise/.34*indices.length)];
-  const seen=visibleCounts(view),dora=doraOf(view.doraIndicator);
+  const seen=visibleCounts(view),dora=(view.doraIndicators??[view.doraIndicator]).map(doraOf);
   const candidates=indices.map(index=>{
-    const tile=hand[index],rest=hand.filter((_,i)=>i!==index),s=shanten(rest);
-    const e=level>=4?efficiency(rest,seen):{ukeire:0};
-    const keep=tileShape(tile,rest)+(tile===dora?4:0),risk=view.riichi[0]?danger(tile,view,seen):0;
+    const tile=hand[index],rest=hand.filter((_,i)=>i!==index),s=shanten(rest,kans);
+    const e=level>=4?efficiency(rest,seen,kans):{ukeire:0};
+    const keep=tileShape(tile,rest)+dora.filter(id=>id===tile).length*4,risk=view.riichi[0]?danger(tile,view,seen):0;
     let value=-s*100+e.ukeire*(level>=7?1.6:1.0)-keep*(level>=5?.8:.3);
     if(level===2)value=-s*50-keep;
     if(level>=6&&view.riichi[0]&&s>0)value-=risk*(level===7?130:80);
-    if(level>=7&&s===0){const waits=winningTiles(rest);value+=waits.length*1.5;}
+    if(level>=7&&s===0){const waits=winningTiles(rest,kans);value+=waits.length*1.5;}
     return{index,value};
   });
   candidates.sort((a,b)=>b.value-a.value||a.index-b.index);
   if(level===3&&noise<.15)return candidates[Math.min(2,candidates.length-1)].index;
   return candidates[0].index;
 }
-export function analyzeHand(hand,{discards=[[],[]],doraIndicator=0}={}){
-  const seen=visibleCounts({hand,discards,doraIndicator});
-  const discardOptions=hand.length===14?hand.map((tile,index)=>({index,tile,...efficiency(hand.filter((_,i)=>i!==index),seen)})):[];
+export function analyzeHand(hand,{discards=[[],[]],doraIndicator=0,doraIndicators,kans=[],visibleKans=[kans]}={}){
+  const seen=visibleCounts({hand,discards,doraIndicator,doraIndicators,kans:visibleKans});
+  const discardOptions=hand.length===handSize(kans,true)?hand.map((tile,index)=>({index,tile,...efficiency(hand.filter((_,i)=>i!==index),seen,kans)})):[];
   discardOptions.sort((a,b)=>a.shanten-b.shanten||b.ukeire-a.ukeire||a.index-b.index);
-  return{shanten:shanten(hand),waits:winningTiles(hand),discardOptions};
+  return{shanten:shanten(hand,kans),waits:winningTiles(hand,kans),discardOptions};
 }
 function discard(s,player,index,declare=false){
-  const hand=s.hands[player],tile=hand[index];
-  if(declare){s.riichi[player]=true;s.doubleRiichi[player]=s.discards[player].length===0;s.ippatsu[player]=true;s.points[player]-=1000;s.riichiPot+=1000;s.pendingRiichi=player;s.riichiAt[player]=s.discards[player].length;}
+  const hand=s.hands[player],tile=hand[index],afterKan=s.drawnFromKan[player];
+  if(declare){s.riichi[player]=true;s.doubleRiichi[player]=s.discards[player].length===0&&s.kanCount===0;s.ippatsu[player]=true;s.points[player]-=1000;s.riichiPot+=1000;s.pendingRiichi=player;s.riichiAt[player]=s.discards[player].length;}
   else if(s.riichi[player])s.ippatsu[player]=false;
-  s.hands[player]=sorted(hand.filter((_,i)=>i!==index));s.discards[player].push(tile);s.drawn[player]=null;s.turnCount++;
-  s.lastDiscard={player,tile,riichi:declare,turn:s.turnCount};s.turn=1-player;
+  s.hands[player]=sorted(hand.filter((_,i)=>i!==index));s.discards[player].push(tile);s.drawn[player]=null;s.drawnFromKan[player]=false;s.turnCount++;
+  s.lastDiscard={player,tile,riichi:declare,turn:s.turnCount,...(afterKan?{afterKan}:{})};s.turn=1-player;
   if(player===0){s.phase='cpu';return declare?'riichi':'discard';}
   if(ronScore(s,0)){s.phase='human-ron';return'ron-offer';}
   s.pendingRiichi=null;if(!drawFor(s,0))return finishDraw(s);return declare?'cpu-riichi':'cpu-discard';
@@ -178,6 +229,9 @@ export function actRound(state,action){
   const legal=legalActions(state),s=clone(state);let event='',message='';
   if(action.type==='tsumo'){
     if(!legal.canTsumo)return fail('ツモできる手牌ではありません。');event=finishWin(s,evaluateWin(s,0));
+  }else if(action.type==='kan'){
+    if(!legal.kanTiles.includes(action.tile))return fail('この牌は今は暗槓できません。');
+    declareKan(s,0,action.tile);event='kan';message=`${tileLabel(action.tile)}を暗槓し、嶺上牌を引きました。`;
   }else if(action.type==='ron'){
     if(!legal.canRon)return fail('ロンできません。役・待ち牌・フリテンを確認してください。');event=finishWin(s,ronScore(s,0));
   }else if(action.type==='pass'){
@@ -206,11 +260,12 @@ export function actRound(state,action){
   return{ok:true,state:s,event,message:s.result?.message||message||(event==='ron-offer'?'ロンできます。':'あなたの手番です。')};
 }
 export function publicView(state){
-  const reveal=state.phase==='finished';
+  const reveal=state.phase==='finished',doraIndicators=indicators(state);
   return{stage:state.stage,dealer:state.dealer,phase:state.phase,turn:state.turn,turnCount:state.turnCount,drawCount:state.drawCount,
     hands:[[...state.hands[0]],reveal?[...state.hands[1]]:state.hands[1].map(()=>null)],hand:[...state.hands[0]],cpuHandCount:state.hands[1].length,
-    drawn:[state.drawn[0],reveal?state.drawn[1]:null],drawnIndex:state.hands[0].length===14?13:null,
+    drawn:[state.drawn[0],reveal?state.drawn[1]:null],drawnIndex:state.drawn[0]===null?null:state.hands[0].length-1,
+    kans:state.kans.map(group=>[...group]),
     discards:state.discards.map(a=>[...a]),riichi:[...state.riichi],riichiAt:[...state.riichiAt],points:[...state.points],
-    riichiPot:state.riichiPot,doraIndicator:state.doraIndicator,doraTile:doraOf(state.doraIndicator),wallRemaining:state.wall.length,
+    riichiPot:state.riichiPot,doraIndicator:state.doraIndicator,doraIndicators,doraTile:doraOf(state.doraIndicator),wallRemaining:state.wall.length,
     lastDiscard:state.lastDiscard?{...state.lastDiscard}:null,result:state.result?clone(state.result):null,legal:legalActions(state)};
 }
