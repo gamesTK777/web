@@ -3,6 +3,7 @@ import { makeLandmarks, type Landmark } from "./landmarks.ts";
 import type { TerrainPreset } from "./stages.ts";
 import { buildSchool, schoolSpawn } from "./school.ts";
 import { buildFrontierTerrain, buildFrontierTown, frontierSpawn, type FrontierStructureCell } from "./frontier-world.ts";
+import { buildCopsStage, COPS_ROBBER_SPAWN, COPS_WALK_Y } from "./cops-stages.ts";
 
 export const SIZE = 256;
 export const HEIGHT = 96;
@@ -172,6 +173,14 @@ export class World {
     yield* this.indexTerrain();
   }
   private *generateTerrain(): Generator<number> {
+    if(this.stage==='park'||this.stage==='crossing'){
+      this.data.fill(14,0,AREA);
+      this.data.fill(3,(COPS_WALK_Y-5)*AREA,(COPS_WALK_Y-1)*AREA);
+      this.data.fill(1,(COPS_WALK_Y-1)*AREA,COPS_WALK_Y*AREA);
+      buildCopsStage(this.stage,(x,y,z,id)=>this.write(x,y,z,id));
+      yield* this.indexTerrain();
+      return;
+    }
     if(this.stage==='school'){
       this.data.fill(14,0,AREA);
       this.data.fill(3,30*AREA,32*AREA);
@@ -277,7 +286,7 @@ export class World {
   }
   private *indexTerrain():Generator<number> {
     this.highest.fill(-1);
-    const indexLandmarkLights=this.stage==='school'||this.stage==='frontier';
+    const indexLandmarkLights=this.stage==='school'||this.stage==='frontier'||this.stage==='park'||this.stage==='crossing';
     for(let y=0;y<HEIGHT;y++) {
       for(let z=0;z<SIZE;z++) for(let x=0;x<SIZE;x++) {
         const index=voxelIndex(x,y,z),id=this.data[index];
@@ -310,6 +319,7 @@ export class World {
     }
   }
   spawn(): Spawn {
+    if(this.stage==='park'||this.stage==='crossing')return {...COPS_ROBBER_SPAWN};
     if(this.stage==='school')return {...schoolSpawn};
     if(this.stage==='frontier')return {...frontierSpawn};
     for(let radius=0;radius<32;radius++) for(let dz=-radius;dz<=radius;dz++) for(let dx=-radius;dx<=radius;dx++) {

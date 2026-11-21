@@ -1,17 +1,21 @@
 import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, isFrontierEquipment, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
-import { TERRAIN_PRESETS, soloExploration, stageSupportsTagBots, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
+import { TERRAIN_PRESETS, copsStage, soloExploration, stageSupportsTagBots, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
-export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting'; stage?:TerrainPreset;tagBots?:number }
+export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting'; stage?:TerrainPreset;tagBots?:number;cops?:boolean }
 export interface TagUIStatus {
   label:string; hint:string; it:boolean; mapOpen:boolean; remaining?:number
-  hide?: {remaining:number;title:string;detail:string}
+  hide?: {remaining:number;title:string;detail:string}; cops?:boolean
 }
 export interface TagUIResult { outcome:'win'|'lose'|'spectator'; loser:string; winners:string[]; minutes:number }
-type RoomUIPlayMode = Mode | 'tag'
+type RoomUIPlayMode = Mode | 'tag' | 'cops'
+const onlineMode=(value:unknown):RoomUIPlayMode=>value==='tag'||value==='cops'||value==='explore'?value:'creative'
+const chaseMode=(mode:RoomUIPlayMode)=>mode==='tag'||mode==='cops'
+const roomStageAvailable=(stage:TerrainPreset,mode:RoomUIPlayMode)=>
+  mode==='cops'?copsStage(stage):!copsStage(stage)&&stage!=='frontier'&&(stage!=='school'||mode==='tag')
 const tagMinuteOptions = [1,3,5,10,15] as const
 const defaultTagMinutes = 5
 const onlineTerrainDetails:Partial<Record<TerrainPreset,string>> = {
@@ -52,14 +56,14 @@ const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻�
 const sectionHead = (name:string) => '<header class="panel-head"><h1>'+name+'</h1>'+backButton()+'</header>'
 const terrainName = (stage:TerrainPreset|undefined) => TERRAIN_PRESETS.find(preset=>preset.id===stage)?.name??''
 function stagePicker(selected:TerrainPreset, mode?:RoomUIPlayMode) {
-  const cards=TERRAIN_PRESETS.filter(({id})=>mode===undefined?id!=='school':id!=='frontier').map(({id,name,detail,thumbnail})=>{
-    const unavailable=id==='school'&&mode!=='tag'
+  const cards=TERRAIN_PRESETS.filter(({id})=>mode===undefined?validSoloTerrainPreset(id):id!=='frontier').map(({id,name,detail,thumbnail})=>{
+    const unavailable=mode!==undefined&&!roomStageAvailable(id,mode)
     return '<label class="stage-card"'+(unavailable?' hidden':'')+'><input type="radio" name="stage" value="'+id+'"'+
       (unavailable?' disabled':id===selected?' checked':'')+'>'+
       '<img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
       '<span><b>'+name+'</b><small>'+(mode?onlineTerrainDetails[id]??detail:detail)+'</small></span></label>'
   }).join('')
-  return '<fieldset class="stage-picker"'+(mode==='tag'?' data-school-choice':'')+'><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
+  return '<fieldset class="stage-picker"'+(mode&&chaseMode(mode)?' data-school-choice':'')+'><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
 }
 const formattedCount=(count:number)=>Number.isFinite(count)?String(count):'∞'
 const icons = new Map<number,string>()
@@ -224,17 +228,16 @@ export class GameUI {
       if(form.id==='online-create-form'){
         const name=String(data.get('name')??'').trim()
         const seed=String(data.get('seed')??'').trim()
-        const selected=data.get('mode')
-        const mode:RoomUIPlayMode=selected==='tag'||selected==='explore'?selected:'creative'
+        const mode=onlineMode(data.get('mode'))
         const selectedStage=data.get('stage')
-        const stage=validTerrainPreset(selectedStage)&&selectedStage!=='frontier'&&(selectedStage!=='school'||mode==='tag')?selectedStage:'classic'
+        const stage=validTerrainPreset(selectedStage)&&roomStageAvailable(selectedStage,mode)?selectedStage:mode==='cops'?'park':'classic'
         const selectedMinutes=Number(data.get('tagMinutes'))
         const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
         const selectedBots=Number(data.get('tagBots'))
         const tagBots=stageSupportsTagBots(stage)&&Number.isInteger(selectedBots)&&selectedBots>=0&&selectedBots<=4?selectedBots:0
-        Object.assign(this.onlineDraft,{name,seed,mode,stage,...(mode==='tag'?{tagMinutes,tagBots}:{})})
+        Object.assign(this.onlineDraft,{name,seed,mode,stage,...(chaseMode(mode)?{tagMinutes,tagBots}:{})})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
-        this.send('online-create',{name,seed,nickname,mode,stage,...(mode==='tag'?{tagMinutes,...(tagBots?{tagBots}:{})}:{})})
+        this.send('online-create',{name,seed,nickname,mode,stage,...(chaseMode(mode)?{tagMinutes,...(mode==='tag'&&tagBots?{tagBots}:{})}:{})})
       }else{
         const code=String(data.get('code')??'').trim().toUpperCase()
         this.onlineDraft.code=code
@@ -265,17 +268,17 @@ export class GameUI {
       return
     }
     if(input.name==='mode'&&input.form?.id==='online-create-form'&&input.checked){
-      const isTag=input.value==='tag',minutes=$<HTMLSelectElement>('tag-minutes')
-      this.onlineDraft.mode=isTag?'tag':input.value==='explore'?'explore':'creative'
-      $('tag-time-option').hidden=minutes.disabled=!isTag
+      const mode=onlineMode(input.value)
+      this.onlineDraft.mode=mode
+      $('tag-time-option').hidden=$<HTMLSelectElement>('tag-minutes').disabled=!chaseMode(mode)
       const picker=input.form.querySelector<HTMLFieldSetElement>('.stage-picker')!
-      const school=picker.querySelector<HTMLInputElement>('[name="stage"][value="school"]')!
-      if(!isTag&&school.checked){
-        picker.querySelector<HTMLInputElement>('[name="stage"][value="classic"]')!.checked=true
-        this.onlineDraft.stage='classic'
+      if(!roomStageAvailable(this.onlineDraft.stage,mode))this.onlineDraft.stage=mode==='cops'?'park':'classic'
+      for(const stage of picker.querySelectorAll<HTMLInputElement>('[name="stage"]')){
+        const allowed=validTerrainPreset(stage.value)&&roomStageAvailable(stage.value,mode)
+        stage.closest('label')!.hidden=stage.disabled=!allowed
+        stage.checked=allowed&&stage.value===this.onlineDraft.stage
       }
-      school.closest('label')!.hidden=school.disabled=!isTag
-      picker.toggleAttribute('data-school-choice',isTag)
+      picker.toggleAttribute('data-school-choice',chaseMode(mode))
       this.updateBotSelector()
       return
     }
@@ -338,13 +341,13 @@ export class GameUI {
     if(code)this.onlineDraft.code=code.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)
     const draft=this.onlineDraft
     const nickname='<label class="entry">プレイヤー名<input name="nickname" value="'+escapeText(draft.nickname)+'" placeholder="ワールド内に表示される名前" maxlength="24" required autocomplete="nickname"></label>'
-    const modes=([['creative','建材を自由に使って建築する。'],['explore','素材を集めて道具や建材を作る。'],['tag','仲間と追いかけっこをする。']] as const)
+    const modes=([['creative','建材を自由に使って建築する。'],['explore','素材を集めて道具や建材を作る。'],['tag','仲間と追いかけっこをする。'],['cops','ケイは確保、ドロは仲間を救出。']] as const)
       .map(([mode,detail])=>'<label><input type="radio" name="mode" value="'+mode+'"'+(draft.mode===mode?' checked':'')+
-        '><span><b>'+(mode==='tag'?'鬼ごっこ':modeName(mode))+'</b><small>'+detail+'</small></span></label>').join('')
-    const tagTime='<div id="tag-time-option" class="entry"'+(draft.mode==='tag'?'':' hidden')+'><label for="tag-minutes">制限時間</label>'+
-      '<select name="tagMinutes" id="tag-minutes" aria-describedby="tag-time-help"'+(draft.mode==='tag'?'':' disabled')+'>'+
+        '><span><b>'+(mode==='cops'?'ドロケイ':mode==='tag'?'鬼ごっこ':modeName(mode))+'</b><small>'+detail+'</small></span></label>').join('')
+    const tagTime='<div id="tag-time-option" class="entry"'+(chaseMode(draft.mode)?'':' hidden')+'><label for="tag-minutes">制限時間</label>'+
+      '<select name="tagMinutes" id="tag-minutes" aria-describedby="tag-time-help"'+(chaseMode(draft.mode)?'':' disabled')+'>'+
       tagMinuteOptions.map(minutes=>'<option value="'+minutes+'"'+(draft.tagMinutes===minutes?' selected':'')+'>'+minutes+'分</option>').join('')+
-      '</select><small id="tag-time-help">鬼が追いかけている間だけ時間が進みます。</small></div>'
+      '</select><small id="tag-time-help">隠れる時間が終わると制限時間が進みます。</small></div>'
     const botsEnabled=draft.mode==='tag'&&stageSupportsTagBots(draft.stage)
     const bots='<div id="tag-bot-option" class="entry"'+(botsEnabled?'':' hidden')+'><label for="tag-bots">CPUの人数</label>'+
       '<select id="tag-bots" name="tagBots" aria-describedby="tag-bot-help"'+(botsEnabled?'':' disabled')+'>'+
@@ -390,6 +393,7 @@ export class GameUI {
   }
   tagMode(status:TagUIStatus|null) {
     $('game').toggleAttribute('data-tag-play',!!status)
+    $('game').toggleAttribute('data-cops-play',!!status?.cops)
     const panel=$('tag-status'), toggle=$('tag-map-toggle'), map=$('tag-map')
     panel.hidden=toggle.hidden=!status
     map.hidden=!status?.mapOpen
@@ -425,6 +429,16 @@ export class GameUI {
       '<div class="tag-result-time"><small>制限 '+minutes+'分</small><time datetime="PT0S">0:00</time></div></header>'+
       '<dl class="tag-result-players"><div><dt>負け・時間切れ時の鬼</dt><dd id="tag-result-loser">'+escapeText(loser)+'</dd></div>'+
       '<div><dt>勝ち・逃げ切った人</dt><dd>'+winnersList+'</dd></div></dl>'+
+      button('online-leave','退出してタイトルへ','primary full')+'</section>')
+    $('tag-result-title').focus({preventScroll:true})
+  }
+  copsResult(outcome:'win'|'lose'|'spectator',policeWon:boolean,winners:string[]){
+    const title=policeWon?'ケイの勝利':'ドロの勝利'
+    const result=outcome==='win'?'あなたのチームの勝ちです。':outcome==='lose'?'あなたのチームは負けました。':'対戦が終了しました。'
+    this.show('tag-result','<section class="tag-result" data-outcome="'+outcome+'" aria-labelledby="tag-result-title">'+
+      '<header><div><h1 id="tag-result-title" tabindex="-1">'+title+'</h1><p>'+
+      (policeWon?'ドロを全員確保しました。':'ドロが制限時間まで逃げ切りました。')+' '+result+'</p></div></header>'+
+      '<dl class="tag-result-players"><div><dt>勝利メンバー</dt><dd><ul>'+winners.map(name=>'<li>'+escapeText(name)+'</li>').join('')+'</ul></dd></div></dl>'+
       button('online-leave','退出してタイトルへ','primary full')+'</section>')
     $('tag-result-title').focus({preventScroll:true})
   }
@@ -555,7 +569,7 @@ export class GameUI {
     this.inventoryState=view
     const item=view.bar[view.selected]
     $('hud-bar').innerHTML=this.slots(view)
-    const mode=$('game').hasAttribute('data-tag-play')?'鬼ごっこ':modeName(view.mode)
+    const mode=$('game').hasAttribute('data-cops-play')?'ドロケイ':$('game').hasAttribute('data-tag-play')?'鬼ごっこ':modeName(view.mode)
     $('mode-tag').textContent=(this.worldName?this.worldName+'　／　':'')+mode
     $('equipped').textContent=item?item.name+'　'+formattedCount(item.count)+(item.durability!==undefined?'　耐久 '+item.durability+'/'+item.maxDurability:''):'素手'
   }

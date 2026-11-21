@@ -207,7 +207,7 @@ export class SceneView {
     if(this.chips.count){this.chips.instanceMatrix.needsUpdate=true;if(this.chips.instanceColor)this.chips.instanceColor.needsUpdate=true;}
   }
   update(p:CameraPose & {fovOffset?:number},target:Position|null,day:number,dt:number,presentation?:Presentation,
-    kids?:{player:Player;hit:Hit|null},concealNames=false) {
+    kids?:{player:Player;hit:Hit|null;seated?:boolean},concealNames=false) {
     const w=Math.max(1,this.canvas.clientWidth),h=Math.max(1,this.canvas.clientHeight);
     if(w!==this.wt || h!==this.ht){
       this.wt=w;this.ht=h;
@@ -231,7 +231,7 @@ export class SceneView {
     this.actionTime=Math.max(0,this.actionTime-dt);
     if(thirdPerson&&kids){
       if(!this.avatar){this.avatar=new KidsAvatar();this.scene.add(this.avatar.group);}
-      this.avatar.update(kids.player,dt,this.actionTime>0||!!presentation?.mining,.52+.48*this.sky.day.value);
+      this.avatar.update(kids.player,dt,this.actionTime>0||!!presentation?.mining,.52+.48*this.sky.day.value,kids.seated);
     }
     if(this.avatar)this.avatar.group.visible=thirdPerson;
     this.selection.visible=Boolean(target);

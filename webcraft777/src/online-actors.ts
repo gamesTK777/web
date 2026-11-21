@@ -31,13 +31,14 @@ function nameTag(name:string) {
 export class OnlineActors {
   private readonly actors=new Map<string,Actor>()
   private readonly sample=new T.Vector3()
+  seatedPose?: (id:string)=>{x:number;y:number;z:number;yaw:number}|undefined
   constructor(private readonly scene:T.Scene) {}
 
-  setPlayers(players:RoomPlayer[],it:string|null=null) {
+  setPlayers(players:RoomPlayer[],it:string|null=null,police?:readonly string[]) {
     const seen=new Set<string>()
     for(const peer of players) {
       seen.add(peer.id)
-      const caption=peer.id===it?'鬼 '+peer.nickname:peer.nickname
+      const caption=police?(police.includes(peer.id)?'ケイ ':'ドロ ')+peer.nickname:peer.id===it?'鬼 '+peer.nickname:peer.nickname
       let actor=this.actors.get(peer.id)
       if(!actor) {
         const avatar=new KidsAvatar(),label=nameTag(caption)
@@ -58,7 +59,8 @@ export class OnlineActors {
   }
 
   animate(dt:number,daylight:number,world:World,camera?:T.PerspectiveCamera) {
-    for(const {body,goal,avatar,label} of this.actors.values()) {
+    for(const [id,{body,goal,avatar,label}] of this.actors) {
+      const seat=this.seatedPose?.(id)
       const jump=Math.hypot(goal.x-body.x,goal.y-body.y,goal.z-body.z)>12
       const amount=jump||dt===0 ? 1 : 1-Math.exp(-6*dt)
       body.x+=(goal.x-body.x)*amount
@@ -71,7 +73,8 @@ export class OnlineActors {
       body.grounded=!goal.flying
       body.vx=goal.moving ? 3.3 : 0
       label.position.y=goal.crouched ? 1.23 : 2.02
-      avatar.update(body,dt,false,daylight)
+      if(seat){Object.assign(body,seat);body.vx=0;label.position.y=1.76}
+      avatar.update(body,dt,false,daylight,!!seat)
       label.visible=!camera||tagNameVisible(world,camera,body,this.sample)
     }
   }

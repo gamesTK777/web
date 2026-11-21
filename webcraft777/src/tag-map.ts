@@ -1,21 +1,23 @@
 import { SEA_LEVEL, SIZE, type World } from './world'
 import { SCHOOL_BOUNDS, SCHOOL_LEVELS } from './school'
+import { COPS_BOUNDS, COPS_RESCUE } from './cops-stages'
 
 const outdoorZones = 8
-const outdoorSize = SIZE / outdoorZones
 const worldBounds={minX:0,maxX:SIZE,minZ:0,maxZ:SIZE}
 type Point = {x:number;y:number;z:number}
 type Peer = {pose:Point}
 type RGB = readonly [number,number,number]
 
-function terrainColor(world:World, startX:number, startZ:number) {
+function terrainColor(world:World,startX:number,startZ:number,width:number,depth:number) {
   const color=[0,0,0]
-  const sampleStep=outdoorSize/4
-  for(let dz=sampleStep/2;dz<outdoorSize;dz+=sampleStep){
-    for(let dx=sampleStep/2;dx<outdoorSize;dx+=sampleStep){
-      const x=startX+dx,z=startZ+dz,y=world.highest[x+z*SIZE],id=world.get(x,y,z)
+  for(let row=0;row<4;row++){
+    for(let column=0;column<4;column++){
+      const x=Math.floor(startX+(column+.5)*width/4),z=Math.floor(startZ+(row+.5)*depth/4)
+      const y=world.highest[x+z*SIZE],id=world.get(x,y,z)
       const water=world.get(x,SEA_LEVEL,z)===13
-      const colors:RGB=water?[63,126,140]:id===4?[177,157,101]:id===5||id===6?[55,101,70]:[102,132,76]
+      const city=world.stage==='crossing'
+      const colors:RGB=water?[63,126,140]:id===4?[177,157,101]:id===5||id===6?[55,101,70]:
+        city?(y>33?[100,128,148]:[66,81,89]):[102,132,76]
       const heightShade=water?0:Math.ceil((y-30)*.9)
       for(let c=0;c<3;c++)color[c]+=colors[c]+heightShade
     }
@@ -41,6 +43,7 @@ export class TagMap {
   private readonly columns:number
   private readonly rows:number
   private readonly school:boolean
+  private readonly cops:boolean
   private readonly counts:Uint8Array
   private readonly drawnCounts:Uint8Array
   private drawnSelf=-2
@@ -49,7 +52,8 @@ export class TagMap {
   constructor(private readonly canvas:HTMLCanvasElement, world:World, private readonly levelLabel?:HTMLElement) {
     this.context=canvas.getContext('2d')
     this.school=world.stage==='school'
-    this.bounds=this.school?SCHOOL_BOUNDS:worldBounds
+    this.cops=world.stage==='park'||world.stage==='crossing'
+    this.bounds=this.school?SCHOOL_BOUNDS:this.cops?COPS_BOUNDS:worldBounds
     this.columns=this.school?6:outdoorZones
     this.rows=this.school?5:outdoorZones
     this.counts=new Uint8Array(this.columns*this.rows)
@@ -73,8 +77,10 @@ export class TagMap {
         painter.fillRect(left,top,Math.round((x+1-minX)*cellW)-left,Math.round((z+1-minZ)*cellH)-top)
       }
     }else{
+      const {minX,maxX,minZ,maxZ}=this.bounds
+      const width=(maxX-minX)/this.columns,depth=(maxZ-minZ)/this.rows
       for(let z=0;z<this.rows;z++)for(let x=0;x<this.columns;x++){
-        painter.fillStyle=terrainColor(world,x*outdoorSize,z*outdoorSize)
+        painter.fillStyle=terrainColor(world,minX+x*width,minZ+z*depth,width,depth)
         painter.fillRect(x*w,z*h,w,h)
       }
     }
@@ -135,5 +141,12 @@ export class TagMap {
       ctx.strokeStyle='#4b4225';ctx.lineWidth=2;ctx.stroke()
       ctx.fillStyle='#263025';ctx.fillText(String(count),x,z+1)
     })
+    if(this.cops){
+      const {minX,maxX,minZ,maxZ}=this.bounds
+      const x=(COPS_RESCUE.x-minX)/(maxX-minX)*this.canvas.width
+      const y=(COPS_RESCUE.z-minZ)/(maxZ-minZ)*this.canvas.height
+      ctx.fillStyle='#45839a';ctx.fillRect(x-30,y-13,60,26)
+      ctx.font='bold 18px system-ui, sans-serif';ctx.fillStyle='#fff7df';ctx.fillText('牢屋',x,y+1)
+    }
   }
 }

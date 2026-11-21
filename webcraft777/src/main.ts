@@ -8,13 +8,15 @@ import { Soundscape } from './audio'
 import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining, consumeBlock, consumeItem, quantity, FRONTIER_ITEMS, isFrontierEquipment, ITEMS, SLIDE_ITEM, blockItemId, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode, type Bag } from './inventory'
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
-import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
+import { OnlineClient, type CopsState, type OnlineState, type RideRequest, type RideSeat, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
 import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
 import { soloExploration, validSoloTerrainPreset, type TerrainPreset } from './stages'
 import { LandLife } from './land-life'
 import { AquaticLife } from './aquatic-life'
 import { FrontierLife } from './frontier-life'
 import { FRONTIER_FLOOR, FRONTIER_LOTS, FRONTIER_RESOURCES } from './frontier-world'
+import { COPS_JAIL, COPS_POLICE_SPAWN, COPS_RELEASE, COPS_RESCUE } from './cops-stages'
+import { ParkRides } from './park-rides'
 import { TagMap } from './tag-map'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
@@ -30,6 +32,7 @@ const sharkHealth=hud.querySelector<HTMLProgressElement>('#shark-health')!
 const lifeHealthNumber=hud.querySelector<HTMLElement>('#life-health-number')!
 const sharkHealthNumber=hud.querySelector<HTMLElement>('#shark-health-number')!
 const touchAttack=hud.querySelector<HTMLButtonElement>('#touch-attack')!
+const parkRide=hud.querySelector<HTMLButtonElement>('#park-ride')!
 const touchRotate=hud.querySelector<HTMLButtonElement>('#touch-rotate')!
 const touchButtons = {
   stick:hud.querySelector<HTMLElement>('#move-stick')!,
@@ -44,7 +47,8 @@ const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
 const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
 type TagGame = {map:TagMap;status?:TagState;receivedAt:number;remaining?:number;hideRemaining?:number;
-  peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string}
+  peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string;copsMode?:boolean;cops?:CopsState;
+  rides?:ParkRides;seats?:RideSeat[];rideCommand?:RideRequest|null;rideUntil?:number;pump?:number}
 type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
   ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>;
   nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit;tagGame?:TagGame}
@@ -134,7 +138,8 @@ function guide(){
     data.mode==='explore'&&!j.hidden&&j.toolMade&&!j.caveVisited&&cave?'岩窟 '+bearing(cave,player):'')
 }
 function interact(hit: Hit|null, explicit=false){
-  if(!session||!input.active||session.online?.tagGame)return false
+  if(!session||!input.active)return false
+  if(session.online?.tagGame)return tryRide()
   if(session.online&&session.data.mode==='creative'){
     if(explicit)ui.toast('共同建築ルームでは、建材を自由に選んで建築できます。')
     return false
@@ -305,7 +310,8 @@ function changeSharedBlock(s:Session,x:number,y:number,z:number,block:number,axi
     .finally(()=>{room.editing=false})
 }
 function place() {
-  if(!session||!input.active||session.online?.tagGame)return
+  if(!session||!input.active)return
+  if(session.online?.tagGame){tryRide();return}
   const {world,player,data,view}=session,hit=raycast(world,player)
   if(useFrontierTool()||!player.crouched&&interact(hit))return
   if(hit&&(session.land?.occupies(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz)||
@@ -508,13 +514,17 @@ function disposeLife(s:Session){
   s.land?.dispose()
   s.aquatic?.dispose()
   s.frontier?.dispose()
+  s.online?.tagGame?.rides?.dispose()
+  parkRide.hidden=true
 }
 function showRoom(room:SharedRoom) {
-  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state,stage:room.connection.room.stage,tagBots:room.connection.room.tagBots})
+  const {stage,tagBots,mode}=room.connection.room
+  ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state,stage,tagBots,cops:mode==='cops'})
 }
 function updateTagUI(s:Session,now=performance.now()){
   const room=s.online,game=room?.tagGame
   if(!room||!game)return
+  if(game.copsMode){updateCopsUI(s,room,game,now);return}
   const state=game.status,localId=room.connection.id
   const it=state?.it===localId
   const hiding=state?.phase==='hiding', playing=state?.phase==='playing'
@@ -552,6 +562,96 @@ function updateTagUI(s:Session,now=performance.now()){
     game.mapDue=now+240
   }
 }
+function updateCopsUI(s:Session,room:SharedRoom,game:TagGame,now:number){
+  const state=game.cops,id=room.connection.id
+  const playing=state?.phase==='playing',hiding=state?.phase==='hiding'
+  const police=!!state?.policeIds.includes(id),jailed=!!state?.jailedIds.includes(id)
+  const spectator=playing&&!state.enrolledIds.includes(id)
+  const clock=(state?.serverNow??Date.now())+Math.max(0,now-game.receivedAt)
+  const remaining=(hiding||playing)?Math.max(0,Math.ceil((state.endsAt-(hiding?state.hideUntil:clock))/1000)):undefined
+  const hide=hiding?{remaining:Math.max(0,Math.ceil((state.hideUntil-clock)/1000)),
+    title:police?'ケイの待機時間':'あなたはドロ',detail:police?'ドロが逃げる間、その場で待とう。':'20秒の間にケイから離れ、身を隠そう。'}:undefined
+  const label=state?.phase==='finished'?'試合終了':jailed?'牢屋':spectator?'観戦中':
+    playing||hiding?(police?'ケイ':'ドロ'):'参加者を待っています'
+  const count=state?.jailedIds.length??0
+  const robbers=state?state.enrolledIds.filter(member=>!state.policeIds.includes(member)).length:0
+  const hint=jailed?'仲間の救出を待とう':spectator?'対戦を見守っています':playing?
+    (police?'ドロに触れて確保　'+count+'/'+robbers:count?'仲間を救出　'+bearing(COPS_RESCUE,s.player):'時間切れまで逃げよう'):
+    hiding||state?.phase==='finished'?'':'2人以上で開始'
+  const key=[label,hint,game.open,remaining,hide?.remaining].join('/')
+  if(game.uiKey!==key){
+    ui.tagMode({label,hint,it:police,mapOpen:game.open,remaining,hide,cops:true})
+    game.uiKey=key
+  }
+  if(game.open&&now>=game.mapDue){
+    game.map.update(game.peers,s.player,playing&&!jailed&&!spectator)
+    game.mapDue=now+240
+  }
+}
+function relocate(s:Session,point:{x:number;y:number;z:number; yaw?:number}){
+  const player=s.player
+  Object.assign(player,{x:point.x,y:point.y,z:point.z,vy:0})
+  if(point.yaw!==undefined){player.yaw=point.yaw;input.rememberView(player)}
+  resetPlayerInput(player)
+  stepDistance=0
+  s.view.kidsCamera.reset()
+}
+function tryRide(){
+  const s=session,room=s?.online,game=room?.tagGame
+  const id=room?.connection.id,rides=game?.rides
+  if(!s||!game||!id||!rides||!input.active||!canRide(game.cops,id))return false
+  if(game.rideCommand!==undefined)return true
+  if(rides.playerPose(id))game.rideCommand=null
+  else{
+    const target=rides.target(s.player)
+    if(!target)return false
+    if(target.seat===undefined){ui.toast('すべての席が使用中です。');return true}
+    game.rideCommand={id:target.id,seat:target.seat}
+  }
+  game.rideUntil=performance.now()+2200
+  return true
+}
+function canRide(state:CopsState|undefined,id:string){
+  return !!state&&!state.jailedIds.includes(id)&&state.enrolledIds.includes(id)&&
+    (state.phase==='playing'||state.phase==='hiding'&&!state.policeIds.includes(id))
+}
+function applyCopsFrame(s:Session,room:SharedRoom,game:TagGame,state:CopsState,seats:RideSeat[]){
+  const prior=game.cops,id=room.connection.id,now=performance.now()
+  const oldSeat=game.seats?.find(seat=>seat.memberId===id)
+  const oldExit=game.rides?.exit(id)
+  const activeSeat=seats.find(seat=>seat.memberId===id)
+  const jailed=state.jailedIds.includes(id),wasJailed=!!prior?.jailedIds.includes(id)
+  const police=state.policeIds.includes(id)
+  if(jailed&&!wasJailed)relocate(s,COPS_JAIL)
+  else if(wasJailed&&!jailed)relocate(s,COPS_RELEASE)
+  else if(police&&!prior?.policeIds.includes(id)){
+    relocate(s,COPS_POLICE_SPAWN)
+    separateSpawn(s,game.peers)
+  }else if(oldSeat&&!activeSeat&&oldExit&&!jailed)relocate(s,oldExit)
+  if((game.rideCommand===null&&!activeSeat)||
+    (game.rideCommand?.id===activeSeat?.id&&!!activeSeat)||jailed){
+    game.rideCommand=undefined
+  }else if(game.rideCommand!==undefined&&now>=(game.rideUntil??0)){
+    game.rideCommand=undefined
+    ui.toast('空いている席へ近づいてください。')
+  }
+  game.cops=state
+  game.seats=seats
+  game.receivedAt=now
+  if(prior?.phase!==state.phase)game.mapDue=0
+  if(state.seq!==prior?.seq&&state.event){
+    if(state.event.kind==='capture')ui.toast(jailed&&!wasJailed?'確保された！ 仲間の救出を待とう。':'ケイがドロを確保！')
+    else ui.toast('仲間が牢屋から救出された！')
+  }
+  if(state.phase==='finished'&&prior?.phase!=='finished'){
+    game.open=false;parkRide.hidden=true
+    stopInput()
+    const outcome=!state.enrolledIds.includes(id)?'spectator':state.winnerIds.includes(id)?'win':'lose'
+    const winners=state.results.filter(member=>state.winnerIds.includes(member.id)).map(member=>member.nickname)
+    ui.copsResult(outcome,state.winner==='police',winners)
+  }
+  updateTagUI(s,now)
+}
 function toggleTagMap(){
   const s=session,game=s?.online?.tagGame
   if(!s||!game||!input.active)return
@@ -582,6 +682,10 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
   }
   const peers=frame.players.filter(peer=>peer.id!==room.connection.id)
   const game=room.tagGame
+  if(game&&frame.cops){
+    game.peers=peers
+    applyCopsFrame(s,room,game,frame.cops,frame.rides??[])
+  }
   if(!room.ready&&!room.restoring&&!game&&peers.length)separateSpawn(s,peers)
   if(game&&frame.tag){
     const previous=game.status, state=frame.tag, localId=room.connection.id
@@ -607,8 +711,9 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
     }
     updateTagUI(s)
   }
-  const blinded=game?.status?.phase==='hiding'&&game.status.it===room.connection.id
-  s.view.actors.setPlayers(blinded?[]:peers,game?.status?.it)
+  const blinded=game?.status?.phase==='hiding'&&game.status.it===room.connection.id||
+    game?.cops?.phase==='hiding'&&game.cops.policeIds.includes(room.connection.id)
+  s.view.actors.setPlayers(blinded?[]:peers,game?.status?.it,game?.cops?.policeIds)
   if(room.count!==peers.length+1){room.count=peers.length+1;showRoom(room)}
   room.ready=true;stillFrame=''
   if(station?.id===21&&world.get(station.x,station.y,station.z)!==21){
@@ -626,10 +731,17 @@ function connectRoom(s:Session,room:SharedRoom) {
       const {x,y,z,yaw,crouched,flying,vx,vz}=s.player
       return {x,y,z,yaw,crouched,flying,moving:Math.hypot(vx,vz)>.18}
     },
+    ride:()=>{
+      const game=room.tagGame
+      if(!game?.rides)return undefined
+      if(game.rideCommand!==undefined)return game.rideCommand
+      const seat=game.seats?.find(member=>member.memberId===room.connection.id)
+      return seat?{id:seat.id,seat:seat.seat,pump:game.pump??0}:undefined
+    },
     onFrame:frame=>{if(session===s)applyRoomFrame(s,room,frame)},
     onState:state=>{if(session===s){room.state=state;showRoom(room);flushExplorationEdit(s)}},
     onEnd:error=>{
-      if(session!==s||room.tagGame?.status?.phase==='finished')return
+      if(session!==s||room.tagGame?.status?.phase==='finished'||room.tagGame?.cops?.phase==='finished')return
       room.ended=true;room.state='reconnecting';showRoom(room)
       stopInput();ui.pause(false,controlMode,reason(error))
     },
@@ -654,7 +766,8 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     },connection?.room.generator??loaded?.generator??2,stage)
     if(loaded){world.loadEdits(loaded.edits);world.loadFixtures(loaded.fixtures)}
     const start=world.spawn()
-    const tag=connection?.room.mode==='tag'
+    const cops=connection?.room.mode==='cops'
+    const tag=connection?.room.mode==='tag'||cops
     const mode=connection?(connection.room.mode==='explore'?'explore':'creative'):
       !soloExploration(stage)?'creative':args?.mode??loaded?.mode??'creative'
     const profile=connection&&mode==='explore'?readRoomProfile(connection.room.code,nickname):undefined
@@ -680,7 +793,13 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
       const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map(),
         nickname,restoring:!!profile,pendingExplore:profile?.pending}
       session.online=room
-      if(tag){room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),receivedAt:0,peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
+      if(tag){
+        room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),receivedAt:performance.now(),peers:[],started:false,
+          open:false,mapDue:0,uiKey:'',copsMode:cops,rides:stage==='park'?new ParkRides(view.scene):undefined}
+        const rides=room.tagGame.rides
+        if(rides)view.actors.seatedPose=id=>rides.playerPose(id)
+        updateTagUI(session)
+      }
       connectRoom(session,room)
     }else if(stage==='frontier'){
       session.frontier=new FrontierLife(world,view.scene)
@@ -756,6 +875,7 @@ async function handle(action:string,value?:any) {
     case 'online-join':audio.unlock();await openWorld(null,undefined,()=>onlineClient.join(value),value.code,value.nickname);break
     case 'online-copy':await copyInvitation();break
     case 'tag-map':toggleTagMap();break
+    case 'park-ride':tryRide();break
     case 'online-leave':if(session?.online){busy=true;try{await title()}finally{busy=false}}break
     case 'goto-worlds': await worldList();break
     case 'goto-help': ui.help();break
@@ -811,7 +931,7 @@ async function handle(action:string,value?:any) {
         !chest?undefined:action==='transfer-all'?transferAll(bag,chest,side):transferStack(bag,chest,side,value.index,value.half)
       if(r){ui.toast(r.message);if(r.ok){refreshBag();void persistRoomProgress(session)}}break}
     case 'preset':{
-      if(Object.hasOwn(presets,value)){const name=value as keyof typeof presets;await handle('settings-change',{...settings,...presets[name],quality:name});if(session?.online?.tagGame?.status?.phase!=='finished')ui.settings(settings)}break}
+      if(Object.hasOwn(presets,value)){const name=value as keyof typeof presets;await handle('settings-change',{...settings,...presets[name],quality:name});if(ui.screen!=='tag-result')ui.settings(settings)}break}
     case 'original':await exportWorld(value,true);break
     case 'save':if(session)await persist(session);break
     case 'settings-change':if(validSettings(value)){
@@ -866,15 +986,30 @@ function tick(now:number){
   if(!session)return
   const s=session,elapsed=frameTime?(now-frameTime)/1000:0,dt=Math.min(elapsed,.1);frameTime=now
   const tag=s.online?.tagGame
-  if(tag?.status?.phase==='finished')return
+  if(tag?.status?.phase==='finished'||tag?.cops?.phase==='finished')return
   if(tag)updateTagUI(s,now)
+  const id=s.online?.connection.id??'',cops=tag?.cops,rides=tag?.rides
+  const police=!!cops?.policeIds.includes(id),jailed=!!cops?.jailedIds.includes(id)
+  let seated
+  if(rides&&cops){
+    rides.update(tag.seats??[],cops.serverNow+Math.max(0,now-tag.receivedAt))
+    seated=!jailed?rides.playerPose(id):undefined
+    const target=input.active&&canRide(cops,id)&&!seated?rides.target(s.player):null
+    const label=seated?'降りる':target?.label??''
+    parkRide.hidden=!input.active||!label
+    parkRide.setAttribute('aria-pressed',String(!!seated))
+    if(label&&parkRide.textContent!==label)parkRide.textContent=label
+  }
   if(input.active){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
     if(!input.frame(p,elapsed))return
     const it=!!tag?.status?.it&&tag.status.it===s.online?.connection.id
     if(tag)movement.sprint=true
-    if(!it||tag?.status?.phase!=='hiding')
-      stepPlayer(s.world,p,movement,dt,it?{...settings,sprintMultiplier:1.25}:settings)
+    if(seated&&tag){
+      tag.pump=Math.abs(movement.forward)>.1?Math.sign(movement.forward):0
+      Object.assign(p,{x:seated.x,y:seated.y,z:seated.z,vx:0,vy:0,vz:0})
+    }else if(!jailed&&!(it&&tag?.status?.phase==='hiding')&&!(police&&cops?.phase==='hiding'))
+      stepPlayer(s.world,p,movement,dt,it||police?{...settings,sprintMultiplier:it?1.25:1.12}:settings)
     audio.environment(s.world,p,dt)
     s.land?.update(p,dt,s.data.day)
     const water=s.aquatic
@@ -912,11 +1047,13 @@ function tick(now:number){
   const ammo=held===FRONTIER_ITEMS.revolver?FRONTIER_ITEMS.rounds:held===FRONTIER_ITEMS.torch?FRONTIER_ITEMS.torch:FRONTIER_ITEMS.fireArrow
   const frontierAction=input.active&&s.frontier&&isFrontierEquipment(held)?
     ITEMS[held].name+' ×'+(s.data.mode==='creative'?'∞':quantity(s.data.bag,ammo))+'　'+(input.drag?'使うボタン / X':'左クリック / X'):''
-  ui.target(aimedShark?(input.drag?'サメ　攻撃ボタン / X':'サメ　左クリック / X'):
+  const rideHint=seated?'前後でこぐ　V またはボタンで降りる':!parkRide.hidden?parkRide.textContent+'　V またはボタン':''
+  ui.target(rideHint|| (aimedShark?(input.drag?'サメ　攻撃ボタン / X':'サメ　左クリック / X'):
     frontierAction|| (aimedResident?aimedResident+'　'+(s.frontier?'V / '+useAction:useAction+'で話す'):use?useAction+(target!.id===21?'で作業台':'でチェスト'):''))
+  )
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,
-    moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined,!!tag)
+    moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target,seated:!!seated}:undefined,!!tag)
   if(s.kids)moveReticle(Math.round(s.view.kidsCamera.reticle.y*20)/20)
   if(input.active && debugging){
     frameCount++

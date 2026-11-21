@@ -164,6 +164,8 @@ input { accent-color: #2e745b; }
 .online-card small { color: #4e6658; font-weight: 650; }
 .online-card .online-room-modes { margin: 12px 0 0; padding: 4px 7px 7px; }
 .online-room-modes .modes { gap: 3px; }
+#park-ride { position:absolute; z-index:2; bottom:calc(max(12px,env(safe-area-inset-bottom)) + 112px); right:max(14px,env(safe-area-inset-right)); min-height:44px; padding:7px 14px; color:#fff4d0; background:#214f4bef; border:1px solid #efdc9e; border-radius:9px; }
+#park-ride[aria-pressed="true"] { background:#73502c; }
 .online-room-modes .modes label { min-height: 44px; padding: 5px 7px; }
 #tag-minutes { width: 100%; min-height: 44px; padding: 6px 10px; font-weight: 650; color: var(--ink); background: #fffdf5; border: 1px solid #a8bba8; border-radius: 5px; }
 #tag-time-help { font-size: .8rem; line-height: 1.4; }

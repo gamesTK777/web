@@ -13,7 +13,12 @@ CREATE TABLE IF NOT EXISTS webcraft_rooms (
   stage TEXT NOT NULL DEFAULT 'classic' CHECK (stage IN ('classic','flat','lake')),
   tag_stage TEXT CHECK (tag_stage IS NULL OR (tag_stage='school' AND tag_enabled=1 AND tag_minutes>0 AND stage='classic')),
   tag_bots INTEGER NOT NULL DEFAULT 0 CHECK (typeof(tag_bots)='integer' AND tag_bots BETWEEN 0 AND 4 AND
-    (tag_bots=0 OR (tag_enabled=1 AND tag_minutes>0 AND (stage='flat' OR tag_stage IS 'school'))))
+    (tag_bots=0 OR (tag_enabled=1 AND tag_minutes>0 AND (stage='flat' OR tag_stage IS 'school')))),
+  cops_stage TEXT CHECK (
+    cops_stage IS NULL OR (cops_stage IN ('park','crossing') AND mode='creative' AND stage='classic'
+      AND tag_stage IS NULL AND tag_enabled=0 AND tag_bots=0 AND tag_minutes=0)),
+  cops_minutes INTEGER NOT NULL DEFAULT 0 CHECK (
+    (cops_stage IS NULL AND cops_minutes=0) OR (cops_stage IS NOT NULL AND cops_minutes IN (1,3,5,10,15)))
 );
 
 CREATE INDEX IF NOT EXISTS webcraft_rooms_expiry ON webcraft_rooms(expires_at);
@@ -28,8 +33,13 @@ CREATE TABLE IF NOT EXISTS webcraft_members (
   pose_at INTEGER NOT NULL DEFAULT 0,
   previous_pose TEXT,
   previous_pose_at INTEGER NOT NULL DEFAULT 0,
+  ride_id TEXT CHECK (ride_id IN ('swings','seesaw')),
+  ride_seat INTEGER CHECK (ride_seat BETWEEN 0 AND 3),
+  ride_pump INTEGER NOT NULL DEFAULT 0 CHECK (ride_pump IN (-1,0,1)),
   PRIMARY KEY(room_code, token_hash)
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS webcraft_ride_seats ON webcraft_members(room_code,ride_id,ride_seat) WHERE ride_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS webcraft_cells (
   room_code TEXT NOT NULL REFERENCES webcraft_rooms(code) ON DELETE CASCADE,
@@ -86,4 +96,18 @@ CREATE TABLE IF NOT EXISTS webcraft_tag_state (
   ends_at INTEGER NOT NULL DEFAULT 0,
   round_roster TEXT,
   round_result TEXT
+);
+
+CREATE TABLE IF NOT EXISTS webcraft_cops_state (
+  room_code TEXT PRIMARY KEY NOT NULL REFERENCES webcraft_rooms(code) ON DELETE CASCADE,
+  phase TEXT NOT NULL DEFAULT 'waiting' CHECK (phase IN ('waiting','hiding','playing','finished')),
+  hide_until INTEGER NOT NULL DEFAULT 0,
+  ends_at INTEGER NOT NULL DEFAULT 0,
+  seq INTEGER NOT NULL DEFAULT 0,
+  protected_until INTEGER NOT NULL DEFAULT 0,
+  roster TEXT NOT NULL DEFAULT '[]',
+  police TEXT NOT NULL DEFAULT '[]',
+  jailed TEXT NOT NULL DEFAULT '[]',
+  event TEXT,
+  winner TEXT CHECK (winner IN ('police','robbers'))
 );

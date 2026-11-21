@@ -1,7 +1,7 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
-import { stageSupportsTagBots, validTerrainPreset, type TerrainPreset } from './stages'
-export type OnlineMode = Mode|'tag'
+import { copsStage, stageSupportsTagBots, validTerrainPreset, type TerrainPreset } from './stages'
+export type OnlineMode = Mode|'tag'|'cops'
 export type TagMinutes = 1|3|5|10|15
 
 export interface NetPose {
@@ -60,6 +60,19 @@ export interface RoomFrame {
   cells: RoomCell[]
   players: RoomPlayer[]
   tag?: TagState
+  cops?:CopsState
+  rides?:RideSeat[]
+}
+export type RideId='swings'|'seesaw'
+export type RideRequest={id:RideId;seat?:number;pump?:number}
+export type RideSeat={id:RideId;seat:number;memberId:string;pump:number}
+export interface CopsState {
+  phase:TagState['phase']
+  hideUntil:number;endsAt:number;serverNow:number;seq:number
+  policeIds:string[];jailedIds:string[];enrolledIds:string[]
+  winner:'police'|'robbers'|null;winnerIds:string[]
+  results:TagState['results']
+  event:{kind:'capture'|'rescue';ids:string[];by:string}|null
 }
 export interface TagState {
   it:string|null
@@ -83,6 +96,7 @@ export type OnlineState = 'connecting' | 'connected' | 'reconnecting'
 
 export interface RoomHooks {
   pose: () => NetPose | null
+  ride?:()=>RideRequest|null|undefined
   onFrame: (frame: RoomFrame) => void
   onState: (state: OnlineState) => void
   onEnd?: (error: OnlineError) => void
@@ -94,7 +108,9 @@ const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
 const MAX_ROOM_CELLS = 10_000
-const PROTOCOL = 7
+const PROTOCOL = 8
+
+const timedMode=(mode:OnlineMode)=>mode==='tag'||mode==='cops'
 
 const statusMessages: Record<number, string> = {
   400: '部屋名・ニックネーム・合言葉を確認してください。',
@@ -148,11 +164,13 @@ function parseConnection(value: unknown): RoomConnection {
   const body = asRecord(value), room = asRecord(body?.room)
   if (!body || !room || typeof room.code !== 'string' || !/^[A-Z0-9]{8}$/.test(room.code) ||
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
-      (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag') ||
+      (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag'&&room.mode!=='cops') ||
       (room.stage!==undefined&&!validTerrainPreset(room.stage)) ||
       room.stage==='frontier' ||
+      ((room.mode==='cops')!==copsStage(room.stage)) ||
       (room.stage==='school'&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
-      (room.tagMinutes!==undefined&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
+      (room.tagMinutes!==undefined&&(room.mode!=='tag'&&room.mode!=='cops'||!isTagMinutes(room.tagMinutes))) ||
+      (room.mode==='cops'&&!isTagMinutes(room.tagMinutes)) ||
       (room.tagBots!==undefined&&(!isInteger(room.tagBots,0,4)||
         room.tagBots>0&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes)||!stageSupportsTagBots(room.stage)))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
@@ -162,7 +180,7 @@ function parseConnection(value: unknown): RoomConnection {
     id: body.id,
     token: body.token,
     room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt,
-      mode:room.mode==='explore'||room.mode==='tag'?room.mode:'creative',
+      mode:room.mode==='explore'||room.mode==='tag'||room.mode==='cops'?room.mode:'creative',
       stage:validTerrainPreset(room.stage)?room.stage:'classic',
       ...(isTagMinutes(room.tagMinutes)?{tagMinutes:room.tagMinutes}:{}),
       ...(isInteger(room.tagBots,1,4)?{tagBots:room.tagBots}:{}) },
@@ -225,6 +243,44 @@ function parseTag(value:unknown,timed:boolean):TagState {
   return {it:tag.it,previousIt:tag.previousIt,phase:tag.phase,hideUntil:tag.hideUntil,seq:tag.seq,
     endsAt:endsAt??0,serverNow,enrolledIds,winnerIds,results}
 }
+function parseCops(value:unknown):CopsState {
+  const state=asRecord(value)
+  if(!state||(state.phase!=='waiting'&&state.phase!=='hiding'&&state.phase!=='playing'&&state.phase!=='finished')||
+    !isInteger(state.hideUntil,0,Number.MAX_SAFE_INTEGER)||!isInteger(state.endsAt,0,Number.MAX_SAFE_INTEGER)||
+    !isInteger(state.serverNow,1,Number.MAX_SAFE_INTEGER)||!isInteger(state.seq,0,Number.MAX_SAFE_INTEGER)||
+    (state.winner!==null&&state.winner!=='police'&&state.winner!=='robbers')||
+    (state.phase==='finished')!==Boolean(state.winner)||!Array.isArray(state.results)||state.results.length>6)
+    return invalidResponse()
+  const results:CopsState['results']=[]
+  for(const raw of state.results){
+    const entry=asRecord(raw)
+    if(!entry||!isMemberId(entry.id)||!isText(entry.nickname,80))return invalidResponse()
+    results.push({id:entry.id,nickname:entry.nickname})
+  }
+  let event:CopsState['event']=null
+  if(state.event!=null){
+    const entry=asRecord(state.event)
+    if(!entry||(entry.kind!=='capture'&&entry.kind!=='rescue')||!isMemberId(entry.by))return invalidResponse()
+    event={kind:entry.kind,ids:tagIds(entry.ids),by:entry.by}
+  }
+  return {phase:state.phase,hideUntil:state.hideUntil,endsAt:state.endsAt,serverNow:state.serverNow,seq:state.seq,
+    policeIds:tagIds(state.policeIds),jailedIds:tagIds(state.jailedIds),enrolledIds:tagIds(state.enrolledIds),
+    winner:state.winner,winnerIds:tagIds(state.winnerIds),results,event}
+}
+function parseRides(value:unknown):RideSeat[] {
+  if(value===undefined)return []
+  if(!Array.isArray(value)||value.length>6)return invalidResponse()
+  const seen=new Set<string>(), members=new Set<string>()
+  return value.map(raw=>{
+    const entry=asRecord(raw)
+    if(!entry||(entry.id!=='swings'&&entry.id!=='seesaw')||!isInteger(entry.seat,0,entry.id==='swings'?1:3)||
+      !isMemberId(entry.memberId)||!isNumber(entry.pump,-1,1))return invalidResponse()
+    const key=entry.id+'/'+entry.seat
+    if(seen.has(key)||members.has(entry.memberId))return invalidResponse()
+    seen.add(key);members.add(entry.memberId)
+    return {id:entry.id,seat:entry.seat,memberId:entry.memberId,pump:entry.pump}
+  })
+}
 function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean, room:RoomSummary) {
   const body = asRecord(value)
   if (!body || !isInteger(body.revision, since, Number.MAX_SAFE_INTEGER) ||
@@ -251,7 +307,9 @@ function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean
     const reason = typeof outcome.reason === 'string' && /^[a-z-]{1,32}$/.test(outcome.reason) ? outcome.reason : undefined
     result = { ok: outcome.ok, ...(reason ? { reason } : {}) }
   }
-  return { frame: { revision, cells, players, ...(room.mode==='tag'?{tag:parseTag(body.tag,!!room.tagMinutes)}:{}) }, result }
+  const modeState=room.mode==='tag'?{tag:parseTag(body.tag,!!room.tagMinutes)}:
+    room.mode==='cops'?{cops:parseCops(body.cops),rides:parseRides(body.rides)}:{}
+  return { frame: { revision, cells, players, ...modeState }, result }
 }
 
 function retryDelay(header: string | null) {
@@ -267,6 +325,7 @@ type SyncRequest = {
   since: number
   pose: NetPose | null
   edit?: RoomEdit
+  ride?:RideRequest|null
 }
 
 export class OnlineClient {
@@ -282,7 +341,7 @@ export class OnlineClient {
   }
 
   async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode; tagMinutes?:TagMinutes; stage?:TerrainPreset;tagBots?:number }): Promise<RoomConnection> {
-    const timed=input.mode==='tag'
+    const timed=input.mode!==undefined&&timedMode(input.mode)
     const connection=parseConnection(await this.request('rooms', {...input,protocol:PROTOCOL}))
     if((input.mode&&connection.room.mode!==input.mode)||(timed&&connection.room.tagMinutes!==(input.tagMinutes??5))||
       (input.stage&&connection.room.stage!==input.stage)||(input.tagBots??0)!==(connection.room.tagBots??0)){
@@ -395,7 +454,7 @@ export class RoomSync {
     if (this.closed || this.finished || this.running || isHidden()) return
     clearTimeout(this.timer)
     const now = performance.now()
-    const minimum=this.connection.room.mode==='tag'?TAG_POLL_INTERVAL:EDIT_INTERVAL
+    const minimum=timedMode(this.connection.room.mode)?TAG_POLL_INTERVAL:EDIT_INTERVAL
     const at = Math.max(now + delay, this.lastStart + minimum, this.retryAt)
     this.timer = setTimeout(() => { void this.tick() }, at - now)
   }
@@ -427,14 +486,16 @@ export class RoomSync {
     let attemptedEdit = false
     try {
       const pose = this.hooks.pose()
+      const ride=this.hooks.ride?.()
       attemptedEdit = Boolean(sent && pose)
       if (sent && !attemptedEdit) this.finishEdit({ ok: false, reason: 'offline' })
       const payload = await this.send({
         protocol: PROTOCOL, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
+        ...(ride===undefined?{}:{ride}),
       }, request.signal)
       if (this.closed) return
       const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit, room)
-      this.finished=frame.tag?.phase==='finished'
+      this.finished=frame.tag?.phase==='finished'||frame.cops?.phase==='finished'
       this.hooks.onFrame(frame)
       this.revision = frame.revision
       this.failures = this.retryAt = 0
@@ -460,7 +521,7 @@ export class RoomSync {
       this.retryAt = performance.now() + Math.max(error.retryAfter, Math.min(MAX_BACKOFF, POLL_INTERVAL * 2 ** (this.failures - 1)))
     } finally {
       this.running = undefined
-      const interval=room.mode==='tag'?TAG_POLL_INTERVAL:POLL_INTERVAL
+      const interval=timedMode(room.mode)?TAG_POLL_INTERVAL:POLL_INTERVAL
       if (!this.closed) this.schedule(this.pending ? 0 : Math.max(0, this.lastStart + interval - performance.now()))
     }
   }

@@ -2,6 +2,7 @@ import { activeStack, consumeBlock, ITEMS, stageMining } from "./inventory.ts";
 import type { Bag, Mode, Outcome } from "./inventory.ts";
 import { isSlide, jumpPadHeight, slideDirection, slideHeight } from "./playground.ts";
 import { schoolStairTop } from "./school.ts";
+import { parkStairTop } from "./cops-stages.ts";
 import type { TerrainPreset } from "./stages.ts";
 
 export const WORLD_WIDTH = 256;
@@ -157,11 +158,12 @@ function supported(world:ReadWorld,x:number,y:number,z:number,radius=BODY_RADIUS
 function walkAxis(world:ReadWorld,player:Player,axis:"x"|"z",distance:number,ground:Floor|null,guard:boolean,foot:number){
   if(!distance)return false;
   const x=player.x+(axis==="x"?distance:0),z=player.z+(axis==="z"?distance:0);
-  if(ground&&world.stage==="school"){
+  if(ground&&(world.stage==="school"||world.stage==="park")){
+    const stairTop=world.stage==="school"?schoolStairTop:parkStairTop;
     const edge=Math.sign(distance)*(BODY_RADIUS-EPS);
     const ex=axis==="x"?edge:0,ez=axis==="z"?edge:0;
-    const next=schoolStairTop(Math.floor(x+ex),Math.floor(z+ez));
-    const previous=schoolStairTop(Math.floor(x-ex),Math.floor(z-ez));
+    const next=stairTop(Math.floor(x+ex),Math.floor(z+ez));
+    const previous=stairTop(Math.floor(x-ex),Math.floor(z-ez));
     const height=player.crouched?CROUCH_HEIGHT:BODY_HEIGHT;
     if(next!==undefined&&Math.abs(next-player.y-1)<.003&&!occupied(world,x,next,z,height)){
       player[axis]+=distance;player.y=next;return false;

@@ -29,11 +29,147 @@ function env(t) {
   async function join(host, nickname = '建築仲間', now = epoch, protocol = 2) {
     return run('join', {code:host.room.code, nickname, protocol}, {now})
   }
-  async function sync(actor, {protocol=2,since=0, at=pose(), edit, now=epoch} = {}) {
-    return run('sync', {protocol,code:actor.room.code, token:actor.token, since, pose:at, edit}, {now})
+  async function sync(actor, {protocol=2,since=0, at=pose(), edit, ride, now=epoch} = {}) {
+    return run('sync', {protocol,code:actor.room.code, token:actor.token, since, pose:at, edit, ride}, {now})
   }
   return {sql,run,create,join,sync}
 }
+
+async function copsSession(t,stage='park',count=3) {
+  const service=env(t),body={mode:'cops',stage,protocol:8,tagMinutes:1,nickname:'ケイ役',name:'ドロケイ'}
+  const response=await service.run('rooms',body)
+  assert.equal(response.status,201)
+  const host=await response.json()
+  const guests=[]
+  for(let index=1;index<count;index++){
+    const joined=await service.join(host,'仲間'+index,epoch,8)
+    assert.equal(joined.status,200)
+    guests.push(await joined.json())
+  }
+  async function frame(actor,now,at=pose(),ride){
+    const result=await service.sync(actor,{protocol:8,at,ride,now})
+    assert.equal(result.status,200)
+    return result.json()
+  }
+  return {...service,body,host,guests,frame}
+}
+
+test('cops rooms preserve stage, select duration and reject legacy clients and terrain edits',async t=>{
+  const {run,host,guests,body,join,frame,sync}=await copsSession(t,'crossing',2)
+  assert.equal(host.room.mode,'cops')
+  assert.equal(host.room.stage,'crossing')
+  assert.equal(guests[0].room.stage,'crossing')
+  assert.equal(host.room.tagMinutes,1)
+  assert.equal(host.room.tagBots,0)
+  assert.equal((await run('rooms',{...body,stage:'school'})).status,400)
+  assert.equal((await run('rooms',{...body,tagMinutes:2})).status,400)
+  assert.equal((await run('rooms',{...body,mode:'tag'})).status,400)
+  assert.equal((await run('rooms',{...body,protocol:7})).status,426)
+  assert.equal((await join(host,'以前の画面',epoch,7)).status,426)
+  assert.equal((await sync(host,{protocol:7})).status,426)
+  assert.equal((await sync(host,{protocol:8,edit:{key:voxel(128,34,131),before:0,block:8,axis:'y',fromRevision:0}})).status,403)
+  const waiting=await frame(host,epoch,pose())
+  assert.equal(waiting.tag,undefined)
+  assert.equal(waiting.rides,undefined)
+  assert.equal(waiting.cops.phase,'waiting')
+  assert.deepEqual(waiting.cops.policeIds,[])
+})
+
+test('police are frozen for 20 seconds, arrests lock prisoners in jail and rescues give a shared grace',async t=>{
+  const {host,guests,frame,join}=await copsSession(t)
+  const [first,rescuer]=guests
+  const start=epoch+100
+  await frame(host,epoch,pose(125,33,168))
+  const hiding=(await frame(first,start,pose(128,33,92))).cops
+  assert.equal(hiding.phase,'hiding')
+  assert.deepEqual(hiding.policeIds,[host.id])
+  assert.equal(hiding.hideUntil,start+20_000)
+  assert.equal(hiding.endsAt,hiding.hideUntil+60_000)
+  assert.equal((await join(host,'途中から参加',start+30,8)).status,409)
+  await frame(host,start+200,pose(92,33,92))
+  const enrolled=await frame(rescuer,start+220,pose(92,33,92))
+  const cop=enrolled.players.find(player=>player.id===host.id)
+  assert.deepEqual([cop.pose.x,cop.pose.y,cop.pose.z,cop.pose.moving],[128.5,33,169.5,false])
+  assert.deepEqual(new Set(enrolled.cops.enrolledIds),new Set([host.id,first.id,rescuer.id]))
+  const hideEnds=hiding.hideUntil
+  await frame(host,hideEnds-210,pose(61,33,61))
+  await frame(first,hideEnds-200,pose(129,33,168))
+  await frame(rescuer,hideEnds-190,pose(128.5,33,173.5))
+  assert.equal((await frame(host,hideEnds,pose(128.5,33,169.5))).cops.phase,'playing')
+  await frame(first,hideEnds+120,pose(128.55,33,169.48))
+  const caught=(await frame(host,hideEnds+130,pose(128.5,33,169.5))).cops
+  assert.equal(caught.phase,'playing')
+  assert.deepEqual(caught.jailedIds,[first.id])
+  assert.deepEqual(caught.event,{kind:'capture',ids:[first.id],by:host.id})
+  assert.equal(caught.endsAt,hiding.endsAt)
+  await frame(first,hideEnds+200,pose(128.5,33,177.5))
+  const inJail=await frame(rescuer,hideEnds+210,pose(128.5,33,174))
+  const prisoner=inJail.players.find(player=>player.id===first.id)
+  assert.deepEqual([prisoner.pose.x,prisoner.pose.y,prisoner.pose.z,prisoner.pose.moving],[128.5,33,184.5,false])
+  assert.deepEqual(inJail.cops.jailedIds,[first.id])
+  const freed=(await frame(rescuer,hideEnds+430,pose(128.5,33,176))).cops
+  assert.deepEqual(freed.jailedIds,[])
+  assert.deepEqual(freed.event,{kind:'rescue',ids:[first.id],by:rescuer.id})
+  await frame(host,hideEnds+500,pose(128.5,33,176))
+  assert.deepEqual((await frame(rescuer,hideEnds+510,pose(128.5,33,176))).cops.jailedIds,[])
+
+  const contact=hideEnds+3500
+  const sameSpot=pose(118.5,33,157)
+  await frame(first,contact,sameSpot)
+  await frame(rescuer,contact+1,sameSpot)
+  const finished=(await frame(host,contact+2,sameSpot)).cops
+  assert.equal(finished.phase,'finished')
+  assert.equal(finished.winner,'police')
+  assert.deepEqual(finished.winnerIds,[host.id])
+  assert.deepEqual(new Set(finished.jailedIds),new Set([first.id,rescuer.id]))
+  assert.deepEqual(new Set(finished.results.map(player=>player.id)),new Set([host.id,first.id,rescuer.id]))
+  assert.equal((await frame(first,contact+200,sameSpot)).cops.seq,finished.seq)
+})
+
+test('at the deadline the robbers win before a late touch can begin',async t=>{
+  const {host,guests,frame,join}=await copsSession(t,'crossing',2)
+  const [runner]=guests
+  const at=pose(125,33,164)
+  await frame(host,epoch,at)
+  const {hideUntil,endsAt}=(await frame(runner,epoch+100,pose(118,33,151))).cops
+  await frame(host,hideUntil-100,at)
+  await frame(runner,hideUntil-90,pose(118,33,151))
+  await frame(host,hideUntil,at)
+  await frame(host,endsAt-15,at)
+  const finished=(await frame(runner,endsAt,at)).cops
+  assert.equal(finished.winner,'robbers')
+  assert.deepEqual(finished.winnerIds,[runner.id])
+  assert.deepEqual(finished.jailedIds,[])
+  const closed=await join(host,'次の参加者',endsAt+20,8)
+  assert.equal(closed.status,409)
+  assert.deepEqual(await closed.json(),{error:'room-finished'})
+})
+
+test('a park seesaw has four shared seats with exclusive occupants and authorized control',async t=>{
+  const {host,guests,frame,join,run}=await copsSession(t,'park',6)
+  const [first,officer,...others]=guests
+  const seat=pose(146.5,33,141.5)
+  const far=pose(130.5,33,130.5)
+  assert.equal((await join(host,'満員の参加者',epoch,8)).status,409)
+  const empty=await frame(host,epoch,far,{id:'seesaw',pump:1})
+  assert.deepEqual(empty.rides,[])
+  const hiding=await frame(first,epoch+100,seat,{id:'seesaw',seat:0,pump:1})
+  assert.deepEqual(hiding.cops.policeIds,[host.id,officer.id])
+  assert.deepEqual(hiding.rides,[{id:'seesaw',seat:0,pump:1,memberId:first.id}])
+  const collision=await frame(others[0],epoch+120,seat,{id:'seesaw',seat:0,pump:-1})
+  assert.deepEqual(collision.rides,hiding.rides)
+  for(const [i,guest] of others.entries())await frame(guest,epoch+130+i*10,seat,{id:'seesaw',pump:-1})
+  const shared=await frame(host,epoch+220,seat,{id:'seesaw',pump:1})
+  assert.deepEqual(shared.rides.map(rider=>rider.seat),[0,1,2,3])
+  assert.deepEqual(new Set(shared.rides.map(rider=>rider.memberId)),new Set([first,...others].map(person=>person.id)))
+  const stopped=await frame(first,epoch+240,seat,{id:'seesaw',pump:0})
+  assert.equal(stopped.rides.find(rider=>rider.memberId===first.id).pump,0)
+  const dismounted=await frame(first,epoch+260,seat,null)
+  assert.equal(dismounted.rides.length,3)
+  await run('leave',{code:host.room.code,token:others[0].token},{now:epoch+270})
+  assert.equal((await frame(first,epoch+280,seat)).rides.length,2)
+  assert.deepEqual((await frame(first,epoch+5000,seat)).rides,[])
+})
 
 async function tagSession(t) {
   const service = env(t)

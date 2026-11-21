@@ -134,7 +134,7 @@ export class KidsAvatar {
     }
   }
 
-  update(player: Player, dt: number, acting = false, daylight = 1) {
+  update(player: Player, dt: number, acting = false, daylight = 1, seated = false) {
     const elapsed = Math.min(.05, Math.max(0, dt));
     const speed = Math.hypot(player.vx, player.vz);
     const airborne = !player.grounded && !player.inWater && !player.flying;
@@ -154,10 +154,10 @@ export class KidsAvatar {
     this.body.scale.y = player.crouched ? .54 : 1;
     this.head.rotation.x = T.MathUtils.clamp(player.pitch * .28, -.22, .21);
     this.head.rotation.z = .037 * step;
-    this.legs[0].rotation.x = .5 * step + (airborne ? .18 : 0);
-    this.legs[1].rotation.x = -.5 * step - (airborne ? .21 : 0);
-    this.arms[0].rotation.x = -.49 * step + (airborne ? .24 : 0);
-    this.arms[1].rotation.x = .49 * step + pump + (airborne ? .24 : 0);
+    this.legs[0].rotation.x = seated ? 1.08 : .5 * step + (airborne ? .18 : 0);
+    this.legs[1].rotation.x = seated ? 1.08 : -.5 * step - (airborne ? .21 : 0);
+    this.arms[0].rotation.x = seated ? .40 : -.49 * step + (airborne ? .24 : 0);
+    this.arms[1].rotation.x = seated ? .40 : .49 * step + pump + (airborne ? .24 : 0);
     this.arms[0].rotation.z = player.flying ? -.38 : -.035;
     this.arms[1].rotation.z = player.flying ? .38 : .035;
     this.shadow.visible = player.grounded && !player.inWater && !player.flying;
