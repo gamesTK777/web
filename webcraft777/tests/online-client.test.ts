@@ -36,7 +36,7 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
     { path: '/api/webcraft/rooms', body: {...fields,protocol:3} },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:3 } },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:4 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -122,6 +122,33 @@ test('共有の遊具ブロックは向きを表すIDを保持する', { timeout
   })
   t.after(()=>sync.close())
   assert.deepEqual((await ready.promise).cells,cells)
+})
+
+test('時間制の鬼ごっこは終了結果を保持し、ルーム退出まで追跡の通信を止める', {timeout:3_000}, async t => {
+  const match:RoomConnection={...connection,room:{...connection.room,mode:'tag',tagMinutes:1}}
+  const end=1784600068000
+  const result={it:'peer',previousIt:'local-player',phase:'finished',hideUntil:end-60_000,endsAt:end,
+    serverNow:end+4,seq:4,enrolledIds:['peer','local-player'],winnerIds:['local-player'],
+    results:[{id:'peer',nickname:'あお'},{id:'local-player',nickname:'はる'}]}
+  const received=deferred<RoomFrame>(),left=deferred<void>()
+  let polls=0
+  const client=new OnlineClient('https://rooms.example.test',async (url,options)=>{
+    const path=new URL(String(url)).pathname
+    if(path.endsWith('/leave')){left.resolve();return json({ok:true})}
+    const body=JSON.parse(String(options?.body))
+    assert.equal(body.protocol,4)
+    if(path.endsWith('/rooms')){assert.equal(body.tagMinutes,1);return json(match)}
+    polls++
+    return json({...empty,tag:result})
+  })
+  const created=await client.create({name:match.room.name,seed:match.room.seed,nickname:'はる',mode:'tag',tagMinutes:1})
+  const sync=client.start(created,{pose:()=>pose,onFrame:frame=>received.resolve(frame),onState:()=>{}})
+  t.after(()=>sync.close())
+  assert.deepEqual((await received.promise).tag,result)
+  await new Promise(resolve=>setTimeout(resolve,315))
+  assert.equal(polls,1)
+  sync.close()
+  await left.promise
 })
 
 test('非表示中は同期を始めず、復帰して部屋が失効していた場合は終了する', { timeout: 3_000 }, async t => {

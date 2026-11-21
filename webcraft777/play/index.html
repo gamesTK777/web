@@ -7,8 +7,8 @@
   <meta name="description" content="素材を集めて道具を作り、自分のワールドに家を建てる一人用3Dゲーム。">
   <title>ウェブクラフト777 | TK777 ARCADE</title>
   <link rel="icon" href="./art/icon.webp" type="image/webp">
-  <script type="module" crossorigin src="./assets/index-CTDQlEcS.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-L0BEFoy9.css">
+  <script type="module" crossorigin src="./assets/index-k6XEfZAp.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DxlOnZ94.css">
 </head>
 <body>
   <main id="game">
@@ -26,7 +26,10 @@
         </div>
       </div>
       <div id="online-hud" role="status" hidden>ルーム <strong id="online-hud-code"></strong><span id="online-hud-status"></span></div>
-      <div id="tag-status" role="status" hidden><strong id="tag-role"></strong><span id="tag-hint"></span></div>
+      <div id="tag-status" hidden>
+        <div id="tag-clock" role="timer" aria-live="off" aria-label="残り時間" hidden><span aria-hidden="true">残り</span><time id="tag-clock-value"></time></div>
+        <strong id="tag-role" role="status"></strong><span id="tag-hint"></span>
+      </div>
       <aside id="tag-map" aria-label="鬼ごっこのエリア地図" hidden>
         <div class="tag-map-head"><strong>エリア地図</strong><span>↑ 北</span></div>
         <canvas id="tag-map-canvas" width="384" height="384" role="img" aria-label="地形、自分のエリア、他の参加者のエリアごとの人数"></canvas>

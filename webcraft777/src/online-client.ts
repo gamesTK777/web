@@ -1,6 +1,7 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
 export type OnlineMode = Mode|'tag'
+export type TagMinutes = 1|3|5|10|15
 
 export interface NetPose {
   x: number
@@ -41,6 +42,7 @@ export interface RoomSummary {
   generator: 2
   createdAt: number
   mode: OnlineMode
+  tagMinutes?: TagMinutes
 }
 
 export interface RoomConnection {
@@ -57,10 +59,15 @@ export interface RoomFrame {
 }
 export interface TagState {
   it:string|null
-  phase:'waiting'|'hiding'|'playing'
+  phase:'waiting'|'hiding'|'playing'|'finished'
   hideUntil:number
   seq:number
   previousIt:string|null
+  endsAt:number
+  serverNow?:number
+  enrolledIds?:string[]
+  winnerIds:string[]
+  results:{id:string;nickname:string}[]
 }
 
 export interface EditOutcome {
@@ -98,6 +105,8 @@ const statusMessages: Record<number, string> = {
 export class OnlineError extends Error {
   constructor(readonly status: number, readonly code: string, readonly retryAfter = 0) {
     super(code === 'invalid-response' ? '部屋から正しい応答を受け取れませんでした。' :
+      code === 'round-started' ? 'この鬼ごっこは始まっています。次のルームに参加してください。' :
+      code === 'room-finished' ? 'この鬼ごっこは終了しました。新しいルームに参加してください。' :
       statusMessages[status] ?? 'マルチプレイに接続できませんでした。通信環境を確認してください。')
     this.name = 'OnlineError'
   }
@@ -126,12 +135,16 @@ function isNumber(value: unknown, min: number, max: number): value is number {
 function isMemberId(value: unknown): value is string {
   return isText(value, 64) && /^[a-z0-9_-]+$/i.test(value)
 }
+function isTagMinutes(value:unknown):value is TagMinutes {
+  return value===1||value===3||value===5||value===10||value===15
+}
 
 function parseConnection(value: unknown): RoomConnection {
   const body = asRecord(value), room = asRecord(body?.room)
   if (!body || !room || typeof room.code !== 'string' || !/^[A-Z0-9]{8}$/.test(room.code) ||
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
       (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag') ||
+      (room.tagMinutes!==undefined&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||
       !/^[a-z0-9_.-]+$/i.test(body.token)) return invalidResponse()
@@ -139,7 +152,8 @@ function parseConnection(value: unknown): RoomConnection {
     id: body.id,
     token: body.token,
     room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt,
-      mode:room.mode==='explore'||room.mode==='tag'?room.mode:'creative' },
+      mode:room.mode==='explore'||room.mode==='tag'?room.mode:'creative',
+      ...(isTagMinutes(room.tagMinutes)?{tagMinutes:room.tagMinutes}:{}) },
   }
 }
 
@@ -162,15 +176,43 @@ function parseCell(value: unknown, since: number, total: number): RoomCell {
   return { key: cell.key, block: cell.block, axis: cell.axis, revision: cell.revision }
 }
 
-function parseTag(value:unknown):TagState {
+function tagIds(value:unknown):string[] {
+  if(!Array.isArray(value)||value.length>6||!value.every(isMemberId)||new Set(value).size!==value.length)
+    return invalidResponse()
+  return value
+}
+
+function parseTag(value:unknown,timed:boolean):TagState {
   const tag=asRecord(value)
   if(!tag||(tag.it!==null&&!isMemberId(tag.it))||(tag.previousIt!==null&&!isMemberId(tag.previousIt))||
-    (tag.phase!=='waiting'&&tag.phase!=='hiding'&&tag.phase!=='playing')||
+    (tag.phase!=='waiting'&&tag.phase!=='hiding'&&tag.phase!=='playing'&&tag.phase!=='finished')||
     !isInteger(tag.hideUntil,0,Number.MAX_SAFE_INTEGER)||!isInteger(tag.seq,0,Number.MAX_SAFE_INTEGER))
     return invalidResponse()
-  return {it:tag.it,previousIt:tag.previousIt,phase:tag.phase,hideUntil:tag.hideUntil,seq:tag.seq}
+  const endsAt=isInteger(tag.endsAt,0,Number.MAX_SAFE_INTEGER)?tag.endsAt:undefined
+  const serverNow=isInteger(tag.serverNow,1,Number.MAX_SAFE_INTEGER)?tag.serverNow:undefined
+  if(timed&&(endsAt===undefined||serverNow===undefined||
+      (tag.phase!=='waiting'&&(!tag.it||endsAt<=tag.hideUntil))))return invalidResponse()
+  const enrolledIds=tag.enrolledIds===undefined?undefined:tagIds(tag.enrolledIds)
+  const winnerIds=tag.winnerIds===undefined?[]:tagIds(tag.winnerIds)
+  const results:{id:string;nickname:string}[]=[]
+  if(tag.results!==undefined){
+    if(!Array.isArray(tag.results)||tag.results.length>6)return invalidResponse()
+    for(const value of tag.results){
+      const member=asRecord(value)
+      if(!member||!isMemberId(member.id)||!isText(member.nickname,80))return invalidResponse()
+      results.push({id:member.id,nickname:member.nickname})
+    }
+  }
+  if(tag.phase==='finished'){
+    const ids=new Set(results.map(member=>member.id))
+    if(!timed||tag.it===null||winnerIds.includes(tag.it)||!ids.has(tag.it)||
+      !winnerIds.every(id=>ids.has(id))||ids.size!==winnerIds.length+1||results.length!==ids.size)
+      return invalidResponse()
+  }
+  return {it:tag.it,previousIt:tag.previousIt,phase:tag.phase,hideUntil:tag.hideUntil,seq:tag.seq,
+    endsAt:endsAt??0,serverNow,enrolledIds,winnerIds,results}
 }
-function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean, tagRoom=false) {
+function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean, room:RoomSummary) {
   const body = asRecord(value)
   if (!body || !isInteger(body.revision, since, Number.MAX_SAFE_INTEGER) ||
       !Array.isArray(body.cells) || body.cells.length > MAX_ROOM_CELLS ||
@@ -196,7 +238,7 @@ function parseFrame(value: unknown, since: number, id: string, sentEdit: boolean
     const reason = typeof outcome.reason === 'string' && /^[a-z-]{1,32}$/.test(outcome.reason) ? outcome.reason : undefined
     result = { ok: outcome.ok, ...(reason ? { reason } : {}) }
   }
-  return { frame: { revision, cells, players, ...(tagRoom?{tag:parseTag(body.tag)}:{}) }, result }
+  return { frame: { revision, cells, players, ...(room.mode==='tag'?{tag:parseTag(body.tag,!!room.tagMinutes)}:{}) }, result }
 }
 
 function retryDelay(header: string | null) {
@@ -206,7 +248,7 @@ function retryDelay(header: string | null) {
 }
 
 type SyncRequest = {
-  protocol: 3
+  protocol: 3|4
   code: string
   token: string
   since: number
@@ -226,9 +268,10 @@ export class OnlineClient {
     this.origin = url.origin
   }
 
-  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode }): Promise<RoomConnection> {
-    const connection=parseConnection(await this.request('rooms', {...input,protocol:3}))
-    if(input.mode&&connection.room.mode!==input.mode){
+  async create(input: { name: string; seed: string; nickname: string; mode?: OnlineMode; tagMinutes?:TagMinutes }): Promise<RoomConnection> {
+    const timed=input.mode==='tag'
+    const connection=parseConnection(await this.request('rooms', {...input,protocol:timed?4:3}))
+    if((input.mode&&connection.room.mode!==input.mode)||(timed&&connection.room.tagMinutes!==(input.tagMinutes??5))){
       void this.leave(connection)
       throw new OnlineError(426,'mode-unavailable')
     }
@@ -236,7 +279,7 @@ export class OnlineClient {
   }
 
   async join(input: { code: string; nickname: string }): Promise<RoomConnection> {
-    return parseConnection(await this.request('join', {...input,protocol:3}))
+    return parseConnection(await this.request('join', {...input,protocol:4}))
   }
 
   start(connection: RoomConnection, hooks: RoomHooks): RoomSync {
@@ -289,6 +332,7 @@ export class RoomSync {
   private pending: PendingEdit | undefined
   private sent: PendingEdit | undefined
   private closed = false
+  private finished = false
 
   get state() { return this.currentState }
 
@@ -334,7 +378,7 @@ export class RoomSync {
   }
 
   private schedule(delay: number) {
-    if (this.closed || this.running || isHidden()) return
+    if (this.closed || this.finished || this.running || isHidden()) return
     clearTimeout(this.timer)
     const now = performance.now()
     const minimum=this.connection.room.mode==='tag'?TAG_POLL_INTERVAL:EDIT_INTERVAL
@@ -360,7 +404,7 @@ export class RoomSync {
 
   private async tick() {
     this.timer = undefined
-    if (this.closed || this.running || isHidden()) return
+    if (this.closed || this.finished || this.running || isHidden()) return
     const request = new AbortController()
     this.running = request
     this.lastStart = performance.now()
@@ -372,10 +416,11 @@ export class RoomSync {
       attemptedEdit = Boolean(sent && pose)
       if (sent && !attemptedEdit) this.finishEdit({ ok: false, reason: 'offline' })
       const payload = await this.send({
-        protocol: 3, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
+        protocol: room.mode==='tag'?4:3, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
       }, request.signal)
       if (this.closed) return
-      const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit, room.mode==='tag')
+      const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit, room)
+      this.finished=frame.tag?.phase==='finished'
       this.hooks.onFrame(frame)
       this.revision = frame.revision
       this.failures = this.retryAt = 0

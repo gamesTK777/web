@@ -6,8 +6,11 @@ import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
 export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
 export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting' }
-export interface TagUIStatus { label:string; hint:string; it:boolean; mapOpen:boolean }
+export interface TagUIStatus { label:string; hint:string; it:boolean; mapOpen:boolean; remaining?:number }
+export interface TagUIResult { outcome:'win'|'lose'|'spectator'; loser:string; winners:string[]; minutes:number }
 type RoomUIPlayMode = Mode | 'tag'
+const tagMinuteOptions = [1,3,5,10,15] as const
+const defaultTagMinutes = 5
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
 export interface RecipeView { id:string; name:string; ingredients:string; outputs:string; craftable:number; itemId:number; reason:string; equipment:string }
 export interface InventoryView { items:ItemView[]; bar:(ItemView|null)[]; recipes:RecipeView[]; selected:number; mode:Mode; benchUses?:number; chest?:Stack[]; palette?:ItemView[] }
@@ -122,7 +125,7 @@ export class GameUI {
   private worldName=''
   private kidsView=false
   private room:OnlineStatus|null=null
-  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode}
+  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode,tagMinutes:defaultTagMinutes}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -142,7 +145,7 @@ export class GameUI {
   private show(name:string,content:string,wide=false) {
     this.stopMining()
     window.clearTimeout(this.guideTimer)
-    const onWorld = ['pause','ready','inventory','diagnostics'].includes(name) || (['settings','help'].includes(name) && !$('game').classList.contains('home'))
+    const onWorld = ['pause','ready','inventory','diagnostics','tag-result'].includes(name) || (['settings','help'].includes(name) && !$('game').classList.contains('home'))
     if(['title','create','worlds','online','error'].includes(name))$('game').classList.add('home')
     else if(onWorld)$('game').classList.remove('home')
     this.screen=name
@@ -189,9 +192,11 @@ export class GameUI {
         const seed=String(data.get('seed')??'').trim()
         const selected=data.get('mode')
         const mode:RoomUIPlayMode=selected==='tag'||selected==='explore'?selected:'creative'
-        Object.assign(this.onlineDraft,{name,seed,mode})
+        const selectedMinutes=Number(data.get('tagMinutes'))
+        const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
+        Object.assign(this.onlineDraft,{name,seed,mode,...(mode==='tag'?{tagMinutes}:{})})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
-        this.send('online-create',{name,seed,nickname,mode})
+        this.send('online-create',{name,seed,nickname,mode,...(mode==='tag'?{tagMinutes}:{})})
       }else{
         const code=String(data.get('code')??'').trim().toUpperCase()
         this.onlineDraft.code=code
@@ -206,7 +211,17 @@ export class GameUI {
     this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:stage!=='classic'||data.get('mode')==='creative'?'creative':'explore',stage})
   }
   private change(event:Event) {
-    const input=event.target as HTMLInputElement
+    const input=event.target
+    if(input instanceof HTMLSelectElement&&input.id==='tag-minutes'){
+      this.onlineDraft.tagMinutes=tagMinuteOptions.find(minutes=>minutes===Number(input.value))??defaultTagMinutes
+      return
+    }
+    if(!(input instanceof HTMLInputElement))return
+    if(input.name==='mode'&&input.form?.id==='online-create-form'&&input.checked){
+      const isTag=input.value==='tag',minutes=$<HTMLSelectElement>('tag-minutes')
+      $('tag-time-option').hidden=minutes.disabled=!isTag
+      return
+    }
     if(input.name==='stage' && input.form?.id==='world-form' && input.checked){
       const form=input.form,onlyCreative=input.value!=='classic'
       const explore=form.querySelector<HTMLInputElement>('[name="mode"][value="explore"]')!
@@ -268,11 +283,15 @@ export class GameUI {
     const modes=([['creative','建材を自由に使って建築する。'],['explore','素材を集めて道具や建材を作る。'],['tag','仲間と追いかけっこをする。']] as const)
       .map(([mode,detail])=>'<label><input type="radio" name="mode" value="'+mode+'"'+(draft.mode===mode?' checked':'')+
         '><span><b>'+(mode==='tag'?'鬼ごっこ':modeName(mode))+'</b><small>'+detail+'</small></span></label>').join('')
+    const tagTime='<div id="tag-time-option" class="entry"'+(draft.mode==='tag'?'':' hidden')+'><label for="tag-minutes">制限時間</label>'+
+      '<select name="tagMinutes" id="tag-minutes" aria-describedby="tag-time-help"'+(draft.mode==='tag'?'':' disabled')+'>'+
+      tagMinuteOptions.map(minutes=>'<option value="'+minutes+'"'+(draft.tagMinutes===minutes?' selected':'')+'>'+minutes+'分</option>').join('')+
+      '</select><small id="tag-time-help">隠れる時間が終わってから計測します。</small></div>'
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
-      '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+
+      '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+tagTime+
       '<button type="submit" class="primary full">ルームを作成</button></form>'
     const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
       '<h2 id="online-join-label">ルームに参加する</h2>'+nickname+
@@ -306,6 +325,25 @@ export class GameUI {
     const role=$('tag-role'),hint=$('tag-hint')
     if(role.textContent!==(status?.label??''))role.textContent=status?.label??''
     if(hint.textContent!==(status?.hint??''))hint.textContent=status?.hint??''
+    const clock=$('tag-clock'), value=$<HTMLTimeElement>('tag-clock-value'), seconds=status?.remaining
+    clock.hidden=seconds===undefined
+    clock.toggleAttribute('data-urgent',seconds!==undefined&&seconds<=10)
+    if(seconds!==undefined){
+      const display=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')
+      if(value.textContent!==display){value.textContent=display;value.dateTime='PT'+seconds+'S'}
+    }
+  }
+  tagResult({outcome,loser,winners,minutes}:TagUIResult) {
+    const title={win:'勝利',lose:'敗北',spectator:'試合終了'}[outcome]
+    const summary={win:'時間切れまで逃げ切りました。',lose:'時間切れの時点であなたが鬼でした。',spectator:'制限時間に達しました。'}[outcome]
+    const winnersList=winners.length?'<ul id="tag-result-winners">'+winners.map(name=>'<li>'+escapeText(name)+'</li>').join('')+'</ul>':'<span>なし</span>'
+    this.show('tag-result','<section class="tag-result" data-outcome="'+outcome+'" aria-labelledby="tag-result-title">'+
+      '<header><div><h1 id="tag-result-title" tabindex="-1">'+title+'</h1><p>'+summary+'</p></div>'+
+      '<div class="tag-result-time"><small>制限 '+minutes+'分</small><time datetime="PT0S">0:00</time></div></header>'+
+      '<dl class="tag-result-players"><div><dt>負け・時間切れ時の鬼</dt><dd id="tag-result-loser">'+escapeText(loser)+'</dd></div>'+
+      '<div><dt>勝ち・逃げ切った人</dt><dd>'+winnersList+'</dd></div></dl>'+
+      button('online-leave','退出してタイトルへ','primary full')+'</section>')
+    $('tag-result-title').focus({preventScroll:true})
   }
   worlds(list:UIWorld[]) {
     const rows=list.map(w=>{
@@ -333,12 +371,13 @@ export class GameUI {
   }
   pause(ready=false,mode:ControlMode='lock',message='') {
     const online=this.room
+    const tagReady=ready&&$('game').hasAttribute('data-tag-play')
     const alternatives=Object.entries(controlChoices).filter(([choice])=>choice!==mode)
       .map(([choice,{label}])=>button('resume-'+choice,label)).join('')
     this.show(ready?'ready':'pause','<h1>'+(ready?'ワールドの準備ができました':'一時停止')+'</h1>'+
       (message?'<p class="input-message" role="status">'+escapeText(message)+'</p>':'')+
       (online?'<div class="room-actions"><p>ルーム <strong>'+escapeText(online.code)+'</strong> <span data-online-status role="status"></span></p>'+
-        button('online-copy','招待リンクをコピー')+'</div>':'')+
+        button('online-copy','招待リンクをコピー')+(tagReady?'<p>遊ぶ人がそろってから「プレイ開始」を押してください。</p>':'')+'</div>':'')+
       '<div class="pause-actions">'+button('resume',ready?'プレイ開始':'再開','primary')+
       '<p class="control-mode">操作方法　<strong>'+controlChoices[mode].name+'</strong></p>'+alternatives+
       '<button type="button" data-action="view-mode" aria-label="オリジナルモードとキッズモードの切り替え" aria-pressed="false"></button>'+
@@ -386,7 +425,7 @@ export class GameUI {
     '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
     '<h2>マルチプレイ</h2><p>ルームを作るときに遊び方を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
-    '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」を選び、仲間が参加したら、鬼は逃げ役を追いかけます。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。</p>'+
+    '<h2>鬼ごっこ</h2><p>マルチプレイで「鬼ごっこ」と制限時間を選びます。隠れる時間のあとに追いかけっこが始まり、時間切れのときに鬼だった人が負けです。Mキーや画面上の「地図」で、地形とエリアごとの人数を確認できます。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
     '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+

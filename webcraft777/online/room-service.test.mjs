@@ -20,8 +20,8 @@ function env(t) {
       body:opts.rawBody ?? body
     }), db, {now:opts.now ?? epoch})
   }
-  async function create(nickname = '作り手', mode, now = epoch, protocol) {
-    const res = await run('rooms', {name:'みんなの丘', seed:'hill', nickname, mode, protocol}, {now})
+  async function create(nickname = '作り手', mode, now = epoch, protocol, tagMinutes) {
+    const res = await run('rooms', {name:'みんなの丘', seed:'hill', nickname, mode, protocol, tagMinutes}, {now})
     assert.equal(res.status, 201)
     return res.json()
   }
@@ -49,6 +49,160 @@ async function tagSession(t) {
   }
   return {...service,host,guest,frame,pair}
 }
+
+async function timedSession(t, minutes=1) {
+  const service=env(t)
+  const host=await service.create('ときの鬼','tag',epoch,4,minutes)
+  const enlist=async nickname=>(await service.join(host,nickname,epoch,4)).json()
+  const guest=await enlist('森の逃げ役')
+  async function frame(actor, now, at=pose()){
+    const response=await service.sync(actor,{protocol:4,now,at})
+    assert.equal(response.status,200)
+    return response.json()
+  }
+  const leave=(actor,now)=>service.run('leave',{code:host.room.code,token:actor.token},{now})
+  return {...service,host,guest,enlist,frame,leave}
+}
+
+test('timed tag validates the selected duration and isolates old wire formats', async t=>{
+  const {run,create,join,sync}=env(t)
+  const body={nickname:'仲間',name:'丘',seed:'hill',mode:'tag',protocol:4}
+  for (const tagMinutes of [0,2,30,1.5,'5',null]) {
+    assert.equal((await run('rooms',{...body,tagMinutes})).status,400)
+  }
+  for (const mode of ['creative','explore']) {
+    assert.equal((await run('rooms',{...body,mode,tagMinutes:5})).status,400)
+  }
+  assert.equal((await run('rooms',{...body,protocol:3,tagMinutes:5})).status,426)
+  const defaultRoom=await create('標準','tag',epoch,4)
+  assert.equal(defaultRoom.room.tagMinutes,5)
+  for (const minutes of [1,3,5,10,15]) {
+    const selected=await create('設定','tag',epoch,4,minutes)
+    assert.equal(selected.room.tagMinutes,minutes)
+    assert.equal((await join(selected,'旧版',epoch,3)).status,426)
+    assert.equal((await sync(selected,{protocol:3})).status,426)
+    const newest=await (await join(selected,'新版',epoch,4)).json()
+    assert.equal(newest.room.tagMinutes,minutes)
+  }
+  const old=await create('旧ルーム','tag',epoch,3)
+  assert.equal(old.room.tagMinutes,undefined)
+  const oldState=(await (await sync(old,{protocol:3})).json()).tag
+  const newState=(await (await sync(old,{protocol:4})).json()).tag
+  assert.deepEqual(Object.keys(oldState).sort(),['hideUntil','it','phase','previousIt','seq'])
+  assert.deepEqual(newState,{...oldState,endsAt:0,serverNow:epoch,winnerIds:[],results:[],enrolledIds:[]})
+})
+
+test('deadline follows hiding, exact-time contact cannot tag, and each client gets a frozen winner list', async t=>{
+  const {host,guest,enlist,join,frame,leave}=await timedSession(t)
+  const another=await enlist('湖の逃げ役')
+  const spectator=await enlist('開始前に待機')
+  const start=epoch+100
+  assert.equal((await frame(spectator,epoch,null)).tag.phase,'waiting')
+  assert.equal((await frame(host,epoch,pose(128))).tag.endsAt,0)
+  const hiding=(await frame(guest,start,pose(130.5))).tag
+  assert.equal(hiding.phase,'hiding')
+  assert.equal(hiding.it,host.id)
+  assert.equal(hiding.hideUntil,start+8000)
+  assert.equal(hiding.endsAt,hiding.hideUntil+60000)
+  assert.equal(hiding.serverNow,start)
+  assert.deepEqual(new Set(hiding.enrolledIds),new Set([host.id,guest.id]))
+  assert.deepEqual(hiding.results,[])
+  const late=await join(host,'開始後の参加',start+200,4)
+  assert.equal(late.status,409)
+  assert.deepEqual(await late.json(),{error:'round-started'})
+
+  await frame(another,hiding.hideUntil-1,pose(130))
+  await frame(spectator,hiding.hideUntil,pose(128))
+  const playing=await frame(host,hiding.hideUntil,pose(128))
+  assert.equal(playing.tag.phase,'playing')
+  assert.deepEqual(new Set(playing.tag.enrolledIds),new Set([host.id,guest.id,another.id]))
+  assert.equal(playing.players.some(player=>player.id===spectator.id),false)
+  await frame(another,hiding.endsAt-300,pose(130))
+  await frame(guest,hiding.endsAt-290,pose(130.5))
+  const before=await frame(host,hiding.endsAt-1,pose(129.2))
+  assert.equal(before.tag.phase,'playing')
+  assert.equal(before.tag.it,host.id)
+
+  const calls=await Promise.all([
+    frame(host,hiding.endsAt,pose(130.4)),
+    frame(guest,hiding.endsAt,pose(130.4)),
+    frame(another,hiding.endsAt,pose(130.4))
+  ])
+  for(const {tag} of calls){
+    assert.equal(tag.phase,'finished')
+    assert.equal(tag.it,host.id)
+    assert.equal(tag.previousIt,null)
+    assert.equal(tag.endsAt,hiding.endsAt)
+    assert.equal(tag.serverNow,hiding.endsAt)
+    assert.equal(tag.seq,calls[0].tag.seq)
+    assert.deepEqual(tag.results[0],{id:host.id,nickname:'ときの鬼'})
+    assert.deepEqual(new Set(tag.winnerIds),new Set([guest.id,another.id]))
+    assert.deepEqual(new Set(tag.results.slice(1).map(result=>result.nickname)),new Set(['森の逃げ役','湖の逃げ役']))
+  }
+  await leave(another,hiding.endsAt+1)
+  const stable=await frame(guest,hiding.endsAt+10_000)
+  assert.deepEqual(stable.tag,{...calls[0].tag,serverNow:hiding.endsAt+10_000})
+  const finished=await join(host,'終了後の参加',hiding.endsAt+10_010,4)
+  assert.equal(finished.status,409)
+  assert.deepEqual(await finished.json(),{error:'room-finished'})
+})
+
+test('timed tag preserves the last ghost and clock through sparse polls and explicit departures', async t=>{
+  const {host,guest,enlist,frame,leave}=await timedSession(t,3)
+  const departed=await enlist('途中で退出')
+  const spectator=await enlist('開始前に待機')
+  await frame(host,epoch,pose(128))
+  const hiding=(await frame(guest,epoch+1,pose(129))).tag
+  await frame(departed,epoch+2,pose(129))
+  const chase=(await frame(guest,hiding.hideUntil+100,pose(129))).tag
+  await frame(spectator,hiding.hideUntil+200,pose(129))
+  assert.equal(chase.phase,'playing')
+  assert.equal(chase.endsAt,hiding.hideUntil+180000)
+  assert.deepEqual(new Set(chase.enrolledIds),new Set([host.id,guest.id,departed.id]))
+  assert.equal(chase.it,host.id)
+  await leave(departed,chase.endsAt-1100)
+  await leave(host,chase.endsAt-1000)
+  const alone=(await frame(guest,chase.endsAt-1,pose(129))).tag
+  assert.equal(alone.it,host.id)
+  assert.equal(alone.endsAt,chase.endsAt)
+  const finished=(await frame(guest,chase.endsAt+1,pose(129))).tag
+  assert.deepEqual(finished.results,[{id:host.id,nickname:'ときの鬼'},{id:guest.id,nickname:'森の逃げ役'}])
+  assert.deepEqual(finished.winnerIds,[guest.id])
+  assert.equal(finished.phase,'finished')
+})
+
+test('winning and losing follow the last successful touch before expiry', async t=>{
+  const {host,guest,frame}=await timedSession(t)
+  await frame(host,epoch,pose(128))
+  const hiding=(await frame(guest,epoch+1,pose(129))).tag
+  await frame(host,hiding.hideUntil,pose(128))
+  await frame(host,hiding.hideUntil+100,pose(128))
+  await frame(guest,hiding.hideUntil+100,pose(129))
+  await frame(host,hiding.hideUntil+350,pose(128))
+  const tag=(await frame(guest,hiding.hideUntil+350,pose(128.3))).tag
+  assert.equal(tag.phase,'playing')
+  assert.equal(tag.it,guest.id)
+  assert.equal(tag.previousIt,host.id)
+  assert.equal(tag.endsAt,hiding.endsAt)
+  const finalized=(await frame(host,hiding.endsAt,pose(128))).tag
+  assert.equal(finalized.phase,'finished')
+  assert.equal(finalized.it,guest.id)
+  assert.deepEqual(finalized.winnerIds,[host.id])
+  assert.deepEqual(finalized.results,[{id:guest.id,nickname:'森の逃げ役'},{id:host.id,nickname:'ときの鬼'}])
+})
+
+test('a round can finish after an extended interruption without a chase-phase poll', async t=>{
+  const {host,guest,enlist,frame}=await timedSession(t)
+  const lobby=await Promise.all(['三人目','四人目','五人目','六人目'].map(name=>enlist(name)))
+  await frame(host,epoch,pose(128))
+  const hiding=(await frame(guest,epoch+1,pose(129))).tag
+  for(const [index,entrant] of lobby.entries())await frame(entrant,hiding.hideUntil-10+index,pose(132))
+  const resume=(await frame(host,hiding.endsAt+2000,pose(129))).tag
+  assert.equal(resume.phase,'finished')
+  assert.equal(resume.it,host.id)
+  assert.deepEqual(new Set(resume.winnerIds),new Set([guest.id,...lobby.map(entrant=>entrant.id)]))
+  assert.equal(resume.enrolledIds.length,6)
+})
 
 test('room code, seeds, and player positions work with distinct room-only credentials', async t => {
   const {sql,run,create,join,sync} = env(t)

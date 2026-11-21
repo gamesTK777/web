@@ -13,7 +13,7 @@
 html,body,#game { width: 100%; height: 100%; margin: 0; }
 html,body { overscroll-behavior-x: none; }
 body { overflow: hidden; }
-button,input { font: inherit; }
+button,input,select { font: inherit; }
 button,.file-btn {
   cursor: pointer; min-height: 43px; padding: 9px 16px;
   border: 1px solid var(--edge); border-radius: 6px;
@@ -23,7 +23,7 @@ button,.file-btn {
 button:disabled { cursor: default; opacity: .5; }
 button:enabled:hover,.file-btn:hover { border-color: #668574; background: #f1f4df; }
 button:active:not(:disabled),.file-btn:active { translate: 0 1px; }
-button:focus-visible,a:focus-visible,input:focus-visible,.file-btn:focus-within { outline: 3px solid #178b77; outline-offset: 3px; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,.file-btn:focus-within { outline: 3px solid #178b77; outline-offset: 3px; }
 .primary { background: #f7c86a; color: #2d321f; border-color: #cc9b45; }
 .primary:enabled:hover { background: #ffdf8b; border-color: #b58232; }
 .danger { color: white; background:#8c443b; border-color:#75352e; }
@@ -158,6 +158,8 @@ input { accent-color: #2e745b; }
 .online-card .online-room-modes { margin: 12px 0 0; padding: 4px 7px 7px; }
 .online-room-modes .modes { gap: 3px; }
 .online-room-modes .modes label { min-height: 44px; padding: 5px 7px; }
+#tag-minutes { width: 100%; min-height: 44px; padding: 6px 10px; font-weight: 650; color: var(--ink); background: #fffdf5; border: 1px solid #a8bba8; border-radius: 5px; }
+#tag-time-help { font-size: .8rem; line-height: 1.4; }
 .online-card button { margin-top: 14px; }
 .online-card input,.online-card button { min-height: 44px; }
 #online-code { font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; }
@@ -172,6 +174,10 @@ input { accent-color: #2e745b; }
 }
 #tag-status #tag-role { padding: 1px 6px; border-radius: 4px; background: #285c56; color: #d6fcf3; }
 #tag-status[data-it] #tag-role { background: #723d30; color: #fff2bd; }
+#tag-clock { display: inline-flex; align-items: baseline; gap: 5px; padding-inline: 3px; white-space: nowrap; color: #ffedb7; }
+#tag-clock span { font-size: .74rem; }
+#tag-clock-value,.tag-result-time time { font-size: 1.2rem; font-variant-numeric: tabular-nums; font-weight: 850; line-height: 1.1; }
+#tag-clock[data-urgent] { color: #ffd0a7; }
 #tag-hint:empty { display: none; }
 #tag-map-toggle { min-inline-size: 44px; }
 #tag-map-toggle[aria-pressed="true"] { background: #f1cb79; border-color: #ffe2a6; color: #2d3923; }
@@ -191,6 +197,20 @@ input { accent-color: #2e745b; }
 .tag-map-legend i { width: 15px; height: 15px; flex: 0 0 auto; text-align: center; line-height: 13px; font-style: normal; }
 .tag-map-self { border: 2px solid #d7f9ff; background: #74afb9; }
 .tag-map-people { border-radius: 50%; background: #ffe292; color: #263025; border: 1px solid #8c7445; font-weight: 800; }
+#game[data-screen="tag-result"] .panel { border-top-color: #568163; }
+#game[data-screen="tag-result"] .panel:has(.tag-result[data-outcome="lose"]) { border-top-color: #a65844; }
+.tag-result header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tag-result header p { margin-block: 6px 4px; }
+.tag-result h1 { color: #275940; outline: 0; }
+.tag-result[data-outcome="lose"] h1 { color: #8a3f31; }
+.tag-result-time { flex: none; min-width: 70px; text-align: center; padding: 5px 8px; display: grid; gap: 4px; color: #fceac1; background: #25443a; border-radius: 5px; }
+.tag-result-time small { font-size: .74rem; white-space: nowrap; }
+.tag-result-players { margin: 12px 0 16px; background: #eef1df; border: 1px solid #c8d2b6; border-radius: 6px; }
+.tag-result-players > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.22fr); gap: 8px; padding: 8px 10px; }
+.tag-result-players > div + div { border-top: 1px solid #c8d2b6; }
+.tag-result-players dt { color: #4c6558; font-size: .84rem; }
+.tag-result-players dd { margin: 0; font-weight: 750; overflow-wrap: anywhere; }
+.tag-result-players ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
 @media (max-width: 650px) {
   #tag-status { top: calc(max(7px,env(safe-area-inset-top)) + 82px); left: max(7px,env(safe-area-inset-left)); }
 }

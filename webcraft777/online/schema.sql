@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS webcraft_rooms (
   revision INTEGER NOT NULL DEFAULT 0,
   cell_count INTEGER NOT NULL DEFAULT 0,
   mode TEXT NOT NULL DEFAULT 'creative' CHECK (mode IN ('creative','explore')),
-  tag_enabled INTEGER NOT NULL DEFAULT 0 CHECK (tag_enabled IN (0,1))
+  tag_enabled INTEGER NOT NULL DEFAULT 0 CHECK (tag_enabled IN (0,1)),
+  tag_minutes INTEGER NOT NULL DEFAULT 0 CHECK (tag_minutes IN (0,1,3,5,10,15))
 );
 
 CREATE INDEX IF NOT EXISTS webcraft_rooms_expiry ON webcraft_rooms(expires_at);
@@ -77,5 +78,8 @@ CREATE TABLE IF NOT EXISTS webcraft_tag_state (
   hide_until INTEGER NOT NULL DEFAULT 0,
   seq INTEGER NOT NULL DEFAULT 0,
   previous_it TEXT,
-  protected_until INTEGER NOT NULL DEFAULT 0
+  protected_until INTEGER NOT NULL DEFAULT 0,
+  ends_at INTEGER NOT NULL DEFAULT 0,
+  round_roster TEXT,
+  round_result TEXT
 );

@@ -40,7 +40,7 @@ const ui = new GameUI((action,value)=>{ void handle(action,value).catch(err=>ui.
 const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
 const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
-type TagGame = {map:TagMap;status?:TagState;peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string}
+type TagGame = {map:TagMap;status?:TagState;receivedAt:number;remaining?:number;peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string}
 type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
   ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>;
   nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit;tagGame?:TagGame}
@@ -471,13 +471,22 @@ function updateTagUI(s:Session,now=performance.now()){
   const state=game.status
   const it=state?.it===room.connection.id
   const hiding=state?.phase==='hiding', playing=state?.phase==='playing'
-  const label=playing||hiding?(it?'鬼':'逃げ役'):'参加者を待っています'
-  const seconds=hiding?Math.max(0,Math.ceil((state.hideUntil-Date.now())/1000)):0
-  const hint=hiding?(it?'鬼のスタートまで ':'隠れる時間 ')+seconds+'秒':
+  const finished=state?.phase==='finished'
+  const spectator=playing&&!!room.connection.room.tagMinutes&&state.enrolledIds&&!state.enrolledIds.includes(room.connection.id)
+  const label=finished?'試合終了':playing||hiding?(it?'鬼':spectator?'観戦中':'逃げ役'):'参加者を待っています'
+  const clock=state?.serverNow===undefined?Date.now():state.serverNow+Math.max(0,now-game.receivedAt)
+  const seconds=hiding?Math.max(0,Math.ceil((state.hideUntil-clock)/1000)):0
+  if(finished)game.remaining=0
+  else if(playing&&state.endsAt>0){
+    // A late response must not make the visible countdown gain a second.
+    const secondsLeft=Math.max(0,Math.ceil((state.endsAt-clock)/1000))
+    game.remaining=Math.min(game.remaining??secondsLeft,secondsLeft)
+  }
+  const hint=finished?'':spectator?'結果を待っています':hiding?(it?'鬼のスタートまで ':'隠れる時間 ')+seconds+'秒':
     playing?(it?'逃げ役にぶつかるとタッチ':'鬼から逃げて隠れよう'):'2人以上で開始'
-  const key=[label,hint,game.open].join('/')
+  const key=[label,hint,game.open,game.remaining].join('/')
   if(game.uiKey!==key){
-    ui.tagMode({label,hint,it,mapOpen:game.open})
+    ui.tagMode({label,hint,it,mapOpen:game.open,remaining:game.remaining})
     game.uiKey=key
   }
   if(game.open&&now>=game.mapDue){
@@ -516,12 +525,20 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
   const peers=frame.players.filter(peer=>peer.id!==room.connection.id)
   const game=room.tagGame
   if(!room.ready&&!room.restoring&&!game&&peers.length)separateSpawn(s,peers)
-  if(game){
-    const previous=game.status
-    game.status=frame.tag;game.peers=peers
-    if(previous&&frame.tag?.previousIt&&frame.tag.seq>previous.seq){
-      if(frame.tag.it===room.connection.id)ui.toast('タッチされました！ あなたが鬼です。')
-      else if(frame.tag.previousIt===room.connection.id)ui.toast('タッチ成功！ 逃げ役になりました。')
+  if(game&&frame.tag){
+    const previous=game.status, state=frame.tag, localId=room.connection.id
+    if(previous?.endsAt!==state.endsAt)game.remaining=undefined
+    game.status=state;game.receivedAt=performance.now();game.peers=peers
+    if(state.phase==='finished'&&previous?.phase!=='finished'){
+      game.open=false
+      stopInput()
+      const loser=state.results.find(member=>member.id===state.it)!
+      const winners=state.results.filter(member=>member.id!==state.it).map(member=>member.nickname)
+      ui.tagResult({outcome:localId===state.it?'lose':state.winnerIds.includes(localId)?'win':'spectator',
+        loser:loser.nickname,winners,minutes:room.connection.room.tagMinutes!})
+    }else if(state.phase==='playing'&&previous?.it!==state.it&&state.previousIt){
+      if(state.it===localId)ui.toast('タッチされました！ あなたが鬼です。')
+      else if(state.previousIt===localId)ui.toast('タッチ成功！ 逃げ役になりました。')
     }
     updateTagUI(s)
   }
@@ -547,7 +564,7 @@ function connectRoom(s:Session,room:SharedRoom) {
     onFrame:frame=>{if(session===s)applyRoomFrame(s,room,frame)},
     onState:state=>{if(session===s){room.state=state;showRoom(room);flushExplorationEdit(s)}},
     onEnd:error=>{
-      if(session!==s)return
+      if(session!==s||room.tagGame?.status?.phase==='finished')return
       room.ended=true;room.state='reconnecting';showRoom(room)
       stopInput();ui.pause(false,controlMode,reason(error))
     },
@@ -595,7 +612,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
       const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map(),
         nickname,restoring:!!profile,pendingExplore:profile?.pending}
       session.online=room
-      if(tag){room.tagGame={map:new TagMap(tagCanvas,world),peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
+      if(tag){room.tagGame={map:new TagMap(tagCanvas,world),receivedAt:0,peers:[],started:false,open:false,mapDue:0,uiKey:''};updateTagUI(session)}
       connectRoom(session,room)
     }else if(stage!=='flat'){
       if(stage==='classic')session.land=new LandLife(world,view.scene,player)
@@ -657,6 +674,7 @@ function downloadJson(filename:string,text:string){
 }
 async function handle(action:string,value?:any) {
   if(busy && !['resume','resume-drag','resume-lock','resume-tablet','dismiss-guide'].includes(action))return
+  if(ui.screen==='tag-result'&&action!=='online-leave')return
   if(session&&heldForSync(session)&&['assign','craft','split','sort'].includes(action)){
     ui.toast('素材の変更を確認しています。少し待ってください。');return
   }
@@ -722,7 +740,7 @@ async function handle(action:string,value?:any) {
         !chest?undefined:action==='transfer-all'?transferAll(bag,chest,side):transferStack(bag,chest,side,value.index,value.half)
       if(r){ui.toast(r.message);if(r.ok){refreshBag();void persistRoomProgress(session)}}break}
     case 'preset':{
-      if(Object.hasOwn(presets,value)){const name=value as keyof typeof presets;await handle('settings-change',{...settings,...presets[name],quality:name});ui.settings(settings)}break}
+      if(Object.hasOwn(presets,value)){const name=value as keyof typeof presets;await handle('settings-change',{...settings,...presets[name],quality:name});if(session?.online?.tagGame?.status?.phase!=='finished')ui.settings(settings)}break}
     case 'original':await exportWorld(value,true);break
     case 'save':if(session)await persist(session);break
     case 'settings-change':if(validSettings(value)){
@@ -745,16 +763,17 @@ document.addEventListener('keydown',e=>{
 })
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();graphicsOK=false;pause()
   if(session)void persist(session)
-  ui.error('3D描画が中断されました。ページを再読み込みし、「つづきから」再開してください。')
+  if(ui.screen!=='tag-result')ui.error('3D描画が中断されました。ページを再読み込みし、「つづきから」再開してください。')
 })
 canvas.addEventListener('webglcontextlost',event=>{
   event.preventDefault();graphicsOK=false;frameHalted=true;stopInput()
+  if(ui.screen==='tag-result')return
   if(session){ui.pause(false,controlMode,'3D描画を中断しました。復旧後に再開できます。');void persist(session)}
   else ui.error(gpuMessage)
 })
 canvas.addEventListener('webglcontextrestored',()=>{
   graphicsOK=true;frameHalted=false;stillFrame=''
-  if(session){session.view.configure(settings);ui.pause(false,controlMode,'3D描画が復旧しました。操作を再開できます。')}
+  if(session){session.view.configure(settings);if(ui.screen!=='tag-result')ui.pause(false,controlMode,'3D描画が復旧しました。操作を再開できます。')}
   else void title()
 })
 window.addEventListener('pagehide',event=>{if(session){
@@ -776,6 +795,7 @@ function tick(now:number){
   if(!session)return
   const s=session,elapsed=frameTime?(now-frameTime)/1000:0,dt=Math.min(elapsed,.1);frameTime=now
   const tag=s.online?.tagGame
+  if(tag?.status?.phase==='finished')return
   if(input.active){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
     if(!input.frame(p,elapsed))return
