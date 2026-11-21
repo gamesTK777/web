@@ -119,7 +119,7 @@ function switchViewMode(){
   input.rememberView(s.player)
   // Keep movement and the current control method. A held mine must be pressed
   // again after switching so it cannot edit a different face by accident.
-  input.mining=false;resetMining();cooldown=0
+  input.mining=false;input.cancelPlacementTap();resetMining();cooldown=0
   s.view.kidsCamera.reset();moveReticle(50);stillFrame=''
   ui.showViewMode(s.kids)
   try {localStorage.setItem(viewPreferenceKey,s.kids?'kids':'original')} catch {}
@@ -450,7 +450,7 @@ function tick(now:number){
   const held=s.data.bag.hotbar[s.data.selected],use=target&&[21,22].includes(target.id)&&!s.player.crouched
   const preview=target&&!use&&ITEMS[held]?.block&&!input.mining?{x:target.x+target.nx,y:target.y+target.ny,z:target.z+target.nz,
     id:held,axis:logAxis,valid:!placementIssue(s.world,s.player,s.data.bag,s.data.mode,s.data.selected,target)}:null
-  const useAction=touchControls.hidden?'右クリック':'設置ボタン'
+  const useAction=touchControls.hidden?'右クリック':'タップ'
   ui.target(use?useAction+(target!.id===21?'で作業台':'でチェスト'):'')
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,

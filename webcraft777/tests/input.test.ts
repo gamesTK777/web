@@ -5,9 +5,10 @@ import {InputController} from "../src/input.ts";
 // Dispatch through the production event listeners. Node supplies EventTarget;
 // browser permission, pointer-lock ownership and timers are simulated here.
 function fire(target:EventTarget,type:string,fields:Record<string,unknown>={}) {
-  const {target:source,...props}=fields;
+  const {target:source,timeStamp,...props}=fields;
   const event=Object.assign(new Event(type,{cancelable:true}),props);
   if(source)Object.defineProperty(event,'target',{value:source});
+  if(timeStamp!==undefined)Object.defineProperty(event,'timeStamp',{value:timeStamp});
   target.dispatchEvent(event);
 }
 function touchButton() {
@@ -25,6 +26,7 @@ function touchButton() {
 function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
   const canvas=Object.assign(new EventTarget(),{focus(){},requestPointerLock:request});
   const doc=Object.assign(new EventTarget(),{hidden:false,pointerLockElement:null as EventTarget|null,
+    hitElement:canvas as EventTarget|null,elementFromPoint(){return this.hitElement;},
     exitPointerLock(){this.pointerLockElement=null;fire(this,"pointerlockchange");}});
   const timers:(()=>void)[]=[];
   const win=Object.assign(new EventTarget(),{setTimeout(fn:()=>void){timers.push(fn);return timers.length;}});
@@ -278,4 +280,42 @@ test("端末の向き変更で移動・上昇・下降を解除し、視点モ�
   assert.equal(h.input.movement().forward,0);
   h.input.start(true);
   assert.equal(h.input.movement().forward,0);
+});
+
+test("景色の短いタップを一度だけ設置として扱う。小さな指のずれで照準は動かさない",t=>{
+  const h=setup(t);
+  h.input.start(true);
+  fire(h.touch.stick,'pointerdown',{pointerId:2,pointerType:'touch',button:0,clientX:50,clientY:115});
+  fire(h.canvas,'pointerdown',{pointerId:1,pointerType:'touch',button:0,clientX:200,clientY:220,timeStamp:10});
+  fire(h.canvas,'pointermove',{pointerId:1,pointerType:'touch',clientX:203,clientY:224,timeStamp:25});
+  fire(h.win,'pointerup',{pointerId:1,pointerType:'touch',button:0,clientX:203,clientY:223,timeStamp:70});
+  fire(h.canvas,'click',{pointerType:'touch'});
+  assert.equal(h.events.places,1);
+  assert.deepEqual(h.events.looks,[]);
+  assert.equal(h.input.movement().forward,1);
+  assert.equal(h.input.mining,false);
+});
+
+test("ドラッグ、長押し、操作中断、押したままHUDへ出た指、マウスの左クリックは設置しない",t=>{
+  const h=setup(t);
+  const down=(pointerType='touch')=>fire(h.canvas,'pointerdown',{pointerId:1,pointerType,button:0,clientX:200,clientY:220,timeStamp:100});
+  const up=(timeStamp=160,clientX=200)=>fire(h.win,'pointerup',{pointerId:1,button:0,clientX,clientY:220,timeStamp});
+  h.input.start(true);
+  down();
+  fire(h.canvas,'pointermove',{pointerId:1,clientX:232,clientY:220});
+  fire(h.canvas,'pointermove',{pointerId:1,clientX:200,clientY:220});
+  up();
+  assert.deepEqual(h.events.looks,[[32,0],[-32,0]]);
+
+  down();up(600);
+  down();up(160,232);
+  down();fire(h.win,'pointercancel',{pointerId:1});up();
+  down();fire(h.doc,'lostpointercapture',{pointerId:1,target:h.canvas});up();
+  down();h.input.cancelPlacementTap();up();
+  down();h.input.stop();up();h.input.start(true);
+  h.doc.hitElement=null;
+  down();up();
+  h.doc.hitElement=h.canvas;
+  down('mouse');up();
+  assert.equal(h.events.places,0);
 });

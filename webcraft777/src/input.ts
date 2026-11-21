@@ -10,10 +10,12 @@ export interface Controls {
 
 type TouchButtons = { stick:HTMLElement; jump:HTMLButtonElement; down:HTMLButtonElement }
 type Role = 'look'|'mine'|'stick'|'jump'|'down'
-type Contact = { id:number; element:HTMLElement; role:Role; pointerType:string; x:number; y:number }
+type Contact = { id:number; element:HTMLElement; role:Role; pointerType:string; x:number; y:number; tapStartedAt?:number }
 const movableKeys = new Set(['KeyW','KeyA','KeyS','KeyD','KeyC','Space','ShiftLeft','ShiftRight',
   'ControlLeft','ControlRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'])
 const maxDiscontinuousTurn = 2 * Math.PI / 3
+const tapRadius = 9 // CSS pixels, independent of the canvas resolution
+const tapDuration = 360
 const screenSpan = () => Math.max(1024,window.screen?.width||0,window.screen?.height||0,window.innerWidth||0,window.innerHeight||0)
 
 export class InputController {
@@ -228,6 +230,10 @@ export class InputController {
     this.wheelSum=0
     this.nextWheel=this.lastWheel=-Infinity
   }
+  cancelPlacementTap(){
+    const look=this.findRole('look')
+    if(look)look.tapStartedAt=undefined
+  }
 
   private startView(e:PointerEvent){
     if(!this.active||this.pending)return
@@ -242,16 +248,18 @@ export class InputController {
       this.controls.beginMine()
       return
     }
-    this.grab(e,this.canvas,'look')
+    const look=this.grab(e,this.canvas,'look')
+    if(look&&e.pointerType==='touch')look.tapStartedAt=e.timeStamp
   }
   private findRole(role:Role){
     for(const contact of this.contacts.values())if(contact.role===role)return contact
   }
   private grab(e:PointerEvent,el:HTMLElement,role:Role,capture=true){
-    if(this.contacts.has(e.pointerId)||this.findRole(role))return false
-    this.contacts.set(e.pointerId,{id:e.pointerId,element:el,role,pointerType:e.pointerType||'mouse',x:e.clientX,y:e.clientY})
-    try{if(capture)el.setPointerCapture?.(e.pointerId)}catch{this.contacts.delete(e.pointerId);return false}
-    return true
+    if(this.contacts.has(e.pointerId)||this.findRole(role))return
+    const contact:Contact={id:e.pointerId,element:el,role,pointerType:e.pointerType||'mouse',x:e.clientX,y:e.clientY}
+    this.contacts.set(e.pointerId,contact)
+    try{if(capture)el.setPointerCapture?.(e.pointerId)}catch{this.contacts.delete(e.pointerId);return}
+    return contact
   }
   private bindTouch(element:HTMLElement,role:'stick'|'jump'|'down'){
     element.addEventListener('contextmenu',e=>e.preventDefault())
@@ -292,6 +300,11 @@ export class InputController {
     if(c.role==='stick'){this.updateStick(c.element,e.clientX,e.clientY);return}
     if(c.role!=='look')return
     const dx=e.clientX-c.x,dy=e.clientY-c.y
+    if(c.tapStartedAt!==undefined){
+      // Tiny finger movement keeps the original aim and stays eligible to place.
+      if(Math.hypot(dx,dy)<=tapRadius)return
+      c.tapStartedAt=undefined
+    }
     c.x=e.clientX;c.y=e.clientY
     this.look(dx,dy)
   }
@@ -312,7 +325,11 @@ export class InputController {
     if(e.type==='lostpointercapture'&&e.target!==c.element&&c.element.isConnected!==false)return
     if(e.type==='pointerup'&&c.pointerType==='mouse'&&(Number.isInteger(e.buttons)?!!(e.buttons&1):e.button>0))return
     if(c.role==='jump'&&e.type!=='pointerup')this.touchJumpEdge=false
+    const duration=e.timeStamp-(c.tapStartedAt??Infinity)
+    const place=this.drag&&e.type==='pointerup'&&duration>=0&&duration<=tapDuration&&
+      Math.hypot(e.clientX-c.x,e.clientY-c.y)<=tapRadius&&document.elementFromPoint(e.clientX,e.clientY)===this.canvas
     this.dropContact(c)
+    if(place)this.controls.place()
   }
   private wheel(e:WheelEvent){
     if(!this.active)return
