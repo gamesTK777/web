@@ -238,6 +238,98 @@ dialog::backdrop { background: #122b28bb; }
 .quality-presets button[aria-pressed="true"] { color:#fff; background:#385e49; }
 .craft-actions { flex-direction:column; align-items:stretch; }
 @media (max-height:550px) { #guide:not([hidden]) ~ .trail { display:none; } }
+#hud {
+  --touch-bottom: calc(max(7px,env(safe-area-inset-bottom)) + 69px);
+  --touch-right: max(8px,env(safe-area-inset-right));
+  --touch-left: max(8px,env(safe-area-inset-left));
+}
+#move-stick {
+  position: absolute;
+  left: var(--touch-left);
+  bottom: var(--touch-bottom);
+  inline-size: clamp(90px,25vmin,122px);
+  aspect-ratio: 1;
+  border: 2px solid #f4e4bb9e;
+  border-radius: 50%;
+  background: #142f2ad4;
+  box-shadow: inset 0 0 0 8px #c8dbaf15,0 4px 16px #152c2966;
+  color: #fff0c8;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#move-stick[data-held] { border-color: #ffe097; }
+#move-stick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 38px;
+  height: 38px;
+  translate: calc(var(--stick-x,0px) - 50%) calc(var(--stick-y,0px) - 50%);
+  border: 2px solid #fff0b1;
+  border-radius: 50%;
+  background: #e8c478;
+  box-shadow: inset 0 -4px #9575415c,0 3px 8px #142c22b8;
+  pointer-events: none;
+}
+.stick-direction { position: absolute; font-size: 12px; line-height: 1; pointer-events: none; }
+.stick-up,.stick-down { left: 50%; translate: -50% 0; }
+.stick-up { top: 9px; }
+.stick-down { bottom: 9px; }
+.stick-left,.stick-right { top: 50%; translate: 0 -50%; }
+.stick-left { left: 9px; }
+.stick-right { right: 9px; }
+#touch-actions {
+  position: absolute;
+  right: var(--touch-right);
+  bottom: calc(var(--touch-bottom) + 50px);
+  display: flex;
+  gap: 5px;
+}
+#touch-actions button,#touch-controls:not([hidden]) ~ #fallback button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border-color: #c0be9aab;
+  border-radius: 9px;
+  background: #193c33ed;
+  color: #fff9e5;
+  font-size: .78rem;
+  white-space: nowrap;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#touch-actions #touch-jump,#touch-actions #touch-fly[aria-pressed="true"] {
+  border-color: #f3d58e;
+  background: #edc778;
+  color: #2d3923;
+}
+#touch-actions button:active,#touch-actions button[data-held],#touch-controls:not([hidden]) ~ #fallback button:active {
+  box-shadow: inset 0 0 0 2px #fae4a8;
+}
+#touch-controls:not([hidden]) ~ #fallback {
+  right: var(--touch-right);
+  bottom: var(--touch-bottom);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#touch-controls:not([hidden]) ~ #fallback > span { display: none; }
+#touch-controls:not([hidden]) ~ #fallback button { min-width: 61px; }
+#touch-controls:not([hidden]) ~ .belt {
+  bottom: max(7px,env(safe-area-inset-bottom));
+  width: min(412px,calc(100vw - var(--touch-left) - var(--touch-right)));
+  gap: 4px;
+}
+#touch-controls:not([hidden]) ~ .belt .hotbar { width: 100%; gap: 2px; }
+#touch-controls:not([hidden]) ~ .belt .slot { width: 100%; }
+#hud:has(> #touch-controls:not([hidden])) .top-actions button { min-height: 44px; }
+#hud:has(> #touch-controls:not([hidden])) #guide:not([hidden]) ~ .trail { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

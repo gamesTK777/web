@@ -28,6 +28,20 @@
       <div id="target-hint" hidden></div>
       <div id="crosshair" aria-hidden="true"></div>
       <div id="mine-meter" role="progressbar" aria-label="採掘の進み具合" aria-valuemin="0" aria-valuemax="100" hidden><i></i></div>
+      <div id="touch-controls" role="group" aria-label="タッチ操作" hidden>
+        <div id="move-stick" role="group" aria-label="ドラッグして移動">
+          <span class="stick-direction stick-up" aria-hidden="true">▲</span>
+          <span class="stick-direction stick-right" aria-hidden="true">▶</span>
+          <span class="stick-direction stick-down" aria-hidden="true">▼</span>
+          <span class="stick-direction stick-left" aria-hidden="true">◀</span>
+          <div id="move-stick-knob" aria-hidden="true"></div>
+        </div>
+        <div id="touch-actions">
+          <button type="button" id="touch-fly" data-action="touch-fly" aria-label="飛行を切り替える" aria-pressed="false" hidden>飛行</button>
+          <button type="button" id="touch-down" title="長押ししてしゃがむ。飛行中は下降">しゃがむ</button>
+          <button type="button" id="touch-jump" title="ジャンプ。水中や飛行中は長押しで上昇">ジャンプ</button>
+        </div>
+      </div>
       <div id="fallback" hidden><span>ドラッグで視点を変更</span><div><button data-hold="mine" title="押し続けて採掘">採掘</button><button data-action="place">設置</button></div></div>
       <div class="belt"><p id="equipped"></p><div class="hotbar" id="hud-bar" role="group" aria-label="ホットバー"></div></div>
     </section>

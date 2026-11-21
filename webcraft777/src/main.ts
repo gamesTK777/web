@@ -11,6 +11,13 @@ import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
 const hud = document.querySelector<HTMLElement>('#hud')!
+const touchControls = hud.querySelector<HTMLElement>('#touch-controls')!
+const touchFly = hud.querySelector<HTMLButtonElement>('#touch-fly')!
+const touchButtons = {
+  stick:hud.querySelector<HTMLElement>('#move-stick')!,
+  jump:hud.querySelector<HTMLButtonElement>('#touch-jump')!,
+  down:hud.querySelector<HTMLButtonElement>('#touch-down')!,
+}
 canvas.tabIndex = -1
 const saves = new SaveStore()
 const audio = new Soundscape()
@@ -130,10 +137,20 @@ function inventory() {
   if(!session || !input.active)return
   station=null;stopInput(); ui.inventory(viewInventory())
 }
+function showTouchControls(drag:boolean) {
+  const enabled=drag&&(window.matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>0)
+  touchControls.hidden=!enabled
+  touchFly.hidden=session?.data.mode!=='creative'
+  const flying=Boolean(session?.player.flying)
+  touchFly.setAttribute('aria-pressed',String(flying))
+  touchButtons.jump.textContent=flying?'上昇':'ジャンプ'
+  touchButtons.down.textContent=flying?'下降':'しゃがむ'
+  return enabled
+}
 function showPlay(fallback:boolean){
   if(!session||!input.active)return
   fallbackPreferred=fallback
-  ui.play(fallback,firstGuide,input.pending);ui.hud(viewInventory());guide()
+  ui.play(fallback,firstGuide,input.pending,showTouchControls(fallback));ui.hud(viewInventory());guide()
 }
 function resume(drag:boolean) {
   if(!session || !['ready','pause','inventory'].includes(ui.screen))return
@@ -194,6 +211,15 @@ function advanceMine(dt:number) {
   }else input.mining=false
   ui.toast(result.message);resetMining(); cooldown=data.mode==='creative'?.15:.11
 }
+function toggleFly(){
+  if(!session||!input.active)return
+  const {player,data}=session
+  if(data.mode!=='creative'){ui.toast('飛行はクリエイティブモードで使えます。');return}
+  player.flying=!player.flying
+  player.vy=0
+  const touch=showTouchControls(input.drag)
+  ui.toast(player.flying?(touch?'飛行中：上昇・下降ボタンで高さを変えられます。':'飛行中：Spaceで上昇、Ctrlで下降'):'飛行を終了しました。')
+}
 const input=new InputController(canvas,{
   pause,inventory,place,select,look:aim, beginMine:()=>advanceMine(0),pick,undo,viewMode:switchViewMode,
   rotate:()=>{logAxis=logAxis==='y'?'x':logAxis==='x'?'z':'y';ui.toast('原木の向き　'+({x:'東西',y:'縦',z:'南北'}[logAxis]))},
@@ -201,13 +227,11 @@ const input=new InputController(canvas,{
   home:()=>{if(session){const {x,y,z}=session.player;session.data.journey.home={x,y,z};guide();ui.toast('現在地を拠点に登録しました。')}},
   guide:()=>{if(session){session.data.journey.hidden=!session.data.journey.hidden;guide()}},
   cycle:d=>{if(session)select((session.data.selected+d+9)%9)},
-  fly:()=>{if(!session)return;const {player,data}=session
-    if(data.mode!=='creative'){ui.toast('飛行はクリエイティブモードで使えます。');return}
-    player.flying=!player.flying;player.vy=0;ui.toast(player.flying?'飛行中：Spaceで上昇、Ctrlで下降':'飛行を終了しました。')},
+  fly:toggleFly,
   debug:()=>{debugging=!debugging;if(!debugging)ui.debug('')},
   dragChanged:showPlay,background:()=>{if(session) void persist(session)},
   recovery:message=>{if(session){stopInput();fallbackPreferred=true;ui.pause(false,true,message)}}
-})
+},touchButtons)
 function snapshot(s:Session): WorldSave {
   const {x,y,z,yaw,pitch}=s.player
   return {...s.data,pose:{x,y,z,yaw,pitch:s.kids?s.originalPitch:pitch,crouched:s.player.crouched},flying:s.player.flying,edits:s.world.exportEdits(),
@@ -331,6 +355,7 @@ async function handle(action:string,value?:any) {
     case 'reset-input': if(session){stopInput();input.rememberView(session.player);fallbackPreferred=true;ui.pause(false,true,'入力をリセットしました。ドラッグ操作で再開できます。')}break
     case 'pause':pause();break
     case 'view-mode':switchViewMode();break
+    case 'touch-fly':if(!touchControls.hidden)toggleFly();break
     case 'inventory':inventory();break
     case 'select':select(value);break
     case 'assign':if(session&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();ui.toast('ホットバーに登録しました。')}break
@@ -425,7 +450,8 @@ function tick(now:number){
   const held=s.data.bag.hotbar[s.data.selected],use=target&&[21,22].includes(target.id)&&!s.player.crouched
   const preview=target&&!use&&ITEMS[held]?.block&&!input.mining?{x:target.x+target.nx,y:target.y+target.ny,z:target.z+target.nz,
     id:held,axis:logAxis,valid:!placementIssue(s.world,s.player,s.data.bag,s.data.mode,s.data.selected,target)}:null
-  ui.target(use?(target!.id===21?'右クリックで作業台':'右クリックでチェスト'): '')
+  const useAction=touchControls.hidden?'右クリック':'設置ボタン'
+  ui.target(use?useAction+(target!.id===21?'で作業台':'でチェスト'):'')
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,
     moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined)

@@ -8,7 +8,9 @@ export interface Controls {
   viewMode?(): void
 }
 
-type Contact = { id:number; element:HTMLElement; role:'look'|'mine'; x:number; y:number }
+type TouchButtons = { stick:HTMLElement; jump:HTMLButtonElement; down:HTMLButtonElement }
+type Role = 'look'|'mine'|'stick'|'jump'|'down'
+type Contact = { id:number; element:HTMLElement; role:Role; pointerType:string; x:number; y:number }
 const movableKeys = new Set(['KeyW','KeyA','KeyS','KeyD','KeyC','Space','ShiftLeft','ShiftRight',
   'ControlLeft','ControlRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'])
 const maxDiscontinuousTurn = 2 * Math.PI / 3
@@ -21,10 +23,13 @@ export class InputController {
   get pending(){return this.mode==='pending'}
   get active(){return this.pending || this.mode==='locked' || this.mode==='drag'}
   get drag(){return this.mode==='drag'}
-  private contact:Contact|null = null
+  private readonly contacts=new Map<number,Contact>()
+  private stickForward=0
+  private stickRight=0
   private ticket = 0
   private hasRequestPromise = false
   private jumpEdge = false
+  private touchJumpEdge=false
   private wheelSum = 0
   private lastWheel = -Infinity
   private nextWheel = -Infinity
@@ -33,7 +38,7 @@ export class InputController {
   private sensitivity = 1
   private readonly trace = new InputDiagnostics()
 
-  constructor(private canvas:HTMLCanvasElement,private controls:Controls){
+  constructor(private canvas:HTMLCanvasElement,private controls:Controls,touch?:TouchButtons){
     document.addEventListener('pointerlockchange',()=>this.reconcileLock())
     document.addEventListener('pointerlockerror',()=>{
       if(!this.hasRequestPromise)this.fallback('pointerlockerror')
@@ -51,7 +56,7 @@ export class InputController {
     canvas.addEventListener('lostpointercapture',e=>this.release(e))
     document.addEventListener('pointerdown',e=>{
       const button=(e.target as Element|null)?.closest?.<HTMLButtonElement>('[data-hold="mine"]')
-      if(!this.drag||!button||button.disabled||e.button!==0||this.contact)return
+      if(!this.drag||!button||button.disabled||e.button!==0)return
       if(e.pointerType!=='mouse')e.preventDefault()
       if(!this.grab(e,button,'mine'))return
       this.mining=true
@@ -62,7 +67,7 @@ export class InputController {
     window.addEventListener('pointerup',e=>this.release(e))
     window.addEventListener('pointercancel',e=>this.release(e))
     // pointerup reports the last button. mouseup reports each mouse button separately.
-    window.addEventListener('mouseup',e=>{if(e.button===0)this.dropContact()})
+    window.addEventListener('mouseup',e=>{if(e.button===0)this.dropMouseContact()})
     canvas.addEventListener('wheel',e=>this.wheel(e),{passive:false})
     window.addEventListener('keydown',e=>this.keydown(e))
     window.addEventListener('keyup',e=>this.keys.delete(e.code))
@@ -70,6 +75,14 @@ export class InputController {
     document.addEventListener('visibilitychange',()=>{
       if(document.hidden){this.interrupt('hidden');this.controls.background()}
     })
+    if(touch){
+      this.bindTouch(touch.stick,'stick')
+      this.bindTouch(touch.jump,'jump')
+      this.bindTouch(touch.down,'down')
+      const resetAfterTurn=()=>{if(this.drag)this.reset()}
+      window.addEventListener('orientationchange',resetAfterTurn)
+      window.screen?.orientation?.addEventListener?.('change',resetAfterTurn)
+    }
   }
 
   private ownsLock(){return document.pointerLockElement===this.canvas}
@@ -208,9 +221,10 @@ export class InputController {
   }
   reset(){
     this.keys.clear()
-    this.dropContact()
+    for(const contact of this.contacts.values())this.dropContact(contact)
     this.mining=false
     this.jumpEdge=false
+    this.touchJumpEdge=false
     this.wheelSum=0
     this.nextWheel=this.lastWheel=-Infinity
   }
@@ -221,45 +235,84 @@ export class InputController {
     if(e.pointerType!=='mouse')e.preventDefault()
     if(e.button===2){this.controls.place();return}
     if(e.button===1){this.controls.pick?.();return}
-    if(e.button!==0||this.contact)return
+    if(e.button!==0)return
     if(this.mode==='locked'){
-      this.contact={id:e.pointerId,element:this.canvas,role:'mine',x:0,y:0}
+      if(!this.grab(e,this.canvas,'mine',false))return
       this.mining=true
       this.controls.beginMine()
       return
     }
     this.grab(e,this.canvas,'look')
   }
-  private grab(e:PointerEvent,el:HTMLElement,role:Contact['role']){
-    this.contact={id:e.pointerId,element:el,role,x:e.clientX,y:e.clientY}
-    try{el.setPointerCapture?.(e.pointerId)}catch{this.contact=null;return false}
+  private findRole(role:Role){
+    for(const contact of this.contacts.values())if(contact.role===role)return contact
+  }
+  private grab(e:PointerEvent,el:HTMLElement,role:Role,capture=true){
+    if(this.contacts.has(e.pointerId)||this.findRole(role))return false
+    this.contacts.set(e.pointerId,{id:e.pointerId,element:el,role,pointerType:e.pointerType||'mouse',x:e.clientX,y:e.clientY})
+    try{if(capture)el.setPointerCapture?.(e.pointerId)}catch{this.contacts.delete(e.pointerId);return false}
     return true
   }
+  private bindTouch(element:HTMLElement,role:'stick'|'jump'|'down'){
+    element.addEventListener('contextmenu',e=>e.preventDefault())
+    if(role==='jump')element.addEventListener('click',e=>{
+      if(this.drag && e.detail===0)this.touchJumpEdge=true
+    })
+    element.addEventListener('pointerdown',e=>{
+      if(!this.drag||e.button!==0||!this.grab(e,element,role))return
+      e.preventDefault()
+      element.dataset.held=''
+      if(role==='stick')this.updateStick(element,e.clientX,e.clientY)
+      if(role==='jump')this.touchJumpEdge=true
+    })
+  }
+  private updateStick(element:HTMLElement,x:number,y:number){
+    const rect=element.getBoundingClientRect()
+    const radius=Math.min(rect.width,rect.height)*.29
+    const dx=x-(rect.left+rect.width/2),dy=y-(rect.top+rect.height/2)
+    const distance=Math.hypot(dx,dy)
+    if(!(radius>0)||!Number.isFinite(distance))return
+    const ratio=Math.min(1,radius/(distance||1))
+    element.style.setProperty('--stick-x',dx*ratio+'px')
+    element.style.setProperty('--stick-y',dy*ratio+'px')
+    const power=Math.max(0,(Math.min(1,distance/radius)-.16)/.84)/(distance||1)
+    this.stickForward=-dy*power||0
+    this.stickRight=dx*power||0
+  }
+  private dropMouseContact(){
+    for(const c of this.contacts.values())if(c.pointerType==='mouse')this.dropContact(c)
+  }
   private checkButtons(e:MouseEvent){
-    if(this.contact&&Number.isInteger(e.buttons)&&!(e.buttons&1))this.dropContact()
+    if(Number.isInteger(e.buttons)&&!(e.buttons&1))this.dropMouseContact()
   }
   private movePointer(e:PointerEvent){
-    const c=this.contact
-    if(!this.drag||!c||c.id!==e.pointerId)return
-    this.checkButtons(e)
-    if(!this.contact||c.role!=='look')return
+    const c=this.contacts.get(e.pointerId)
+    if(!this.drag||!c)return
+    if(c.pointerType==='mouse'&&Number.isInteger(e.buttons)&&!(e.buttons&1)){this.dropContact(c);return}
+    if(c.role==='stick'){this.updateStick(c.element,e.clientX,e.clientY);return}
+    if(c.role!=='look')return
     const dx=e.clientX-c.x,dy=e.clientY-c.y
     c.x=e.clientX;c.y=e.clientY
     this.look(dx,dy)
   }
-  private dropContact(){
-    const c=this.contact
-    if(!c)return
-    this.contact=null
+  private dropContact(c:Contact){
+    this.contacts.delete(c.id)
     if(c.role==='mine')this.mining=false
+    if(c.role==='stick'){
+      this.stickForward=this.stickRight=0
+      c.element.style.removeProperty('--stick-x')
+      c.element.style.removeProperty('--stick-y')
+    }
+    if(c.role==='stick'||c.role==='jump'||c.role==='down')delete c.element.dataset.held
     try{if(c.element.hasPointerCapture?.(c.id))c.element.releasePointerCapture(c.id)}catch{/* Capture was already released. */}
   }
   private release(e:PointerEvent){
-    const c=this.contact
-    if(!c||(e.pointerId!==undefined&&e.pointerId!==c.id))return
+    const c=this.contacts.get(e.pointerId)
+    if(!c)return
     if(e.type==='lostpointercapture'&&e.target!==c.element&&c.element.isConnected!==false)return
-    if(e.type==='pointerup'&&(Number.isInteger(e.buttons)?!!(e.buttons&1):e.button>0))return
-    this.dropContact()
+    if(e.type==='pointerup'&&c.pointerType==='mouse'&&(Number.isInteger(e.buttons)?!!(e.buttons&1):e.button>0))return
+    if(c.role==='jump'&&e.type!=='pointerup')this.touchJumpEdge=false
+    this.dropContact(c)
   }
   private wheel(e:WheelEvent){
     if(!this.active)return
@@ -309,9 +362,12 @@ export class InputController {
     }
   }
   movement(){
-    const k=this.keys,jumpPressed=this.jumpEdge
-    this.jumpEdge=false
-    return {forward:Number(k.has('KeyW'))-Number(k.has('KeyS')),right:Number(k.has('KeyD'))-Number(k.has('KeyA')),
-      jump:k.has('Space'),jumpPressed,sprint:k.has('ShiftLeft')||k.has('ShiftRight'),down:k.has('KeyC')||k.has('ControlLeft')||k.has('ControlRight')}
+    const k=this.keys,jumpPressed=this.jumpEdge||this.touchJumpEdge
+    this.jumpEdge=this.touchJumpEdge=false
+    const forward=Number(k.has('KeyW'))-Number(k.has('KeyS')),right=Number(k.has('KeyD'))-Number(k.has('KeyA'))
+    const keyboard=!!(forward||right)
+    return {forward:keyboard?forward:this.stickForward,right:keyboard?right:this.stickRight,
+      jump:k.has('Space')||!!this.findRole('jump'),jumpPressed,sprint:k.has('ShiftLeft')||k.has('ShiftRight'),
+      down:k.has('KeyC')||k.has('ControlLeft')||k.has('ControlRight')||!!this.findRole('down')}
   }
 }
