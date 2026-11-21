@@ -1,4 +1,5 @@
 import { HEIGHT, SIZE, type Axis } from './world'
+import type { Mode } from './inventory'
 
 export interface NetPose {
   x: number
@@ -16,6 +17,7 @@ export interface RoomEdit {
   fromRevision: number
   block: number
   axis: Axis
+  actionId?: string
 }
 
 export interface RoomCell {
@@ -37,6 +39,7 @@ export interface RoomSummary {
   seed: string
   generator: 2
   createdAt: number
+  mode: Mode
 }
 
 export interface RoomConnection {
@@ -78,6 +81,7 @@ const statusMessages: Record<number, string> = {
   404: '部屋が見つかりません。合言葉を確認してください。',
   409: '部屋が現在いっぱいです。',
   410: '部屋の有効期限が切れました。新しい部屋を作ってください。',
+  426: 'ゲームを再読み込みして、最新版で探索ルームに入り直してください。',
   429: '通信が集中しています。少し待ってからお試しください。',
 }
 
@@ -117,13 +121,15 @@ function parseConnection(value: unknown): RoomConnection {
   const body = asRecord(value), room = asRecord(body?.room)
   if (!body || !room || typeof room.code !== 'string' || !/^[A-Z0-9]{8}$/.test(room.code) ||
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
+      (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative') ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||
       !isMemberId(body.id) || !isText(body.token, 256) || body.token.length < 16 ||
       !/^[a-z0-9_.-]+$/i.test(body.token)) return invalidResponse()
   return {
     id: body.id,
     token: body.token,
-    room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt },
+    room: { code: room.code, name: room.name, seed: room.seed, generator: room.generator, createdAt: room.createdAt,
+      mode:room.mode==='explore'?'explore':'creative' },
   }
 }
 
@@ -140,7 +146,7 @@ function parsePlayer(value: unknown): RoomPlayer | undefined {
 function parseCell(value: unknown, since: number, total: number): RoomCell {
   const cell = asRecord(value)
   if (!cell || !isInteger(cell.key, SIZE * SIZE, SIZE * SIZE * HEIGHT - 1) ||
-      !isInteger(cell.block, 0, 26) || (cell.block > 12 && ![23, 25, 26].includes(cell.block)) ||
+      !isInteger(cell.block, 0, 33) || (cell.block > 12 && cell.block !== 21 && cell.block !== 23 && cell.block < 25) ||
       (cell.axis !== 'y' && !(cell.block === 5 && (cell.axis === 'x' || cell.axis === 'z'))) ||
       !isInteger(cell.revision, since + 1, total)) return invalidResponse()
   return { key: cell.key, block: cell.block, axis: cell.axis, revision: cell.revision }
@@ -182,6 +188,7 @@ function retryDelay(header: string | null) {
 }
 
 type SyncRequest = {
+  protocol: 2
   code: string
   token: string
   since: number
@@ -201,12 +208,17 @@ export class OnlineClient {
     this.origin = url.origin
   }
 
-  async create(input: { name: string; seed: string; nickname: string }): Promise<RoomConnection> {
-    return parseConnection(await this.request('rooms', input))
+  async create(input: { name: string; seed: string; nickname: string; mode?: Mode }): Promise<RoomConnection> {
+    const connection=parseConnection(await this.request('rooms', input))
+    if(input.mode==='explore'&&connection.room.mode!=='explore'){
+      void this.leave(connection)
+      throw new OnlineError(426,'mode-unavailable')
+    }
+    return connection
   }
 
   async join(input: { code: string; nickname: string }): Promise<RoomConnection> {
-    return parseConnection(await this.request('join', input))
+    return parseConnection(await this.request('join', {...input,protocol:2}))
   }
 
   start(connection: RoomConnection, hooks: RoomHooks): RoomSync {
@@ -341,7 +353,7 @@ export class RoomSync {
       attemptedEdit = Boolean(sent && pose)
       if (sent && !attemptedEdit) this.finishEdit({ ok: false, reason: 'offline' })
       const payload = await this.send({
-        code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
+        protocol: 2, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
       }, request.signal)
       if (this.closed) return
       const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit)
@@ -353,7 +365,11 @@ export class RoomSync {
     } catch (err) {
       if (this.closed) return
       const error = err instanceof OnlineError ? err : new OnlineError(0, 'invalid-response')
-      if ([400, 401, 403, 404, 409, 410].includes(error.status)) {
+      if(error.status===400&&attemptedEdit&&sent?.edit.actionId){
+        this.finishEdit({ok:false,reason:'invalid'})
+        return
+      }
+      if ([400, 401, 403, 404, 409, 410, 426].includes(error.status)) {
         this.stop()
         this.hooks.onEnd?.(error)
         return

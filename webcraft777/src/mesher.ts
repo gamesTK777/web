@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import {World, SIZE, chunkKey, inside, isOpaque, scatter, voxelIndex} from "./world";
 import {BLADES, FLOWERS, TILE_COUNT, tileFor, tileUV} from "./textures";
+import {isSlide, slideHeight} from "./playground";
 
 type Vec = [number,number,number];
 type Face = {n:Vec; u:Vec; v:Vec; o:Vec};
@@ -16,7 +17,7 @@ const corners=[[0,0],[1,0],[1,1],[0,1]];
 const uvs=Array.from({length:TILE_COUNT},(_,tile)=>corners.map(([u,v])=>tileUV(tile,u,v)));
 export function faceVisible(id:number, neighbor:number) {
   if(!id || isOpaque(neighbor)) return false;
-  if(id===neighbor) return false;
+  if(id===neighbor&&!isSlide(id)) return false;
   if(id===13 && neighbor===10) return false;
   return true;
 }
@@ -69,6 +70,7 @@ export function meshChunk(world:World,cx:number,cy:number,cz:number,vegetation=1
     for(let x=sx;x<sx+16;x++,index++){
       const id=world.data[index]; if(!id) continue;
       const s=id===13?water:id===10?glass:solid;
+      const ramp=isSlide(id);
       let sample=-1;
       for(const f of faces) {
         const [nx,ny,nz]=f.n, a=x+nx,b=y+ny,c=z+nz;
@@ -76,13 +78,18 @@ export function meshChunk(world:World,cx:number,cy:number,cz:number,vegetation=1
         if(sample===-1)sample=scatter(x+y*13,z,world.salt^17);
         const axis=id===5?world.axisAt(x,y,z):'y';
         const tile=tileFor(id,ny,nx,nz,axis,Math.floor(sample*3)), uv=uvs[tile];
-        const turn=tile===5 && ((axis==='x' && f.u[0]!==0)||(axis==='z' && f.u[2]!==0))?1:0;
+        const turn=ramp&&ny===1?id-30:tile===5 && ((axis==='x' && f.u[0]!==0)||(axis==='z' && f.u[2]!==0))?1:0;
+        const slanted=ramp&&ny===1;
+        const dx=slanted?slideHeight(id,0,0)-slideHeight(id,1,0):nx;
+        const dz=slanted?slideHeight(id,0,0)-slideHeight(id,0,1):nz;
+        const length=slanted?Math.hypot(dx,1,dz):1;
         const variant=.94+.11*sample;
         const waterTop=id===13 && read(x,y+1,z)!==13;
         for(let i=0;i<4;i++){
           const [u,v]=corners[i], px=f.o[0]+f.u[0]*u+f.v[0]*v,py=f.o[1]+f.u[1]*u+f.v[1]*v,pz=f.o[2]+f.u[2]*u+f.v[2]*v;
-          s.position.push(x+px,y+py-(waterTop && py===1?.105:0),z+pz);
-          s.normal.push(nx,ny,nz);s.uv.push(...uv[(i+turn)%4]);
+          const surfaceY=ramp&&py===1?slideHeight(id,px,pz):py-(waterTop && py===1?.105:0);
+          s.position.push(x+px,y+surfaceY,z+pz);
+          s.normal.push(dx/length,ny/length,dz/length);s.uv.push(...uv[(i+turn)%4]);
           const su=u?1:-1,sv=v?1:-1;
           const ux=f.u[0]*su,uy=f.u[1]*su,uz=f.u[2]*su;
           const vx=f.v[0]*sv,vy=f.v[1]*sv,vz=f.v[2]*sv;
@@ -97,7 +104,7 @@ export function meshChunk(world:World,cx:number,cy:number,cz:number,vegetation=1
         const tail=s.detail.length;
         const flip=s===solid && s.detail[tail-12]+s.detail[tail-6]>s.detail[tail-9]+s.detail[tail-3];
         s.quad(id===13 && (ny===1 || x===0 || z===0 || x===SIZE-1 || z===SIZE-1),flip);
-        if(vegetation && id===1&&ny===1&&world.highest[x+SIZE*z]===y) {
+        if(vegetation && world.stage!=='flat' && id===1&&ny===1&&world.highest[x+SIZE*z]===y) {
           const patch=scatter(x>>3,z>>3,world.salt^75);
           if(scatter(x,z,world.salt^2534)<(.023+patch*patch*.21)*vegetation)
             sprig(solid,x,y+1,z,variant,patch>.72);

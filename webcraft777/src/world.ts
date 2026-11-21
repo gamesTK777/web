@@ -1,5 +1,6 @@
 import { validStacks, type Stack, type Outcome } from "./inventory.ts";
 import { makeLandmarks, type Landmark } from "./landmarks.ts";
+import type { TerrainPreset } from "./stages.ts";
 
 export const SIZE = 256;
 export const HEIGHT = 96;
@@ -18,7 +19,7 @@ export type WorldFixtures = { axes:[number,'x'|'z'][]; chests:[number,Stack[]][]
 type CapturedCell = {x:number;y:number;z:number;id:number;axis:Axis};
 export const emptyFixtures = (): WorldFixtures => ({axes:[],chests:[],benches:[]});
 export function editableId(id: unknown): id is number {
-  return typeof id==="number" && Number.isInteger(id) && (id>=0 && id<=13 || [21,22,23,25,26].includes(id));
+  return typeof id==="number" && Number.isInteger(id) && (id>=0 && id<=13 || [21,22,23].includes(id) || id>=25 && id<=33);
 }
 export function validFixtures(value: unknown): value is WorldFixtures {
   if (!value || typeof value!=="object") return false;
@@ -42,7 +43,7 @@ export const chunkKey = (cx: number, cy: number, cz: number) => cx + 16 * cz + 2
 export function inside(x: number, y: number, z: number) {
   return x >= 0 && y >= 0 && z >= 0 && x < SIZE && y < HEIGHT && z < SIZE;
 }
-export function isOpaque(id: number) { return id !== 0 && id !== 6 && id !== 10 && id !== 13; }
+export function isOpaque(id: number) { return id !== 0 && id !== 6 && id !== 10 && id !== 13 && !(id>=30 && id<=33); }
 export function isSolid(id: number) { return id !== 0 && id !== 13; }
 export function affectedChunks(x: number, y: number, z: number): number[] {
   // Corner AO and crossed foliage depend on diagonal neighbours as well as face neighbours.
@@ -97,13 +98,13 @@ export class World {
   private readonly edits = new Map<number, {id: number; base: number}>();
   private readonly listeners = new Set<(x: number, y: number, z: number) => void>();
 
-  constructor(seed: string, defer = false, generator:GeneratorVersion=1) {
+  constructor(seed: string, defer = false, generator:GeneratorVersion=1, readonly stage:TerrainPreset='classic') {
     this.salt = seedHash(seed);
     this.generator=generator;
     if (!defer) for (const _ of this.generateTerrain()) { /* synchronous use in tools/tests */ }
   }
-  static async generate(seed: string, progress?: (fraction: number) => void, generator:GeneratorVersion=1) {
-    const world = new World(seed, true,generator);
+  static async generate(seed: string, progress?: (fraction: number) => void, generator:GeneratorVersion=1, stage:TerrainPreset='classic') {
+    const world = new World(seed, true,generator,stage);
     let checkpoint = performance.now();
     for (const part of world.generateTerrain()) {
       if (performance.now() - checkpoint < 7 && part < 1) continue;
@@ -143,7 +144,35 @@ export class World {
     height += headland*(8+7*detail);
     return clamp(Math.floor(height), 6, HEIGHT-14);
   }
+  private lakeHeight(x:number,z:number) {
+    const bottom=11+noise(x,z,25,this.salt^0xc44)*4;
+    const landing=fade(Math.hypot((x-SPAWN_X)/1.2,z-SPAWN_Z),4,24);
+    const west=fade(Math.hypot((x-92)/1.65,z-113),2,16);
+    const east=fade(Math.hypot(x-154,(z-110)/1.75),2,13);
+    return Math.floor(Math.max(bottom+(32-bottom)*landing,bottom+(30-bottom)*Math.max(west,east)));
+  }
+  private *generatePresetTerrain():Generator<number> {
+    const flat=this.stage==='flat';
+    this.data.fill(14,0,AREA);
+    for(let z=0;z<SIZE;z++){
+      for(let x=0;x<SIZE;x++){
+        const height=flat?32:this.lakeHeight(x,z);
+        for(let y=1;y<=height;y++){
+          this.data[voxelIndex(x,y,z)]=y<height-3?3:flat?(y===height?1:2):4;
+        }
+        if(!flat){
+          for(let y=height+1;y<=SEA_LEVEL;y++)this.data[voxelIndex(x,y,z)]=13;
+        }
+      }
+      if(z%4===3)yield .78*(z+1)/SIZE;
+    }
+    yield* this.indexTerrain();
+  }
   private *generateTerrain(): Generator<number> {
+    if(this.stage!=='classic'){
+      yield* this.generatePresetTerrain();
+      return;
+    }
     for (let z=0; z<SIZE; z++) {
       for (let x=0; x<SIZE; x++) {
         const h = this.heightAt(x,z);
@@ -224,6 +253,9 @@ export class World {
       ground:(x,z)=>this.heights[x+SIZE*z],noise:(x,z)=>scatter(x,z,this.salt^0x777),
       get:(x,y,z)=>this.get(x,y,z),put:(x,y,z,id)=>this.write(x,y,z,id)
     });
+    yield* this.indexTerrain();
+  }
+  private *indexTerrain():Generator<number> {
     this.highest.fill(-1);
     for(let y=0;y<HEIGHT;y++) {
       for(let z=0;z<SIZE;z++) for(let x=0;x<SIZE;x++) {

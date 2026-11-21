@@ -1,19 +1,31 @@
-import { World, emptyFixtures, isSolid, voxelIndex, type Axis } from './world'
+import { World, emptyFixtures, isSolid, voxelIndex, SEA_LEVEL, type Axis } from './world'
 import { createJourney, currentGoal, homeBearing, bearing, placedDecor, recipeCrafted, visitCave } from './expedition'
 import { presets } from './preferences'
 import { SceneView } from './renderer'
 import { GameUI, inventoryView } from './ui'
 import { InputController, preferredControlMode, type ControlMode } from './input'
 import { Soundscape } from './audio'
-import { craft, createBag, assignHotbar, activeStack, miningSeconds, ITEMS, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode } from './inventory'
+import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining, consumeBlock, ITEMS, SLIDE_ITEM, blockItemId, sortSlots, splitStack, transferAll, transferStack, supplyCreative, type Mode, type Bag } from './inventory'
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
-import { OnlineClient, type OnlineState, type RoomConnection, type RoomFrame, type RoomSync } from './online-client'
+import { OnlineClient, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame, type RoomSync } from './online-client'
+import { readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
+import { validTerrainPreset, type TerrainPreset } from './stages'
+import { LandLife } from './land-life'
+import { AquaticLife } from './aquatic-life'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
 const hud = document.querySelector<HTMLElement>('#hud')!
 const touchControls = hud.querySelector<HTMLElement>('#touch-controls')!
 const touchFly = hud.querySelector<HTMLButtonElement>('#touch-fly')!
+const lifeStatus=hud.querySelector<HTMLElement>('#life-status')!
+const sharkStatus=hud.querySelector<HTMLElement>('#shark-status')!
+const lifeHealth=hud.querySelector<HTMLProgressElement>('#life-health')!
+const sharkHealth=hud.querySelector<HTMLProgressElement>('#shark-health')!
+const lifeHealthNumber=hud.querySelector<HTMLElement>('#life-health-number')!
+const sharkHealthNumber=hud.querySelector<HTMLElement>('#shark-health-number')!
+const touchAttack=hud.querySelector<HTMLButtonElement>('#touch-attack')!
+const touchRotate=hud.querySelector<HTMLButtonElement>('#touch-rotate')!
 const touchButtons = {
   stick:hud.querySelector<HTMLElement>('#move-stick')!,
   jump:hud.querySelector<HTMLButtonElement>('#touch-jump')!,
@@ -27,10 +39,12 @@ const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
 const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
 type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
-  ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>}
+  ready:boolean;ended:boolean;count:number;editing:boolean;versions:Map<number,number>;
+  nickname:string;restoring:boolean;pendingExplore?:ExplorationEdit}
 type Session = { data: ActiveSave; world: World; player: Player; view: SceneView;
-  kids: boolean; originalPitch: number; kidsPitch: number; online?:SharedRoom }
-let station:Hit|null=null, logAxis:Axis='y', progress=0, guideDue=0, tapSound=0
+  kids: boolean; originalPitch: number; kidsPitch: number; online?:SharedRoom; land?:LandLife; aquatic?:AquaticLife }
+let station:Hit|null=null, logAxis:Axis='y', slideFacing=0, progress=0, guideDue=0, tapSound=0
+const slideNames=['北','東','南','西']
 let currentSite=''
 const tuneAudio=()=>audio.configure(settings.volume,settings.muted,settings.effectsVolume,settings.ambientVolume)
 let session: Session|null=null
@@ -74,11 +88,13 @@ function reason(err:unknown) {
   }
   return err instanceof Error && /[ぁ-龯]/u.test(err.message) ? err.message : '処理を完了できませんでした。ページを開き直してお試しください。'
 }
-function context(s:Session){return {generator:s.world.generator,bench:station?.id===21}}
-function sharedMaterial(id:number){return !!ITEMS[id]?.block&&id!==21&&id!==22}
+function context(s:Session){return {generator:s.world.generator,bench:station?.id===21&&s.world.get(station.x,station.y,station.z)===21}}
+function sharedMaterial(id:number,mode:Mode){return !!ITEMS[id]?.block&&id!==22&&(id!==21||mode==='explore')}
+function heldForSync(s:Session){return Boolean(s.online?.pendingExplore)}
 function viewInventory() {
   const s=session!, v=inventoryView(s.data.bag,s.data.mode,s.data.selected,context(s))
-  if(s.online)v.items=v.items.filter(item=>sharedMaterial(item.id))
+  if(s.online&&s.data.mode==='creative')v.items=v.items.filter(item=>sharedMaterial(item.id,'creative'))
+  if(s.online&&s.data.mode==='explore')v.recipes=v.recipes.filter(recipe=>recipe.id!=='chest')
   if(station?.id===21)v.benchUses=s.world.benchUses(station.x,station.y,station.z)
   if(station?.id===22){
     v.chest=s.world.chestAt(station.x,station.y,station.z)
@@ -97,22 +113,30 @@ function guide(){
 }
 function interact(hit: Hit|null, explicit=false){
   if(!session||!input.active)return false
-  if(session.online){
+  if(session.online&&session.data.mode==='creative'){
     if(explicit)ui.toast('共同建築ルームでは、建材を自由に選んで建築できます。')
     return false
   }
-  if(!hit||![21,22].includes(hit.id)){if(explicit)ui.toast('作業台かチェストに照準を合わせてください。');return false}
+  const response=session.land?.interact(session.player)
+  if(response){ui.toast(response);return true}
+  if(!hit||!(hit.id===21||hit.id===22&&!session.online)){
+    if(explicit)ui.toast(session.online?'作業台に照準を合わせてください。':
+      session.land?'住民・動物・作業台・チェストに照準を合わせてください。':'作業台かチェストに照準を合わせてください。')
+    return false
+  }
   station=hit;stopInput();ui.inventory(viewInventory());return true
 }
 function pick(){
   if(!session)return
+  if(heldForSync(session)){ui.toast('素材の変更を確認しています。少し待ってください。');return}
   const {world,player,data}=session,hit=raycast(world,player)
   if(!hit){ui.toast('選びたい建材に照準を合わせてください。');return}
-  if(session.online&&!sharedMaterial(hit.id)){ui.toast('このブロックは共同建築で使えません。');return}
-  const slot=data.bag.hotbar.indexOf(hit.id)
-  if(data.mode==='explore'&&!activeStack(data.bag,hit.id)){ui.toast('この建材は所持品にありません。');return}
+  if(session.online&&!sharedMaterial(hit.id,data.mode)){ui.toast('このブロックは共有ワールドで使えません。');return}
+  const block=blockItemId(hit.id), slot=data.bag.hotbar.indexOf(block)
+  if(data.mode==='explore'&&!activeStack(data.bag,block)){ui.toast('この建材は所持品にありません。');return}
+  if(block===SLIDE_ITEM)slideFacing=hit.id-SLIDE_ITEM
   if(slot>=0){select(slot);return}
-  if(assignHotbar(data.bag,data.selected,hit.id,data.mode)){refreshBag();ui.toast(ITEMS[hit.id].name+'を選びました。')}
+  if(assignHotbar(data.bag,data.selected,block,data.mode)){refreshBag();ui.toast(ITEMS[block].name+'を選びました。')}
   else ui.toast('このブロックは選択できません。')
 }
 function undo(){
@@ -149,6 +173,7 @@ function switchViewMode(){
 function select(slot:number) {
   if(!session||!Number.isInteger(slot)||slot<0||slot>8)return
   session.data.selected=slot;resetMining(); refreshBag()
+  void persistRoomProgress(session)
 }
 function stopInput(){ input.stop(); if(session)resetPlayerInput(session.player);audio.setPlaying(false);resetMining();cooldown=0;stepDistance=0;frameTime=0 }
 function pause() {
@@ -198,19 +223,56 @@ const editMessages:Record<string,string>={
   limit:'このルームで共有できるブロック変更数に達しました。',
   uncertain:'通信を確認しています。建築の結果が画面に反映されるまでお待ちください。',
   offline:'接続が戻ると建築できます。',
+  invalid:'編集内容を共有できませんでした。照準を合わせ直してください。',
 }
-function changeSharedBlock(s:Session,x:number,y:number,z:number,block:number,axis:Axis='y'){
+function announceSharedEdit(s:Session,edit:RoomEdit,message?:string){
+  const {key,block,before}=edit
+  const x=key&255,y=key>>>16,z=(key>>>8)&255
+  const mining=block===0,id=mining?before:block
+  s.view.effect(x,y,z,id,mining?'mine':'place');audio.sound(mining?'mine':'place',id)
+  if(mining&&s.data.mode==='explore')audio.sound('pickup')
+  if(!mining&&s.data.mode==='explore'&&placedDecor(s.data.journey,id,{x,y,z}))guide()
+  ui.toast(message??ITEMS[id].name+(mining?'を取り除きました。':'を置きました。'))
+}
+function flushExplorationEdit(s:Session){
+  const room=s.online,pending=room?.pendingExplore
+  if(!room?.sync||!pending||room.editing||room.ended||room.state!=='connected')return
+  room.editing=true
+  void room.sync.edit(pending.edit).then(result=>{
+    if(session!==s)return
+    // Keep the same operation ID on reconnect or reload. Only a confirmed
+    // commit changes the player's inventory.
+    if(!result.ok&&!['conflict','range','blocked','limit','invalid'].includes(result.reason??'')){
+      if(result.reason==='uncertain')ui.toast(editMessages.uncertain)
+      return
+    }
+    room.pendingExplore=undefined
+    if(result.ok){
+      s.data.bag=pending.after
+      announceSharedEdit(s,pending.edit,pending.message)
+      refreshBag()
+    }else ui.toast(editMessages[result.reason??'']??editMessages.invalid)
+    void persist(s)
+  }).catch(error=>{if(session===s)ui.toast(reason(error))})
+    .finally(()=>{room.editing=false})
+}
+function changeSharedBlock(s:Session,x:number,y:number,z:number,block:number,axis:Axis='y',after?:Bag,message?:string){
   const room=s.online
   if(!room?.ready||room.ended||room.state!=='connected'||!room.sync){ui.toast(editMessages.offline);return}
-  if(room.editing)return
+  if(room.editing||room.pendingExplore)return
   const before=s.world.get(x,y,z),key=voxelIndex(x,y,z)
+  const edit={key,before,fromRevision:room.versions.get(key)??0,block,axis}
+  if(after){
+    room.pendingExplore={edit:{...edit,actionId:crypto.randomUUID()},after,message}
+    void persist(s)
+    flushExplorationEdit(s)
+    return
+  }
   room.editing=true
-  void room.sync.edit({key,before,fromRevision:room.versions.get(key)??0,block,axis}).then(result=>{
+  void room.sync.edit(edit).then(result=>{
     if(session!==s)return
     if(!result.ok){ui.toast(editMessages[result.reason??'']??'共同建築の変更を確認できませんでした。');return}
-    const mining=block===0,id=mining?before:block
-    s.view.effect(x,y,z,id,mining?'mine':'place');audio.sound(mining?'mine':'place',id)
-    ui.toast(ITEMS[id].name+(mining?'を取り除きました。':'を置きました。'))
+    announceSharedEdit(s,edit)
   }).catch(error=>{if(session===s)ui.toast(reason(error))})
     .finally(()=>{room.editing=false})
 }
@@ -218,16 +280,23 @@ function place() {
   if(!session||!input.active)return
   const {world,player,data,view}=session,hit=raycast(world,player)
   if(!player.crouched&&interact(hit))return
+  if(hit&&session.land?.occupies(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz)){
+    ui.toast('住民や動物がいる場所には置けません。');return
+  }
   const before=hit&&data.mode==='creative'?world.capture(hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz):null
   const id=data.bag.hotbar[data.selected]
+  const placedId=id===SLIDE_ITEM?SLIDE_ITEM+slideFacing:id
   if(session.online){
+    if(heldForSync(session))return
     const issue=placementIssue(world,player,data.bag,data.mode,data.selected,hit)
     if(issue||!hit){ui.toast(issue??'設置したい面に照準を合わせてください。');return}
-    if(!sharedMaterial(id)){ui.toast('共同建築用の建材を選んでください。');return}
-    changeSharedBlock(session,hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz,id,id===5?logAxis:'y')
+    if(!sharedMaterial(id,data.mode)){ui.toast('共有ワールドで使える建材を選んでください。');return}
+    const after=data.mode==='explore'?structuredClone(data.bag):undefined
+    if(after&&!consumeBlock(after,id))return
+    changeSharedBlock(session,hit.x+hit.nx,hit.y+hit.ny,hit.z+hit.nz,placedId,id===5?logAxis:'y',after)
     resetMining();return
   }
-  const result=placeAt(world,player,data.bag,data.mode,data.selected,hit)
+  const result=placeAt(world,player,data.bag,data.mode,data.selected,hit,placedId)
   if(result.ok&&hit){
     const x=hit.x+hit.nx,y=hit.y+hit.ny,z=hit.z+hit.nz
     if(id===5)world.setAxis(x,y,z,logAxis)
@@ -238,12 +307,22 @@ function place() {
   }
   ui.toast(result.message)
 }
+function rotateMaterial(){
+  if(!session||!input.active)return
+  if(session.data.bag.hotbar[session.data.selected]===SLIDE_ITEM){
+    slideFacing=(slideFacing+1)%4
+    ui.toast('滑り台の下り方向　'+slideNames[slideFacing])
+  }else{
+    logAxis=logAxis==='y'?'x':logAxis==='x'?'z':'y'
+    ui.toast('原木の向き　'+({x:'東西',y:'縦',z:'南北'}[logAxis]))
+  }
+}
 function advanceMine(dt:number) {
   if(!session||!input.active)return
   const {world,player,data,view}=session
   const hit=raycast(world,player)
   if(!input.mining || !hit) { if(aimKey)resetMining(); return }
-  if(cooldown>0||session.online?.editing)return
+  if(cooldown>0||session.online?.editing||heldForSync(session))return
   const key=[hit.x,hit.y,hit.z,hit.id,data.selected].join('/')
   if(key!==aimKey){resetMining();aimKey=key}
   if(hit.id===14){ui.toast('岩盤は掘れません。');input.mining=false;resetMining();return}
@@ -256,9 +335,11 @@ function advanceMine(dt:number) {
   tapSound-=dt;if(tapSound<=0&&dt>0&&progress<.96){audio.sound('tap',hit.id);tapSound=.32}
   if(mining<duration && !(data.mode==='creative' && dt===0)) return
   if(session.online){
-    if(!sharedMaterial(hit.id)){ui.toast('このブロックは共同建築で取り除けません。');input.mining=false;resetMining();return}
+    if(!sharedMaterial(hit.id,data.mode)){ui.toast('このブロックは共有ワールドで取り除けません。');input.mining=false;resetMining();return}
+    const staged=data.mode==='explore'?stageMining(data.bag,hit.id,held):undefined
+    if(staged&&!staged.draft){ui.toast(staged.message);input.mining=false;resetMining();return}
     if(session.online.state!=='connected')input.mining=false
-    changeSharedBlock(session,hit.x,hit.y,hit.z,0);resetMining();cooldown=.15;return
+    changeSharedBlock(session,hit.x,hit.y,hit.z,0,'y',staged?.draft,staged?.message);resetMining();cooldown=.15;return
   }
   const before=data.mode==='creative'?world.capture(hit.x,hit.y,hit.z):null
   const result=mineAt(world,player,data.bag,data.mode,data.selected,hit)
@@ -280,9 +361,43 @@ function toggleFly(){
   const touch=showTouchControls(input.drag)
   ui.toast(player.flying?(touch?'飛行中：上昇・下降ボタンで高さを変えられます。':'飛行中：Spaceで上昇、Ctrlで下降'):'飛行を終了しました。')
 }
+function attackShark(){
+  const s=session,water=s?.aquatic
+  if(!s||!water||!input.active||!water.attack(s.player))return false
+  input.mining=false
+  resetMining()
+  if(water.sharkDefeated&&!s.data.sharkDefeated){
+    s.data.sharkDefeated=true
+    void persist(s)
+  }
+  return true
+}
+function returnToShore(s:Session){
+  const start=s.world.spawn()
+  let pose:ReturnType<typeof safeSpawn>
+  try {pose=safeSpawn(s.world,start)}
+  catch {pose=safeSpawn(s.world,{...start,y:SEA_LEVEL+3})}
+  Object.assign(s.player,createPlayer({...pose,pitch:s.kids?s.kidsPitch:pose.pitch}))
+  if(!s.kids)s.originalPitch=s.player.pitch
+  input.reset();input.rememberView(s.player)
+  resetMining();cooldown=0;s.view.kidsCamera.reset()
+  s.aquatic?.resetHealth()
+  ui.toast('岸に戻りました。持ち物は引き継がれています。')
+}
+function showWildlife(s:Session,aimedShark:boolean){
+  const water=s.aquatic
+  const health=water?.health??100, shark=water?.sharkHealth??100
+  const show=!!water?.hasAquaticLife&&(s.player.inWater||health<100)
+  lifeStatus.hidden=!show&&!aimedShark
+  sharkStatus.hidden=!aimedShark
+  touchAttack.hidden=!aimedShark||!input.drag
+  if(lifeHealth.value!==health){lifeHealth.value=health;lifeHealthNumber.textContent=String(health)}
+  if(sharkHealth.value!==shark){sharkHealth.value=shark;sharkHealthNumber.textContent=String(shark)}
+}
 const input=new InputController(canvas,{
-  pause,inventory,place,select,look:aim, beginMine:()=>advanceMine(0),pick,undo,viewMode:switchViewMode,
-  rotate:()=>{logAxis=logAxis==='y'?'x':logAxis==='x'?'z':'y';ui.toast('原木の向き　'+({x:'東西',y:'縦',z:'南北'}[logAxis]))},
+  pause,inventory,place,select,look:aim, beginMine:()=>{if(!attackShark())advanceMine(0)},pick,undo,viewMode:switchViewMode,
+  attack:()=>{if(!attackShark()&&session?.aquatic)ui.toast('近くのサメに照準を合わせてください。')},
+  rotate:rotateMaterial,
   interact:()=>{if(session)interact(raycast(session.world,session.player),true)},
   home:()=>{if(session){const {x,y,z}=session.player;session.data.journey.home={x,y,z};guide();ui.toast('現在地を拠点に登録しました。')}},
   guide:()=>{if(session){session.data.journey.hidden=!session.data.journey.hidden;guide()}},
@@ -294,11 +409,19 @@ const input=new InputController(canvas,{
 },touchButtons)
 function snapshot(s:Session): WorldSave {
   const {x,y,z,yaw,pitch}=s.player
-  return {...s.data,pose:{x,y,z,yaw,pitch:s.kids?s.originalPitch:pitch,crouched:s.player.crouched},flying:s.player.flying,edits:s.world.exportEdits(),
+  return {...s.data,sharkDefeated:s.aquatic?.sharkDefeated??s.data.sharkDefeated,
+    pose:{x,y,z,yaw,pitch:s.kids?s.originalPitch:pitch,crouched:s.player.crouched},flying:s.player.flying,edits:s.world.exportEdits(),
     fixtures:s.world.exportFixtures(),journey:structuredClone(s.data.journey),settings:{...settings},bag:structuredClone(s.data.bag)}
 }
 function persist(s:Session) {
-  if(s.online)return Promise.resolve(true)
+  if(s.online){
+    if(s.data.mode==='explore'){
+      const {x,y,z,yaw,pitch,crouched}=s.player
+      writeRoomProfile(s.online.connection.room.code,s.online.nickname,{bag:s.data.bag,selected:s.data.selected,
+        journey:s.data.journey,pose:{x,y,z,yaw,pitch:s.kids?s.originalPitch:pitch,crouched},pending:s.online.pendingExplore})
+    }
+    return Promise.resolve(true)
+  }
   saveQueue=saveQueue.then(async()=>{
     if(s!==session)return true
     ui.status('保存中…')
@@ -310,18 +433,23 @@ function persist(s:Session) {
   })
   return saveQueue
 }
+function persistRoomProgress(s:Session){if(s.online&&s.data.mode==='explore')return persist(s)}
 async function title() {
   if(session) {
     const s=session
     stopInput()
     s.online?.sync?.close()
     if(!await persist(s) && !window.confirm('保存できませんでした。キャンセルすると今の状態をファイルへ書き出せます。保存せずにタイトルへ戻りますか？')) {ui.pause(false,controlMode);return}
-    s.view.dispose();session=null
+    disposeLife(s);s.view.dispose();session=null
   }
   ui.onlineSession(null)
   ui.title(false)
   try {const entries=await saves.list();if(ui.screen==='title') ui.title(!!entries.length)}
   catch(e){if(ui.screen==='title')ui.status('保存領域：'+reason(e))}
+}
+function disposeLife(s:Session){
+  s.land?.dispose()
+  s.aquatic?.dispose()
 }
 function showRoom(room:SharedRoom) {
   ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state})
@@ -342,7 +470,7 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
     Object.assign(player,{x,y,z,vy:0});resetPlayerInput(player)
   }
   const peers=frame.players.filter(peer=>peer.id!==room.connection.id)
-  if(!room.ready&&peers.length){
+  if(!room.ready&&!room.restoring&&peers.length){
     // Start near the group without spawning directly inside another player.
     for(const [dx,dz] of [[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,2],[2,-2]]){
       const start=safeSpawn(world,{...player,x:player.x+dx,z:player.z+dz})
@@ -354,6 +482,12 @@ function applyRoomFrame(s:Session,room:SharedRoom,frame:RoomFrame) {
   s.view.actors.setPlayers(peers)
   if(room.count!==peers.length+1){room.count=peers.length+1;showRoom(room)}
   room.ready=true;stillFrame=''
+  if(station?.id===21&&world.get(station.x,station.y,station.z)!==21){
+    station=null
+    refreshBag()
+    ui.toast('作業台が取り除かれました。')
+  }
+  flushExplorationEdit(s)
 }
 function connectRoom(s:Session,room:SharedRoom) {
   showRoom(room)
@@ -364,7 +498,7 @@ function connectRoom(s:Session,room:SharedRoom) {
       return {x,y,z,yaw,crouched,flying,moving:Math.hypot(vx,vz)>.18}
     },
     onFrame:frame=>{if(session===s)applyRoomFrame(s,room,frame)},
-    onState:state=>{if(session===s){room.state=state;showRoom(room)}},
+    onState:state=>{if(session===s){room.state=state;showRoom(room);flushExplorationEdit(s)}},
     onEnd:error=>{
       if(session!==s)return
       room.ended=true;room.state='reconnecting';showRoom(room)
@@ -372,7 +506,7 @@ function connectRoom(s:Session,room:SharedRoom) {
     },
   })
 }
-async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode},connect?:()=>Promise<RoomConnection>,retryCode='') {
+async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode;stage?:TerrainPreset},connect?:()=>Promise<RoomConnection>,retryCode='',nickname='') {
   if(session || busy)return
   if(!graphicsOK){ui.error(gpuMessage);return}
   busy=true
@@ -383,37 +517,47 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     const loaded=id?await saves.get(id):undefined
     if(id&&!loaded)throw new Error('ワールドが見つかりません。一覧を開き直してください。')
     const seed=connection?.room.seed||loaded?.seed||args?.seed?.trim().slice(0,128)||crypto.randomUUID().slice(0,8)
+    const choice=args?.stage
+    const stage=connection?'classic':loaded?.stage??(validTerrainPreset(choice)?choice:'classic')
     let step=-1
     const world=await World.generate(seed,(fraction:number)=>{
       const n=Math.min(10,Math.floor(fraction*10));if(step!==n){ui.loading('地形を生成中　'+n*10+'%');step=n}
-    },connection?.room.generator??loaded?.generator??2)
+    },connection?.room.generator??loaded?.generator??2,stage)
     if(loaded){world.loadEdits(loaded.edits);world.loadFixtures(loaded.fixtures)}
     const start=world.spawn()
-    const mode=connection?'creative':args?.mode??loaded?.mode??'creative'
+    const mode=connection?.room.mode??(stage!=='classic'?'creative':args?.mode??loaded?.mode??'creative')
+    const profile=connection&&mode==='explore'?readRoomProfile(connection.room.code,nickname):undefined
     const data:ActiveSave=loaded??{format:'webcraft777',version:2,generator:2,id:crypto.randomUUID(),
-      fixtures:emptyFixtures(),journey:createJourney(),
-      revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,
-      pose:start,flying:false,bag:createBag(mode),selected:0,edits:[],day:.39,settings:{...settings},guideSeen:false}
+      fixtures:emptyFixtures(),journey:profile?.journey??createJourney(),
+      revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,stage,
+      pose:profile?.pose??start,flying:false,bag:profile?.bag??createBag(mode),selected:profile?.selected??0,
+      edits:[],day:.39,settings:{...settings},guideSeen:false}
+    if(!loaded&&stage!=='classic')data.bag.hotbar=[7,8,10,27,28,29,SLIDE_ITEM,9,12]
     if(!data.journey.home){const {x,y,z}=start;data.journey.home={x,y,z}}
-    station=null;logAxis='y';currentSite=''
+    station=null;logAxis='y';slideFacing=0;currentSite=''
     settings={...data.settings};tuneAudio()
-    const player=createPlayer(safeSpawn(world,data.pose,!!loaded));player.flying=data.mode==='creative'&&data.flying
+    const player=createPlayer(safeSpawn(world,data.pose,Boolean(loaded||profile)));player.flying=data.mode==='creative'&&data.flying
     const view=new SceneView(canvas,world)
     session={world,data,player,view,kids:preferKids(),originalPitch:player.pitch,kidsPitch:-.43}
     if(session.kids)player.pitch=session.kidsPitch
     view.configure(settings);stillFrame='';moveReticle(50)
     input.rememberView(player);frameHalted=false;controlMode=loadControlMode()
     if(connection){
-      const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map()}
+      const room:SharedRoom={connection,state:'connecting',count:1,ready:false,ended:false,editing:false,versions:new Map(),
+        nickname,restoring:!!profile,pendingExplore:profile?.pending}
       session.online=room;connectRoom(session,room)
+    }else if(stage!=='flat'){
+      if(stage==='classic')session.land=new LandLife(world,view.scene,player)
+      session.aquatic=new AquaticLife(world,view.scene,data.sharkDefeated)
     }
+    showWildlife(session,false)
     ui.setWorld(data.name);ui.showViewMode(session.kids);ui.pause(true,controlMode)
     if(!loaded&&!connection)await persist(session)
     debugging=false
   } catch(e){
     if(session?.online?.sync)session.online.sync.close()
     else if(connection)void onlineClient.leave(connection)
-    session?.view.dispose();session=null
+    if(session){disposeLife(session);session.view.dispose();session=null}
     ui.onlineSession(null)
     if(connect)ui.onlineMenu(retryCode,reason(e))
     else{console.error(e);ui.error(reason(e))}
@@ -440,7 +584,7 @@ async function importWorld(file:File){
     if(file.size>128*1024*1024)throw new Error('バックアップは128 MBまで読み込めます。')
     const {save:data,original}=readBackup(await file.text())
     // Validate world-dependent rules too, before replacing a known good record.
-    const terrain=await World.generate(data.seed,undefined,data.generator)
+    const terrain=await World.generate(data.seed,undefined,data.generator,data.stage)
     terrain.loadEdits(data.edits);terrain.loadFixtures(data.fixtures)
     const existing=(await saves.list()).find(w=>w.id===data.id)
     if(existing&&!await ui.confirmImport(existing.name))return
@@ -461,11 +605,14 @@ function downloadJson(filename:string,text:string){
 }
 async function handle(action:string,value?:any) {
   if(busy && !['resume','resume-drag','resume-lock','resume-tablet','dismiss-guide'].includes(action))return
+  if(session&&heldForSync(session)&&['assign','craft','split','sort'].includes(action)){
+    ui.toast('素材の変更を確認しています。少し待ってください。');return
+  }
   switch(action){
     case 'goto-create': ui.create();break
     case 'online-menu':ui.onlineMenu(inviteCode);break
-    case 'online-create':audio.unlock();await openWorld(null,undefined,()=>onlineClient.create(value));break
-    case 'online-join':audio.unlock();await openWorld(null,undefined,()=>onlineClient.join(value),value.code);break
+    case 'online-create':audio.unlock();await openWorld(null,undefined,()=>onlineClient.create(value),'',value.nickname);break
+    case 'online-join':audio.unlock();await openWorld(null,undefined,()=>onlineClient.join(value),value.code,value.nickname);break
     case 'online-copy':await copyInvitation();break
     case 'online-leave':if(session?.online){busy=true;try{await title()}finally{busy=false}}break
     case 'goto-worlds': await worldList();break
@@ -492,16 +639,19 @@ async function handle(action:string,value?:any) {
     case 'export-diagnostics': if(session)downloadJson('ウェブクラフト777-入力診断.json',JSON.stringify(input.report(),null,2));break
     case 'reset-input': if(session){stopInput();input.rememberView(session.player);controlMode=recoverControlMode();ui.pause(false,controlMode,'入力をリセットしました。「再開」から操作できます。')}break
     case 'pause':pause();break
+    case 'attack-shark':attackShark();break
+    case 'rotate-material':rotateMaterial();break
     case 'view-mode':switchViewMode();break
     case 'touch-fly':if(!touchControls.hidden)toggleFly();break
     case 'inventory':inventory();break
     case 'select':select(value);break
-    case 'assign':if(session&&(!session.online||sharedMaterial(value.id))&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();ui.toast('ホットバーに登録しました。')}break
+    case 'assign':if(session&&(!session.online||sharedMaterial(value.id,session.data.mode))&&assignHotbar(session.data.bag,value.slot,value.id,session.data.mode)){refreshBag();void persistRoomProgress(session);ui.toast('ホットバーに登録しました。')}break
     case 'craft':if(session&&session.data.mode==='explore'&&ui.screen==='inventory'){
       const count=value.count??1, recipe=value.id??value
+      if(session.online&&recipe==='chest'){ui.toast('共有ワールドでは作業台を使えます。');break}
       const result=craft(session.data.bag,recipe,count,context(session))
       if(result.ok){if(station?.id===21)session.world.useBench(station.x,station.y,station.z,count)
-        recipeCrafted(session.data.journey,recipe);audio.sound('craft');refreshBag()}ui.toast(result.message)
+        recipeCrafted(session.data.journey,recipe);audio.sound('craft');refreshBag();void persistRoomProgress(session)}ui.toast(result.message)
     }break
     case 'mine-down':if(input.active){input.mining=true;advanceMine(0)}break
     case 'mine-up': input.mining=false;resetMining();break
@@ -517,7 +667,7 @@ async function handle(action:string,value?:any) {
       if(!slots)break
       const r=action==='sort'?sortSlots(slots):action==='split'?splitStack(slots,value.index):
         !chest?undefined:action==='transfer-all'?transferAll(bag,chest,side):transferStack(bag,chest,side,value.index,value.half)
-      if(r){ui.toast(r.message);if(r.ok)refreshBag()}break}
+      if(r){ui.toast(r.message);if(r.ok){refreshBag();void persistRoomProgress(session)}}break}
     case 'preset':{
       if(Object.hasOwn(presets,value)){const name=value as keyof typeof presets;await handle('settings-change',{...settings,...presets[name],quality:name});ui.settings(settings)}break}
     case 'original':await exportWorld(value,true);break
@@ -556,7 +706,7 @@ canvas.addEventListener('webglcontextrestored',()=>{
 })
 window.addEventListener('pagehide',event=>{if(session){
   if(input.active)pause()
-  if(session.online){if(!event.persisted)session.online.sync?.close()}
+  if(session.online){void persist(session);if(!event.persisted)session.online.sync?.close()}
   else void persist(session)
 }})
 window.setInterval(()=>{if(session && !document.hidden)void persist(session)},25000)
@@ -576,6 +726,12 @@ function tick(now:number){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
     if(!input.frame(p,elapsed))return
     stepPlayer(s.world,p,movement,dt,settings);audio.environment(s.world,p,dt)
+    s.land?.update(p,dt,s.data.day)
+    const water=s.aquatic
+    water?.update(p,dt)
+    const wildlifeEvent=water?.consumeEvent()
+    if(wildlifeEvent)ui.toast(wildlifeEvent)
+    if(water&&water.health<=0)returnToShore(s)
     guideDue-=dt
     if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}
     stepDistance+=Math.hypot(ox-p.x,oz-p.z)
@@ -589,11 +745,21 @@ function tick(now:number){
     if(stillFrame===key && !s.view.stats.queued)return
     stillFrame=key
   } else stillFrame=''
-  const held=s.data.bag.hotbar[s.data.selected],use=!s.online&&target&&[21,22].includes(target.id)&&!s.player.crouched
-  const preview=target&&!use&&ITEMS[held]?.block&&!input.mining?{x:target.x+target.nx,y:target.y+target.ny,z:target.z+target.nz,
-    id:held,axis:logAxis,valid:!placementIssue(s.world,s.player,s.data.bag,s.data.mode,s.data.selected,target)}:null
+  const aimedShark=input.active&&!!s.aquatic?.canAttack(s.player)
+  const aimedResident=input.active&&!aimedShark?s.land?.targetLabel(s.player,target?.distance):null
+  if(input.active)showWildlife(s,aimedShark)
+  const held=s.data.bag.hotbar[s.data.selected]
+  const use=target&&!s.player.crouched&&(!s.online?[21,22].includes(target.id):s.data.mode==='explore'&&target.id===21)
+  const slide=held===SLIDE_ITEM
+  touchRotate.hidden=!input.active||!input.drag||!slide||aimedShark
+  const rotateLabel='向き '+slideNames[slideFacing]
+  if(!touchRotate.hidden&&touchRotate.textContent!==rotateLabel)touchRotate.textContent=rotateLabel
+  const preview=target&&!use&&!aimedShark&&!aimedResident&&ITEMS[held]?.block&&!input.mining?{x:target.x+target.nx,y:target.y+target.ny,z:target.z+target.nz,
+    id:slide?SLIDE_ITEM+slideFacing:held,axis:logAxis,valid:!placementIssue(s.world,s.player,s.data.bag,s.data.mode,s.data.selected,target)&&
+      !s.land?.occupies(target.x+target.nx,target.y+target.ny,target.z+target.nz)}:null
   const useAction=touchControls.hidden?'右クリック':'タップ'
-  ui.target(use?useAction+(target!.id===21?'で作業台':'でチェスト'):'')
+  ui.target(aimedShark?(input.drag?'サメ　攻撃ボタン / X':'サメ　左クリック / X'):
+    aimedResident?aimedResident+'　'+useAction+'で話す':use?useAction+(target!.id===21?'で作業台':'でチェスト'):'')
   const speed=Math.hypot(s.player.vx,s.player.vz),heldItem=s.data.mode==='creative'||activeStack(s.data.bag,held)?held:0
   s.view.update(s.player,target,s.data.day,input.active?dt:0,{active:input.active,held:heldItem,mining:progress,preview,
     moving:settings.bob&&s.player.grounded&&speed>.15,sprinting:speed>4.5},s.kids?{player:s.player,hit:target}:undefined)

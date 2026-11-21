@@ -5,7 +5,7 @@ import {scatter} from "./world";
 // power-of-two cells keep the complete visible mip chain inside its own tile.
 const CELL=64, ART=32, PAD=16, GRID=8, SIZE=CELL*GRID;
 export const FLOWERS=18, BLADES=19;
-export const TILE_COUNT=39;
+export const TILE_COUNT=47;
 export type Axis='x'|'y'|'z';
 export function tileFor(id:number, ny:number, nx=0, nz=0, axis:Axis='y', variation=0) {
   if(id===1) return ny>0?[0,20,21][variation]:ny<0?[2,24,25][variation]:[1,22,23][variation];
@@ -17,6 +17,8 @@ export function tileFor(id:number, ny:number, nx=0, nz=0, axis:Axis='y', variati
   if(id===23) return 34;
   if(id===25) return ny===0?35:36;
   if(id===26) return ny===0?38:37;
+  if(id>=27&&id<=29)return (ny>0?39:42)+id-27;
+  if(id>=30&&id<=33)return ny>0?45:46;
   return [0,0,2,3,4,5,7,8,9,10,11,12,13,14,15][id] ?? 3;
 }
 export function tileUV(tile:number, u:number, v:number) {
@@ -186,6 +188,36 @@ function pigment(tile:number,x:number,y:number):[number,number,number,number] {
       if(tile===37 && Math.abs(d-13)<2.1)rgb=0xd0ab74;
       if(tile===37 && d<6)rgb=x<15?0xa7d5bd:0x73bcb1;
       if(tile===38 && (y===8||y===23))rgb=0xc2a169;
+      break;
+    }
+    case 39:case 40:case 41:{
+      const tier=tile-39, edge=Math.min(x,y,31-x,31-y);
+      rgb=edge<2?0x3f5359:edge<4?0xc5d7c0:[0x57c7a4,0x6fb5e1,0xcf85dc][tier];
+      if(edge>5&&(x%4===0||y%4===0))shade-=9;
+      for(let arrow=0;arrow<=tier;arrow++){
+        const v=y-(7+arrow*7), center=7-Math.abs(x-15.5);
+        if(Math.abs(x-15.5)<7&&v>=center-2&&v<=center)rgb=0xfff5c4;
+      }
+      break;
+    }
+    case 42:case 43:case 44:{
+      const tier=tile-42, edge=Math.min(x,31-x);
+      const tread=[0x3f927b,0x467fb4,0x9a61aa][tier];
+      rgb=y<5||y>27?0x43565c:edge<3?0x6f858b:(y===12||y===20)?0x405260:tread;
+      if((edge===5||edge===6)&&(y===9||y===24))rgb=0xc9d5c7;
+      break;
+    }
+    case 45:{
+      const edge=Math.min(x,31-x), arrow=9-Math.abs(x-15.5);
+      rgb=edge<2?0xb17c46:edge<5?0xffe59a:0xeeb256;
+      if(edge>=5&&y%8===0)shade-=15;
+      if(Math.abs(x-15.5)<6&&Math.abs(y%16-arrow)<1.2)rgb=0xffebbd;
+      break;
+    }
+    case 46:{
+      const edge=Math.min(x,31-x);
+      rgb=y<=2||y>28?0x744f39:edge<3?0xb0784c:0xd69a56;
+      if(y%7===0)shade-=19;
       break;
     }
     default: rgb=0x979d92;

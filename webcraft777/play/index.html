@@ -7,8 +7,8 @@
   <meta name="description" content="素材を集めて道具を作り、自分のワールドに家を建てる一人用3Dゲーム。">
   <title>ウェブクラフト777 | TK777 ARCADE</title>
   <link rel="icon" href="./art/icon.webp" type="image/webp">
-  <script type="module" crossorigin src="./assets/index-D9z4xQBv.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-B8-PUOJ0.css">
+  <script type="module" crossorigin src="./assets/index-BQ3RS4_t.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-D4pJYMuy.css">
 </head>
 <body>
   <main id="game">
@@ -25,6 +25,10 @@
         </div>
       </div>
       <div id="online-hud" role="status" hidden>ルーム <strong id="online-hud-code"></strong><span id="online-hud-status"></span></div>
+      <div id="life-status" hidden>
+        <label>体力 <progress id="life-health" max="100" value="100"></progress><span id="life-health-number">100</span></label>
+        <label id="shark-status" hidden>サメ <progress id="shark-health" max="100" value="100"></progress><span id="shark-health-number">100</span></label>
+      </div>
       <div id="guide" hidden></div>
       <div class="trail"><span id="bearing"></span><span id="journey" hidden></span></div>
       <div id="target-hint" hidden></div>
@@ -44,7 +48,7 @@
           <button type="button" id="touch-jump" title="ジャンプ。水中や飛行中は長押しで上昇">ジャンプ</button>
         </div>
       </div>
-      <div id="fallback" hidden><span>ドラッグで視点を変更</span><div><button data-hold="mine" title="押し続けて採掘">採掘</button><button data-action="place">設置</button></div></div>
+      <div id="fallback" hidden><span>ドラッグで視点を変更</span><div><button id="touch-attack" data-action="attack-shark" type="button" hidden>攻撃</button><button id="touch-rotate" data-action="rotate-material" type="button" aria-label="滑り台の下り方向を切り替える" hidden>向き</button><button data-hold="mine" title="押し続けて採掘">採掘</button><button data-action="place">設置</button></div></div>
       <div class="belt"><p id="equipped"></p><div class="hotbar" id="hud-bar" role="group" aria-label="ホットバー"></div></div>
     </section>
     <output id="debug" aria-label="描画情報" hidden></output>

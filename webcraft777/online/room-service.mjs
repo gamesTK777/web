@@ -1,6 +1,7 @@
 const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const roomPattern = /^[A-HJ-NP-Z2-9]{8}$/
 const tokenPattern = /^[a-f0-9]{64}$/
+const actionPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 const publicOrigin = 'https://gamestk777.github.io'
 const localOrigin = /^https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::[0-9]{1,5})?$/
 const lifetime = 24 * 60 * 60 * 1000
@@ -23,7 +24,7 @@ class RoomError extends Error {
 
 const prepared = (db, sql, ...values) => db.prepare(sql).bind(...values)
 const changed = result => result.meta.changes > 0
-const validBlock = n => Number.isInteger(n) && ((n >= 1 && n <= 12) || n === 23 || n === 25 || n === 26)
+const validBlock = n => Number.isInteger(n) && ((n >= 1 && n <= 12) || n === 23 || (n >= 25 && n <= 33))
 const clean = (value, max, label) => {
   if (typeof value !== 'string') throw new RoomError(label + 'を入力してください。')
   const safe = value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim()
@@ -48,7 +49,7 @@ async function newSeat(nickname) {
 
 function publicRoom(row, seat) {
   return {
-    room: {code:row.code, name:row.name, seed:row.seed, generator:2, createdAt:row.created_at},
+    room: {code:row.code, name:row.name, seed:row.seed, generator:2, createdAt:row.created_at, mode:row.mode},
     id:seat.id, token:seat.token
   }
 }
@@ -56,6 +57,12 @@ function publicRoom(row, seat) {
 function checkRoom(room, now) {
   if (!room) throw new RoomError('ルームが見つかりません。コードを確認してください。', 404)
   if (room.expires_at <= now) throw new RoomError('ルームの有効期限が切れました。', 410)
+}
+
+function checkProtocol(room, modern) {
+  if (room.mode === 'explore' && !modern) {
+    throw new RoomError('探索ルームに入るには、ゲーム画面を再読み込みしてください。', 426)
+  }
 }
 
 async function readJson(request) {
@@ -110,12 +117,16 @@ function cleanEdit(edit) {
       edit.fromRevision < 0 || !['x', 'y', 'z'].includes(edit.axis)) {
     throw new RoomError('ブロックの編集内容が不正です。')
   }
-  const mine = edit.block === 0 && validBlock(edit.before)
-  const place = validBlock(edit.block) && (edit.before === 0 || edit.before === 13)
+  if (edit.actionId !== undefined && (typeof edit.actionId !== 'string' || !actionPattern.test(edit.actionId))) {
+    throw new RoomError('ブロック編集の識別子が不正です。')
+  }
+  const mine = edit.block === 0 && (validBlock(edit.before) || edit.before === 21)
+  const place = (validBlock(edit.block) || edit.block === 21) && (edit.before === 0 || edit.before === 13)
   if ((!mine && !place) || (edit.block !== 5 && edit.axis !== 'y')) {
     throw new RoomError('このブロックは編集できません。')
   }
   return {key:edit.key, before:edit.before, fromRevision:edit.fromRevision, block:edit.block, axis:edit.axis,
+    actionId:edit.actionId?.toLowerCase() ?? null, workbench:edit.before === 21 || edit.block === 21,
     x:edit.key % size, y:Math.floor(edit.key / area), z:Math.floor(edit.key / size) % size}
 }
 
@@ -126,26 +137,28 @@ function canReach(p, e) {
   return Math.hypot(delta(p.x, e.x), delta(eyeY, e.y), delta(p.z, e.z)) <= 6.25
 }
 
-const roomInfo = 'SELECT code,name,seed,created_at,expires_at,revision,cell_count FROM webcraft_rooms WHERE code=?'
+const roomInfo = 'SELECT code,name,seed,created_at,expires_at,revision,cell_count,mode FROM webcraft_rooms WHERE code=?'
 const addSeat = `INSERT INTO webcraft_members(room_code,token_hash,id,nickname,last_seen)
   SELECT code,?,?,?,? FROM webcraft_rooms`
 
 async function createRoom(db, body, now) {
   const name = clean(body.name, 40, 'ワールド名')
   const seed = body.seed == null || body.seed === '' ? makeCode() : clean(body.seed, 64, 'シード')
+  const mode = body.mode === undefined ? 'creative' : body.mode
+  if (mode !== 'creative' && mode !== 'explore') throw new RoomError('ゲームモードが不正です。')
   const seat = await newSeat(body.nickname)
   const cleanup = prepared(db, `DELETE FROM webcraft_rooms WHERE code IN
     (SELECT code FROM webcraft_rooms WHERE expires_at<=? ORDER BY expires_at LIMIT 4)`, now)
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = makeCode()
     const [created] = await db.batch([
-      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at)
-        SELECT ?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
-      code, seat.id, name, seed, now, now + lifetime, roomLimit),
+      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode)
+        SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
+      code, seat.id, name, seed, now, now + lifetime, mode, roomLimit),
       prepared(db, addSeat + ' WHERE code=? AND creator=?', seat.hash, seat.id, seat.nickname, now, code, seat.id),
       cleanup
     ])
-    if (changed(created)) return publicRoom({code, name, seed, created_at:now}, seat)
+    if (changed(created)) return publicRoom({code, name, seed, created_at:now, mode}, seat)
   }
   throw new RoomError('現在ルームの空きがありません。少し待ってから再試行してください。', 503)
 }
@@ -153,34 +166,41 @@ async function createRoom(db, body, now) {
 async function joinRoom(db, body, now) {
   const code = roomCode(body.code)
   const seat = await newSeat(body.nickname)
+  const modern = Number(body.protocol === 2)
   const [, inserted, , info] = await db.batch([
-    prepared(db, 'DELETE FROM webcraft_members WHERE room_code=? AND last_seen<=?', code, now - presence),
-    prepared(db, addSeat + ` WHERE code=? AND expires_at>?
+    prepared(db, `DELETE FROM webcraft_members WHERE room_code=? AND last_seen<=?
+      AND EXISTS(SELECT 1 FROM webcraft_rooms WHERE code=? AND (mode='creative' OR ?=1))`,
+    code, now - presence, code, modern),
+    prepared(db, addSeat + ` WHERE code=? AND expires_at>? AND (mode='creative' OR ?=1)
       AND (SELECT COUNT(*) FROM webcraft_members WHERE room_code=?) < ?`,
-    seat.hash, seat.id, seat.nickname, now, code, now, code, playersLimit),
-    refreshExpiry(db,code,seat.hash,now),
+    seat.hash, seat.id, seat.nickname, now, code, now, modern, code, playersLimit),
+    refreshExpiry(db,code,seat.hash,now,modern),
     prepared(db, roomInfo, code)
   ])
   const room = info.results[0]
   checkRoom(room, now)
+  checkProtocol(room, modern)
   if (!changed(inserted)) throw new RoomError('このルームは満員です（最大6人）。', 409)
   return publicRoom(room, seat)
 }
 
 const authenticated = 'EXISTS(SELECT 1 FROM webcraft_members WHERE room_code=? AND token_hash=?)'
 
-function refreshExpiry(db,code,digest,now) {
-  return prepared(db, `UPDATE webcraft_rooms SET expires_at=? WHERE code=? AND expires_at>? AND expires_at<=? AND ${authenticated}`,
-    now + lifetime, code, now, now + lifetime - 60000, code, digest)
+function refreshExpiry(db,code,digest,now,modern) {
+  return prepared(db, `UPDATE webcraft_rooms SET expires_at=? WHERE code=? AND expires_at>? AND expires_at<=?
+    AND (mode='creative' OR ?=1) AND ${authenticated}`,
+    now + lifetime, code, now, now + lifetime - 60000, modern, code, digest)
 }
 
-function editStatement(db, code, digest, edit, since, now) {
-  const {key, fromRevision, before, block, axis, x, y, z} = edit
-  // The write, the prior-revision check and the counter triggers form one
-  // SQLite statement. Simultaneous changes never share a cursor.
-  return prepared(db, `INSERT INTO webcraft_cells(room_code,voxel,block,axis,revision)
-    SELECT r.code,?,?,?,r.revision+1 FROM webcraft_rooms r
+function editStatement(db, code, digest, edit, since, now, modern) {
+  const {key, fromRevision, before, block, axis, actionId, workbench, x, y, z} = edit
+  // Edit, revision and receipt are committed by the same SQLite statement.
+  return prepared(db, `INSERT INTO webcraft_cells(room_code,voxel,block,axis,revision,action_id)
+    SELECT r.code,?,?,?,r.revision+1,? FROM webcraft_rooms r
     WHERE r.code=? AND r.expires_at>? AND r.revision>=? AND ${authenticated}
+    AND (r.mode='creative' OR (?=1 AND ? IS NOT NULL))
+    AND (r.mode='explore' OR ?=0)
+    AND (? IS NULL OR NOT EXISTS(SELECT 1 FROM webcraft_edit_receipts WHERE room_code=r.code AND action_id=?))
     AND ((?=0 AND r.cell_count<?) OR (? > 0 AND EXISTS(
       SELECT 1 FROM webcraft_cells WHERE room_code=r.code AND voxel=? AND revision=? AND block=?
     )))
@@ -191,9 +211,11 @@ function editStatement(db, code, digest, edit, since, now) {
       AND json_extract(m.pose,'$.y')<?
       AND json_extract(m.pose,'$.y')+CASE json_extract(m.pose,'$.crouched') WHEN 1 THEN 1 ELSE 1.82 END>?
     ))
-    ON CONFLICT(room_code,voxel) DO UPDATE SET block=excluded.block,axis=excluded.axis,revision=excluded.revision
+    ON CONFLICT(room_code,voxel) DO UPDATE SET block=excluded.block,axis=excluded.axis,
+      revision=excluded.revision,action_id=excluded.action_id
     WHERE webcraft_cells.revision=? AND webcraft_cells.block=?`,
-  key, block, axis, code, now, since, code, digest, fromRevision, cellsLimit, fromRevision, key, fromRevision, before,
+  key, block, axis, actionId, code, now, since, code, digest, modern, actionId, Number(workbench), actionId, actionId,
+  fromRevision, cellsLimit, fromRevision, key, fromRevision, before,
   block, now - 2500, x - .31, x + 1.31, z - .31, z + 1.31, y + 1, y, fromRevision, before)
 }
 
@@ -216,15 +238,22 @@ async function syncRoom(db, body, now) {
   const pose = cleanPose(body.pose)
   const edit = body.edit === undefined ? null : cleanEdit(body.edit)
   const canEdit = edit && canReach(pose, edit)
+  const modern = Number(body.protocol === 2)
   const poseText = pose === null ? null : JSON.stringify(pose)
   const queries = [
     prepared(db, `UPDATE webcraft_members SET last_seen=MAX(last_seen,?),pose=COALESCE(?,pose)
       WHERE room_code=? AND token_hash=? AND (last_seen<=? OR (? IS NOT NULL AND pose IS NOT ?))
-      AND EXISTS(SELECT 1 FROM webcraft_rooms WHERE code=? AND expires_at>?)`,
-    now, poseText, code, digest, now - 4000, poseText, poseText, code, now),
-    refreshExpiry(db,code,digest,now)
+      AND EXISTS(SELECT 1 FROM webcraft_rooms WHERE code=? AND expires_at>? AND (mode='creative' OR ?=1))`,
+    now, poseText, code, digest, now - 4000, poseText, poseText, code, now, modern),
+    refreshExpiry(db,code,digest,now,modern)
   ]
-  if (canEdit) queries.push(editStatement(db, code, digest, edit, body.since, now))
+  const mutationIndex = canEdit ? queries.push(editStatement(db, code, digest, edit, body.since, now, modern)) - 1 : -1
+  const receiptIndex = edit?.actionId ? queries.push(prepared(db,
+    `SELECT voxel,block FROM webcraft_edit_receipts WHERE room_code=? AND action_id=? AND ${authenticated}`,
+    code, edit.actionId, code, digest)) - 1 : -1
+  const cellIndex = edit ? queries.push(prepared(db,
+    `SELECT revision,block FROM webcraft_cells WHERE room_code=? AND voxel=? AND ${authenticated}`,
+    code, edit.key, code, digest)) - 1 : -1
   queries.push(
     prepared(db, roomInfo, code),
     prepared(db, 'SELECT id FROM webcraft_members WHERE room_code=? AND token_hash=?', code, digest),
@@ -236,15 +265,22 @@ async function syncRoom(db, body, now) {
   const room = info.results[0]
   checkRoom(room, now)
   if (!member.results.length) throw new RoomError('参加情報を確認できません。ルームに入り直してください。', 401)
+  checkProtocol(room, modern)
   if (body.since > room.revision) throw new RoomError('同期を最初からやり直してください。')
-  const response = {revision:room.revision, cells:cells.results,
+  // Tabs still on the previous client can keep syncing older materials during rollout.
+  const updates = body.protocol===2 ? cells.results : cells.results.map(cell=>cell.block>=27&&cell.block<=33?{...cell,block:8}:cell)
+  const response = {revision:room.revision, cells:updates,
     players:members.results.map(p => ({id:p.id, nickname:p.nickname, pose:JSON.parse(p.pose)}))}
   if (edit) {
-    if (!canEdit) response.result = {ok:false, reason:'range'}
-    else if (changed(rows[2])) response.result = {ok:true}
+    if (room.mode === 'explore' && !edit.actionId) throw new RoomError('探索ルームのブロック編集には識別子が必要です。')
+    if (room.mode !== 'explore' && edit.workbench) throw new RoomError('作業台は探索ルームでのみ編集できます。')
+    const receipt = rows[receiptIndex]?.results[0]
+    if (receipt) response.result = receipt.voxel === edit.key && receipt.block === edit.block
+      ? {ok:true} : {ok:false, reason:'conflict'}
+    else if (!canEdit) response.result = {ok:false, reason:'range'}
+    else if (changed(rows[mutationIndex])) response.result = {ok:true}
     else {
-      const current = await prepared(db, `SELECT revision,block FROM webcraft_cells WHERE room_code=? AND voxel=?`,
-        code, edit.key).first()
+      const current = rows[cellIndex].results[0]
       const stale = (current?.revision ?? 0) !== edit.fromRevision || (current && current.block !== edit.before)
       response.result = {ok:false, reason:stale ? 'conflict' : room.cell_count >= cellsLimit && !current ? 'limit' : 'blocked'}
     }

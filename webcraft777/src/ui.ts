@@ -1,9 +1,10 @@
-import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
+import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
+import { TERRAIN_PRESETS, validTerrainPreset, type TerrainPreset } from './stages'
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
 import type { ControlMode } from './input'
-export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean }
+export interface UIWorld { id:string; name:string; mode:Mode; updatedAt:number; hasOriginal?:boolean; stage?:TerrainPreset }
 export interface OnlineStatus { code:string; count:number; state:'connecting'|'connected'|'reconnecting' }
 export interface ItemView { id:number; name:string; count:number; durability?:number; maxDurability?:number }
 export interface RecipeView { id:string; name:string; ingredients:string; outputs:string; craftable:number; itemId:number; reason:string; equipment:string }
@@ -17,7 +18,7 @@ export function inventoryView(bag:Bag, mode:Mode, selected:number,ctx:CraftConte
     return {id, name:def.name, count:creative ? Infinity : quantity(bag,id), durability:creative ? undefined : activeStack(bag,id)?.durability, maxDurability:def.maxDurability}
   }
   const items = creative
-    ? Object.keys(ITEMS).map(Number).filter(id=>ITEMS[id].block).map(item).filter((i):i is ItemView=>!!i)
+    ? Object.keys(ITEMS).map(Number).filter(id=>ITEMS[id].block&&blockItemId(id)===id).map(item).filter((i):i is ItemView=>!!i)
     : bag.slots.map(s=>({id:s.id,name:ITEMS[s.id].name,count:s.count,durability:s.durability,maxDurability:ITEMS[s.id].maxDurability}))
   const recipes = creative ? [] : RECIPES.filter(r=>!r.legacy||ctx.generator===1).map(r=>({id:r.id, name:r.name, itemId:r.output.id,
     ingredients:r.inputs.map(i=>ITEMS[i.id].name+' '+quantity(bag,i.id)+'/'+i.count).join(' ・ '),
@@ -38,7 +39,7 @@ const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻�
 const sectionHead = (name:string) => '<header class="panel-head"><h1>'+name+'</h1>'+backButton()+'</header>'
 const formattedCount=(count:number)=>Number.isFinite(count)?String(count):'∞'
 const icons = new Map<number,string>()
-const toolEffect:Record<number,string>={17:'石や鉱石を素早く掘り、潮晶を採取',18:'石や鉱石をさらに速く掘り、潮晶を採取',19:'原木・木材の採掘を短縮',20:'原木・木材をさらに速く採掘'}
+const toolEffect:Record<number,string>={17:'石や鉱石を素早く掘り、潮晶を採取',18:'石や鉱石をさらに速く掘り、潮晶を採取',19:'原木・木材の採掘を短縮',20:'原木・木材をさらに速く採掘',27:'約3ブロック跳び上がる',28:'約6ブロック跳び上がる',29:'約10ブロック跳び上がる',30:'1ブロックずつ高さを変えてつなぐ'}
 
 // The game draws its own low-resolution item stamps on demand and shares them across all slots.
 function icon(id:number):string {
@@ -58,7 +59,8 @@ function icon(id:number):string {
     4:['#f1d9a0','#ccb17e','#b79565'],5:['#d1ad75','#926645','#684630'],6:['#71ac63','#538959','#386c47'],
     7:['#e6ba82','#bf8c53','#9d7044'],8:['#b4b7b4','#8e9392','#6f797a'],9:['#b9bfc5','#89939e','#647483'],
     10:['#d8f3f0','#8db8bf','#69a7ae'],11:['#a0aaa9','#7b8486','#69777a'],12:['#ffe3a2','#eeb756','#bf893c'],
-    21:['#eac98f','#a97651','#755040'],22:['#e2ac58','#aa793c','#876137'],23:['#9fc6bd','#689a96','#536f79'],25:['#c2fff1','#6dc7c7','#5aafaf'],26:['#a1c8c1','#668c89','#4e7176']
+    21:['#eac98f','#a97651','#755040'],22:['#e2ac58','#aa793c','#876137'],23:['#9fc6bd','#689a96','#536f79'],25:['#c2fff1','#6dc7c7','#5aafaf'],26:['#a1c8c1','#668c89','#4e7176'],
+    27:['#66d6a9','#338775','#266259'],28:['#7fc9ee','#4e88b8','#325e96'],29:['#d897e5','#9a67ad','#765183']
   }
   if (palettes[id]) {
     const p = palettes[id]
@@ -67,6 +69,12 @@ function icon(id:number):string {
     poly(p[0],[[2,9],[16,2],[30,9],[16,16]])
     const stroke=(c:string,x1:number,y1:number,x2:number,y2:number)=>{
       ctx.strokeStyle=c;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()
+    }
+    if(id>=27&&id<=29) {
+      for(let i=0;i<id-26;i++){
+        const y=14+i*4
+        poly('#fff4c8',[[6,y+3],[9,y],[12,y+3],[12,y+5],[9,y+3],[6,y+5]])
+      }
     }
     if(id===22||id===21){stroke('#573b34',3,15,16,22);stroke('#543c34',16,22,29,15);ctx.fillStyle='#ffe2a0';ctx.fillRect(9,16,3,5)}
     if([23,25,26].includes(id))poly('#c7fff1',[[6,15],[9,14],[12,20],[9,23]])
@@ -77,6 +85,12 @@ function icon(id:number):string {
     } else if(id===5) {for(const x of [5,9,13])stroke('#5e422f',x,10+(x-2)/2,x,23+(x-2)/2);poly('#99784c',[[8,9],[16,5],[24,9],[16,13]]);poly('#d2ab76',[[11,9],[16,7],[21,9],[16,11]])}
     else if(id===10) {stroke('#e0ffff',4,13,9,22);stroke('#c3eeee',18,17,22,23)}
     else {ctx.fillStyle=id===11?'#35434a':'#ffffff38';for(const [x,y] of [[5,13],[9,19],[12,16],[19,21],[25,15],[16,7]])ctx.fillRect(x,y,id===11?3:2,id===11?3:1)}
+  } else if(id===30){
+    poly('#9d6642',[[3,12],[16,5],[16,24],[3,29]])
+    poly('#c88946',[[3,12],[16,5],[29,12],[16,28],[3,29]])
+    poly('#f5ca70',[[3,12],[16,5],[29,12],[16,28]])
+    poly('#e5f2ca',[[5,12],[9,10],[19,25],[16,28]])
+    poly('#e5f2ca',[[14,6],[16,5],[29,12],[27,15]])
   } else if(id===24){poly('#438c9a',[[7,16],[17,2],[25,13],[17,30],[10,26]]);poly('#a6fff0',[[7,16],[17,2],[15,18],[10,26]]);poly('#74ddd4',[[15,18],[17,2],[23,13]])}
   else if (id===15) {poly('#25323d',[[4,17],[9,8],[20,5],[28,12],[25,23],[14,27],[6,24]]);poly('#53626c',[[5,16],[11,9],[20,7],[18,14],[10,20]]);poly('#36454d',[[12,23],[19,16],[25,14],[24,21],[15,25]])}
   else {
@@ -106,7 +120,7 @@ export class GameUI {
   private worldName=''
   private kidsView=false
   private room:OnlineStatus|null=null
-  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:''}
+  private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as Mode}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -171,9 +185,10 @@ export class GameUI {
       if(form.id==='online-create-form'){
         const name=String(data.get('name')??'').trim()
         const seed=String(data.get('seed')??'').trim()
-        Object.assign(this.onlineDraft,{name,seed})
+        const mode:Mode=data.get('mode')==='explore'?'explore':'creative'
+        Object.assign(this.onlineDraft,{name,seed,mode})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
-        this.send('online-create',{name,seed,nickname})
+        this.send('online-create',{name,seed,nickname,mode})
       }else{
         const code=String(data.get('code')??'').trim().toUpperCase()
         this.onlineDraft.code=code
@@ -184,10 +199,20 @@ export class GameUI {
     if(form.id!=='world-form')return
     const data=new FormData(form), name=String(data.get('name')??'').trim()
     if(!name){this.toast('ワールド名を入力してください。');form.querySelector('input')?.focus();return}
-    this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:data.get('mode')==='creative'?'creative':'explore'})
+    const selected=data.get('stage'),stage=validTerrainPreset(selected)?selected:'classic'
+    this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:stage!=='classic'||data.get('mode')==='creative'?'creative':'explore',stage})
   }
   private change(event:Event) {
     const input=event.target as HTMLInputElement
+    if(input.name==='stage' && input.form?.id==='world-form' && input.checked){
+      const form=input.form,onlyCreative=input.value!=='classic'
+      const explore=form.querySelector<HTMLInputElement>('[name="mode"][value="explore"]')!
+      const creative=form.querySelector<HTMLInputElement>('[name="mode"][value="creative"]')!
+      if(onlyCreative&&explore.checked)creative.checked=true
+      explore.disabled=onlyCreative
+      form.querySelector<HTMLElement>('#stage-mode-hint')!.hidden=!onlyCreative
+      return
+    }
     if(input.id==='world-import'){const file=input.files?.[0];if(file)this.send('import',file);input.value='';return}
     if(input.closest('#setting-form')) {
       const data=new FormData($<HTMLFormElement>('setting-form'))
@@ -220,27 +245,37 @@ export class GameUI {
     this.panel.querySelector('[data-action="goto-worlds"]')?.setAttribute('title',hasWorlds?'保存したワールドを開く':'ワールド一覧とバックアップの読み込み')
   }
   create() {
-    this.show('create',sectionHead('ワールドを作る')+'<form id="world-form"><label class="entry">ワールド名<input name="name" value="はじまりの谷" required maxlength="64" autocomplete="off"></label>'+
-      '<label class="entry">地形のシード<input name="seed" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
-      '<fieldset><legend>ゲームモード</legend><div class="modes"><label><input type="radio" name="mode" value="explore" checked><span><b>探索</b><small>木や石を集め、道具と建材を作る。</small></span></label>'+
-      '<label><input type="radio" name="mode" value="creative"><span><b>クリエイティブ</b><small>素材は無制限。空を飛んで建築する。</small></span></label></div></fieldset>'+
-      '<button type="submit" class="primary full">ワールドを作成</button></form>')
+    const stages=TERRAIN_PRESETS.map(({id,name,detail,thumbnail})=>'<label class="stage-card"><input type="radio" name="stage" value="'+id+'"'+
+      (id==='classic'?' checked':'')+'><img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
+      '<span><b>'+name+'</b><small>'+detail+'</small></span></label>').join('')
+    this.show('create',sectionHead('ワールドを作る')+'<form id="world-form">'+
+      '<fieldset class="stage-picker"><legend>ステージ</legend><div class="stage-grid">'+stages+'</div></fieldset>'+
+      '<div class="stage-fields"><label class="entry">ワールド名<input name="name" value="はじまりの谷" required maxlength="64" autocomplete="off"></label>'+
+      '<label class="entry">地形のシード<input name="seed" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label></div>'+
+      '<fieldset><legend>ゲームモード</legend><div class="modes"><label><input type="radio" name="mode" value="explore" checked aria-describedby="stage-mode-hint"><span><b>探索</b><small>木や石を集め、道具と建材を作る。</small></span></label>'+
+      '<label><input type="radio" name="mode" value="creative"><span><b>クリエイティブ</b><small>素材は無制限。空を飛んで建築する。</small></span></label></div>'+
+      '<p id="stage-mode-hint" hidden>このステージではクリエイティブで遊べます。</p></fieldset>'+
+      '<button type="submit" class="primary full">ワールドを作成</button></form>',true)
   }
   onlineMenu(code='',error='') {
     if(code)this.onlineDraft.code=code.trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8)
     const draft=this.onlineDraft
     const nickname='<label class="entry">プレイヤー名<input name="nickname" value="'+escapeText(draft.nickname)+'" placeholder="ワールド内に表示される名前" maxlength="24" required autocomplete="nickname"></label>'
+    const modes=([['creative','建材を自由に使って建築する。'],['explore','素材を集めて道具や建材を作る。']] as const)
+      .map(([mode,detail])=>'<label><input type="radio" name="mode" value="'+mode+'"'+(draft.mode===mode?' checked':'')+
+        '><span><b>'+modeName(mode)+'</b><small>'+detail+'</small></span></label>').join('')
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
+      '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+
       '<button type="submit" class="primary full">ルームを作成</button></form>'
     const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
       '<h2 id="online-join-label">ルームに参加する</h2>'+nickname+
       '<label class="entry">ルームコード<input id="online-code" name="code" value="'+escapeText(draft.code)+'" placeholder="8文字の英数字" minlength="8" maxlength="8" pattern="[A-Za-z0-9]{8}" title="8文字の英数字" required autocapitalize="characters" autocorrect="off" autocomplete="off" spellcheck="false"></label>'+
       '<button type="submit" class="full">ルームに参加</button></form>'
     this.show('online',sectionHead('マルチプレイ')+
-      '<p class="online-description">最大6人で同じワールドを建築できます。建材を自由に使えるクリエイティブです。</p>'+
+      '<p class="online-description">最大6人が同じワールドで遊べます。探索では持ち物を各自で管理し、掘った場所や設置した作業台は仲間と共有されます。</p>'+
       (error?'<p class="online-error" role="alert">'+escapeText(error)+'</p>':'')+
       '<div class="online-forms">'+(code?join+create:create+join)+'</div>',true)
   }
@@ -262,8 +297,9 @@ export class GameUI {
       const when=new Date(w.updatedAt)
       const stamp=Number.isFinite(when.getTime())?when.toLocaleString('ja-JP',{year:'numeric',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):''
       const id=escapeText(w.id)
+      const stage=TERRAIN_PRESETS.find(candidate=>candidate.id===(w.stage??'classic'))?.name
       const original=w.hasOriginal?'<button data-action="original" data-id="'+id+'">旧版の原本</button>':''
-      return '<li><div><strong>'+escapeText(w.name)+'</strong><small>'+modeName(w.mode)+'　'+stamp+'</small></div><div class="row-actions"><button class="primary" data-action="load" data-id="'+id+'">開く</button><button data-action="export" data-id="'+id+'">書き出す</button>'+original+'</div></li>'
+      return '<li><div><strong>'+escapeText(w.name)+'</strong><small>'+[modeName(w.mode),stage,stamp].filter(Boolean).join('　')+'</small></div><div class="row-actions"><button class="primary" data-action="load" data-id="'+id+'">開く</button><button data-action="export" data-id="'+id+'">書き出す</button>'+original+'</div></li>'
     }).join('')
     this.show('worlds',sectionHead('ワールド一覧')+(list.length?'<ul class="worlds">'+rows+'</ul>':'<p class="empty">このブラウザーには保存したワールドがありません。</p>')+
       '<div class="actions">'+button('goto-create','新しく始める')+'<label class="file-btn">ファイルを読み込む<input id="world-import" type="file" accept=".json,application/json"></label></div>')
@@ -327,12 +363,14 @@ export class GameUI {
     this.show('help',sectionHead('操作説明')+'<dl class="keylist">'+[
       ['W / A / S / D','移動'],['マウス / 矢印キー','視点を変える'],['K / 画面上のモードボタン','オリジナルモードと見下ろし視点のキッズモードを切り替える'],['Space / Shift','ジャンプ・水中で浮上 ／ ダッシュ'],
       ['左クリック長押し','照準のブロックを採掘'],['右クリック','手に持っているブロックを設置'],['1 ～ 9 / ホイール','ホットバーを切り替える'],
-      ['C 長押し','しゃがむ。足場の端で踏みとどまり、低い坑道を通れる'],['Q / 中クリック','照準の建材を選ぶ'],['R','原木を縦・東西・南北に切り替える'],
-      ['右クリック / V','作業台・チェストを開く。しゃがんで右クリックすると隣に設置'],['Ctrl + Z','クリエイティブの通常ブロックを最大20回戻す。作業台とチェストは対象外'],
+      ['C 長押し','しゃがむ。足場の端で踏みとどまり、低い坑道を通れる'],['Q / 中クリック','照準の建材を選ぶ'],['R / 向きボタン','原木や滑り台パーツの向きを切り替える'],
+      ['右クリック / V','住民と話す、または作業台・チェストを開く。しゃがんで右クリックすると設備の隣に設置'],['左クリック / X','照準を合わせたサメを攻撃。タッチ操作では画面の「攻撃」ボタン'],['Ctrl + Z','クリエイティブの通常ブロックを最大20回戻す。作業台とチェストは対象外'],
       ['B / G','現在地を拠点に登録 ／ 探索目標の表示切り替え'],['E','持ち物・クラフトを開閉'],['Esc','一時停止'],['F','クリエイティブで飛行を切り替える'],['Space / Ctrl','飛行中に上昇 ／ 下降'],['F3','FPS・描画回数・チャンク数を表示']
     ].map(([key,text])=>'<div><dt>'+key+'</dt><dd>'+text+'</dd></div>').join('')+'</dl>'+
     '<h2>タブレットモード</h2><p>一時停止画面の「タブレットモードでプレイ」から、PCでも画面のスティックやボタンを使えます。左下のスティックで移動し、景色をドラッグして見回します。照準を合わせて画面を短くタップすると、選択中のブロックを設置できます。右下のボタンからも設置・採掘・ジャンプ・しゃがみができます。クリエイティブでは「飛行」で切り替え、上昇・下降ボタンを長押しします。</p>'+
+    '<h2>ジャンプ台と滑り台</h2><p>ジャンプ台に乗ると、小・中・大の高さに合わせて跳び上がります。滑り台は、下りたい方向に坂のパーツを1ブロックずつ低くしてつなぎ、高い方から乗ります。</p>'+
     '<h2>探索のはじめ方</h2><p>木の幹に近づいて採掘し、持ち物を開いて原木から木材と棒を作ります。木のツルハシで石を掘り、石の道具や建材を作りましょう。持ち物のアイコンを選ぶと、選択中のホットバー枠に登録できます。</p>'+
+    '<h2>マルチプレイ</h2><p>ルームを作るときにクリエイティブか探索を選び、ルームコードを仲間に知らせます。探索では持ち物はプレイヤーごとに管理され、掘った場所や建物、設置した作業台は仲間と共有されます。</p>'+
     '<h2>拠点と遠征</h2><p>木材4個で作業台、6個でチェストを作れます。床に置き、照準を合わせて右クリックで開きます。木の道具と灯晶ブロックを用意したら、拠点をBで登録して岩窟へ。潮晶を持ち帰ると、作業台で青緑色のランタンや象眼タイルを作れます。旧ワールドでは朝霧ガラスと石炭から潮晶を作れます。</p>'+
     '<h2>トラックパッドと視点操作</h2><p>Macでは、トラックパッドを押したまま指を動かすと見回せます。画面上の「採掘」「設置」を使います。クリックせずに見回したいときは、一時停止から「視点を固定してプレイ」を選んでください。</p>'+
     '<p>視点が動かなくなったら、Esc または「一時停止」から「入力の診断・復旧」を開きます。「入力をリセット」でドラッグ操作に戻れます。診断記録は端末に保存・書き出しできます。</p>'+

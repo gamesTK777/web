@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { defaults, SaveStore, parseBackup, backupText, type WorldSave } from '../src/storage.ts'
+import { defaults, SaveStore, parseBackup, backupText, migrate, type WorldSave } from '../src/storage.ts'
 import { createBag } from '../src/inventory.ts'
 import { World,voxelIndex } from '../src/world.ts'
 
@@ -40,4 +40,26 @@ test('import rejects invalid UTF JSON data, incompatible versions, invalid inven
     {edits:[[1,0]]},{edits:[[65536,99]]},{edits:[[65536,0],[65536,1]]},{settings:{...defaults,distance:50}}])
     assert.throws(()=>parseBackup(JSON.stringify({...base,...patch})))
   assert.throws(()=>parseBackup('{'))
+})
+
+test('湖のステージとサメの討伐、ジャンプ台と坂の向きがセーブと書き出しで残る',async()=>{
+  const save=migrate(fixture())
+  assert.equal(save.stage,'classic')
+  const lake=new World('staged-lake',false,2,'lake'), start=lake.spawn()
+  const pad=voxelIndex(130,35,139),slide=voxelIndex(131,34,139)
+  const data:WorldSave={...save,id:'lake-check',stage:'lake',generator:2,seed:'staged-lake',
+    pose:start,mode:'creative',bag:createBag('creative'),sharkDefeated:true,edits:[[pad,29],[slide,31]]}
+  const store=new SaveStore('stage-'+crypto.randomUUID())
+  const written=await store.write(data,null)
+  const backup=parseBackup(backupText(written))
+  assert.equal((await store.list())[0].stage,'lake')
+  assert.equal(backup.sharkDefeated,true)
+  assert.equal(backup.stage,'lake')
+  const restored=new World(backup.seed,false,backup.generator,backup.stage)
+  restored.loadEdits(backup.edits)
+  assert.equal(restored.get(130,35,139),29)
+  assert.equal(restored.get(131,34,139),31)
+  assert.throws(()=>migrate({...data,stage:null}))
+  assert.throws(()=>migrate({...data,stage:'unrecognized'}))
+  assert.throws(()=>migrate({...data,sharkDefeated:1}))
 })

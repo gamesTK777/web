@@ -3,15 +3,16 @@ import { validBag, type Bag, type Mode } from './inventory'
 import { defaults, upgradeSettings, validSettings, type Settings } from './preferences'
 import { emptyFixtures, validFixtures, editableId, type WorldFixtures } from './world'
 import { createJourney, validJourney } from './expedition'
+import { validTerrainPreset, type TerrainPreset } from './stages'
 export { defaults, validSettings, type Settings }
 export interface WorldSave {
   format: 'webcraft777'; version: 1|2; generator: 1|2; id: string; name: string; seed: string; mode: Mode
-  fixtures?: WorldFixtures; journey?: ReturnType<typeof createJourney>
+  fixtures?: WorldFixtures; journey?: ReturnType<typeof createJourney>; stage?: TerrainPreset; sharkDefeated?: boolean
   revision: number; updatedAt: number; pose: { x: number; y: number; z: number; yaw: number; pitch: number; crouched?: boolean }
   flying: boolean; bag: Bag; selected: number; edits: [number, number][]; day: number; settings: Settings; guideSeen: boolean
 }
 export type ActiveSave = WorldSave & {version:2;fixtures:WorldFixtures;journey:ReturnType<typeof createJourney>}
-export type WorldEntry = Pick<WorldSave, 'id'|'name'|'seed'|'mode'|'updatedAt'|'revision'> & {hasOriginal?:boolean}
+export type WorldEntry = Pick<WorldSave, 'id'|'name'|'seed'|'mode'|'stage'|'updatedAt'|'revision'> & {hasOriginal?:boolean}
 const inRange = (v: unknown, lo: number, hi: number): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi
 const integer = (v: unknown, lo: number, hi: number): v is number => inRange(v, lo, hi) && Number.isInteger(v)
@@ -29,6 +30,10 @@ export function migrate(value: unknown): ActiveSave {
   if (!object(value) || value.format !== 'webcraft777') throw new Error('ウェブクラフト777のワールドファイルを選んでください。')
   const legacy=value.version===1 && value.generator===1
   if (!legacy && (value.version!==2 || (value.generator!==1 && value.generator!==2))) throw new Error('この保存形式または地形バージョンには対応していません。')
+  const stage=value.stage===undefined?'classic':value.stage
+  if(!validTerrainPreset(stage)||(stage!=='classic'&&(value.generator!==2||value.mode!=='creative'))||
+    (value.sharkDefeated!==undefined&&typeof value.sharkDefeated!=='boolean'))
+    throw new Error('ステージまたは生き物の保存情報が正しくありません。')
   if(legacy && (!object(value.settings) || !['distance','scale','shadows','sensitivity','volume','muted'].every(k=>Object.hasOwn(value.settings as object,k))))
     throw new Error('旧ワールドの設定が欠けています。元のバックアップを確認してください。')
   const settings=legacy ? upgradeSettings(value.settings) : value.settings
@@ -52,7 +57,7 @@ export function migrate(value: unknown): ActiveSave {
   }
   if(fixtures.chests.some(([k])=>editsByPosition.get(k)!==22) || fixtures.benches.some(([k])=>editsByPosition.get(k)!==21) ||
     fixtures.axes.some(([k])=>editsByPosition.has(k) && editsByPosition.get(k)!==5))throw Error('設備と建築記録が一致しません。')
-  return {...value,version:2,settings,fixtures,journey} as ActiveSave
+  return {...value,version:2,stage,settings,fixtures,journey} as ActiveSave
 }
 export function readBackup(text: string) {
   let data: unknown
@@ -126,8 +131,8 @@ export class SaveStore {
             has.onsuccess=()=>{if(has.result===undefined)originals.add(legacy)}}
         }
         saved = { ...next, revision: (expectedRevision ?? 0)+1, updatedAt: Date.now() }
-        const {id,name,seed,mode,updatedAt,revision} = saved
-        tx.objectStore('worlds').put(saved); directory.put({id,name,seed,mode,updatedAt,revision,schemaVersion:2})
+        const {id,name,seed,mode,stage,updatedAt,revision} = saved
+        tx.objectStore('worlds').put(saved); directory.put({id,name,seed,mode,stage,updatedAt,revision,schemaVersion:2})
       }
       tx.oncomplete = () => resolve(saved)
       tx.onabort = () => reject(conflict

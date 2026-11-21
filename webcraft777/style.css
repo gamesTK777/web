@@ -89,6 +89,39 @@ input { accent-color: #2e745b; }
 .modes label { display: flex; align-items: center; gap: 9px; padding: 9px; cursor: pointer; }
 .modes label:has(:checked) { border-radius: 4px; background: #e3ecd8; }
 .modes small,.worlds small,.recipes small { display: block; margin-top: 3px; color: #4c6558; font-size: .82rem; }
+#game[data-screen="create"] .panel { width: min(100%,820px); }
+.stage-picker { padding: 9px 0 0; border: 0; margin-top: 10px; }
+.stage-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.stage-card {
+  position: relative; display: grid; align-content: start; overflow: hidden;
+  border: 2px solid #cdd3bc; border-radius: 8px; background: #fffdf4; cursor: pointer;
+}
+.stage-card:hover { border-color: #6d9375; }
+.stage-card:has(:checked) { border-color: #367658; background: #e9f0dc; }
+.stage-card:has(:focus-visible) { outline: 3px solid #178b77; outline-offset: 2px; }
+.stage-card input {
+  position: absolute; z-index: 1; top: 7px; left: 7px; width: 18px; height: 18px; margin: 0;
+  outline: 0; border-radius: 50%; box-shadow: 0 0 0 2px #fffdf5;
+}
+.stage-card img { display: block; width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; background: #557f71; }
+.stage-card > span { display: grid; gap: 3px; padding: 9px 11px 11px; }
+.stage-card b { font-size: 1rem; line-height: 1.35; }
+.stage-card small { color: #456051; font-size: .82rem; line-height: 1.45; }
+.stage-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.stage-fields .entry { margin: 0; }
+#world-form fieldset:not(.stage-picker) { padding: 10px 12px; margin-block: 12px; }
+#world-form .modes { grid-template-columns: repeat(2,minmax(0,1fr)); }
+#world-form .modes label { align-items: flex-start; }
+#stage-mode-hint { margin: 4px 9px 0; color: #3c614b; font-size: .84rem; }
+#world-form .modes label:has(:disabled) { cursor: default; opacity: .52; }
+@media (max-width: 610px) {
+  .stage-grid { grid-template-columns: minmax(0,1fr); gap: 6px; }
+  .stage-card { grid-template-columns: min(34%,134px) minmax(0,1fr); min-height: 74px; }
+  .stage-card img { height: 100%; min-height: 70px; }
+  .stage-card > span { align-self: center; padding: 7px 9px; }
+  .stage-fields { grid-template-columns: minmax(0,1fr); gap: 9px; }
+  #world-form .modes label { gap: 3px; padding-inline: 4px; }
+}
 .full { width: 100%; }
 .actions,.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
 .row-actions { flex: none; gap: 5px; }
@@ -122,6 +155,9 @@ input { accent-color: #2e745b; }
 .online-card h2 { margin: 0; font-size: 1.1rem; }
 .online-card .entry { margin: 11px 0 0; }
 .online-card small { color: #4e6658; font-weight: 650; }
+.online-card .online-room-modes { margin: 12px 0 0; padding: 4px 7px 7px; }
+.online-room-modes .modes { gap: 3px; }
+.online-room-modes .modes label { min-height: 44px; padding: 5px 7px; }
 .online-card button { margin-top: 14px; }
 .online-card input,.online-card button { min-height: 44px; }
 #online-code { font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; }
@@ -362,6 +398,26 @@ dialog::backdrop { background: #122b28bb; }
 #touch-controls:not([hidden]) ~ .belt .slot { width: 100%; }
 #hud:has(> #touch-controls:not([hidden])) .top-actions button { min-height: 44px; }
 #hud:has(> #touch-controls:not([hidden])) #guide:not([hidden]) ~ .trail { display: none; }
+#life-status {
+  position: absolute;
+  top: calc(max(16px,env(safe-area-inset-top)) + 48px);
+  right: max(12px,env(safe-area-inset-right));
+  display: grid;
+  gap: 5px;
+  width: min(196px,51vw);
+  padding: 7px 9px;
+  border: 1px solid #d8c9a375;
+  border-radius: 9px;
+  background: #16332eea;
+  color: #fff7dc;
+  font: 700 .76rem/1.25 system-ui,sans-serif;
+}
+#life-status label { display: grid; align-items: center; grid-template-columns: 2.25em 1fr 2.45em; gap: 6px; }
+#life-status label span { text-align: right; font-variant-numeric: tabular-nums; }
+#life-status progress { width: 100%; height: 8px; accent-color: #8be2ad; }
+#life-status #shark-health { accent-color: #ffa476; }
+#hud:has(> #guide:not([hidden])) #life-status { top: calc(max(16px,env(safe-area-inset-top)) + 169px); }
+#fallback #touch-attack { background: #803e31; border-color: #ffc18c; color: #fff4e2; }
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

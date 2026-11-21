@@ -1,5 +1,6 @@
 import { activeStack, consumeBlock, ITEMS, stageMining } from "./inventory.ts";
 import type { Bag, Mode, Outcome } from "./inventory.ts";
+import { isSlide, jumpPadHeight, slideDirection, slideHeight } from "./playground.ts";
 
 export const WORLD_WIDTH = 256;
 export const WORLD_HEIGHT = 96;
@@ -39,6 +40,13 @@ export function resetPlayerInput(p: Player) {
 export function eyeHeight(p: Pose & Partial<Pick<Player,"eye"|"bobOffset">>) {
   return (p.eye ?? (p.crouched ? .79 : EYE_HEIGHT)) + (p.bobOffset ?? 0);
 }
+
+function rampTop(id:number,bx:number,by:number,bz:number,x:number,z:number,radius:number){
+  const {x:dx,z:dz}=slideDirection(id);
+  // The uphill edge of the intersection is the highest point under the feet.
+  return by+slideHeight(id,x-bx-dx*radius,z-bz-dz*radius);
+}
+
 // Padding makes touching a face legal while retaining solid world bounds.
 function occupied(world: ReadWorld, x: number, y: number, z: number, height = BODY_HEIGHT): boolean {
   const x0 = Math.floor(x - BODY_RADIUS + EPS), x1 = Math.floor(x + BODY_RADIUS - EPS);
@@ -47,8 +55,10 @@ function occupied(world: ReadWorld, x: number, y: number, z: number, height = BO
   if (!inside(x0, y0, z0) || !inside(x1, y1, z1)) return true;
   for (let by = y0; by <= y1; by++)
     for (let bz = z0; bz <= z1; bz++)
-      for (let bx = x0; bx <= x1; bx++)
-        if (solid(world.get(bx, by, bz))) return true;
+      for (let bx = x0; bx <= x1; bx++) {
+        const id=world.get(bx,by,bz);
+        if (solid(id) && (!isSlide(id) || y < rampTop(id,bx,by,bz,x,z,BODY_RADIUS-EPS)-EPS)) return true;
+      }
   return false;
 }
 function wet(world: ReadWorld, x: number, y: number, z: number) {
@@ -101,20 +111,61 @@ function moveAxis(world: ReadWorld, player: Player, axis: "x" | "y" | "z", dista
   player[axis] = old + distance;
   const height = player.crouched ? CROUCH_HEIGHT : BODY_HEIGHT;
   if (!occupied(world, player.x, player.y, player.z,height)) return false;
+  if(axis==="y"&&distance<0){
+    const floor=floorBetween(world,player.x,player.z,player.y-EPS,old+EPS);
+    if(floor){player.y=floor.y;return true;}
+  }
   // Each substep is shorter than one voxel. Snap to the face first crossed by the leading edge.
   const pad = axis === "y" ? (distance > 0 ? height : 0) : (distance > 0 ? BODY_RADIUS : -BODY_RADIUS);
   const edge = old + distance + pad;
-  player[axis] = (distance > 0 ? Math.floor(edge - EPS) : Math.ceil(edge + EPS)) - pad;
+  const snap=(distance > 0 ? Math.floor(edge - EPS) : Math.ceil(edge + EPS)) - pad;
+  if(axis!=="y"&&Math.abs(snap-old)>Math.abs(distance)+EPS){
+    // An airborne avatar can hit the middle of a slope without crossing a
+    // voxel boundary. Stop inside this substep instead of snapping backwards.
+    let low=0,high=1;
+    for(let i=0;i<9;i++){
+      const t=(low+high)/2;
+      player[axis]=old+distance*t;
+      if(occupied(world,player.x,player.y,player.z,height))high=t;
+      else low=t;
+    }
+    player[axis]=old+distance*low;
+  }else player[axis]=snap;
   return true;
 }
-// Only a horizontal top face can support a foot. Touching a wall never counts.
-function supported(world: ReadWorld, x: number, y: number, z: number, radius = BODY_RADIUS - EPS) {
-  if (Math.abs(y - Math.round(y)) > .002) return false;
-  const below = Math.round(y) - 1;
-  for (let bz = Math.floor(z-radius); bz <= Math.floor(z+radius); bz++)
-    for (let bx = Math.floor(x-radius); bx <= Math.floor(x+radius); bx++)
-      if (inside(bx,below,bz) && solid(world.get(bx,below,bz))) return true;
-  return false;
+type Floor={y:number;id:number};
+function floorBetween(world:ReadWorld,x:number,z:number,low:number,high:number,radius=BODY_RADIUS-EPS):Floor|null {
+  let floor:Floor|null=null;
+  const bottom=Math.max(0,Math.ceil(low-1)),top=Math.min(WORLD_HEIGHT-1,Math.floor(high));
+  const x0=Math.max(0,Math.floor(x-radius)),x1=Math.min(WORLD_WIDTH-1,Math.floor(x+radius));
+  const z0=Math.max(0,Math.floor(z-radius)),z1=Math.min(WORLD_WIDTH-1,Math.floor(z+radius));
+  for(let by=bottom;by<=top;by++)for(let bz=z0;bz<=z1;bz++)for(let bx=x0;bx<=x1;bx++){
+    const id=world.get(bx,by,bz);
+    if(!solid(id))continue;
+    const ramp=isSlide(id),y=ramp?rampTop(id,bx,by,bz,x,z,radius):by+1;
+    if(y<low||y>high)continue;
+    if(!floor||y>floor.y+EPS||!ramp&&isSlide(floor.id)&&Math.abs(y-floor.y)<=EPS)floor={y,id};
+  }
+  return floor;
+}
+function supported(world:ReadWorld,x:number,y:number,z:number,radius=BODY_RADIUS-EPS){
+  return floorBetween(world,x,z,y-.002,y+.002,radius);
+}
+function walkAxis(world:ReadWorld,player:Player,axis:"x"|"z",distance:number,ground:Floor|null,guard:boolean,foot:number){
+  if(!distance)return false;
+  const x=player.x+(axis==="x"?distance:0),z=player.z+(axis==="z"?distance:0);
+  if(ground){
+    const rise=Math.abs(distance)+.054;
+    const next=floorBetween(world,x,z,player.y-rise,player.y+rise);
+    if(next&&(isSlide(next.id)||isSlide(ground.id))){
+      if(guard&&!floorBetween(world,x,z,player.y-rise,player.y+rise,foot))return true;
+      if(!occupied(world,x,next.y,z,player.crouched?CROUCH_HEIGHT:BODY_HEIGHT)){
+        player[axis]+=distance;player.y=next.y;return false;
+      }
+    }
+  }
+  if(guard&&!supported(world,x,player.y,z,foot))return true;
+  return moveAxis(world,player,axis,distance);
 }
 export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: number,
   comfort: {bob?: boolean; sprintFov?: boolean} = {}): void {
@@ -130,28 +181,32 @@ export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: n
   for (let i = 0; i < steps; i++) {
     const px = player.x, pz = player.z;
     player.inWater = wet(world, player.x, player.y, player.z);
-    const ground = player.vy <= 0 && supported(world, px, player.y, pz);
-    if (ground) player.y = Math.round(player.y);
+    const ground = player.vy <= 0 ? supported(world, px, player.y, pz) : null;
+    if (ground) player.y = ground.y;
     // Never unfold the collision body into a low lintel, even when starting flight.
-    player.crouched = (!player.flying && !player.inWater && input.down && (ground || player.crouched)) ||
+    player.crouched = (!player.flying && !player.inWater && input.down && (!!ground || player.crouched)) ||
       (player.crouched && occupied(world,px,player.y,pz));
     const speed = player.flying ? (input.sprint ? 13 : 8) : player.inWater ? 2 :
       player.crouched ? 1.65 : input.sprint ? 6.4 : 4.2;
     if (player.flying || player.inWater) {
       player.vx = dx*speed; player.vz = dz*speed;
     } else {
-      const ax = dx*speed - player.vx, az = dz*speed - player.vz;
-      const acceleration = ground ? ((dx || dz) ? 53 : 72) : ((dx || dz) ? 17 : 5);
+      const slide=ground&&isSlide(ground.id)?slideDirection(ground.id):null;
+      const drive=slide?(player.crouched?2.4:6.4):0;
+      const steer=slide?speed*.48:speed;
+      const ax = dx*steer+(slide?.x??0)*drive-player.vx, az = dz*steer+(slide?.z??0)*drive-player.vz;
+      const acceleration = slide ? 13 : ground ? ((dx || dz) ? 53 : 72) : ((dx || dz) ? 17 : 5);
       const amount = Math.min(1, acceleration*h/(Math.hypot(ax,az) || 1));
       player.vx += ax*amount; player.vz += az*amount;
     }
-    const guard = ground && player.crouched && !player.flying;
+    const guard = !!ground && player.crouched && !player.flying;
     // A standing player may already overhang the safety margin when C is pressed.
     // Allow the existing footprint until they can step comfortably back onto the block.
     const foot = guard && supported(world,px,player.y,pz,.10) ? .10 : BODY_RADIUS-EPS;
     const sx = player.vx*h, sz = player.vz*h;
-    if ((guard && !supported(world,px+sx,player.y,pz,foot)) || moveAxis(world,player,"x",sx)) player.vx = 0;
-    if ((guard && !supported(world,player.x,player.y,pz+sz,foot)) || moveAxis(world,player,"z",sz)) player.vz = 0;
+    const riding=player.flying||player.inWater?null:ground;
+    if (walkAxis(world,player,"x",sx,riding,guard,foot)) player.vx = 0;
+    if (walkAxis(world,player,"z",sz,riding,guard,foot)) player.vz = 0;
     if (ground) player.coyote = .08;
     if (player.flying) {
       player.coyote = player.jumpBuffer = 0;
@@ -161,15 +216,17 @@ export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: n
       // Keep momentum near the surface long enough to climb onto a shallow bank.
       player.vy = input.jump ? 4.9 : Math.max(-2.1, player.vy - 7 * h);
     } else {
-      if (player.jumpBuffer > 0 && player.coyote > 0) {
-        player.vy = 8.35;
+      const pad=ground&&Math.abs(player.y-Math.round(player.y))<.002
+        ?jumpPadHeight(world.get(Math.floor(player.x),Math.round(player.y)-1,Math.floor(player.z))):0;
+      if (pad || player.jumpBuffer > 0 && player.coyote > 0) {
+        player.vy = pad ? Math.sqrt(48*pad)+.12 : 8.35;
         player.jumpBuffer = player.coyote = 0;
       }
       if (player.vy > 0 || !supported(world,player.x,player.y,player.z)) player.vy = Math.max(-30, player.vy - 24*h);
       else player.vy = 0;
     }
     if (moveAxis(world, player, "y", player.vy * h)) player.vy = 0;
-    player.grounded = player.vy <= 0 && supported(world,player.x,player.y,player.z);
+    player.grounded = player.vy <= 0 && !!supported(world,player.x,player.y,player.z);
     player.jumpBuffer = Math.max(0,player.jumpBuffer-h);
     player.coyote = Math.max(0,player.coyote-h);
     const distance = Math.hypot(player.x-px,player.z-pz);
@@ -204,7 +261,16 @@ export function raycast(world: ReadWorld, pose: Pose, max = REACH): Hit | null {
   // A ray can cross at most ceil(reach) planes on each axis, plus the starting cell.
   for (let steps = 0; steps <= 3 * Math.ceil(reach) + 1 && distance <= reach && inside(x, y, z); steps++) {
     const id = world.get(x, y, z);
-    if (solid(id)) return { x, y, z, id, nx, ny, nz, distance };
+    if(isSlide(id)){
+      const exit=Math.min(reach,nextX,nextY,nextZ);
+      const above=(t:number)=>oy+dy*t-y-slideHeight(id,ox+dx*t-x,oz+dz*t-z);
+      const entryHeight=above(distance),exitHeight=above(exit);
+      if(entryHeight<=EPS)return {x,y,z,id,nx,ny,nz,distance};
+      if(exitHeight<=0){
+        const surface=distance+(exit-distance)*entryHeight/(entryHeight-exitHeight);
+        return {x,y,z,id,nx:0,ny:1,nz:0,distance:surface};
+      }
+    }else if (solid(id)) return { x, y, z, id, nx, ny, nz, distance };
     nx = ny = nz = 0;
     // A ray across an exact edge enters the diagonal cell, never the two cells it only touches.
     distance = Math.min(nextX,nextY,nextZ);
@@ -259,12 +325,13 @@ export function placementIssue(world: ReadWorld, player: Pose, bag: Bag, mode: M
   if (!canPlaceAt(world,player,hit)) return "ここにはすでにブロックがあります。";
   return null;
 }
-export function placeAt(world: EditWorld, player: Pose, bag: Bag, mode: Mode, slot: number, hit: Hit | null): Outcome {
+export function placeAt(world: EditWorld, player: Pose, bag: Bag, mode: Mode, slot: number, hit: Hit | null, placedId?:number): Outcome {
   const issue = placementIssue(world,player,bag,mode,slot,hit);
   if (issue) return {ok:false,message:issue};
   if (!matchesSight(world,player,hit)) return {ok:false,message:"5ブロック以内の面に照準を合わせてください。"};
   const id = bag.hotbar[slot];
-  if (!world.set(hit.x + hit.nx, hit.y + hit.ny, hit.z + hit.nz, id)) return { ok: false, message: "ここには置けません。" };
+  if(placedId!==undefined && (id!==30 || !isSlide(placedId)))return {ok:false,message:"この建材の向きは変更できません。"};
+  if (!world.set(hit.x + hit.nx, hit.y + hit.ny, hit.z + hit.nz, placedId??id)) return { ok: false, message: "ここには置けません。" };
   if (mode === "explore") consumeBlock(bag, id);
   return { ok: true, message: ITEMS[id].name + "を置きました。" };
 }

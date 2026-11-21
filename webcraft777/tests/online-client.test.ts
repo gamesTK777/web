@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { OnlineClient, OnlineError, type NetPose, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame } from '../src/online-client'
 
 const connection: RoomConnection = {
-  room: { code: 'TEAM7777', name: '工作の島', seed: 'green-777', generator: 2, createdAt: 1784600000000 },
+  room: { code: 'TEAM7777', name: '工作の島', seed: 'green-777', generator: 2, createdAt: 1784600000000, mode:'creative' },
   id: 'local-player', token: 'test-private-member-session-1234',
 }
 const pose: NetPose = { x: 16, y: 33, z: 44, yaw: 0, moving: false, crouched: false, flying: false }
@@ -36,7 +36,7 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
     { path: '/api/webcraft/rooms', body: fields },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお' } },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:2 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -70,8 +70,8 @@ test('同期した編集だけを適用し、編集は一つずつ送る', { tim
   assert.deepEqual(await pending, { ok: true })
   assert.deepEqual(frames, [empty, changed])
   assert.deepEqual(requests, [
-    { code: connection.room.code, token: connection.token, since: 0, pose },
-    { code: connection.room.code, token: connection.token, since: 0, pose, edit },
+    { protocol:2,code: connection.room.code, token: connection.token, since: 0, pose },
+    { protocol:2,code: connection.room.code, token: connection.token, since: 0, pose, edit },
   ])
   sync.close()
   await left.promise
@@ -106,6 +106,22 @@ test('編集の応答が途切れても再送せず、差分で確定して不�
   assert.deepEqual(states, ['connected', 'reconnecting', 'connected'])
   assert.equal(syncRequests.filter(request => request.edit).length, 1)
   assert.equal(syncRequests[2].since, 0)
+})
+
+test('共有の遊具ブロックは向きを表すIDを保持する', { timeout: 3_000 }, async t => {
+  const ready=deferred<RoomFrame>()
+  const cells=Array.from({length:7},(_,index)=>({
+    key:edit.key+index,block:27+index,axis:'y' as const,revision:index+1,
+  }))
+  const sync=new OnlineClient('https://rooms.example.test',async (url)=>json(
+    String(url).endsWith('/leave')?{ok:true}:{revision:7,cells,players:[]}
+  )).start(connection,{
+    pose:()=>pose,
+    onFrame:frame=>ready.resolve(frame),
+    onState:()=>{},
+  })
+  t.after(()=>sync.close())
+  assert.deepEqual((await ready.promise).cells,cells)
 })
 
 test('非表示中は同期を始めず、復帰して部屋が失効していた場合は終了する', { timeout: 3_000 }, async t => {

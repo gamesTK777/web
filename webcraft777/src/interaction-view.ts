@@ -1,5 +1,6 @@
 import * as T from 'three'
 import { tileFor, tileUV, type Axis } from './textures'
+import { isSlide, slideHeight } from './playground'
 
 interface Position { x:number; y:number; z:number }
 export interface PlacementGhost extends Position { id:number; valid:boolean; axis?:Axis }
@@ -13,6 +14,7 @@ function cubeUV(face:number,u:number,v:number,id:number,axis:Axis) {
   const tile=tileFor(id,y,x,z,axis)
   // On a BoxGeometry, u runs along Z on the two X faces, and along X elsewhere.
   if(tile===5 && (axis==='x' && !x || axis==='z' && x!==0)) [u,v]=[v,1-u]
+  if(tile===45)for(let turn=0;turn<id-30;turn++)[u,v]=[1-v,u]
   return tileUV(tile,u,v)
 }
 
@@ -26,7 +28,9 @@ function handMesh(template:T.BoxGeometry,id:number) {
     for(let i=0;i<original.count;i++) {
       const face=Math.floor(i/4), [nx,ny,nz]=normals[face]
       const shade=.80+.15*ny+.065*nx+.05*nz
-      pos.push(x+original.getX(i)*w,y+original.getY(i)*h,z+original.getZ(i)*d)
+      const px=original.getX(i),py=original.getY(i),pz=original.getZ(i)
+      const height=isSlide(block)&&py>0?slideHeight(block,px+.5,pz+.5)-.5:py
+      pos.push(x+px*w,y+height*h,z+pz*d)
       const u=mapping.getX(i),v=mapping.getY(i)
       uv.push(...(block?cubeUV(face,u,v,block,'y'):tileUV(16,u,v)))
       colors.push(col.r*shade,col.g*shade,col.b*shade)
@@ -157,11 +161,14 @@ export class InteractionView {
       if(key!==this.ghostTile){
         this.ghostTile=key
         const old=this.ghost.geometry.getAttribute('uv'),out=this.ghost.geometry.getAttribute('plate')
+        const original=this.cube.getAttribute('position'),position=this.ghost.geometry.getAttribute('position')
         for(let i=0;i<old.count;i++){
           const xy=cubeUV(i>>2,old.getX(i),old.getY(i),g.id,g.axis??'y')
           out.setXY(i,xy[0],xy[1])
+          const x=original.getX(i),y=original.getY(i),z=original.getZ(i)
+          position.setXYZ(i,x,isSlide(g.id)&&y>0?slideHeight(g.id,x+.5,z+.5)-.5:y,z)
         }
-        out.needsUpdate=true
+        out.needsUpdate=true;position.needsUpdate=true
       }
     }
     if(!p||!active)return

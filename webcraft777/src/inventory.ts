@@ -9,6 +9,9 @@ type Kind = { name: string; color: string; block: boolean; maxDurability?: numbe
 
 export const CAPACITY = 27;
 export const STACK_LIMIT = 64;
+export const SLIDE_ITEM = 30;
+const slidePart = { name: "滑り台パーツ", color: "#e5ab52", block: true };
+export const blockItemId = (id:number) => id>=31&&id<=33 ? SLIDE_ITEM : id;
 export const ITEMS: Record<number, Kind> = {
   1: { name: "草地", color: "#89ac57", block: true },
   2: { name: "土", color: "#9a6e4a", block: true },
@@ -36,6 +39,10 @@ export const ITEMS: Record<number, Kind> = {
   24: { name: "潮晶のかけら", color: "#6ce5db", block: false },
   25: { name: "青磁のランタン", color: "#75e8d9", block: true },
   26: { name: "潮晶の象眼タイル", color: "#72bfb0", block: true },
+  27: { name: "ジャンプ台（小）", color: "#62c8a2", block: true },
+  28: { name: "ジャンプ台（中）", color: "#6eaee8", block: true },
+  29: { name: "ジャンプ台（大）", color: "#d892dd", block: true },
+  30: slidePart, 31: slidePart, 32: slidePart, 33: slidePart,
 };
 
 const amount = (id: number, count: number): Amount => ({ id, count });
@@ -54,13 +61,17 @@ export const RECIPES: Recipe[] = [
   recipe("lamp", amount(12, 2), amount(7, 2), amount(15, 1)),
   recipe("bench", amount(21, 1), amount(7, 4)),
   recipe("chest", amount(22, 1), amount(7, 6)),
+  recipe("jump-small", amount(27, 1), amount(7, 4), amount(16, 2)),
+  recipe("jump-medium", amount(28, 1), amount(7, 5), amount(8, 4)),
+  recipe("jump-large", amount(29, 1), amount(7, 6), amount(8, 8)),
+  recipe("slide-part", amount(30, 3), amount(7, 6)),
   { ...recipe("crystal-lamp", amount(25, 2), amount(24, 1), amount(12, 1)), bench: true },
   { ...recipe("inlaid-tile", amount(26, 8), amount(24, 1), amount(8, 4)), bench: true },
   { ...recipe("crystal-cut", amount(24, 2), amount(10, 2), amount(15, 1)), bench: true, legacy: true },
 ];
 
 function itemId(id: unknown): id is number {
-  return typeof id === "number" && Number.isInteger(id) && Object.hasOwn(ITEMS,id) && id !== 13 && id !== 14;
+  return typeof id === "number" && Number.isInteger(id) && Object.hasOwn(ITEMS,id) && id !== 13 && id !== 14 && blockItemId(id)===id;
 }
 export function validBag(value: unknown): value is Bag {
   if (!value || typeof value !== "object") return false;
@@ -196,7 +207,7 @@ export function stageMining(bag: Bag, block: number, tool: number): { draft?: Ba
       broken = true;
     }
   }
-  const drop = block === 3 ? 8 : block === 11 ? 15 : block === 23 ? 24 : block;
+  const drop = block === 3 ? 8 : block === 11 ? 15 : block === 23 ? 24 : blockItemId(block);
   const count = block === 11 || block === 23 ? 2 : 1;
   if (!store(draft, drop, count)) return { message: "所持品が満杯です。ブロックを置くか、材料を使って空きを作ってください。" };
   return { draft, message: ITEMS[drop].name + " +" + count + (broken ? " ／ " + ITEMS[tool].name + "が壊れました。" : "") };
@@ -267,7 +278,7 @@ export function transferStack(bag: Bag, chest: Stack[], from: ContainerSide, ind
 }
 // Materialize one creative palette stack in the player's finite pouch for storage.
 export function supplyCreative(bag:Bag,mode:Mode,id:number,count:number):Outcome {
-  if(mode!=='creative'||!ITEMS[id]?.block||![1,STACK_LIMIT].includes(count))return {ok:false,message:'建材と個数を確認してください。'};
+  if(mode!=='creative'||!itemId(id)||!ITEMS[id].block||![1,STACK_LIMIT].includes(count))return {ok:false,message:'建材と個数を確認してください。'};
   const draft=copyBag(bag);
   if(!store(draft,id,count))return {ok:false,message:'所持品の空きが足りません。'};
   Object.assign(bag,draft);
