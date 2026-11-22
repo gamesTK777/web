@@ -1,4 +1,5 @@
 import { schoolNavigation } from './school-navigation.mjs'
+import { botPace } from './chase-movement.mjs'
 
 export const cpuTokenPrefix='cpu:'
 export const tagBotStages=new Set(['flat','school'])
@@ -115,12 +116,31 @@ function hidingPlace(places,current,ghost,id,now){
 function toward(current,target,travel,waypoint){
   const dx=target.x-current.x,dz=target.z-current.z
   const length=Math.hypot(dx,dz)
-  if(length<.015)return {...current,y:target.y,moving:false,waypoint:undefined}
+  if(length<.015)return {...current,...target,moving:false,waypoint:undefined}
   const portion=Math.min(1,travel/length)
   const remaining=length*(1-portion)
   const y=remaining<=(target.y>current.y?.81:.19)?target.y:current.y
   return {x:current.x+dx*portion,y,z:current.z+dz*portion,
     yaw:Math.atan2(-dx,-dz),moving:true,crouched:false,flying:false,waypoint:portion===1?undefined:waypoint}
+}
+
+function followSchoolHallway(current,waypoint,goal,travel){
+  let target=schoolCell(waypoint)
+  const dx=target.x-current.x,dz=target.z-current.z
+  let remaining=travel-Math.hypot(dx,dz)
+  // Use the rest of a dash along clear straight segments. Stop at bends and
+  // stairs so the interpolated movement cannot cross through a classroom wall.
+  if(target.y===current.y)while(remaining>.015){
+    const next=schoolStep(waypoint,goal)
+    if(next===-1)break
+    const ahead=schoolCell(next),sx=ahead.x-target.x,sz=ahead.z-target.z
+    if(ahead.y!==target.y||dx*sx+dz*sz<=0||Math.abs(dx*sz-dz*sx)>.001)break
+    if(remaining<1)return toward({...current,...target},ahead,remaining,next)
+    remaining-=1
+    waypoint=next
+    target=ahead
+  }
+  return toward(current,target,travel,waypoint)
 }
 
 function moveSchool(current,target,travel,isIt){
@@ -129,7 +149,7 @@ function moveSchool(current,target,travel,isIt){
   // corner through a classroom wall or a stair rail.
   let waypoint=current.waypoint
   if(!Number.isInteger(waypoint)||!neighbors[waypoint])waypoint=schoolStep(settled,goal)
-  if(waypoint!==-1)return toward(current,schoolCell(waypoint),travel,waypoint)
+  if(waypoint!==-1)return followSchoolHallway(current,waypoint,goal,travel)
   if(settled<0||settled!==goal||!isIt)return {...current,moving:false,waypoint:undefined}
   const center=schoolCell(settled)
   return toward(current,{x:clamp(target.x,center.x-.17,center.x+.17),y:center.y,
@@ -138,10 +158,13 @@ function moveSchool(current,target,travel,isIt){
 
 export function tagBotPose(stage,bot,participants,tag,now){
   const current=bot.current
-  if(tag.phase==='waiting'||(tag.phase==='hiding'&&tag.it===bot.id))
-    return {...current,moving:false,waypoint:undefined}
-  const ghost=participants.find(peer=>peer.id===tag.it)?.current
   const isIt=tag.it===bot.id
+  const elapsed=clamp((now-bot.pose_at)/1000,.04,.32)
+  const frozen=tag.phase==='waiting'||tag.phase==='finished'||(tag.phase==='hiding'&&isIt)
+  const ghost=participants.find(peer=>peer.id===tag.it)?.current
+  const wantsSprint=!frozen&&(isIt||tag.phase==='hiding'||!!ghost&&distance(current,ghost)<15)
+  const pace=botPace(current.stamina,'tag',isIt,wantsSprint,elapsed)
+  if(frozen)return pace.finish({...current,moving:false,waypoint:undefined})
   let target
   if(isIt){
     let nearest=Infinity
@@ -151,8 +174,8 @@ export function tagBotPose(stage,bot,participants,tag,now){
       if(d<nearest){nearest=d;target=peer.current}
     }
   }else target=hidingPlace(stage==='school'?schoolHidingPlaces:flatHidingPlaces,current,ghost,bot.id,now)
-  if(!target)return {...current,moving:false,waypoint:undefined}
-  const travel=(isIt?7.1:4.1)*clamp((now-bot.pose_at)/1000,.04,.32)
-  if(stage==='school')return moveSchool(current,target,travel,isIt)
-  return toward(current,{x:clamp(target.x,.35,255.65),y:33,z:clamp(target.z,.35,255.65)},travel)
+  if(!target)return pace.finish({...current,moving:false,waypoint:undefined})
+  const next=stage==='school'?moveSchool(current,target,pace.travel,isIt):
+    toward(current,{x:clamp(target.x,.35,255.65),y:33,z:clamp(target.z,.35,255.65)},pace.travel)
+  return pace.finish(next)
 }

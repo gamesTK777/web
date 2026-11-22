@@ -14,6 +14,8 @@ function fire(target:EventTarget,type:string,fields:Record<string,unknown>={}) {
 function touchButton() {
   const styles=new Map<string,string>(), captured=new Set<number>();
   return Object.assign(new EventTarget(),{
+    hidden:false,
+    disabled:false,
     style:{setProperty:(name:string,value:string)=>styles.set(name,value),removeProperty:(name:string)=>styles.delete(name)},
     dataset:{} as Record<string,string>,
     getBoundingClientRect:()=>({left:0,top:100,width:100,height:100}),
@@ -52,7 +54,7 @@ function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
   }
   const events={pauses:0,backgrounds:0,mines:0,places:0,picks:0,undos:0,rotates:0,cycles:0,looks:[] as number[][],drag:[] as boolean[],recoveries:[] as string[]};
   const pose={yaw:0,pitch:0};
-  const touch={stick:touchButton(),jump:touchButton(),down:touchButton()};
+  const touch={stick:touchButton(),jump:touchButton(),down:touchButton(),sprint:touchButton()};
   const input=new InputController(canvas as unknown as HTMLCanvasElement,{
     pause(){events.pauses++;input.stop();}, // Same stop-on-pause contract as the game.
     background(){events.backgrounds++;},beginMine(){events.mines++;},place(){events.places++;},
@@ -60,7 +62,7 @@ function setup(t:TestContext,request?:(()=>Promise<void>|void)) {
     inventory(){},fly(){},debug(){},select(){},cycle(direction){events.cycles+=direction;},
     recovery(message){events.recoveries.push(message);},
     pick(){events.picks++;},undo(){events.undos++;},rotate(){events.rotates++;}
-  },touch as unknown as {stick:HTMLElement;jump:HTMLButtonElement;down:HTMLButtonElement});
+  },touch as unknown as {stick:HTMLElement;jump:HTMLButtonElement;down:HTMLButtonElement;sprint:HTMLButtonElement});
   function grant(){doc.pointerLockElement=canvas;fire(doc,"pointerlockchange");}
   function hold(){fire(win,"keydown",{code:"KeyW"});fire(win,"keydown",{code:"ShiftLeft"});fire(canvas,"pointerdown",{button:0});}
   input.rememberView(pose);
@@ -295,6 +297,33 @@ test("端末の向き変更で移動・上昇・下降を解除し、視点モ�
   assert.equal(h.input.movement().forward,0);
   h.input.start(true);
   assert.equal(h.input.movement().forward,0);
+});
+
+test("タッチのダッシュは移動と同時に持続し、指の中断やボタンを隠した時に解除される",t=>{
+  const h=setup(t);
+  h.input.start(true);
+  const press=(element:EventTarget,pointerId:number)=>fire(element,'pointerdown',
+    {pointerType:'touch',pointerId,button:0,clientX:50,clientY:115});
+  press(h.touch.stick,1);
+  h.touch.sprint.hidden=true;
+  press(h.touch.sprint,2);
+  assert.equal(h.input.movement().sprint,false);
+
+  h.touch.sprint.hidden=false;
+  press(h.touch.sprint,2);
+  assert.equal(h.input.movement().sprint,true);
+  assert.equal(h.input.movement().forward,1);
+  fire(h.win,'pointercancel',{pointerId:2});
+  assert.equal(h.input.movement().sprint,false);
+  assert.equal(h.input.movement().forward,1);
+  assert.equal(h.touch.sprint.captured.size,0);
+
+  press(h.touch.sprint,3);
+  h.touch.sprint.hidden=true;
+  assert.equal(h.input.movement().sprint,false);
+  h.touch.sprint.hidden=false;
+  assert.equal(h.input.movement().sprint,false);
+  assert.equal(h.touch.sprint.captured.size,0);
 });
 
 test("景色の短いタップを一度だけ設置として扱う。小さな指のずれで照準は動かさない",t=>{

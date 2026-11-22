@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs'
 import {handleWebcraft} from './room-service.mjs'
 import {createLocalRoomDb} from './sqlite-d1.mjs'
 import {tagBotPose,tagBotSeats} from './tag-bots.mjs'
+import {copsBotPose} from './cops-bots.mjs'
 
 const origin = 'https://gamestk777.github.io'
 const epoch = 1_799_000_000_000
@@ -841,6 +842,7 @@ test('a solo player and a server CPU share starts, movement, handoffs, countdown
   assert.deepEqual(new Set(first.tag.enrolledIds),new Set([host.id,cpu.id]))
   const escape=await frame(start+260)
   assert.notDeepEqual(escape.players[0].pose,cpu.pose)
+  assert(!Object.hasOwn(escape.players[0].pose,'stamina'))
   const before=await frame(first.tag.hideUntil)
   assert.equal(before.tag.phase,'playing')
   const locate=await frame(first.tag.hideUntil+250)
@@ -871,6 +873,50 @@ test('a solo player and a server CPU share starts, movement, handoffs, countdown
   assert.deepEqual(finish.tag.results,[{id:cpu.id,nickname:cpu.nickname},{id:host.id,nickname:'ひとりの鬼'}])
 })
 
+test('flat CPU tag dashes at a 10:7 ratio, then walks and recovers after exhaustion',()=>{
+  const current=pose(96.5,33,139.5)
+  const bot={id:'cpu-1',current,pose_at:epoch}
+  const hunter={id:'person',current:pose(106.5,33,139.5)}
+  const target={id:'person',current:pose(228.5,33,139.5)}
+  const seconds=.25
+  const tick=(current,now,it,peer)=>tagBotPose('flat',{...bot,current,pose_at:now},[peer],
+    {phase:'playing',it},now+seconds*1000)
+  const distance=(from,to)=>Math.hypot(from.x-to.x,from.z-to.z)
+  const close=(actual,expected)=>assert(Math.abs(actual-expected)<1e-8,`${actual} != ${expected}`)
+  const ghost=tick(current,epoch,bot.id,target)
+  const runner=tick(current,epoch,hunter.id,hunter)
+  close(distance(current,ghost),9*seconds)
+  close(distance(current,runner),6.3*seconds)
+  close(distance(current,ghost)/distance(current,runner),10/7)
+
+  let at=current
+  for(let i=0;i<16;i++)at=tick(at,epoch+i*250,bot.id,target)
+  assert.deepEqual(at.stamina,{energy:0,rest:0,exhausted:true})
+  for(let i=16;i<21;i++){
+    const next=tick(at,epoch+i*250,bot.id,target)
+    close(distance(at,next),4.2*seconds)
+    if(i<20)assert.equal(next.stamina.energy,0)
+    at=next
+  }
+  close(at.stamina.energy,1.1)
+  for(let i=21;i<32;i++)at=tick(at,epoch+i*250,bot.id,target)
+  assert(at.stamina.energy>=55)
+  const resumed=tick(at,epoch+32*250,bot.id,target)
+  close(distance(at,resumed),9*seconds)
+})
+
+for(const stage of ['park','crossing'])test(`both cops CPU teams use the same dash pace in ${stage}`,()=>{
+  const position=pose(128.5,33,172.5)
+  const elapsed=.12
+  const base={stage,id:'cpu-1',pose:position,elapsed,now:epoch}
+  const officer=copsBotPose({...base,policeIds:['cpu-1'],jailedIds:[],
+    players:[{id:'runner',pose:pose(128.5,33,177.5)}]})
+  const runner=copsBotPose({...base,policeIds:['officer'],jailedIds:['prisoner'],players:[]})
+  const distances=[officer,runner].map(bot=>Math.hypot(bot.x-position.x,bot.z-position.z))
+  assert(distances.every(distance=>Math.abs(distance-6.3*elapsed)<1e-8))
+  assert.deepEqual(officer.stamina,runner.stamina)
+})
+
 test('school CPUs climb the staircase and stop against the matching target floor',()=>{
   const bot=tagBotSeats('school',1)[0]
   const player={id:'person',current:pose(106.5,40,118.5)}
@@ -881,7 +927,7 @@ test('school CPUs climb the staircase and stop against the matching target floor
   for(let i=0;i<240;i++){
     const next=tagBotPose('school',{...bot,current,pose_at:now},[player],room,now+200)
     assert(Math.abs(next.y-current.y)<=1)
-    assert(Math.hypot(next.x-current.x,next.z-current.z)<=1.421)
+    assert(Math.hypot(next.x-current.x,next.z-current.z)<=1.801)
     current=next
     heights.add(next.y)
     now+=200
@@ -889,6 +935,22 @@ test('school CPUs climb the staircase and stop against the matching target floor
   assert.deepEqual([...heights],[33,34,35,36,37,38,39,40])
   assert.equal(current.x,player.current.x)
   assert.equal(current.z,player.current.z)
+})
+
+test('a school CPU can dash several blocks down a straight hall and still stops at bends',()=>{
+  const cpu=tagBotSeats('school',1)[0]
+  const start=cpu.pose
+  const bot={...cpu,current:start,pose_at:epoch}
+  const elapsed=.26
+  const step=(current,offset)=>tagBotPose('school',{...bot,current},
+    [{id:'person',current:{...start,x:start.x+offset}}],{phase:'playing',it:cpu.id},epoch+elapsed*1000)
+  const dash=step(start,8)
+  const walk=step({...start,stamina:{energy:0,rest:0,exhausted:true}},8)
+  const turn=step(start,-8)
+  assert(Math.abs(dash.x-start.x-9*elapsed)<1e-8)
+  assert(Math.abs(walk.x-start.x-4.2*elapsed)<1e-8)
+  assert.equal(turn.x,start.x-1)
+  assert.equal(turn.z,start.z)
 })
 
 test('edits validate bedrock, range, space occupied by a player and cursor before committing', async t => {

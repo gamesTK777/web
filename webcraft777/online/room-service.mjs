@@ -1,5 +1,6 @@
 import { cpuTokenPrefix, tagBotInterval, tagBotPose, tagBotSeats, tagBotStages } from './tag-bots.mjs'
 import { copsBotPose, copsBotSpawn } from './cops-bots.mjs'
+import { advanceStamina } from './chase-movement.mjs'
 import { advanceCopsState, copsStages, jailSpawn, policeSpawn, publicCops, readCops, rescueExit } from './cops-rules.mjs'
 import { PARK_RIDES, PARK_RIDE_REACH } from './park-rides-config.mjs'
 
@@ -544,7 +545,7 @@ async function tickCopsBots(db,room,state,participants,now,digest,selectState){
   return results.slice(-2)
 }
 
-function copsBotTeleports(state,next,participants){
+function copsBotTeleports(state,next,participants,now){
   const teleports=[]
   for(const player of participants){
     if(!player.cpu)continue
@@ -554,6 +555,10 @@ function copsBotTeleports(state,next,participants){
     const destination=startsAsPolice?policeSpawn:isJailed&&!wasJailed?jailSpawn:wasJailed&&!isJailed?rescueExit:null
     if(!destination)continue
     const pose={...publicBotPose(player.current),...destination,moving:false,crouched:false,flying:false}
+    if(player.current.stamina){
+      pose.stamina={...player.current.stamina}
+      if(wasJailed)advanceStamina(pose.stamina,false,(now-player.pose_at)/1000)
+    }
     teleports.push({id:player.id,pose})
   }
   return teleports
@@ -592,7 +597,7 @@ async function advanceCops(db,room,participants,now,digest){
     next.phase,next.hideUntil,next.endsAt,next.protectedUntil,JSON.stringify(next.roster),JSON.stringify(next.policeIds),
     JSON.stringify(next.jailedIds),next.event===null?null:JSON.stringify(next.event),next.winner,
     room.code,state.seq,room.code,now,room.code,digest)]
-  const teleports=copsBotTeleports(state,next,participants)
+  const teleports=copsBotTeleports(state,next,participants,now)
   // Commit NPC jail and release positions with the same state transition. A
   // stale poll cannot teleport them when its compare-and-swap failed.
   if(teleports.length)changes.push(prepared(db,`UPDATE webcraft_members SET pose=json_extract(places.value,'$.pose'),

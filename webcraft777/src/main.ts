@@ -18,11 +18,15 @@ import { FRONTIER_FLOOR, FRONTIER_LOTS, FRONTIER_RESOURCES } from './frontier-wo
 import { COPS_JAIL, COPS_POLICE_SPAWN, COPS_RELEASE, COPS_RESCUE } from './cops-stages'
 import { ParkRides } from './park-rides'
 import { TagMap } from './tag-map'
+import { advanceStamina, chaseSprintSpeed, createStamina, STAMINA_RECOVERY_DELAY } from '../online/chase-movement.mjs'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#scene')!
 const hud = document.querySelector<HTMLElement>('#hud')!
 const tagCanvas = hud.querySelector<HTMLCanvasElement>('#tag-map-canvas')!
 const tagMapLevel = hud.querySelector<HTMLElement>('#tag-map-level')!
+const sprintStatus = hud.querySelector<HTMLElement>('#sprint-status')!
+const sprintStamina = hud.querySelector<HTMLProgressElement>('#sprint-stamina')!
+const sprintFeedback = hud.querySelector<HTMLElement>('#sprint-feedback')!
 const touchControls = hud.querySelector<HTMLElement>('#touch-controls')!
 const touchFly = hud.querySelector<HTMLButtonElement>('#touch-fly')!
 const lifeStatus=hud.querySelector<HTMLElement>('#life-status')!
@@ -38,6 +42,7 @@ const touchButtons = {
   stick:hud.querySelector<HTMLElement>('#move-stick')!,
   jump:hud.querySelector<HTMLButtonElement>('#touch-jump')!,
   down:hud.querySelector<HTMLButtonElement>('#touch-down')!,
+  sprint:hud.querySelector<HTMLButtonElement>('#touch-sprint')!,
 }
 canvas.tabIndex = -1
 const saves = new SaveStore()
@@ -46,7 +51,7 @@ const ui = new GameUI((action,value)=>{ void handle(action,value).catch(err=>ui.
 const loopback=['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 const onlineClient=new OnlineClient(loopback ? location.origin : 'https://tk777-neonshift-scores.takesuke.chatgpt.site')
 const inviteCode=(new URLSearchParams(location.search).get('room')??'').trim().toUpperCase()
-type TagGame = {map:TagMap;status?:TagState;receivedAt:number;remaining?:number;hideRemaining?:number;
+type TagGame = {map:TagMap;stamina:ReturnType<typeof createStamina>;status?:TagState;receivedAt:number;remaining?:number;hideRemaining?:number;
   peers:RoomPlayer[];started:boolean;open:boolean;mapDue:number;uiKey:string;copsMode?:boolean;cops?:CopsState;
   rides?:ParkRides;seats?:RideSeat[];rideCommand?:RideRequest|null;rideUntil?:number;pump?:number}
 type SharedRoom = {connection:RoomConnection;sync?:RoomSync;state:OnlineState;
@@ -215,6 +220,7 @@ function showTouchControls(drag:boolean) {
   const enabled=drag&&controlMode==='tablet'
   touchControls.hidden=!enabled
   touchFly.hidden=session?.data.mode!=='creative'||!!session.online?.tagGame
+  touchButtons.sprint.hidden=!enabled||!session?.online?.tagGame
   const flying=Boolean(session?.player.flying)
   touchFly.setAttribute('aria-pressed',String(flying))
   touchButtons.jump.textContent=flying?'上昇':'ジャンプ'
@@ -521,6 +527,17 @@ function showRoom(room:SharedRoom) {
   const {stage,tagBots,mode}=room.connection.room
   ui.onlineSession({code:room.connection.room.code,count:room.count,state:room.state,stage,tagBots,cops:mode==='cops'})
 }
+function showStamina({stamina}:TagGame,sprinting:boolean){
+  sprintStatus.hidden=false
+  const energy=Math.ceil(stamina.energy)
+  if(sprintStamina.value!==energy)sprintStamina.value=energy
+  const recovering=energy<100&&stamina.rest>=STAMINA_RECOVERY_DELAY
+  const state=stamina.exhausted?'empty':energy<=25?'low':recovering?'recovering':sprinting?'running':'ready'
+  if(sprintStatus.dataset.state!==state)sprintStatus.dataset.state=state
+  const feedback=stamina.exhausted?(energy?'ダッシュを放す':'スタミナ切れ'):
+    sprinting?'ダッシュ中':recovering?'回復中':energy<100?'休憩中':touchControls.hidden?'Shiftでダッシュ':''
+  if(sprintFeedback.textContent!==feedback)sprintFeedback.textContent=feedback
+}
 function updateTagUI(s:Session,now=performance.now()){
   const room=s.online,game=room?.tagGame
   if(!room||!game)return
@@ -797,7 +814,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
         nickname,restoring:!!profile,pendingExplore:profile?.pending}
       session.online=room
       if(tag){
-        room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),receivedAt:performance.now(),peers:[],started:false,
+        room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),stamina:createStamina(),receivedAt:performance.now(),peers:[],started:false,
           open:false,mapDue:0,uiKey:'',copsMode:cops,rides:stage==='park'?new ParkRides(view.scene):undefined}
         const rides=room.tagGame.rides
         if(rides)view.actors.seatedPose=id=>rides.playerPose(id)
@@ -1003,16 +1020,27 @@ function tick(now:number){
     parkRide.setAttribute('aria-pressed',String(!!seated))
     if(label&&parkRide.textContent!==label)parkRide.textContent=label
   }
+  let sprintRequested=false, sprinting=false
   if(input.active){
     const p=s.player, movement=input.movement(), ox=p.x,oz=p.z
     if(!input.frame(p,elapsed))return
-    const it=!!tag?.status?.it&&tag.status.it===s.online?.connection.id
-    if(tag)movement.sprint=true
+    const it=tag?.status?.it===id
+    const canMove=!seated&&!jailed&&!(it&&tag?.status?.phase==='hiding')&&!(police&&cops?.phase==='hiding')
+    if(tag){
+      const phase=cops?.phase??tag.status?.phase
+      sprintRequested=canMove&&(phase==='hiding'||phase==='playing')&&movement.sprint&&!movement.down&&!p.crouched&&
+        Math.hypot(movement.forward,movement.right)>.03
+      movement.sprint=sprintRequested&&!tag.stamina.exhausted&&tag.stamina.energy>0
+    }
     if(seated&&tag){
       tag.pump=Math.abs(movement.forward)>.1?Math.sign(movement.forward):0
       Object.assign(p,{x:seated.x,y:seated.y,z:seated.z,vx:0,vy:0,vz:0})
-    }else if(!jailed&&!(it&&tag?.status?.phase==='hiding')&&!(police&&cops?.phase==='hiding'))
-      stepPlayer(s.world,p,movement,dt,it||police?{...settings,sprintMultiplier:it?1.25:1.12}:settings)
+    }else if(canMove){
+      stepPlayer(s.world,p,movement,dt,tag?{...settings,sprintSpeed:chaseSprintSpeed(tag.copsMode?'cops':'tag',it)}:settings)
+    }
+    const traveled=Math.hypot(ox-p.x,oz-p.z)
+    sprintRequested=sprintRequested&&traveled>dt*.2&&!p.crouched
+    sprinting=movement.sprint&&sprintRequested
     audio.environment(s.world,p,dt)
     s.land?.update(p,dt,s.data.day)
     const water=s.aquatic
@@ -1023,10 +1051,14 @@ function tick(now:number){
     if(water&&water.health<=0||s.frontier&&s.frontier.health<=0)returnToSpawn(s)
     guideDue-=dt
     if(guideDue<=0){guideDue=.24;if(s.data.mode==='explore'&&s.world.stage==='classic')visitCave(s.data.journey,s.world,p,s.data.bag);guide()}
-    stepDistance+=Math.hypot(ox-p.x,oz-p.z)
+    stepDistance+=traveled
     if(stepDistance>1.8){stepDistance=0;if(p.grounded&&!p.flying)audio.sound('step',s.world.get(Math.floor(p.x),Math.floor(p.y-.05),Math.floor(p.z)))}
     s.data.day=s.online ? (.39+Math.max(0,Date.now()-s.online.connection.room.createdAt)/600_000)%1 : (s.data.day+dt/600)%1
     cooldown=Math.max(0,cooldown-dt);advanceMine(dt)
+  }
+  if(tag){
+    advanceStamina(tag.stamina,sprintRequested,dt)
+    showStamina(tag,sprinting)
   }
   const target=input.active&&!tag?raycast(s.world,s.player):null
   if(!input.active) {

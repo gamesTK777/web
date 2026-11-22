@@ -17,8 +17,9 @@ export interface Controls {
   attack?(): void; tagMap?(): void
 }
 
-type TouchButtons = { stick:HTMLElement; jump:HTMLButtonElement; down:HTMLButtonElement }
-type Role = 'look'|'mine'|'stick'|'jump'|'down'
+type TouchButtons = { stick:HTMLElement; jump:HTMLButtonElement; down:HTMLButtonElement; sprint?:HTMLButtonElement }
+type TouchRole = 'stick'|'jump'|'down'|'sprint'
+type Role = 'look'|'mine'|TouchRole
 type Contact = { id:number; element:HTMLElement; role:Role; pointerType:string; x:number; y:number; tapStartedAt?:number }
 const movableKeys = new Set(['KeyW','KeyA','KeyS','KeyD','KeyC','Space','ShiftLeft','ShiftRight',
   'ControlLeft','ControlRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'])
@@ -90,6 +91,7 @@ export class InputController {
       this.bindTouch(touch.stick,'stick')
       this.bindTouch(touch.jump,'jump')
       this.bindTouch(touch.down,'down')
+      if(touch.sprint)this.bindTouch(touch.sprint,'sprint')
       const resetAfterTurn=()=>{if(this.drag)this.reset()}
       window.addEventListener('orientationchange',resetAfterTurn)
       window.screen?.orientation?.addEventListener?.('change',resetAfterTurn)
@@ -270,13 +272,14 @@ export class InputController {
     try{if(capture)el.setPointerCapture?.(e.pointerId)}catch{this.contacts.delete(e.pointerId);return}
     return contact
   }
-  private bindTouch(element:HTMLElement,role:'stick'|'jump'|'down'){
+  private bindTouch(element:HTMLElement,role:TouchRole){
     element.addEventListener('contextmenu',e=>e.preventDefault())
     if(role==='jump')element.addEventListener('click',e=>{
       if(this.drag && e.detail===0)this.touchJumpEdge=true
     })
     element.addEventListener('pointerdown',e=>{
-      if(!this.drag||e.button!==0||!this.grab(e,element,role))return
+      if(!this.drag||e.button!==0||element.hidden||('disabled' in element&&element.disabled)||
+        !this.grab(e,element,role))return
       e.preventDefault()
       element.dataset.held=''
       if(role==='stick')this.updateStick(element,e.clientX,e.clientY)
@@ -325,7 +328,7 @@ export class InputController {
       c.element.style.removeProperty('--stick-x')
       c.element.style.removeProperty('--stick-y')
     }
-    if(c.role==='stick'||c.role==='jump'||c.role==='down')delete c.element.dataset.held
+    if(c.role!=='look'&&c.role!=='mine')delete c.element.dataset.held
     try{if(c.element.hasPointerCapture?.(c.id))c.element.releasePointerCapture(c.id)}catch{/* Capture was already released. */}
   }
   private release(e:PointerEvent){
@@ -392,10 +395,15 @@ export class InputController {
   movement(){
     const k=this.keys,jumpPressed=this.jumpEdge||this.touchJumpEdge
     this.jumpEdge=this.touchJumpEdge=false
+    let touchSprint=this.findRole('sprint')
+    if(touchSprint&&(touchSprint.element.hidden||('disabled' in touchSprint.element&&touchSprint.element.disabled))){
+      this.dropContact(touchSprint)
+      touchSprint=undefined
+    }
     const forward=Number(k.has('KeyW'))-Number(k.has('KeyS')),right=Number(k.has('KeyD'))-Number(k.has('KeyA'))
     const keyboard=!!(forward||right)
     return {forward:keyboard?forward:this.stickForward,right:keyboard?right:this.stickRight,
-      jump:k.has('Space')||!!this.findRole('jump'),jumpPressed,sprint:k.has('ShiftLeft')||k.has('ShiftRight'),
+      jump:k.has('Space')||!!this.findRole('jump'),jumpPressed,sprint:k.has('ShiftLeft')||k.has('ShiftRight')||!!touchSprint,
       down:k.has('KeyC')||k.has('ControlLeft')||k.has('ControlRight')||!!this.findRole('down')}
   }
 }

@@ -29,6 +29,11 @@
       <div id="tag-status" hidden>
         <div id="tag-clock" role="timer" aria-live="off" aria-label="残り時間" hidden><span aria-hidden="true">残り</span><time id="tag-clock-value"></time></div>
         <strong id="tag-role" role="status"></strong><span id="tag-hint"></span>
+        <div id="sprint-status" hidden>
+          <label for="sprint-stamina">スタミナ</label>
+          <progress id="sprint-stamina" max="100" value="100" aria-describedby="sprint-feedback"></progress>
+          <span id="sprint-feedback"></span>
+        </div>
       </div>
       <aside id="tag-map" aria-label="鬼ごっこのエリア地図" hidden>
         <div class="tag-map-head"><strong>エリア地図</strong><span id="tag-map-level" hidden></span><span>↑ 北</span></div>
@@ -54,6 +59,7 @@
         </div>
         <div id="touch-actions">
           <button type="button" id="touch-fly" data-action="touch-fly" aria-label="飛行を切り替える" aria-pressed="false" hidden>飛行</button>
+          <button type="button" id="touch-sprint" title="押しながら移動してダッシュ" hidden>ダッシュ</button>
           <button type="button" id="touch-down" title="長押ししてしゃがむ。飛行中は下降">しゃがむ</button>
           <button type="button" id="touch-jump" title="ジャンプ。水中や飛行中は長押しで上昇">ジャンプ</button>
         </div>

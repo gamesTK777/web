@@ -1,4 +1,5 @@
 import { navBounds, navFloor, navSpawns, navMaps } from './cops-navigation.mjs'
+import { botPace } from './chase-movement.mjs'
 
 const {minX,maxX,minZ,maxZ}=navBounds
 const width=maxX-minX, area=width*(maxZ-minZ)
@@ -149,8 +150,10 @@ export function copsBotSpawn(stage,index){
 
 export function copsBotPose({stage,id,pose,elapsed,now,policeIds,jailedIds,players,phase='playing'}){
   const map=maps[stage], isPolice=policeIds.includes(id)
+  const stepTime=clamp(elapsed,.04,.32)
+  const stationary={...pose,moving:false,route:undefined,waypoint:undefined}
   if(!map||jailedIds.includes(id)||phase==='waiting'||phase==='finished'||phase==='hiding'&&isPolice){
-    return {...pose,moving:false,route:undefined,waypoint:undefined}
+    return botPace(pose.stamina,'cops',false,false,stepTime).finish(stationary)
   }
   const cops=[], runners=[]
   for(const peer of players){
@@ -168,8 +171,9 @@ export function copsBotPose({stage,id,pose,elapsed,now,policeIds,jailedIds,playe
   const objective=isPolice?'pursue':canRescue?(stepOff?'leave-pad':'rescue'):'hide'
   const target=isPolice?closest(runners):canRescue?(stepOff?navSpawns.release:pad):hidingPlace(stage,id,pose,cops,now)
   const settled=nearest(map,pose), goal=target?nearest(map,target):-1
-  if(settled<0||goal<0)return {...pose,moving:false,route:undefined,waypoint:undefined}
-  const travel=(isPolice?7.2:5.4)*clamp(elapsed,.04,.32)
+  const pace=botPace(pose.stamina,'cops',false,isPolice||canRescue||phase==='hiding'||threat<15,stepTime)
+  if(settled<0||goal<0)return pace.finish(stationary)
+  const {travel}=pace
   let route=pose.route??[], waypoint=pose.waypoint, replanAt=pose.replanAt??0
   let lastGoal=pose.goal, lastObjective=pose.objective
   // Complete the current center-to-center segment before switching direction.
@@ -186,13 +190,13 @@ export function copsBotPose({stage,id,pose,elapsed,now,policeIds,jailedIds,playe
   }
   const state={...pose,route,goal:lastGoal,replanAt,objective:lastObjective,waypoint}
   if(waypoint===undefined){
-    if(settled!==goal)return {...state,moving:false}
+    if(settled!==goal)return pace.finish({...state,moving:false})
     const center=point(goal)
-    return toward(state,{x:clamp(target.x,center.x-.17,center.x+.17),y:center.y,
-      z:clamp(target.z,center.z-.17,center.z+.17)},travel)
+    return pace.finish(toward(state,{x:clamp(target.x,center.x-.17,center.x+.17),y:center.y,
+      z:clamp(target.z,center.z-.17,center.z+.17)},travel))
   }
   const next=point(waypoint)
-  if(distance(pose,next)>travel)return toward(state,next,travel)
+  if(distance(pose,next)>travel)return pace.finish(toward(state,next,travel))
   // Use the remaining distance only on collinear segments. Even if the Worker
   // advances multiple cells in one tick, clients can render a straight blend.
   let remaining=travel-distance(pose,next), stop=next, used=1
@@ -201,10 +205,10 @@ export function copsBotPose({stage,id,pose,elapsed,now,policeIds,jailedIds,playe
     const after=point(route[used]), sx=after.x-stop.x, sz=after.z-stop.z
     if(after.y!==stop.y||Math.abs(dx*sz-dz*sx)>.001||dx*sx+dz*sz<=0)break
     const length=distance(stop,after)
-    if(remaining<length)return toward({...state,...stop,route:route.slice(used),waypoint:route[used]},after,remaining)
+    if(remaining<length)return pace.finish(toward({...state,...stop,route:route.slice(used),waypoint:route[used]},after,remaining))
     remaining-=length
     stop=after
     used++
   }
-  return toward({...state,route:route.slice(used),waypoint:undefined},stop,travel)
+  return pace.finish(toward({...state,route:route.slice(used),waypoint:undefined},stop,travel))
 }

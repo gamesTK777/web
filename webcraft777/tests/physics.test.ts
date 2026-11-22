@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { canPlaceAt, createPlayer, eyeHeight, mineAt, overlapsPlayer, placeAt, raycast, resetPlayerInput, safeSpawn, stepPlayer } from "../src/physics.ts";
 import type { Input, Pose } from "../src/physics.ts";
 import { createBag, quantity } from "../src/inventory.ts";
+import { chaseSprintSpeed } from "../online/chase-movement.mjs";
 
 class FloorWorld {
   changes = new Map<string, number>();
@@ -34,16 +35,18 @@ test("movement respects flat feet, normalized directions and sprint speed", () =
   assert.ok(travel({forward:1,sprint:true}) > 6);
 });
 
-test("the tag chaser's sprint bonus does not change ordinary or invalid-input speeds", () => {
+test("tag sprint speeds are 10:7 while cops and robbers sprint equally", () => {
   const w = new FloorWorld();
-  const speed = (sprintMultiplier?: number, sprint = true) => {
+  const speed = (sprintSpeed?: number, sprint = true) => {
     const p = createPlayer(pose);
-    for (let n = 0; n < 60; n++) stepPlayer(w, p, { ...idle, forward: 1, sprint }, 1 / 60, { sprintMultiplier });
+    for (let n = 0; n < 60; n++) stepPlayer(w, p, { ...idle, forward: 1, sprint }, 1 / 60, { sprintSpeed });
     return -p.vz;
   };
-  assert.ok(Math.abs(speed(1.25) / speed() - 1.25) < .001);
+  assert.equal(speed(chaseSprintSpeed('tag', true)), 9);
+  assert.equal(speed(chaseSprintSpeed('tag', false)), 6.3);
+  assert.equal(speed(chaseSprintSpeed('cops', true)), speed(chaseSprintSpeed('cops', false)));
   assert.equal(speed(Infinity), speed());
-  assert.equal(speed(1.25, false), speed(undefined, false));
+  assert.equal(speed(9, false), speed(undefined, false));
 });
 
 test("jump buffering consumes a quick tap on landing, and cannot repeat in midair", () => {
@@ -167,10 +170,9 @@ test("swimming reduces travel and held jump raises the player", () => {
   assert.ok(Math.abs(p.z - 16.1) < 1e-7);
   const runner = createPlayer(pose), chaser = createPlayer(pose);
   const swim = {...idle,forward:1,sprint:true};
-  stepPlayer(w,runner,swim,.2);
-  stepPlayer(w,chaser,swim,.2,{sprintMultiplier:1.25});
-  assert.equal(runner.vz,-2);
-  assert.equal(chaser.vz,-2.5);
+  stepPlayer(w,runner,swim,.2,{sprintSpeed:chaseSprintSpeed('tag',false)});
+  stepPlayer(w,chaser,swim,.2,{sprintSpeed:chaseSprintSpeed('tag',true)});
+  assert.ok(Math.abs(runner.vz/chaser.vz-.7)<1e-7);
   assert.ok(p.y > 1.8);
 });
 

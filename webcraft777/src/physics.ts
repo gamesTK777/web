@@ -192,7 +192,7 @@ function walkAxis(world:ReadWorld,player:Player,axis:"x"|"z",distance:number,gro
   return moveAxis(world,player,axis,distance);
 }
 export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: number,
-  comfort: {bob?: boolean; sprintFov?: boolean; sprintMultiplier?:number} = {}): void {
+  comfort: {bob?: boolean; sprintFov?: boolean; sprintSpeed?:number} = {}): void {
   if (!(dt > 0) || !Number.isFinite(dt)) return;
   // Cap elapsed time after backgrounding; never take a long untested displacement.
   const elapsed = Math.min(dt, .25);
@@ -201,8 +201,10 @@ export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: n
   const forward = input.forward / length, right = input.right / length;
   const sin = Math.sin(player.yaw), cos = Math.cos(player.yaw);
   const dx = right * cos - forward * sin, dz = -right * sin - forward * cos;
-  const requested = comfort.sprintMultiplier ?? 1;
-  const multiplier = Number.isFinite(requested) ? Math.min(1.4, Math.max(1, requested)) : 1;
+  const requestedSpeed = comfort.sprintSpeed ?? 0;
+  const customSprint = Number.isFinite(requestedSpeed) && requestedSpeed > 0;
+  const sprintSpeed = customSprint ? requestedSpeed : 6.4;
+  const swimSpeed = customSprint ? sprintSpeed * .4 : 2;
   if (input.jumpPressed || (input.jump && !player.wasJump)) player.jumpBuffer = .105;
   for (let i = 0; i < steps; i++) {
     const px = player.x, pz = player.z;
@@ -212,8 +214,8 @@ export function stepPlayer(world: ReadWorld, player: Player, input: Input, dt: n
     // Never unfold the collision body into a low lintel, even when starting flight.
     player.crouched = (!player.flying && !player.inWater && input.down && (!!ground || player.crouched)) ||
       (player.crouched && occupied(world,px,player.y,pz));
-    const speed = player.flying ? (input.sprint ? 13 : 8) : player.inWater ? 2 * (input.sprint ? multiplier : 1) :
-      player.crouched ? 1.65 : input.sprint ? 6.4 * multiplier : 4.2;
+    const speed = player.flying ? (input.sprint ? 13 : 8) : player.inWater ? (input.sprint ? swimSpeed : 2) :
+      player.crouched ? 1.65 : input.sprint ? sprintSpeed : 4.2;
     if (player.flying || player.inWater) {
       player.vx = dx*speed; player.vz = dz*speed;
     } else {

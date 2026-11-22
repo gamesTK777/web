@@ -198,6 +198,35 @@ input { accent-color: #2e745b; }
 #tag-clock-value,.tag-result-time time { font-size: 1.2rem; font-variant-numeric: tabular-nums; font-weight: 850; line-height: 1.1; }
 #tag-clock[data-urgent] { color: #ffd0a7; }
 #tag-hint:empty { display: none; }
+#sprint-status {
+  --stamina-fill: #93deb0;
+  display: grid;
+  flex: 1 0 100%;
+  grid-template-columns: max-content minmax(64px,1fr) max-content;
+  align-items: center;
+  gap: 6px;
+  min-width: min(215px,100%);
+  padding-top: 4px;
+  border-top: 1px solid #a6d1bd58;
+}
+#sprint-status[data-state="low"] { --stamina-fill: #f2cd7b; }
+#sprint-status[data-state="empty"] { --stamina-fill: #ffac84; }
+#sprint-stamina {
+  inline-size: 100%;
+  block-size: 8px;
+  accent-color: var(--stamina-fill);
+  appearance: none;
+  -webkit-appearance: none;
+  background: #d5e8cd36;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+#sprint-stamina::-webkit-progress-bar { background: transparent; }
+#sprint-stamina::-webkit-progress-value { background: var(--stamina-fill); }
+#sprint-stamina::-moz-progress-bar { background: var(--stamina-fill); }
+#sprint-feedback { color: #fff1c1; font-size: .75rem; }
+#sprint-feedback:empty { display: none; }
 #tag-hide {
   --hide-accent: #f6db96;
   --hide-panel: #102f29ee;
@@ -524,6 +553,11 @@ dialog::backdrop { background: #122b28bb; }
 #touch-actions button:active,#touch-actions button[data-held],#touch-controls:not([hidden]) ~ #fallback button:active {
   box-shadow: inset 0 0 0 2px #fae4a8;
 }
+#touch-actions #touch-sprint {
+  border-color: #a6dfb5;
+  background: #315e48;
+}
+#game[data-tag-play] :is(#move-stick,#touch-actions) { bottom: max(10px,env(safe-area-inset-bottom)); }
 #touch-controls:not([hidden]) ~ #fallback {
   right: var(--touch-right);
   bottom: var(--touch-bottom);
