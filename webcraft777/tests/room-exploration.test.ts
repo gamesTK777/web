@@ -2,12 +2,13 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { craft, createBag, quantity, stageMining, validBag } from '../src/inventory'
 import { createJourney } from '../src/expedition'
-import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type RoomProfile } from '../src/room-exploration'
+import { createExplorationBag, readRoomProfile, writeRoomProfile, type RoomProfile } from '../src/room-exploration'
 
 test('木のないステージでも各参加者の初期素材から道具と作業台を作れる',()=>{
-  assert.deepEqual(createRoomExplorationBag('classic'),createBag('explore'))
-  for(const stage of ['flat','lake'] as const){
-    const host=createRoomExplorationBag(stage),guest=createRoomExplorationBag(stage)
+  assert.deepEqual(createExplorationBag('classic'),createBag('explore'))
+  assert.deepEqual(createExplorationBag('frontier'),createBag('explore'))
+  for(const stage of ['flat','lake','school','park','crossing'] as const){
+    const host=createExplorationBag(stage),guest=createExplorationBag(stage)
     assert(validBag(host))
     assert.equal(host.hotbar[0],5)
     assert.equal(quantity(host,5),16)

@@ -18,7 +18,8 @@ const copsBotInterval = 200
 const maxSampleLag = 350
 const hideTime = 20_000
 const tagDurations = new Set([1,3,5,10,15])
-const roomStages = new Set(['classic','flat','lake','school'])
+const baseStages = new Set(['classic','flat','lake'])
+const roomStages = new Set([...baseStages,'school','frontier',...copsStages])
 const playersLimit = 6
 const roomLimit = 128
 const cellsLimit = 8192
@@ -38,10 +39,11 @@ class RoomError extends Error {
 
 const prepared = (db, sql, ...values) => db.prepare(sql).bind(...values)
 const changed = result => result.meta.changes > 0
-const wireProtocol = value => [2,3,4,5,6,7,8,9].includes(value) ? value : 1
+const wireProtocol = value => [2,3,4,5,6,7,8,9,10].includes(value) ? value : 1
 const publicMode = room => room.cops_stage ? 'cops' : room.tag_enabled ? 'tag' : room.mode
-const publicStage = room => room.cops_stage ?? room.tag_stage ?? room.stage
-const minimumProtocol = `CASE WHEN cops_bots>0 THEN 9 WHEN cops_stage IS NOT NULL THEN 8 WHEN tag_bots>0 THEN 7 WHEN tag_stage IS NOT NULL THEN 6 WHEN stage<>'classic' THEN 5
+const publicStage = room => room.world_stage ?? room.cops_stage ?? room.tag_stage ?? room.stage
+const minimumProtocol = `CASE WHEN world_stage IS NOT NULL THEN 10 WHEN cops_bots>0 THEN 9 WHEN cops_stage IS NOT NULL THEN 8
+  WHEN tag_bots>0 THEN 7 WHEN tag_stage IS NOT NULL THEN 6 WHEN stage<>'classic' THEN 5
   WHEN tag_minutes>0 THEN 4 WHEN tag_enabled=1 THEN 3 WHEN mode='explore' THEN 2 ELSE 1 END`
 const cpuSeat = `token_hash LIKE '${cpuTokenPrefix}%'`
 const validBlock = n => Number.isInteger(n) && ((n >= 1 && n <= 12) || n === 23 || (n >= 25 && n <= 33))
@@ -91,7 +93,7 @@ function checkProtocol(room, protocol) {
     throw new RoomError('CPUがいるルームで遊ぶには、ゲーム画面を再読み込みしてください。', 426)
   }
   const stage = publicStage(room)
-  const stageProtocol = stage === 'school' ? 6 : stage && stage !== 'classic' ? 5 : 1
+  const stageProtocol = room.world_stage ? 10 : stage === 'school' ? 6 : stage && stage !== 'classic' ? 5 : 1
   if (protocol < stageProtocol) {
     throw new RoomError('このステージで遊ぶには、ゲーム画面を再読み込みしてください。', 426)
   }
@@ -177,7 +179,7 @@ function canReach(p, e) {
 
 const tagFields = 'it,phase,hide_until,seq,previous_it,protected_until,ends_at,round_roster,round_result'
 const roomInfo = `SELECT r.code,r.name,r.seed,r.created_at,r.expires_at,r.revision,r.cell_count,r.mode,r.tag_enabled,r.tag_minutes,
-  r.stage,r.tag_stage,r.tag_bots,r.cops_stage,r.cops_minutes,r.cops_bots,r.creator,${tagFields.split(',').map(field=>'t.'+field).join(',')},
+  r.stage,r.tag_stage,r.tag_bots,r.cops_stage,r.cops_minutes,r.cops_bots,r.world_stage,r.creator,${tagFields.split(',').map(field=>'t.'+field).join(',')},
   c.phase AS cops_phase,c.ends_at AS cops_ends_at FROM webcraft_rooms r
   LEFT JOIN webcraft_tag_state t ON t.room_code=r.code LEFT JOIN webcraft_cops_state c ON c.room_code=r.code WHERE r.code=?`
 const addSeat = `INSERT INTO webcraft_members(room_code,token_hash,id,nickname,last_seen)
@@ -193,21 +195,24 @@ async function createRoom(db, body, now) {
   const tagEnabled = Number(requested === 'tag')
   const protocol = wireProtocol(body.protocol)
   const selectedStage = body.stage === undefined ? (cops?'park':'classic') : body.stage
-  if (!(cops?copsStages:roomStages).has(selectedStage)) throw new RoomError('ゲームのステージを選んでください。')
-  if (selectedStage === 'school' && !tagEnabled) throw new RoomError('学校は鬼ごっこルームで選べます。')
-  const stage = cops || selectedStage === 'school' ? 'classic' : selectedStage
-  const tagStage = selectedStage === 'school' ? selectedStage : null
-  const copsStage = cops ? selectedStage : null
+  if (!roomStages.has(selectedStage)) throw new RoomError('ゲームのステージを選んでください。')
+  const tagStage = tagEnabled && selectedStage === 'school' ? selectedStage : null
+  const legacyStage = cops ? copsStages.has(selectedStage) : baseStages.has(selectedStage) || tagStage!==null
+  // Keep the old stage columns as mode markers under their existing checks.
+  // Only new combinations use the override and require an updated client.
+  const worldStage = legacyStage ? null : selectedStage
+  const stage = !cops && baseStages.has(selectedStage) ? selectedStage : 'classic'
+  const copsStage = cops ? (legacyStage?selectedStage:'park') : null
   const copsMinutes = cops ? (body.tagMinutes === undefined ? 5 : body.tagMinutes) : 0
   const tagMinutes = tagEnabled && protocol>=4 ? (body.tagMinutes === undefined ? 5 : body.tagMinutes) : 0
   const botCount = body.tagBots === undefined ? 0 : body.tagBots
   if (!Number.isInteger(botCount)||botCount<0||botCount>4) throw new RoomError('CPUの人数は0〜4人から選んでください。')
-  if (botCount>0&&!cops&&(!tagEnabled||!tagBotStages.has(selectedStage)))
-    throw new RoomError('CPUはドロケイと、平地または学校の鬼ごっこで参加できます。')
+  if (botCount>0&&!(cops?copsStages.has(selectedStage):tagEnabled&&tagBotStages.has(selectedStage)))
+    throw new RoomError('CPUは鬼ごっこの平地・学校と、ドロケイの大公園・渋谷で参加できます。')
   const tagBots = cops ? 0 : botCount
   const copsBots = cops ? botCount : 0
   checkProtocol({stage,tag_stage:tagStage,tag_enabled:tagEnabled,tag_minutes:tagMinutes,tag_bots:tagBots,
-    cops_stage:copsStage,cops_bots:copsBots},protocol)
+    cops_stage:copsStage,cops_bots:copsBots,world_stage:worldStage},protocol)
   if (tagEnabled) {
     if (body.tagMinutes!==undefined && protocol<4) checkProtocol({tag_enabled:1,tag_minutes:5},protocol)
     if (protocol>=4 && !tagDurations.has(tagMinutes)) throw new RoomError('鬼ごっこの制限時間を選んでください。')
@@ -223,10 +228,10 @@ async function createRoom(db, body, now) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = makeCode()
     const statements = [
-      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode,tag_enabled,tag_minutes,stage,tag_stage,tag_bots,cops_stage,cops_minutes,cops_bots)
-        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
+      prepared(db, `INSERT OR IGNORE INTO webcraft_rooms(code,creator,name,seed,created_at,expires_at,mode,tag_enabled,tag_minutes,stage,tag_stage,tag_bots,cops_stage,cops_minutes,cops_bots,world_stage)
+        SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM webcraft_rooms)< ?`,
       code, seat.id, name, seed, now, now + lifetime, mode, tagEnabled, tagMinutes, stage, tagStage, tagBots,
-      copsStage,copsMinutes,copsBots,roomLimit),
+      copsStage,copsMinutes,copsBots,worldStage,roomLimit),
       prepared(db, addSeat + ' WHERE code=? AND creator=?', seat.hash, seat.id, seat.nickname, now, code, seat.id)
     ]
     for(const bot of bots)statements.push(prepared(db,
@@ -240,7 +245,7 @@ async function createRoom(db, body, now) {
     const [created] = await db.batch([...statements, cleanup])
     if (changed(created)) return publicRoom({code,name,seed,created_at:now,mode,tag_enabled:tagEnabled,
       tag_minutes:tagMinutes,stage,tag_stage:tagStage,tag_bots:tagBots,cops_stage:copsStage,cops_minutes:copsMinutes,
-      cops_bots:copsBots},seat,protocol)
+      cops_bots:copsBots,world_stage:worldStage},seat,protocol)
   }
   throw new RoomError('現在ルームの空きがありません。少し待ってから再試行してください。', 503)
 }
@@ -500,7 +505,7 @@ async function tickCopsBots(db,room,state,participants,now,digest,selectState){
   if(!due.length)return null
   const players=participants.filter(p=>enrolled.has(p.id)).map(p=>({id:p.id,pose:p.current}))
   const updates=due.map(bot=>{
-    const pose=copsBotPose({stage:room.cops_stage,id:bot.id,pose:bot.current,phase:state.phase,
+    const pose=copsBotPose({stage:publicStage(room),id:bot.id,pose:bot.current,phase:state.phase,
       elapsed:Math.min((now-bot.pose_at)/1000,.5),now,policeIds:state.policeIds,jailedIds:state.jailedIds,players})
     return prepared(db,`UPDATE webcraft_members AS m SET last_seen=?,previous_pose=pose,previous_pose_at=pose_at,
       pose_history=${rememberPose},sample_at=?,pose_at=?,pose=?
@@ -594,7 +599,7 @@ function publicRide({ride_id,ride_seat,id,ride_pump}){
 }
 
 async function updateRides(db,room,state,now,digest,memberId,pose,input){
-  if(room.cops_stage!=='park')return undefined
+  if(publicStage(room)!=='park')return undefined
   const cutoff=now-tagPresence,code=room.code
   const clear='SET ride_id=NULL,ride_seat=NULL,ride_pump=0'
   const seats=prepared(db,`SELECT id,ride_id,ride_seat,ride_pump FROM webcraft_members
@@ -684,7 +689,7 @@ async function syncRoom(db, body, now) {
   const response = {revision:room.revision,cells:updates,players:[]}
   if(room.cops_stage){
     if(edit)throw new RoomError('ドロケイではブロックを編集できません。',403)
-    const ride=room.cops_stage==='park'?cleanRide(body.ride):undefined
+    const ride=publicStage(room)==='park'?cleanRide(body.ride):undefined
     const advanced=await advanceCops(db,room,participants,frameTime,digest)
     const {state}=advanced
     participants=advanced.participants

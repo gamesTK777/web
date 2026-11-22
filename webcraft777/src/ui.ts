@@ -1,5 +1,5 @@
 import { ITEMS, RECIPES, activeStack, craftable, quantity, craftReason, needsBench, blockItemId, isFrontierEquipment, type CraftContext, type Stack, type Bag, type Mode } from './inventory'
-import { TERRAIN_PRESETS, copsStage, soloExploration, stageSupportsBots, validSoloTerrainPreset, validTerrainPreset, type TerrainPreset } from './stages'
+import { TERRAIN_PRESETS, stageSupportsBots, validTerrainPreset, type TerrainPreset } from './stages'
 
 export type { Mode } from './inventory'
 import type { Settings as UISettings } from './preferences'
@@ -17,8 +17,8 @@ const chaseMode=(mode:RoomUIPlayMode)=>mode==='tag'||mode==='cops'
 const botHelp=(mode:RoomUIPlayMode)=>mode==='cops'?
   'CPUを加えると1人でも遊べます。CPUが2人以上なら、両チームにCPUが入ります。合計6人まで。':
   'CPUを加えると、プレイヤー1人でも対戦を始められます。合計6人まで。'
-const roomStageAvailable=(stage:TerrainPreset,mode:RoomUIPlayMode)=>
-  mode==='cops'?copsStage(stage):!copsStage(stage)&&stage!=='frontier'&&(stage!=='school'||mode==='tag')
+const cpuStageHelp=(mode:RoomUIPlayMode,stage:TerrainPreset)=>stageSupportsBots(mode,stage)?botHelp(mode):
+  mode==='cops'?'CPUは「みどりの大公園」と「渋谷スクランブル」で追加できます。':'CPUは「まっさらな平地」と「学校」で追加できます。'
 const tagMinuteOptions = [1,3,5,10,15] as const
 const defaultTagMinutes = 5
 const onlineTerrainDetails:Partial<Record<TerrainPreset,string>> = {
@@ -58,15 +58,13 @@ const button = (action:string, text:string, css='')=>'<button type="button" clas
 const backButton = () => button('back','<span aria-hidden="true">‹</span> 戻る','back')
 const sectionHead = (name:string) => '<header class="panel-head"><h1>'+name+'</h1>'+backButton()+'</header>'
 const terrainName = (stage:TerrainPreset|undefined) => TERRAIN_PRESETS.find(preset=>preset.id===stage)?.name??''
-function stagePicker(selected:TerrainPreset, mode?:RoomUIPlayMode) {
-  const cards=TERRAIN_PRESETS.filter(({id})=>mode===undefined?validSoloTerrainPreset(id):id!=='frontier').map(({id,name,detail,thumbnail})=>{
-    const unavailable=mode!==undefined&&!roomStageAvailable(id,mode)
-    return '<label class="stage-card"'+(unavailable?' hidden':'')+'><input type="radio" name="stage" value="'+id+'"'+
-      (unavailable?' disabled':id===selected?' checked':'')+'>'+
+function stagePicker(selected:TerrainPreset, online=false) {
+  const cards=TERRAIN_PRESETS.map(({id,name,detail,thumbnail})=>{
+    return '<label class="stage-card"><input type="radio" name="stage" value="'+id+'"'+(id===selected?' checked':'')+'>'+
       '<img src="'+escapeText(new URL(thumbnail,document.baseURI).href)+'" width="560" height="315" alt="" draggable="false">'+
-      '<span><b>'+name+'</b><small>'+(mode?onlineTerrainDetails[id]??detail:detail)+'</small></span></label>'
+      '<span><b>'+name+'</b><small>'+(online?onlineTerrainDetails[id]??detail:detail)+'</small></span></label>'
   }).join('')
-  return '<fieldset class="stage-picker"'+(mode&&chaseMode(mode)?' data-school-choice':'')+'><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
+  return '<fieldset class="stage-picker"><legend>ステージ</legend><div class="stage-grid">'+cards+'</div></fieldset>'
 }
 const formattedCount=(count:number)=>Number.isFinite(count)?String(count):'∞'
 const icons = new Map<number,string>()
@@ -166,7 +164,7 @@ export class GameUI {
   private kidsView=false
   private room:OnlineStatus|null=null
   private onlineDraft={name:'みんなの建築ワールド',seed:'',nickname:'',code:'',mode:'creative' as RoomUIPlayMode,
-    stage:'classic' as TerrainPreset,tagMinutes:defaultTagMinutes,tagBots:0}
+    stage:'classic' as TerrainPreset,stageChosen:false,tagMinutes:defaultTagMinutes,tagBots:0}
   constructor(private send:Send) {
     const page=new URL(location.href)
     const cut=page.pathname.indexOf('/webcraft777/')
@@ -233,12 +231,12 @@ export class GameUI {
         const seed=String(data.get('seed')??'').trim()
         const mode=onlineMode(data.get('mode'))
         const selectedStage=data.get('stage')
-        const stage=validTerrainPreset(selectedStage)&&roomStageAvailable(selectedStage,mode)?selectedStage:mode==='cops'?'park':'classic'
+        const stage=validTerrainPreset(selectedStage)?selectedStage:mode==='cops'?'park':'classic'
         const selectedMinutes=Number(data.get('tagMinutes'))
         const tagMinutes=tagMinuteOptions.find(minutes=>minutes===selectedMinutes)??defaultTagMinutes
         const selectedBots=Number(data.get('tagBots'))
         const tagBots=stageSupportsBots(mode,stage)&&Number.isInteger(selectedBots)&&selectedBots>=0&&selectedBots<=4?selectedBots:0
-        Object.assign(this.onlineDraft,{name,seed,mode,stage,...(chaseMode(mode)?{tagMinutes,tagBots}:{})})
+        Object.assign(this.onlineDraft,{name,seed,mode,stage,stageChosen:true,...(chaseMode(mode)?{tagMinutes,tagBots}:{})})
         if(!name){this.toast('ワールド名を入力してください。');form.querySelector<HTMLInputElement>('[name="name"]')?.focus();return}
         this.send('online-create',{name,seed,nickname,mode,stage,...(chaseMode(mode)?{tagMinutes,...(tagBots?{tagBots}:{})}:{})})
       }else{
@@ -251,8 +249,8 @@ export class GameUI {
     if(form.id!=='world-form')return
     const data=new FormData(form), name=String(data.get('name')??'').trim()
     if(!name){this.toast('ワールド名を入力してください。');form.querySelector('input')?.focus();return}
-    const selected=data.get('stage'),stage=validSoloTerrainPreset(selected)?selected:'classic'
-    this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:!soloExploration(stage)||data.get('mode')==='creative'?'creative':'explore',stage})
+    const selected=data.get('stage'),stage=validTerrainPreset(selected)?selected:'classic'
+    this.send('start',{name,seed:String(data.get('seed')??'').trim(),mode:data.get('mode')==='creative'?'creative':'explore',stage})
   }
   private change(event:Event) {
     const input=event.target
@@ -267,6 +265,7 @@ export class GameUI {
     if(!(input instanceof HTMLInputElement))return
     if(input.name==='stage'&&input.form?.id==='online-create-form'&&input.checked&&validTerrainPreset(input.value)){
       this.onlineDraft.stage=input.value
+      this.onlineDraft.stageChosen=true
       this.updateBotSelector()
       return
     }
@@ -274,24 +273,12 @@ export class GameUI {
       const mode=onlineMode(input.value)
       this.onlineDraft.mode=mode
       $('tag-time-option').hidden=$<HTMLSelectElement>('tag-minutes').disabled=!chaseMode(mode)
-      const picker=input.form.querySelector<HTMLFieldSetElement>('.stage-picker')!
-      if(!roomStageAvailable(this.onlineDraft.stage,mode))this.onlineDraft.stage=mode==='cops'?'park':'classic'
-      for(const stage of picker.querySelectorAll<HTMLInputElement>('[name="stage"]')){
-        const allowed=validTerrainPreset(stage.value)&&roomStageAvailable(stage.value,mode)
-        stage.closest('label')!.hidden=stage.disabled=!allowed
-        stage.checked=allowed&&stage.value===this.onlineDraft.stage
+      if(!this.onlineDraft.stageChosen){
+        const stage=mode==='cops'?'park':'classic'
+        this.onlineDraft.stage=stage
+        input.form.querySelector<HTMLInputElement>('input[name="stage"][value="'+stage+'"]')!.checked=true
       }
-      picker.toggleAttribute('data-school-choice',chaseMode(mode))
       this.updateBotSelector()
-      return
-    }
-    if(input.name==='stage' && input.form?.id==='world-form' && input.checked){
-      const form=input.form,onlyCreative=!soloExploration(input.value)
-      const explore=form.querySelector<HTMLInputElement>('[name="mode"][value="explore"]')!
-      const creative=form.querySelector<HTMLInputElement>('[name="mode"][value="creative"]')!
-      if(onlyCreative&&explore.checked)creative.checked=true
-      explore.disabled=onlyCreative
-      form.querySelector<HTMLElement>('#stage-mode-hint')!.hidden=!onlyCreative
       return
     }
     if(input.id==='world-import'){const file=input.files?.[0];if(file)this.send('import',file);input.value='';return}
@@ -304,10 +291,12 @@ export class GameUI {
     }
   }
   private updateBotSelector(){
-    const {mode,stage}=this.onlineDraft
-    const disabled=!stageSupportsBots(mode,stage)
-    $('tag-bot-option').hidden=$<HTMLSelectElement>('tag-bots').disabled=disabled
-    $('tag-bot-help').textContent=botHelp(mode)
+    const {mode,stage,tagBots}=this.onlineDraft
+    const select=$<HTMLSelectElement>('tag-bots')
+    $('tag-bot-option').hidden=!chaseMode(mode)
+    select.disabled=!stageSupportsBots(mode,stage)
+    select.value=String(select.disabled?0:tagBots)
+    $('tag-bot-help').textContent=cpuStageHelp(mode,stage)
   }
   private settingOutput(target:EventTarget|null) {
     if(!(target instanceof HTMLInputElement) || target.type!=='range')return
@@ -337,9 +326,8 @@ export class GameUI {
       stagePicker('classic')+
       '<div class="stage-fields"><label class="entry">ワールド名<input name="name" value="はじまりの谷" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry">地形のシード<input name="seed" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label></div>'+
-      '<fieldset><legend>ゲームモード</legend><div class="modes"><label><input type="radio" name="mode" value="explore" checked aria-describedby="stage-mode-hint"><span><b>探索</b><small>木や石を集め、道具と建材を作る。</small></span></label>'+
-      '<label><input type="radio" name="mode" value="creative"><span><b>クリエイティブ</b><small>素材は無制限。空を飛んで建築する。</small></span></label></div>'+
-      '<p id="stage-mode-hint" hidden>このステージではクリエイティブで遊べます。</p></fieldset>'+
+      '<fieldset><legend>ゲームモード</legend><div class="modes"><label><input type="radio" name="mode" value="explore" checked><span><b>探索</b><small>木や石を集め、道具と建材を作る。</small></span></label>'+
+      '<label><input type="radio" name="mode" value="creative"><span><b>クリエイティブ</b><small>素材は無制限。空を飛んで建築する。</small></span></label></div></fieldset>'+
       '<button type="submit" class="primary full">ワールドを作成</button></form>',true)
   }
   onlineMenu(code='',error='') {
@@ -354,16 +342,16 @@ export class GameUI {
       tagMinuteOptions.map(minutes=>'<option value="'+minutes+'"'+(draft.tagMinutes===minutes?' selected':'')+'>'+minutes+'分</option>').join('')+
       '</select><small id="tag-time-help">隠れる時間が終わると制限時間が進みます。</small></div>'
     const botsEnabled=stageSupportsBots(draft.mode,draft.stage)
-    const bots='<div id="tag-bot-option" class="entry"'+(botsEnabled?'':' hidden')+'><label for="tag-bots">CPUの人数</label>'+
+    const bots='<div id="tag-bot-option" class="entry"'+(chaseMode(draft.mode)?'':' hidden')+'><label for="tag-bots">CPUの人数</label>'+
       '<select id="tag-bots" name="tagBots" aria-describedby="tag-bot-help"'+(botsEnabled?'':' disabled')+'>'+
-      [0,1,2,3,4].map(count=>'<option value="'+count+'"'+(draft.tagBots===count?' selected':'')+'>'+count+'人</option>').join('')+
-      '</select><small id="tag-bot-help">'+botHelp(draft.mode)+'</small></div>'
+      [0,1,2,3,4].map(count=>'<option value="'+count+'"'+((botsEnabled?draft.tagBots:0)===count?' selected':'')+'>'+count+'人</option>').join('')+
+      '</select><small id="tag-bot-help">'+cpuStageHelp(draft.mode,draft.stage)+'</small></div>'
     const create='<form id="online-create-form" class="online-card" aria-labelledby="online-create-label">'+
       '<h2 id="online-create-label">ルームを作る</h2>'+nickname+
       '<label class="entry">ワールド名<input name="name" value="'+escapeText(draft.name)+'" required maxlength="64" autocomplete="off"></label>'+
       '<label class="entry"><span>地形のシード <small>任意</small></span><input name="seed" value="'+escapeText(draft.seed)+'" placeholder="空欄ならランダム" maxlength="128" autocomplete="off"></label>'+
       '<fieldset class="online-room-modes"><legend>ゲームモード</legend><div class="modes">'+modes+'</div></fieldset>'+
-      stagePicker(draft.stage,draft.mode)+tagTime+bots+
+      stagePicker(draft.stage,true)+tagTime+bots+
       '<button type="submit" class="primary full">ルームを作成</button></form>'
     const join='<form id="online-join-form" class="online-card" aria-labelledby="online-join-label">'+
       '<h2 id="online-join-label">ルームに参加する</h2>'+nickname+

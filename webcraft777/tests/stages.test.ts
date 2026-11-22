@@ -1,11 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { SEA_LEVEL, SIZE, World } from '../src/world.ts'
-import { TERRAIN_PRESETS, validSoloTerrainPreset, validTerrainPreset } from '../src/stages.ts'
+import { TERRAIN_PRESETS, validTerrainPreset } from '../src/stages.ts'
 
 test('ステージの選択値は案内と一致する',()=>{
   assert.deepEqual(TERRAIN_PRESETS.map(stage=>stage.id),['classic','flat','lake','school','frontier','park','crossing'])
-  assert.deepEqual(TERRAIN_PRESETS.map(stage=>stage.id).filter(validSoloTerrainPreset),['classic','flat','lake','frontier'])
   for(const {id,thumbnail} of TERRAIN_PRESETS){
     assert(validTerrainPreset(id))
     assert.match(thumbnail,/\.webp$/)

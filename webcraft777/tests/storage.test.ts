@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { defaults, SaveStore, parseBackup, backupText, migrate, type WorldSave } from '../src/storage.ts'
 import { createBag } from '../src/inventory.ts'
 import { World,voxelIndex } from '../src/world.ts'
+import { TERRAIN_PRESETS } from '../src/stages.ts'
 
 function fixture():WorldSave {
   const bag=createBag('explore')
@@ -62,4 +63,16 @@ test('湖のステージとサメの討伐、ジャンプ台と坂の向きが�
   assert.throws(()=>migrate({...data,stage:null}))
   assert.throws(()=>migrate({...data,stage:'unrecognized'}))
   assert.throws(()=>migrate({...data,sharkDefeated:1}))
+})
+
+test('全7ステージでひとり用の探索とクリエイティブを保存・読み込みできる',async()=>{
+  const basic=migrate(fixture()),store=new SaveStore('all-stages-'+crypto.randomUUID())
+  for(const {id:stage} of TERRAIN_PRESETS){
+    for(const mode of ['explore','creative'] as const){
+      const id=stage+'-'+mode
+      const data=await store.write({...basic,id,stage,mode,generator:2,bag:createBag(mode),edits:[]},null)
+      assert.deepEqual(await store.get(id),data)
+      assert.equal(parseBackup(backupText(data)).stage,stage)
+    }
+  }
 })

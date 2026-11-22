@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
 import {COPS_BOUNDS,COPS_JAIL,COPS_POLICE_SPAWN,COPS_RELEASE,COPS_RESCUE,COPS_ROBBER_SPAWN,COPS_WALK_Y,parkStairTop,PARK_SLIDE} from '../src/cops-stages'
-import {createPlayer,stepPlayer,type Input} from '../src/physics'
+import {createPlayer,playerPoseClear,stepPlayer,type Input} from '../src/physics'
+import {SCHOOL_BOUNDS} from '../src/school'
+import {TagMap} from '../src/tag-map'
 import {isSolid,World} from '../src/world'
 
 const park=new World('test-park',false,2,'park')
@@ -84,4 +86,59 @@ test('街の中心に斜めの横断歩道があり、各方向の道から広�
   assert.equal(crossing.get(131,32,131),14)
   assert.equal(crossing.get(138,32,128),14)
   assert(crossing.lamps.size>150)
+})
+
+test('追加した5ステージでは、開始地点から救出区画へ実際に歩ける',()=>{
+  for(const stage of ['classic','flat','lake','school','frontier'] as const){
+    const world=new World('outpost-route',false,2,stage,true)
+    for(const point of [COPS_POLICE_SPAWN,COPS_JAIL,COPS_RELEASE,COPS_RESCUE]){
+      assert(playerPoseClear(world,point),`${stage} ${point.z} clearance`)
+      assert(walkable(world,Math.floor(point.x),Math.floor(point.z)),`${stage} ${point.z} floor`)
+    }
+    const player=createPlayer({...world.spawn(),yaw:Math.PI})
+    for(let i=0;i<800&&player.z<COPS_RESCUE.z;i++)stepPlayer(world,player,walking,1/60)
+    assert(Math.abs(player.z-COPS_RESCUE.z)<.10 && player.grounded,`${stage}: ${JSON.stringify(player)}`)
+    assert(world.lamps.size>0)
+  }
+})
+
+test('湖の牢屋には水中から登れる段があり、学校の出口と牢屋はドロケイでだけ加わる',()=>{
+  const lake=new World('outpost-modes',false,2,'lake',true)
+  const plainLake=new World('outpost-modes',false,2,'lake')
+  assert.equal(plainLake.get(128,32,184),0)
+  assert.equal(lake.get(117,28,171),13)
+  const player=createPlayer({x:111.5,y:28.4,z:171.5,yaw:0,pitch:0})
+  for(let i=0;i<180&&player.x<112.45;i++)stepPlayer(lake,player,{...coast,right:1,jump:true},1/60)
+  assert(player.x>=112.45&&player.y>=29,JSON.stringify(player))
+  for(const x of [112,113,114,115]){
+    assert.equal(lake.get(x,28+x-112,171),7)
+  }
+  const school=new World('outpost-modes',false,2,'school',true)
+  const plainSchool=new World('outpost-modes',false,2,'school')
+  for(const gate of [SCHOOL_BOUNDS.minZ,SCHOOL_BOUNDS.maxZ-1]){
+    assert.equal(school.get(128,33,gate),0)
+    assert(isSolid(plainSchool.get(128,33,gate)))
+  }
+  assert(!isSolid(plainSchool.get(118,33,184)))
+  assert(isSolid(school.get(118,33,184)))
+})
+
+test('エリア地図は遊び方で牢屋を表示し、通常の公園では外側も含める',()=>{
+  const captions:string[]=[]
+  const noop=()=>{}
+  const ctx={fillText:(text:string)=>captions.push(text),fillRect:noop,strokeRect:noop,clearRect:noop,
+    drawImage:noop,beginPath:noop,moveTo:noop,lineTo:noop,stroke:noop,arc:noop,fill:noop}
+  const surface={width:384,height:384,getContext:()=>ctx}
+  const canvas={...surface,ownerDocument:{createElement:()=>({...surface})}} as unknown as HTMLCanvasElement
+  const outsidePark={x:52,y:33,z:52}
+  new TagMap(canvas,park).update([{pose:outsidePark}],park.spawn(),true)
+  assert.deepEqual(captions,['1'])
+  captions.length=0
+  const school=new World('outpost-map',false,2,'school',true)
+  const map=new TagMap(canvas,school,undefined,true)
+  map.update([],school.spawn(),false)
+  assert.deepEqual(captions,['牢屋'])
+  captions.length=0
+  map.update([],{...school.spawn(),y:40},false)
+  assert.deepEqual(captions,[])
 })

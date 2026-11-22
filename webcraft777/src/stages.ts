@@ -1,5 +1,4 @@
-export type SoloTerrainPreset = 'classic' | 'flat' | 'lake' | 'frontier'
-export type TerrainPreset = SoloTerrainPreset | 'school' | 'park' | 'crossing'
+export type TerrainPreset = 'classic' | 'flat' | 'lake' | 'school' | 'frontier' | 'park' | 'crossing'
 
 export const TERRAIN_PRESETS = [
   {id:'classic', name:'森と湖', detail:'森や洞窟を探検できる、にぎやかなワールド。', thumbnail:'./art/stage-classic.webp'},
@@ -15,18 +14,6 @@ export function validTerrainPreset(value:unknown):value is TerrainPreset {
   return TERRAIN_PRESETS.some(stage=>stage.id===value)
 }
 
-export function validSoloTerrainPreset(value:unknown):value is SoloTerrainPreset {
-  return validTerrainPreset(value)&&value!=='school'&&!copsStage(value)
-}
-
-export function copsStage(value:unknown):value is 'park'|'crossing' {
-  return value==='park'||value==='crossing'
-}
-
-export function soloExploration(stage:unknown):boolean {
-  return stage==='classic'||stage==='frontier'
-}
-
 export function stageSupportsBots(mode:unknown,stage:unknown):boolean {
-  return mode==='cops'?copsStage(stage):mode==='tag'&&(stage==='flat'||stage==='school')
+  return mode==='cops'?(stage==='park'||stage==='crossing'):mode==='tag'&&(stage==='flat'||stage==='school')
 }

@@ -1,6 +1,6 @@
 import { HEIGHT, SIZE, type Axis } from './world'
 import type { Mode } from './inventory'
-import { copsStage, stageSupportsBots, validTerrainPreset, type TerrainPreset } from './stages'
+import { stageSupportsBots, validTerrainPreset, type TerrainPreset } from './stages'
 export type OnlineMode = Mode|'tag'|'cops'
 export type TagMinutes = 1|3|5|10|15
 
@@ -112,7 +112,7 @@ const MAX_BACKOFF = 12_000
 const CLOCK_SAMPLE_LIFETIME = 12_000
 const MAX_CLOCK_SAMPLE_RTT = 1_400
 const MAX_ROOM_CELLS = 10_000
-const PROTOCOL = 9
+const PROTOCOL = 10
 
 const timedMode=(mode:OnlineMode)=>mode==='tag'||mode==='cops'
 
@@ -170,11 +170,8 @@ function parseConnection(value: unknown): RoomConnection {
       !isText(room.name, 120) || !isText(room.seed, 128) || room.generator !== 2 ||
       (room.mode!==undefined&&room.mode!=='explore'&&room.mode!=='creative'&&room.mode!=='tag'&&room.mode!=='cops') ||
       (room.stage!==undefined&&!validTerrainPreset(room.stage)) ||
-      room.stage==='frontier' ||
-      ((room.mode==='cops')!==copsStage(room.stage)) ||
-      (room.stage==='school'&&(room.mode!=='tag'||!isTagMinutes(room.tagMinutes))) ||
       (room.tagMinutes!==undefined&&(room.mode!=='tag'&&room.mode!=='cops'||!isTagMinutes(room.tagMinutes))) ||
-      (room.mode==='cops'&&!isTagMinutes(room.tagMinutes)) ||
+      (room.mode==='cops'&&(!validTerrainPreset(room.stage)||!isTagMinutes(room.tagMinutes))) ||
       (room.tagBots!==undefined&&(!isInteger(room.tagBots,0,4)||
         room.tagBots>0&&(!isTagMinutes(room.tagMinutes)||!stageSupportsBots(room.mode,room.stage)))) ||
       !isInteger(room.createdAt, 1, Number.MAX_SAFE_INTEGER) ||

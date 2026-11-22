@@ -1,6 +1,6 @@
 import { SEA_LEVEL, SIZE, type World } from './world'
 import { SCHOOL_BOUNDS, SCHOOL_LEVELS } from './school'
-import { COPS_BOUNDS, COPS_RESCUE } from './cops-stages'
+import { COPS_BOUNDS, COPS_RESCUE, COPS_SCHOOL_BOUNDS } from './cops-stages'
 
 const outdoorZones = 8
 const worldBounds={minX:0,maxX:SIZE,minZ:0,maxZ:SIZE}
@@ -49,11 +49,11 @@ export class TagMap {
   private drawnSelf=-2
   private drawnFloor=-1
 
-  constructor(private readonly canvas:HTMLCanvasElement, world:World, private readonly levelLabel?:HTMLElement) {
+  constructor(private readonly canvas:HTMLCanvasElement, world:World, private readonly levelLabel?:HTMLElement, cops=false) {
     this.context=canvas.getContext('2d')
     this.school=world.stage==='school'
-    this.cops=world.stage==='park'||world.stage==='crossing'
-    this.bounds=this.school?SCHOOL_BOUNDS:this.cops?COPS_BOUNDS:worldBounds
+    this.cops=cops
+    this.bounds=this.school?(cops?COPS_SCHOOL_BOUNDS:SCHOOL_BOUNDS):cops&&(world.stage==='park'||world.stage==='crossing')?COPS_BOUNDS:worldBounds
     this.columns=this.school?6:outdoorZones
     this.rows=this.school?5:outdoorZones
     this.counts=new Uint8Array(this.columns*this.rows)
@@ -116,7 +116,8 @@ export class TagMap {
       }
     }
     if(this.school&&this.levelLabel){
-      const label='校舎 '+(floor+1)+'階'+(elsewhere?'　別の階に '+elsewhere+'人':'')
+      const level=this.cops&&floor===0?'地上・校舎1階':'校舎 '+(floor+1)+'階'
+      const label=level+(elsewhere?'　別の階に '+elsewhere+'人':'')
       if(this.levelLabel.textContent!==label)this.levelLabel.textContent=label
     }
     if(own===this.drawnSelf&&floor===this.drawnFloor&&this.counts.every((count,zone)=>count===this.drawnCounts[zone]))return
@@ -141,7 +142,7 @@ export class TagMap {
       ctx.strokeStyle='#4b4225';ctx.lineWidth=2;ctx.stroke()
       ctx.fillStyle='#263025';ctx.fillText(String(count),x,z+1)
     })
-    if(this.cops){
+    if(this.cops&&floor===0){
       const {minX,maxX,minZ,maxZ}=this.bounds
       const x=(COPS_RESCUE.x-minX)/(maxX-minX)*this.canvas.width
       const y=(COPS_RESCUE.z-minZ)/(maxZ-minZ)*this.canvas.height

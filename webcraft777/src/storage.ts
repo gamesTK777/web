@@ -3,7 +3,7 @@ import { validBag, type Bag, type Mode } from './inventory'
 import { defaults, upgradeSettings, validSettings, type Settings } from './preferences'
 import { emptyFixtures, validFixtures, editableId, type WorldFixtures } from './world'
 import { createJourney, validJourney } from './expedition'
-import { soloExploration, validSoloTerrainPreset, type TerrainPreset } from './stages'
+import { validTerrainPreset, type TerrainPreset } from './stages'
 import { validFrontierState, type FrontierState } from './frontier-life'
 export { defaults, validSettings, type Settings }
 export interface WorldSave {
@@ -33,7 +33,7 @@ export function migrate(value: unknown): ActiveSave {
   const legacy=value.version===1 && value.generator===1
   if (!legacy && (value.version!==2 || (value.generator!==1 && value.generator!==2))) throw new Error('この保存形式または地形バージョンには対応していません。')
   const stage=value.stage===undefined?'classic':value.stage
-  if(!validSoloTerrainPreset(stage)||(stage!=='classic'&&(value.generator!==2||!soloExploration(stage)&&value.mode!=='creative'))||
+  if(!validTerrainPreset(stage)||(stage!=='classic'&&value.generator!==2)||
     (value.frontier!==undefined&&(stage!=='frontier'||!validFrontierState(value.frontier)))||
     (value.sharkDefeated!==undefined&&typeof value.sharkDefeated!=='boolean'))
     throw new Error('ステージまたは生き物の保存情報が正しくありません。')

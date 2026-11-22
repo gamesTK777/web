@@ -172,9 +172,6 @@ input { accent-color: #2e745b; }
 .online-card button { margin-top: 14px; }
 .online-card .entry input,.online-card button { min-height: 44px; }
 .online-card .stage-picker { margin-bottom: 0; }
-@media (min-width: 851px) {
-  .online-card .stage-picker[data-school-choice] .stage-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-}
 @media (min-width: 611px) and (max-width: 850px) {
   .online-card .stage-grid { grid-template-columns: minmax(0,1fr); gap: 6px; }
   .online-card .stage-card { grid-template-columns: min(34%,134px) minmax(0,1fr); min-height: 74px; }

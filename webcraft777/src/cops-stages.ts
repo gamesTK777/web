@@ -1,10 +1,15 @@
+import { SCHOOL_BOUNDS } from './school.ts'
+import type { TerrainPreset } from './stages.ts'
+
 export type CopsStage = 'park' | 'crossing'
+type OutpostStage = Exclude<TerrainPreset,CopsStage>
 type WriteBlock = (x:number,y:number,z:number,block:number)=>void
 type Rect = readonly [minX:number,minZ:number,maxX:number,maxZ:number]
 type Stair = Readonly<{x:number;z:number;dx:number;dz:number;length:number;base:number;width:number}>
 
 export const COPS_WALK_Y=33
 export const COPS_BOUNDS={minX:60,maxX:196,minZ:60,maxZ:196} as const
+export const COPS_SCHOOL_BOUNDS={minX:87,maxX:170,minZ:94,maxZ:198} as const
 export const COPS_SPAWNS={
   police:{x:128.5,y:COPS_WALK_Y,z:169.5,yaw:0,pitch:-.04},
   robbers:{x:128.5,y:COPS_WALK_Y,z:87.5,yaw:Math.PI,pitch:-.04},
@@ -363,4 +368,45 @@ export function buildCopsStage(stage:CopsStage,put:WriteBlock) {
   else crossing(put)
   stageBorder(put,stage==='crossing')
   buildJail(put,stage==='crossing')
+}
+
+export function buildCopsOutpost(stage:OutpostStage,get:(x:number,y:number,z:number)=>number,put:WriteBlock,worldHeight:number) {
+  const waterfront=stage==='lake'
+  const {box}=scenery(put)
+  const surface=([minX,minZ,maxX,maxZ]:Rect,id:number,y=floor)=>{
+    for(let z=minZ;z<=maxZ;z++)for(let x=minX;x<=maxX;x++){
+      // Dock piles leave the lake underneath the deck open for swimming.
+      const foundation=waterfront?x%6===2&&z%6===1:true
+      if(foundation){
+        for(let base=y-1;base>0;base--){
+          const old=get(x,base,z)
+          if(old!==0&&old!==water)break
+          put(x,base,z,waterfront?log:stone)
+        }
+      }
+      put(x,y,z,id)
+      for(let level=y+1;level<worldHeight;level++)if(get(x,level,z))put(x,level,z,0)
+    }
+  }
+  const path=stage==='frontier'?gravel:waterfront?wood:tiles
+  if(stage==='school'){
+    // In team pursuit the two exits connect the corridors to the grounds.
+    for(const gate of [SCHOOL_BOUNDS.minZ,SCHOOL_BOUNDS.maxZ-1])
+      box(126,COPS_WALK_Y,gate,130,COPS_WALK_Y+3,gate,0)
+    surface([126,SCHOOL_BOUNDS.maxZ,130,166],path)
+  }else{
+    const landing=stage==='frontier'?147:139
+    surface([126,landing,130,166],path)
+  }
+  surface([116,166,140,193],path)
+  if(waterfront){
+    for(const side of [116,140]){
+      const direction=side===116?-1:1
+      for(let n=1;n<=4;n++){
+        const x=side+direction*n
+        surface([x,170,x,174],wood,floor-n)
+      }
+    }
+  }
+  buildJail(put,false)
 }

@@ -8,11 +8,11 @@ import type { TerrainPreset } from './stages'
 export type ExplorationEdit = {edit:RoomEdit & {actionId:string}; after:Bag; message?:string}
 export type RoomProfile = {bag:Bag;selected:number;journey:Journey;pose:Pose;pending?:ExplorationEdit}
 
-export function createRoomExplorationBag(stage:TerrainPreset):Bag {
+export function createExplorationBag(stage:TerrainPreset):Bag {
   const bag=createBag('explore')
   // These stages have no trees or coal veins, so provide the materials for
   // starter tools, a workbench and lighting without changing the terrain.
-  if(stage!=='classic'){
+  if(stage!=='classic'&&stage!=='frontier'){
     bag.slots=[{id:5,count:16},{id:15,count:8}]
     bag.hotbar[0]=5
   }

@@ -3,7 +3,7 @@ import { makeLandmarks, type Landmark } from "./landmarks.ts";
 import type { TerrainPreset } from "./stages.ts";
 import { buildSchool, schoolSpawn } from "./school.ts";
 import { buildFrontierTerrain, buildFrontierTown, frontierSpawn, type FrontierStructureCell } from "./frontier-world.ts";
-import { buildCopsStage, COPS_ROBBER_SPAWN, COPS_WALK_Y } from "./cops-stages.ts";
+import { buildCopsOutpost, buildCopsStage, COPS_ROBBER_SPAWN, COPS_WALK_Y } from "./cops-stages.ts";
 
 export const SIZE = 256;
 export const HEIGHT = 96;
@@ -102,13 +102,13 @@ export class World {
   private readonly edits = new Map<number, {id: number; base: number}>();
   private readonly listeners = new Set<(x: number, y: number, z: number) => void>();
 
-  constructor(seed: string, defer = false, generator:GeneratorVersion=1, readonly stage:TerrainPreset='classic') {
+  constructor(seed: string, defer = false, generator:GeneratorVersion=1, readonly stage:TerrainPreset='classic', private readonly cops=false) {
     this.salt = seedHash(seed);
     this.generator=generator;
     if (!defer) for (const _ of this.generateTerrain()) { /* synchronous use in tools/tests */ }
   }
-  static async generate(seed: string, progress?: (fraction: number) => void, generator:GeneratorVersion=1, stage:TerrainPreset='classic') {
-    const world = new World(seed, true,generator,stage);
+  static async generate(seed: string, progress?: (fraction: number) => void, generator:GeneratorVersion=1, stage:TerrainPreset='classic', cops=false) {
+    const world = new World(seed, true,generator,stage,cops);
     let checkpoint = performance.now();
     for (const part of world.generateTerrain()) {
       if (performance.now() - checkpoint < 7 && part < 1) continue;
@@ -170,7 +170,7 @@ export class World {
       }
       if(z%4===3)yield .78*(z+1)/SIZE;
     }
-    yield* this.indexTerrain();
+    yield* this.finishTerrain();
   }
   private *generateTerrain(): Generator<number> {
     if(this.stage==='park'||this.stage==='crossing'){
@@ -178,7 +178,7 @@ export class World {
       this.data.fill(3,(COPS_WALK_Y-5)*AREA,(COPS_WALK_Y-1)*AREA);
       this.data.fill(1,(COPS_WALK_Y-1)*AREA,COPS_WALK_Y*AREA);
       buildCopsStage(this.stage,(x,y,z,id)=>this.write(x,y,z,id));
-      yield* this.indexTerrain();
+      yield* this.finishTerrain();
       return;
     }
     if(this.stage==='school'){
@@ -186,7 +186,7 @@ export class World {
       this.data.fill(3,30*AREA,32*AREA);
       this.data.fill(1,32*AREA,33*AREA);
       buildSchool((x,y,z,id)=>this.write(x,y,z,id));
-      yield* this.indexTerrain();
+      yield* this.finishTerrain();
       return;
     }
     if(this.stage==='frontier'){
@@ -195,7 +195,7 @@ export class World {
         write:(x,y,z,id)=>this.write(x,y,z,id),tree:(x,z,broad)=>this.tree(x,z,broad),
       });
       this.frontierStructures=buildFrontierTown((x,y,z,id)=>this.write(x,y,z,id));
-      yield* this.indexTerrain();
+      yield* this.finishTerrain();
       return;
     }
     if(this.stage!=='classic'){
@@ -282,11 +282,14 @@ export class World {
       ground:(x,z)=>this.heights[x+SIZE*z],noise:(x,z)=>scatter(x,z,this.salt^0x777),
       get:(x,y,z)=>this.get(x,y,z),put:(x,y,z,id)=>this.write(x,y,z,id)
     });
-    yield* this.indexTerrain();
+    yield* this.finishTerrain();
   }
-  private *indexTerrain():Generator<number> {
+  private *finishTerrain():Generator<number> {
+    if(this.cops&&this.stage!=='park'&&this.stage!=='crossing'){
+      buildCopsOutpost(this.stage,(x,y,z)=>this.get(x,y,z),(x,y,z,id)=>this.write(x,y,z,id),HEIGHT);
+    }
     this.highest.fill(-1);
-    const indexLandmarkLights=this.stage==='school'||this.stage==='frontier'||this.stage==='park'||this.stage==='crossing';
+    const indexLandmarkLights=this.cops||this.stage==='school'||this.stage==='frontier'||this.stage==='park'||this.stage==='crossing';
     for(let y=0;y<HEIGHT;y++) {
       for(let z=0;z<SIZE;z++) for(let x=0;x<SIZE;x++) {
         const index=voxelIndex(x,y,z),id=this.data[index];

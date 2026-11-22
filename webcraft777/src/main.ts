@@ -9,8 +9,8 @@ import { craft, createBag, assignHotbar, activeStack, miningSeconds, stageMining
 import { createPlayer, safeSpawn, stepPlayer, resetPlayerInput, overlapsPlayer, placementIssue, raycast, placeAt, mineAt, type Player, type Hit } from './physics'
 import { SaveStore, settingsAtTitle, rememberSettings, validSettings, readBackup, backupText, type ActiveSave, type WorldSave } from './storage'
 import { OnlineClient, type CopsState, type OnlineState, type RideRequest, type RideSeat, type RoomConnection, type RoomEdit, type RoomFrame, type RoomPlayer, type RoomSync, type TagState } from './online-client'
-import { createRoomExplorationBag, readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
-import { soloExploration, validSoloTerrainPreset, type TerrainPreset } from './stages'
+import { createExplorationBag, readRoomProfile, writeRoomProfile, type ExplorationEdit } from './room-exploration'
+import { validTerrainPreset, type TerrainPreset } from './stages'
 import { LandLife } from './land-life'
 import { AquaticLife } from './aquatic-life'
 import { FrontierLife } from './frontier-life'
@@ -122,7 +122,7 @@ function guide(){
   if(!session)return
   if(session.online?.tagGame){ui.expedition('','','');return}
   const {world,data,player}=session,j=data.journey,cave=world.landmarks.find(l=>l.kind==='cave')
-  if(session.frontier){
+  if(world.stage==='frontier'){
     const learning=!j.toolMade&&data.mode==='explore'
     const goal=learning?'林で原木を集め、町の作業台で道具を作れます。':'空き区画に家を建てられます。'
     const lots=FRONTIER_LOTS.map(lot=>({x:(lot.minX+lot.maxX)/2,y:FRONTIER_FLOOR+1,z:(lot.minZ+lot.maxZ)/2}))
@@ -780,26 +780,25 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     if(id&&!loaded)throw new Error('ワールドが見つかりません。一覧を開き直してください。')
     const seed=connection?.room.seed||loaded?.seed||args?.seed?.trim().slice(0,128)||crypto.randomUUID().slice(0,8)
     const choice=args?.stage
-    const stage=connection?.room.stage??loaded?.stage??(validSoloTerrainPreset(choice)?choice:'classic')
+    const stage=connection?.room.stage??loaded?.stage??(validTerrainPreset(choice)?choice:'classic')
+    const cops=connection?.room.mode==='cops'
     let step=-1
     const world=await World.generate(seed,(fraction:number)=>{
       const n=Math.min(10,Math.floor(fraction*10));if(step!==n){ui.loading('地形を生成中　'+n*10+'%');step=n}
-    },connection?.room.generator??loaded?.generator??2,stage)
+    },connection?.room.generator??loaded?.generator??2,stage,cops)
     if(loaded){world.loadEdits(loaded.edits);world.loadFixtures(loaded.fixtures)}
     const start=world.spawn()
-    const cops=connection?.room.mode==='cops'
     const tag=connection?.room.mode==='tag'||cops
-    const mode=connection?(connection.room.mode==='explore'?'explore':'creative'):
-      !soloExploration(stage)?'creative':args?.mode??loaded?.mode??'creative'
+    const mode=connection?(connection.room.mode==='explore'?'explore':'creative'):args?.mode??loaded?.mode??'creative'
     const profile=connection&&mode==='explore'?readRoomProfile(connection.room.code,nickname):undefined
-    const newBag=()=>connection&&mode==='explore'?createRoomExplorationBag(stage):createBag(tag?'explore':mode)
+    const newBag=()=>mode==='explore'?createExplorationBag(stage):createBag(tag?'explore':mode)
     const data:ActiveSave=loaded??{format:'webcraft777',version:2,generator:2,id:crypto.randomUUID(),
       fixtures:emptyFixtures(),journey:profile?.journey??createJourney(),
       revision:0,updatedAt:Date.now(),name:connection?.room.name||args?.name.trim().slice(0,64)||'新しいワールド',seed,mode,stage,
       pose:profile?.pose??start,flying:false,bag:profile?.bag??newBag(),selected:profile?.selected??0,
       edits:[],day:.39,settings:{...settings},guideSeen:false}
     if(!loaded&&!tag&&mode==='creative'&&stage!=='classic'){
-      data.bag.hotbar=stage==='frontier'?[7,8,10,5,9,12,38,36,34]:[7,8,10,27,28,29,SLIDE_ITEM,9,12]
+      data.bag.hotbar=stage==='frontier'&&!connection?[7,8,10,5,9,12,38,36,34]:[7,8,10,27,28,29,SLIDE_ITEM,9,12]
     }
     if(!data.journey.home){const {x,y,z}=start;data.journey.home={x,y,z}}
     station=null;logAxis='y';slideFacing=0;currentSite=''
@@ -815,8 +814,8 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
         nickname,restoring:!!profile,pendingExplore:profile?.pending}
       session.online=room
       if(tag){
-        room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel),stamina:createStamina(),receivedAt:performance.now(),peers:[],started:false,
-          open:false,mapDue:0,uiKey:'',copsMode:cops,rides:stage==='park'?new ParkRides(view.scene):undefined}
+        room.tagGame={map:new TagMap(tagCanvas,world,tagMapLevel,cops),stamina:createStamina(),receivedAt:performance.now(),peers:[],started:false,
+          open:false,mapDue:0,uiKey:'',copsMode:cops,rides:cops&&stage==='park'?new ParkRides(view.scene):undefined}
         const rides=room.tagGame.rides
         if(rides)view.actors.seatedPose=id=>rides.playerPose(id)
         updateTagUI(session)
@@ -825,7 +824,7 @@ async function openWorld(id:string|null,args?:{name:string;seed:string;mode:Mode
     }else if(stage==='frontier'){
       session.frontier=new FrontierLife(world,view.scene)
       if(data.frontier)session.frontier.restore(data.frontier)
-    }else if(stage!=='flat'){
+    }else if(stage==='classic'||stage==='lake'){
       if(stage==='classic')session.land=new LandLife(world,view.scene,player)
       session.aquatic=new AquaticLife(world,view.scene,data.sharkDefeated)
     }

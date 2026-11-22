@@ -77,9 +77,9 @@ test('cops rooms preserve stage, select duration and reject legacy clients and t
   assert.equal(guests[0].room.stage,'crossing')
   assert.equal(host.room.tagMinutes,1)
   assert.equal(host.room.tagBots,0)
-  assert.equal((await run('rooms',{...body,stage:'school'})).status,400)
+  assert.equal((await run('rooms',{...body,stage:'school'})).status,426)
   assert.equal((await run('rooms',{...body,tagMinutes:2})).status,400)
-  assert.equal((await run('rooms',{...body,mode:'tag'})).status,400)
+  assert.equal((await run('rooms',{...body,mode:'tag'})).status,426)
   assert.equal((await run('rooms',{...body,protocol:7})).status,426)
   assert.equal((await join(host,'以前の画面',epoch,7)).status,426)
   assert.equal((await sync(host,{protocol:7})).status,426)
@@ -807,6 +807,86 @@ test('stage is authoritative for each room in every multiplayer mode', async t =
   }
 })
 
+test('all seven stages work across all four modes with isolated older clients',async t=>{
+  const {sql,run,join,sync}=env(t)
+  const settings={name:'ステージ選択',nickname:'ホスト',seed:'shared-stage',protocol:10}
+  const stageColumns=sql.prepare('SELECT stage,tag_stage,cops_stage,world_stage FROM webcraft_rooms WHERE code=?')
+  const memberPose=sql.prepare('SELECT last_seen,pose FROM webcraft_members WHERE room_code=? AND id=?')
+  for(const mode of ['creative','explore','tag','cops']){
+    const implicit=await run('rooms',{...settings,mode})
+    assert.equal(implicit.status,201)
+    assert.equal((await implicit.json()).room.stage,mode==='cops'?'park':'classic')
+    for(const stage of ['classic','flat','lake','school','frontier','park','crossing']){
+      const legacy=mode==='cops'?['park','crossing'].includes(stage):
+        ['classic','flat','lake'].includes(stage)||(mode==='tag'&&stage==='school')
+      const request={...settings,mode,stage}
+      if(!legacy)assert.equal((await run('rooms',{...request,protocol:9})).status,426)
+      const created=await run('rooms',request)
+      assert.equal(created.status,201,`${mode}/${stage}`)
+      const host=await created.json()
+      assert.equal(host.room.mode,mode)
+      assert.equal(host.room.stage,stage)
+      assert.equal(host.room.tagMinutes,['tag','cops'].includes(mode)?5:undefined)
+      assert.equal(stageColumns.get(host.room.code).world_stage,legacy?null:stage)
+      const outdated=await join(host,'旧版',epoch,9)
+      assert.equal(outdated.status,legacy?200:426)
+      if(legacy)assert.deepEqual((await outdated.json()).room,host.room)
+      if(!legacy){
+        assert.equal((await sync(host,{protocol:9,now:epoch+6000})).status,426)
+        assert.deepEqual({...memberPose.get(host.room.code,host.id)},{last_seen:epoch,pose:null})
+      }
+      const joined=await run('join',{nickname:'仲間',code:host.room.code,protocol:10,stage:'unknown'})
+      assert.equal(joined.status,200)
+      const guest=await joined.json()
+      assert.deepEqual(guest.room,host.room)
+      const first=await sync(host,{protocol:10,now:epoch+7000})
+      assert.equal(first.status,200)
+      const second=await sync(guest,{protocol:10,at:pose(128.5,33,129.5),now:epoch+7100})
+      assert.equal(second.status,200)
+      const frame=await second.json()
+      assert.equal(frame.players.some(person=>person.id===host.id),true)
+      assert.equal(frame.tag?.phase,mode==='tag'?'hiding':undefined)
+      assert.equal(frame.cops?.phase,mode==='cops'?'hiding':undefined)
+      assert.deepEqual(frame.rides,mode==='cops'&&stage==='park'?[]:undefined)
+    }
+  }
+})
+
+test('expanded stages keep supported CPU stages and park rides within their original modes',async t=>{
+  const {run,sync}=env(t)
+  const base={name:'CPU選択',nickname:'ホスト',protocol:10,tagBots:1}
+  for(const mode of ['tag','cops']){
+    const playable=mode==='tag'?['flat','school']:['park','crossing']
+    for(const stage of ['classic','flat','lake','school','frontier','park','crossing']){
+      const response=await run('rooms',{...base,mode,stage})
+      assert.equal(response.status,playable.includes(stage)?201:400)
+      if(response.ok){
+        const room=await response.json()
+        assert.equal(room.room.tagBots,1)
+        const frame=await (await sync(room,{protocol:10,now:epoch+300})).json()
+        assert.equal(frame.players.some(player=>player.cpu),true)
+      }
+    }
+  }
+  const school=await (await run('rooms',{...base,mode:'cops',stage:'school',tagBots:0})).json()
+  const entered=await sync(school,{protocol:10,at:pose(146.5,33,141.5),ride:{id:'seesaw',seat:0,pump:1}})
+  assert.equal(entered.status,200)
+  assert.equal((await entered.json()).rides,undefined)
+})
+
+test('additive stage migration preserves existing room modes and enforces stage names',async t=>{
+  const {sql,run,join}=env(t)
+  const host=await (await run('rooms',{mode:'cops',stage:'crossing',protocol:8,name:'旧ドロケイ',nickname:'ホスト'})).json()
+  sql.exec('ALTER TABLE webcraft_rooms DROP COLUMN world_stage')
+  sql.exec(readFileSync(new URL('./all-stages-migration.sql',import.meta.url),'utf8'))
+  const selected=sql.prepare('SELECT world_stage,cops_stage FROM webcraft_rooms WHERE code=?')
+  assert.deepEqual({...selected.get(host.room.code)},{world_stage:null,cops_stage:'crossing'})
+  const joined=await join(host,'旧版の参加者',epoch,8)
+  assert.equal(joined.status,200)
+  assert.deepEqual((await joined.json()).room,host.room)
+  assert.throws(()=>sql.prepare('UPDATE webcraft_rooms SET world_stage=? WHERE code=?').run('unknown',host.room.code),/CHECK constraint failed/)
+})
+
 test('old clients cannot mutate alternate rooms before protocol validation', async t => {
   const {sql,run,create,join,sync}=env(t)
   const selected={name:'まっさらな平地',nickname:'ホスト',stage:'flat'}
@@ -828,11 +908,11 @@ test('old clients cannot mutate alternate rooms before protocol validation', asy
   assert.equal((await (await join(legacy,'新版',epoch,5)).json()).room.stage,'classic')
 })
 
-test('school is a timed tag stage shared by current hosts and guests', async t => {
+test('school remains a timed tag stage for legacy-compatible rooms', async t => {
   const {sql,run,join,sync}=env(t)
   const settings={name:'放課後の学校',nickname:'鬼の候補',seed:'after-school',stage:'school',mode:'tag'}
   for(const mode of [undefined,'creative','explore']){
-    assert.equal((await run('rooms',{...settings,mode,protocol:6})).status,400)
+    assert.equal((await run('rooms',{...settings,mode,protocol:6})).status,426)
   }
   assert.equal((await run('rooms',{...settings,tagMinutes:0,protocol:6})).status,400)
   for(const protocol of [undefined,3,4,5]){

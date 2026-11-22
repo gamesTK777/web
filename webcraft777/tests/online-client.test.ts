@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { OnlineClient, OnlineError, type NetPose, type OnlineState, type RoomConnection, type RoomEdit, type RoomFrame } from '../src/online-client'
+import { TERRAIN_PRESETS } from '../src/stages'
 
 const connection: RoomConnection = {
   room: { code: 'TEAM7777', name: '工作の島', seed: 'green-777', generator: 2, createdAt: 1784600000000, mode:'creative',stage:'classic' },
@@ -35,8 +36,8 @@ test('部屋作成と参加の通信では参加トークンをURLへ載せず�
   await assert.rejects(() => client.join({ code: 'NOEXISTS', nickname: 'あお' }),
     err => err instanceof OnlineError && err.status === 404 && err.code === 'room_missing')
   assert.deepEqual(calls, [
-    { path: '/api/webcraft/rooms', body: {...fields,protocol:9} },
-    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:9 } },
+    { path: '/api/webcraft/rooms', body: {...fields,protocol:10} },
+    { path: '/api/webcraft/join', body: { code: 'NOEXISTS', nickname: 'あお', protocol:10 } },
   ])
   const malformed = new OnlineClient('http://127.0.0.1:8080', async () => json({ ...connection, token: 'short' }))
   await assert.rejects(() => malformed.create(fields),
@@ -70,8 +71,8 @@ test('同期した編集だけを適用し、編集は一つずつ送る', { tim
   assert.deepEqual(await pending, { ok: true })
   assert.deepEqual(frames, [empty, changed])
   assert.deepEqual(requests, [
-    { protocol:9,code: connection.room.code, token: connection.token, since: 0, pose },
-    { protocol:9,code: connection.room.code, token: connection.token, since: 0, pose, edit },
+    { protocol:10,code: connection.room.code, token: connection.token, since: 0, pose },
+    { protocol:10,code: connection.room.code, token: connection.token, since: 0, pose, edit },
   ])
   sync.close()
   await left.promise
@@ -136,7 +137,7 @@ test('学校の鬼ごっこはステージと終了結果を保持し、ルー�
     const path=new URL(String(url)).pathname
     if(path.endsWith('/leave')){left.resolve();return json({ok:true})}
     const body=JSON.parse(String(options?.body))
-    assert.equal(body.protocol,9)
+    assert.equal(body.protocol,10)
     if(path.endsWith('/rooms')){assert.equal(body.tagMinutes,1);assert.equal(body.stage,'school');return json(match)}
     if(path.endsWith('/join'))return json(match)
     polls++
@@ -193,9 +194,20 @@ test('招待先の地形を検証し、旧ルームは森と湖として復元�
   const malformed=new OnlineClient('https://rooms.example.test',async ()=>json({...backup,room:{...oldRoom,stage:'void'}}))
   await assert.rejects(()=>malformed.join({code:connection.room.code,nickname:'あお'}),
     error=>error instanceof OnlineError&&error.code==='invalid-response')
-  const invalidSchool=new OnlineClient('https://rooms.example.test',async ()=>json({...backup,room:{...oldRoom,stage:'school'}}))
-  await assert.rejects(()=>invalidSchool.join({code:connection.room.code,nickname:'あお'}),
-    error=>error instanceof OnlineError&&error.code==='invalid-response')
+})
+
+test('全オンラインモードで7ステージのルーム作成・入室を受け取れる',async()=>{
+  for(const mode of ['creative','explore','tag','cops'] as const){
+    for(const {id:stage} of TERRAIN_PRESETS){
+      const rules=mode==='tag'||mode==='cops'?{tagMinutes:5 as const}:{}
+      const room={...connection.room,mode,stage,...rules}
+      const client=new OnlineClient('https://rooms.example.test',async()=>json({...connection,room}))
+      const created=await client.create({name:room.name,seed:room.seed,nickname:'はる',mode,stage,...rules})
+      assert.equal(created.room.stage,stage)
+      const joined=await client.join({code:room.code,nickname:'あお'})
+      assert.deepEqual(joined.room,created.room)
+    }
+  }
 })
 
 test('ドロケイの公園と渋谷でCPUの人数、役割、救出イベントを受け取れる', {timeout:3_000}, async t=>{
@@ -206,7 +218,7 @@ test('ドロケイの公園と渋谷でCPUの人数、役割、救出イベン�
     const client=new OnlineClient('https://rooms.example.test',async(url,options)=>{
       if(String(url).endsWith('/leave'))return json({ok:true})
       const body=JSON.parse(String(options?.body))
-      assert.equal(body.protocol,9)
+      assert.equal(body.protocol,10)
       if(String(url).endsWith('/rooms')){
         assert.equal(body.stage,stage)
         assert.equal(body.tagBots,2)
