@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS webcraft_members (
   pose_at INTEGER NOT NULL DEFAULT 0,
   previous_pose TEXT,
   previous_pose_at INTEGER NOT NULL DEFAULT 0,
+  sample_at INTEGER NOT NULL DEFAULT 0,
+  pose_history TEXT NOT NULL DEFAULT '[]',
   ride_id TEXT CHECK (ride_id IN ('swings','seesaw')),
   ride_seat INTEGER CHECK (ride_seat BETWEEN 0 AND 3),
   ride_pump INTEGER NOT NULL DEFAULT 0 CHECK (ride_pump IN (-1,0,1)),

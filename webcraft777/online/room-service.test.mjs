@@ -31,8 +31,8 @@ function env(t) {
   async function join(host, nickname = '建築仲間', now = epoch, protocol = 2) {
     return run('join', {code:host.room.code, nickname, protocol}, {now})
   }
-  async function sync(actor, {protocol=2,since=0, at=pose(), edit, ride, now=epoch} = {}) {
-    return run('sync', {protocol,code:actor.room.code, token:actor.token, since, pose:at, edit, ride}, {now})
+  async function sync(actor, {protocol=2,since=0, at=pose(), edit, ride, sampleAt, now=epoch} = {}) {
+    return run('sync', {protocol,code:actor.room.code, token:actor.token, since, pose:at, edit, ride, sampleAt}, {now})
   }
   return {sql,run,create,join,sync}
 }
@@ -606,6 +606,94 @@ test('tag ignores different levels, stale positions and out-of-order samples', a
   await frame(guest,deadline+1640,below)
   assert.equal(sql.prepare('SELECT pose_at FROM webcraft_members WHERE id=?').get(guest.id).pose_at,deadline+1650)
   assert.equal((await frame(host,deadline+1850,below)).tag.it,host.id)
+})
+
+async function chaseSession(t,mode,stage=mode==='tag'?'flat':'park') {
+  const service=env(t),protocol=9
+  const created=await service.run('rooms',{mode,stage,protocol,tagMinutes:1,nickname:'追う役',name:'すれ違い'})
+  assert.equal(created.status,201)
+  const pursuer=await created.json()
+  const runner=await (await service.join(pursuer,'逃げ役',epoch,protocol)).json()
+  async function sample(actor,now,at,sampleAt){
+    const response=await service.sync(actor,{protocol,now,at,sampleAt})
+    assert.equal(response.status,200)
+    return response.json()
+  }
+  await sample(pursuer,epoch,pose(70,33,70))
+  const start=(await sample(runner,epoch+100,pose(90,33,90)))[mode].hideUntil
+  await sample(pursuer,start,pose(70,33,70))
+  return {...service,pursuer,runner,sample,start}
+}
+
+for(const [mode,stage] of [['tag','flat'],['cops','park'],['cops','crossing']]){
+  test(`${mode}/${stage} recognizes a brief perpendicular touch after a delayed poll`,async t=>{
+    const {pursuer,runner,sample,start}=await chaseSession(t,mode,stage)
+    const t0=start+1000, offset=320, interval=260
+    const pace=mode==='tag'?9:6.3
+    const chasing=millis=>pose(128+(millis-130)*pace/1000,33,128)
+    const escaping=millis=>pose(128,33,128+(millis-130)*6.3/1000)
+    await sample(pursuer,t0,chasing(0),t0)
+    await sample(pursuer,t0+interval,chasing(interval),t0+interval)
+    const before=await sample(runner,t0+offset,escaping(0),t0)
+    assert.equal(before[mode].phase,'playing')
+    assert.equal(before.players.find(({id})=>id===pursuer.id).poseAt,t0+interval)
+    await sample(pursuer,t0+2*interval,chasing(2*interval),t0+2*interval)
+
+    // Latest endpoints are far apart. The runner's second position arrives
+    // after the pursuer has already advanced past the only overlapping step.
+    const after=await sample(runner,t0+interval+offset,escaping(interval),t0+interval)
+    if(mode==='tag'){
+      assert.equal(after.tag.it,runner.id)
+      assert.equal(after.tag.previousIt,pursuer.id)
+      assert.equal(after.tag.phase,'hiding')
+    }else{
+      assert.deepEqual(after.cops.event,{kind:'capture',ids:[runner.id],by:pursuer.id})
+      assert.equal(after.cops.winner,'police')
+    }
+  })
+}
+
+test('corrected touch samples respect the hiding fence, floor separation and impossible jumps',async t=>{
+  const {pursuer,runner,sample,start}=await chaseSession(t,'tag')
+  const contact=pose(120,33,120)
+  await sample(pursuer,start+100,contact,start-50)
+  const hiddenContact=await sample(runner,start+120,contact,start-35)
+  assert.equal(hiddenContact.tag.it,pursuer.id)
+  for(const [offset,x] of [[900,118.5],[1180,121.0]]){
+    await sample(pursuer,start+offset,pose(x,33,120),start+offset)
+    const floor=await sample(runner,start+offset+240,pose(120,36,120),start+offset)
+    assert.equal(floor.tag.it,pursuer.id)
+  }
+  await sample(runner,start+1920,pose(120,33,120),start+1700)
+  await sample(pursuer,start+1940,pose(93,33,120),start+1720)
+  await sample(pursuer,start+2080,pose(148,33,120),start+1860)
+  const teleport=await sample(runner,start+2120,contact,start+1900)
+  assert.equal(teleport.tag.it,pursuer.id)
+  assert.equal(teleport.tag.phase,'playing')
+})
+
+test('additive touch history limiting preserves older rooms and rejects untrusted sample times',async t=>{
+  const {pursuer,runner,sample,start,sql}=await chaseSession(t,'tag')
+  sql.exec('ALTER TABLE webcraft_members DROP COLUMN sample_at; ALTER TABLE webcraft_members DROP COLUMN pose_history;')
+  sql.exec(readFileSync(new URL('./touch-history-migration.sql',import.meta.url),'utf8'))
+  const status=sql.prepare('SELECT pose_at,sample_at,json_array_length(pose_history) AS samples FROM webcraft_members WHERE id=?')
+  const at=pose(72,33,72), t0=start+1500
+  const initial=status.get(pursuer.id)
+  assert.equal(initial.sample_at,0)
+  assert.equal(initial.samples,0)
+  await sample(pursuer,t0,at,t0-351)
+  assert.equal(status.get(pursuer.id).sample_at,t0)
+  await sample(pursuer,t0+250,at,t0+251)
+  assert.equal(status.get(pursuer.id).sample_at,t0+250)
+  await sample(pursuer,t0+310,at,t0+180)
+  assert.equal(status.get(pursuer.id).sample_at,t0+251)
+  for(let index=2;index<12;index++)await sample(pursuer,t0+260*index,at,t0+260*index-50)
+  const latest=status.get(pursuer.id)
+  assert.equal(latest.pose_at,t0+260*11)
+  assert.equal(latest.sample_at,latest.pose_at-50)
+  assert.equal(latest.samples,5)
+  const frame=await sample(runner,latest.pose_at+10,pose(88,33,88))
+  assert.equal(frame.players[0].poseAt,latest.sample_at)
 })
 
 test('concurrent contact changes the ghost once, and departure, rejoining and expiry stay isolated', async t => {

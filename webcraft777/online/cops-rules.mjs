@@ -1,3 +1,5 @@
+import { contactWindow } from './chase-contact.mjs'
+
 export const copsStages = new Set(['park', 'crossing'])
 export const jailSpawn = {x:128.5, y:33, z:184.5}
 export const policeSpawn = {x:128.5, y:33, z:169.5}
@@ -6,7 +8,6 @@ const rescuePad = {x:128.5, y:33, z:177.5}
 const rescueReach = 2.3
 const hideTime = 20_000
 const rescueGrace = 2_000
-const sampleWindow = 750
 
 const inRescueZone = pose => Math.abs(pose.y-rescuePad.y)<=1.7 &&
   Math.hypot(pose.x-rescuePad.x,pose.z-rescuePad.z)<=rescueReach
@@ -89,7 +90,7 @@ export function advanceCopsState(state, room, players, members, now, touches) {
   if (rescuer) return {...state,jailedIds:[],protectedUntil:now+rescueGrace,
     event:{kind:'rescue',ids:state.jailedIds,by:rescuer.id}}
 
-  const earliest = Math.max(now-sampleWindow,state.hideUntil,state.protectedUntil)
+  const earliest = Math.max(now-contactWindow,state.hideUntil,state.protectedUntil)
   const captured=[]
   let by
   for (const runner of runners) {

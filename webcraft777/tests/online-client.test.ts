@@ -154,6 +154,35 @@ test('学校の鬼ごっこはステージと終了結果を保持し、ルー�
   await left.promise
 })
 
+test('追跡ルームは同期した時刻を送信し、対戦相手の位置の古さを補間に渡す', {timeout:3_000}, async t=>{
+  const match:RoomConnection={...connection,room:{...connection.room,mode:'tag',tagMinutes:1,stage:'flat'}}
+  const clockBase=1_840_000_000_000, frames:RoomFrame[]=[], requests:Record<string,unknown>[]=[]
+  const ready=deferred<void>()
+  const sync=new OnlineClient('https://rooms.example.test',async(url,options)=>{
+    if(String(url).endsWith('/leave'))return json({ok:true})
+    requests.push(JSON.parse(String(options?.body)))
+    const serverNow=clockBase+Math.round(performance.now())
+    const players=[{id:'peer',nickname:'あお',pose,poseAt:serverNow-155},
+      {id:'legacy-peer',nickname:'しろ',pose,poseAt:'invalid'}]
+    return json({...empty,players,tag:{it:'local-player',previousIt:null,phase:'playing',hideUntil:clockBase,endsAt:clockBase+60_000,
+      serverNow,seq:2,enrolledIds:['local-player','peer','legacy-peer'],winnerIds:[],results:[]}})
+  }).start(match,{
+    pose:()=>requests.length<2?pose:null,
+    onState:()=>{},
+    onFrame:frame=>{frames.push(frame);if(frames.length===3)ready.resolve()},
+  })
+  t.after(()=>sync.close())
+  await ready.promise
+  assert.equal('sampleAt' in requests[0],false)
+  assert.equal('sampleAt' in requests[2],false, 'no timestamp is sent without a pose')
+  assert.ok(typeof requests[1].sampleAt==='number'&&Number.isSafeInteger(requests[1].sampleAt))
+  assert.ok(Math.abs(requests[1].sampleAt-frames[1].tag!.serverNow!)<90)
+  const [peer,oldPeer]=frames[0].players
+  assert.equal(peer.poseAt,frames[0].tag!.serverNow!-155)
+  assert.ok(peer.sampleAgeMs!>=155&&peer.sampleAgeMs!<245)
+  assert.equal(oldPeer.sampleAgeMs,undefined)
+})
+
 test('招待先の地形を検証し、旧ルームは森と湖として復元する',async()=>{
   const {stage:_,...oldRoom}=connection.room
   const backup={...connection,room:oldRoom}

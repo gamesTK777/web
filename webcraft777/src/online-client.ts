@@ -35,6 +35,8 @@ export interface RoomPlayer {
   nickname: string
   pose: NetPose
   cpu?:boolean
+  poseAt?:number
+  sampleAgeMs?:number
 }
 
 export interface RoomSummary {
@@ -107,6 +109,8 @@ const TAG_POLL_INTERVAL = 260
 const EDIT_INTERVAL = 300
 const REQUEST_TIMEOUT = 7_000
 const MAX_BACKOFF = 12_000
+const CLOCK_SAMPLE_LIFETIME = 12_000
+const MAX_CLOCK_SAMPLE_RTT = 1_400
 const MAX_ROOM_CELLS = 10_000
 const PROTOCOL = 9
 
@@ -195,7 +199,8 @@ function parsePlayer(value: unknown): RoomPlayer | undefined {
       typeof pose.moving !== 'boolean' || typeof pose.crouched !== 'boolean' || typeof pose.flying !== 'boolean') return undefined
   const {x, y, z, yaw, moving, crouched, flying} = pose
   return { id: member.id, nickname: member.nickname, pose: { x, y, z, yaw, moving, crouched, flying },
-    ...(member.cpu===true?{cpu:true}:{}) }
+    ...(member.cpu===true?{cpu:true}:{}),
+    ...(isInteger(member.poseAt,1,Number.MAX_SAFE_INTEGER)?{poseAt:member.poseAt}:{}) }
 }
 
 function parseCell(value: unknown, since: number, total: number): RoomCell {
@@ -324,6 +329,7 @@ type SyncRequest = {
   token: string
   since: number
   pose: NetPose | null
+  sampleAt?: number
   edit?: RoomEdit
   ride?:RideRequest|null
 }
@@ -392,6 +398,7 @@ export class OnlineClient {
 }
 
 type PendingEdit = { edit: RoomEdit; resolve: (outcome: EditOutcome) => void }
+type ClockSample = { offset:number; rtt:number; receivedAt:number }
 const isHidden = () => typeof document !== 'undefined' && document.hidden
 
 export class RoomSync {
@@ -404,6 +411,7 @@ export class RoomSync {
   private running: AbortController | undefined
   private pending: PendingEdit | undefined
   private sent: PendingEdit | undefined
+  private clockSample: ClockSample | undefined
   private closed = false
   private finished = false
 
@@ -475,6 +483,25 @@ export class RoomSync {
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.visibility)
   }
 
+  private estimatedServerTime(at:number) {
+    const sample=this.clockSample
+    return sample&&at-sample.receivedAt<CLOCK_SAMPLE_LIFETIME?Math.round(at+sample.offset):undefined
+  }
+
+  private timeChaseFrame(frame:RoomFrame, sentAt:number, receivedAt:number) {
+    const serverNow=frame.cops?.serverNow??frame.tag?.serverNow
+    if(serverNow===undefined)return
+    const rtt=receivedAt-sentAt, previous=this.clockSample
+    // The shortest recent round trip is least affected by queuing and stalls.
+    if(rtt<=MAX_CLOCK_SAMPLE_RTT&&(!previous||rtt<=previous.rtt||receivedAt-previous.receivedAt>=CLOCK_SAMPLE_LIFETIME)){
+      this.clockSample={offset:serverNow-(sentAt+receivedAt)/2,rtt,receivedAt}
+    }
+    const estimatedArrival=this.estimatedServerTime(receivedAt)??serverNow
+    for(const player of frame.players){
+      if(player.poseAt!==undefined)player.sampleAgeMs=Math.max(0,Math.min(2_000,estimatedArrival-player.poseAt))
+    }
+  }
+
   private async tick() {
     this.timer = undefined
     if (this.closed || this.finished || this.running || isHidden()) return
@@ -487,14 +514,17 @@ export class RoomSync {
     try {
       const pose = this.hooks.pose()
       const ride=this.hooks.ride?.()
+      const sampleAt=pose&&timedMode(room.mode)?this.estimatedServerTime(performance.now()):undefined
       attemptedEdit = Boolean(sent && pose)
       if (sent && !attemptedEdit) this.finishEdit({ ok: false, reason: 'offline' })
       const payload = await this.send({
         protocol: PROTOCOL, code: room.code, token, since: this.revision, pose, ...(sent && pose ? { edit: sent.edit } : {}),
+        ...(sampleAt!==undefined?{sampleAt}:{}),
         ...(ride===undefined?{}:{ride}),
       }, request.signal)
       if (this.closed) return
       const { frame, result } = parseFrame(payload, this.revision, id, attemptedEdit, room)
+      this.timeChaseFrame(frame,this.lastStart,performance.now())
       this.finished=frame.tag?.phase==='finished'||frame.cops?.phase==='finished'
       this.hooks.onFrame(frame)
       this.revision = frame.revision

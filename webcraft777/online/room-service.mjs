@@ -1,6 +1,7 @@
 import { cpuTokenPrefix, tagBotInterval, tagBotPose, tagBotSeats, tagBotStages } from './tag-bots.mjs'
 import { copsBotPose, copsBotSpawn } from './cops-bots.mjs'
 import { advanceStamina } from './chase-movement.mjs'
+import { bodiesTouch, contactTrack, contactWindow } from './chase-contact.mjs'
 import { advanceCopsState, copsStages, jailSpawn, policeSpawn, publicCops, readCops, rescueExit } from './cops-rules.mjs'
 import { PARK_RIDES, PARK_RIDE_REACH } from './park-rides-config.mjs'
 
@@ -14,10 +15,8 @@ const lifetime = 24 * 60 * 60 * 1000
 const presence = 20_000
 const tagPresence = 4000
 const copsBotInterval = 200
-const tagSamples = 750
-const tagSkew = 450
+const maxSampleLag = 350
 const hideTime = 20_000
-const tagReach = .68
 const tagDurations = new Set([1,3,5,10,15])
 const roomStages = new Set(['classic','flat','lake','school'])
 const playersLimit = 6
@@ -339,12 +338,20 @@ function editStatement(db, code, digest, edit, since, now, protocol) {
   block, now - 2500, x - .31, x + 1.31, z - .31, z + 1.31, y + 1, y, fromRevision, before)
 }
 
-const activePlayers = `SELECT id,nickname,pose,pose_at,previous_pose,previous_pose_at,${cpuSeat} AS cpu
+const activePlayers = `SELECT id,nickname,pose,pose_at,previous_pose,previous_pose_at,sample_at,pose_history,${cpuSeat} AS cpu
   FROM webcraft_members WHERE room_code=? AND (last_seen>? OR ${cpuSeat}) AND pose IS NOT NULL AND ${authenticated}`
 const activeCells = `SELECT voxel AS key,block,axis,revision FROM webcraft_cells
   WHERE room_code=? AND revision>? AND ${authenticated} ORDER BY revision`
 
-function poseStatement(db,code,digest,now,poseText,protocol) {
+const previousSampleAt = 'COALESCE(NULLIF(m.sample_at,0),m.pose_at)'
+const rememberPose = `CASE WHEN m.pose IS NULL OR m.pose_at<=0 THEN '[]' ELSE json_insert(
+   CASE WHEN json_array_length(m.pose_history)>=5 THEN json_remove(m.pose_history,'$[0]') ELSE m.pose_history END,
+   '$[#]',json_array(${previousSampleAt},json_object(
+     'x',json_extract(m.pose,'$.x'),'y',json_extract(m.pose,'$.y'),'z',json_extract(m.pose,'$.z'),
+     'crouched',json_extract(m.pose,'$.crouched')))) END`
+
+function poseStatement(db,code,digest,now,poseText,sampleAt,protocol) {
+  const record = '(r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL'
   return prepared(db, `UPDATE webcraft_members AS m SET
     last_seen=MAX(m.last_seen,tick.time), pose=CASE
       WHEN tick.pose IS NULL THEN m.pose
@@ -353,68 +360,21 @@ function poseStatement(db,code,digest,now,poseText,protocol) {
       WHEN c.phase='hiding' AND EXISTS(SELECT 1 FROM json_each(c.police) WHERE value=m.id)
         THEN json_set(tick.pose,'$.x',${policeSpawn.x},'$.y',${policeSpawn.y},'$.z',${policeSpawn.z},'$.moving',json('false'),'$.flying',json('false'))
       ELSE tick.pose END,
-    previous_pose=CASE WHEN (r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL THEN m.pose ELSE m.previous_pose END,
-    previous_pose_at=CASE WHEN (r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL THEN m.pose_at ELSE m.previous_pose_at END,
-    pose_at=CASE WHEN (r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL THEN tick.time ELSE m.pose_at END
-    FROM webcraft_rooms r LEFT JOIN webcraft_cops_state c ON c.room_code=r.code CROSS JOIN (SELECT ? AS time,? AS pose) tick
+    previous_pose=CASE WHEN ${record} THEN m.pose ELSE m.previous_pose END,
+    previous_pose_at=CASE WHEN ${record} THEN m.pose_at ELSE m.previous_pose_at END,
+    pose_history=CASE WHEN ${record} THEN ${rememberPose} ELSE m.pose_history END,
+    sample_at=CASE WHEN ${record} THEN MAX(tick.sample_at,${previousSampleAt}+1) ELSE m.sample_at END,
+    pose_at=CASE WHEN ${record} THEN tick.time ELSE m.pose_at END
+    FROM webcraft_rooms r LEFT JOIN webcraft_cops_state c ON c.room_code=r.code
+    CROSS JOIN (SELECT ? AS time,? AS pose,? AS sample_at) tick
     WHERE m.room_code=r.code AND r.code=? AND m.token_hash=? AND r.expires_at>tick.time AND ?>=${minimumProtocol}
     AND NOT EXISTS(SELECT 1 FROM webcraft_tag_state t WHERE t.room_code=r.code AND t.ends_at>0
       AND (t.ends_at<=tick.time OR (t.phase='hiding' AND t.hide_until<=tick.time)))
     AND (c.phase IS NULL OR (c.phase<>'finished' AND (c.ends_at=0 OR c.ends_at>tick.time)
       AND (c.phase<>'hiding' OR c.hide_until>tick.time)))
-    AND CASE WHEN (r.tag_enabled=1 OR r.cops_stage IS NOT NULL) AND tick.pose IS NOT NULL THEN m.pose_at<tick.time
+    AND CASE WHEN ${record} THEN m.pose_at<tick.time
       ELSE m.last_seen<=tick.time-4000 OR (tick.pose IS NOT NULL AND m.pose IS NOT tick.pose) END`,
-  now, poseText, code, digest, protocol)
-}
-
-const bodyHeight = pose => pose.crouched ? 1 : 1.82
-const mix = (from, to, part) => from + (to - from) * part
-const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)
-
-function movement(row) {
-  if (!row.previous_pose || row.previous_pose_at <= 0) return null
-  const span = row.pose_at - row.previous_pose_at
-  if (span <= 0 || span > tagSamples) return null
-  const from = JSON.parse(row.previous_pose)
-  if (distance(from, row.current) > .5 + 22 * span / 1000) return null
-  return {from, to:row.current, start:row.previous_pose_at, end:row.pose_at, span,
-    height:Math.min(bodyHeight(from), bodyHeight(row.current))}
-}
-
-function sampledPosition(track, time) {
-  const part = (time - track.start) / track.span
-  return {x:mix(track.from.x, track.to.x, part), y:mix(track.from.y, track.to.y, part),
-    z:mix(track.from.z, track.to.z, part)}
-}
-
-function bodiesTouch(a, b, earliest) {
-  if (a.pose_at < earliest || b.pose_at < earliest || Math.abs(a.pose_at - b.pose_at) > tagSkew) return false
-  const am = movement(a)
-  const bm = movement(b)
-  const start = am && bm ? Math.max(am.start, bm.start, earliest) : Infinity
-  const end = Math.min(a.pose_at, b.pose_at)
-  if (start > end) {
-    if (Math.abs(a.pose_at - b.pose_at) > 120) return false
-    return a.current.y < b.current.y + bodyHeight(b.current) && b.current.y < a.current.y + bodyHeight(a.current) &&
-      Math.hypot(a.current.x - b.current.x, a.current.z - b.current.z) <= tagReach
-  }
-  const a0 = sampledPosition(am, start), b0 = sampledPosition(bm, start)
-  const a1 = sampledPosition(am, end), b1 = sampledPosition(bm, end)
-  const x = a0.x - b0.x, y = a0.y - b0.y, z = a0.z - b0.z
-  const dx = a1.x - b1.x - x, dy = a1.y - b1.y - y, dz = a1.z - b1.z - z
-  // Intersect the simultaneous body heights before minimizing horizontal separation.
-  let low = 0, high = 1
-  const yMin = -am.height + .001, yMax = bm.height - .001
-  if (dy) {
-    const first = (yMin - y) / dy, second = (yMax - y) / dy
-    low = Math.max(low, Math.min(first, second))
-    high = Math.min(high, Math.max(first, second))
-    if (low > high) return false
-  } else if (y < yMin || y > yMax) return false
-  const speedSquared = dx * dx + dz * dz
-  const nearest = speedSquared ? -(x * dx + z * dz) / speedSquared : 0
-  const at = Math.max(low, Math.min(high, nearest))
-  return Math.hypot(x + dx * at, z + dz * at) <= tagReach
+  now, poseText, sampleAt, code, digest, protocol)
 }
 
 function publicTag(row,protocol,now) {
@@ -449,7 +409,7 @@ async function advanceTag(db, room, active, now, protocol, digest) {
   } else if (room.phase === 'hiding' && now >= room.hide_until) {
     next = {...room, phase:'playing'}
   } else if (room.phase === 'playing' && currentIt && now >= room.protected_until) {
-    const earliest = Math.max(now - tagSamples, room.hide_until, room.protected_until)
+    const earliest = Math.max(now - contactWindow, room.hide_until, room.protected_until)
     const touched = active.find(row => row.id !== room.it && bodiesTouch(currentIt, row, earliest))
     if (touched) {
       const hideUntil=now+hideTime
@@ -494,9 +454,14 @@ async function tokenFor(body) {
 function gatherParticipants(room,rows,now){
   const enrolling=room.phase==='hiding'&&room.previous_it===null&&room.round_result===null
   const roster=room.round_roster===null||enrolling ? null : new Set(JSON.parse(room.round_roster).map(person=>person.id))
-  return rows.filter(row=>!room.tag_enabled&&!room.cops_stage||
+  const chase=room.tag_enabled||room.cops_stage
+  return rows.filter(row=>!chase||
     (row.pose_at>0&&(row.cpu||row.pose_at>=now-tagPresence)&&(!roster||roster.has(row.id))))
-    .map(row=>({...row,current:JSON.parse(row.pose)}))
+    .map(row=>{
+      const participant={...row,current:JSON.parse(row.pose)}
+      if(chase)participant.contactTrack=contactTrack(participant)
+      return participant
+    })
 }
 
 async function tickTagBots(db,room,participants,now,digest){
@@ -507,10 +472,11 @@ async function tickTagBots(db,room,participants,now,digest){
   const stage=publicStage(room)
   // A poll advances bots once per interval. Compare the old sample and tag
   // sequence so two clients cannot both advance the same tick or bypass a freeze.
-  const updates=due.map(bot=>prepared(db,`UPDATE webcraft_members SET last_seen=?,previous_pose=pose,previous_pose_at=pose_at,pose_at=?,pose=?
+  const updates=due.map(bot=>prepared(db,`UPDATE webcraft_members AS m SET last_seen=?,previous_pose=pose,previous_pose_at=pose_at,
+    pose_history=${rememberPose},sample_at=?,pose_at=?,pose=?
     WHERE room_code=? AND id=? AND ${cpuSeat} AND pose_at=? AND EXISTS(
       SELECT 1 FROM webcraft_tag_state WHERE room_code=? AND seq=? AND round_result IS NULL
-    ) AND ${authenticated}`, now,now,JSON.stringify(tagBotPose(stage,bot,participants,room,now)),
+    ) AND ${authenticated}`, now,now,now,JSON.stringify(tagBotPose(stage,bot,participants,room,now)),
     room.code,bot.id,bot.pose_at,room.code,room.seq,room.code,digest))
   const results=await db.batch([...updates,prepared(db,roomInfo,room.code),
     prepared(db,activePlayers,room.code,now-presence,room.code,digest)])
@@ -536,10 +502,11 @@ async function tickCopsBots(db,room,state,participants,now,digest,selectState){
   const updates=due.map(bot=>{
     const pose=copsBotPose({stage:room.cops_stage,id:bot.id,pose:bot.current,phase:state.phase,
       elapsed:Math.min((now-bot.pose_at)/1000,.5),now,policeIds:state.policeIds,jailedIds:state.jailedIds,players})
-    return prepared(db,`UPDATE webcraft_members SET last_seen=?,previous_pose=pose,previous_pose_at=pose_at,pose_at=?,pose=?
+    return prepared(db,`UPDATE webcraft_members AS m SET last_seen=?,previous_pose=pose,previous_pose_at=pose_at,
+      pose_history=${rememberPose},sample_at=?,pose_at=?,pose=?
       WHERE room_code=? AND id=? AND ${cpuSeat} AND pose_at=? AND EXISTS(
         SELECT 1 FROM webcraft_cops_state WHERE room_code=? AND seq=?
-      ) AND ${authenticated}`,now,now,JSON.stringify(pose),room.code,bot.id,bot.pose_at,room.code,state.seq,room.code,digest)
+      ) AND ${authenticated}`,now,now,now,JSON.stringify(pose),room.code,bot.id,bot.pose_at,room.code,state.seq,room.code,digest)
   })
   const results=await db.batch([...updates,selectState,prepared(db,activePlayers,room.code,now-presence,room.code,digest)])
   return results.slice(-2)
@@ -601,7 +568,7 @@ async function advanceCops(db,room,participants,now,digest){
   // Commit NPC jail and release positions with the same state transition. A
   // stale poll cannot teleport them when its compare-and-swap failed.
   if(teleports.length)changes.push(prepared(db,`UPDATE webcraft_members SET pose=json_extract(places.value,'$.pose'),
-    last_seen=?,pose_at=?,previous_pose=NULL,previous_pose_at=0 FROM json_each(?) places
+    last_seen=?,pose_at=?,sample_at=0,pose_history='[]',previous_pose=NULL,previous_pose_at=0 FROM json_each(?) places
     WHERE changes()>0 AND room_code=? AND ${cpuSeat} AND webcraft_members.id=json_extract(places.value,'$.id')`,
     now,now,JSON.stringify(teleports),room.code))
   const index=changes.push(selectState)-1
@@ -670,8 +637,10 @@ async function syncRoom(db, body, now) {
   const canEdit = edit && canReach(pose, edit)
   const protocol = wireProtocol(body.protocol)
   const poseText = pose === null ? null : JSON.stringify(pose)
+  const sampleAt = Number.isSafeInteger(body.sampleAt) && body.sampleAt <= now && body.sampleAt >= now-maxSampleLag
+    ? body.sampleAt : now
   const queries = [
-    poseStatement(db,code,digest,now,poseText,protocol),
+    poseStatement(db,code,digest,now,poseText,sampleAt,protocol),
     refreshExpiry(db,code,digest,now,protocol)
   ]
   const mutationIndex = canEdit ? queries.push(editStatement(db, code, digest, edit, body.since, now, protocol)) - 1 : -1
@@ -708,9 +677,10 @@ async function syncRoom(db, body, now) {
       participants=gatherParticipants(room,updated.members,frameTime)
     }
   }
-  const remotePlayers = () => participants.filter(p=>p.id!==member.results[0].id).map(p=>
-    p.cpu ? {id:p.id,nickname:p.nickname,pose:publicBotPose(p.current),cpu:true}
-      : {id:p.id,nickname:p.nickname,pose:p.current})
+  const remotePlayers = () => participants.filter(p=>p.id!==member.results[0].id).map(p=>({
+    id:p.id,nickname:p.nickname,pose:p.cpu?publicBotPose(p.current):p.current,
+    ...(p.cpu?{cpu:true}:{}), ...(p.contactTrack?{poseAt:p.contactTrack.latest}:{})
+  }))
   const response = {revision:room.revision,cells:updates,players:[]}
   if(room.cops_stage){
     if(edit)throw new RoomError('ドロケイではブロックを編集できません。',403)

@@ -65,6 +65,9 @@ function occupied(world: ReadWorld, x: number, y: number, z: number, height = BO
       }
   return false;
 }
+export function playerPoseClear(world: ReadWorld, pose: Pick<Pose, "x" | "y" | "z" | "crouched">): boolean {
+  return !occupied(world, pose.x, pose.y, pose.z, pose.crouched ? CROUCH_HEIGHT : BODY_HEIGHT);
+}
 function wet(world: ReadWorld, x: number, y: number, z: number) {
   return world.get(Math.floor(x), Math.floor(y + .12), Math.floor(z)) === 13 ||
     world.get(Math.floor(x), Math.floor(y + 1.0), Math.floor(z)) === 13;

@@ -657,7 +657,8 @@ function applyCopsFrame(s:Session,room:SharedRoom,game:TagGame,state:CopsState,s
   game.receivedAt=now
   if(prior?.phase!==state.phase)game.mapDue=0
   if(state.seq!==prior?.seq&&state.event){
-    if(state.event.kind==='capture')ui.toast(jailed&&!wasJailed?'確保された！ 仲間の救出を待とう。':'ケイがドロを確保！')
+    if(state.event.kind==='capture')ui.toast(jailed&&!wasJailed?'確保された！ 仲間の救出を待とう。':
+      state.event.by===id?'タッチ成功！ ドロを確保しました。':'ケイがドロを確保！')
     else {
       const rescuer=state.event.by===id?room.nickname:game.peers.find(player=>player.id===state.event?.by)?.nickname
       ui.toast(rescuer?rescuer+'が牢屋の仲間を救出！':'仲間が牢屋から救出された！')
