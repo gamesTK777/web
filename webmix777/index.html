@@ -11,7 +11,7 @@
   <script src="./game.mjs" type="module"></script>
 </head>
 <body>
-  <main id="game" data-phase="ready">
+  <main id="game" data-phase="ready" data-mode="manual">
     <header class="topbar">
       <a href="../index.html" class="portal"><span aria-hidden="true">←</span> TK777 ARCADE</a>
       <div class="top-controls">
@@ -24,9 +24,9 @@
       <aside class="track">
         <h1 aria-label="ウェブミックス777"><span>WEBMIX</span><em>777</em></h1>
         <div class="track-info">
-          <img class="jacket" src="./art/neon-dawn.webp" alt="" width="768" height="768">
+          <img class="jacket" id="track-art" src="./art/neon-dawn.webp" alt="" width="768" height="768">
           <div class="track-copy">
-            <p class="genre">SYNTH HOUSE</p>
+            <p class="genre" id="track-genre">SYNTH HOUSE</p>
             <h2 id="track-title">夜明けのネオン</h2>
             <dl class="track-facts">
               <div><dt>BPM</dt><dd id="track-bpm">126</dd></div>
@@ -34,11 +34,15 @@
             </dl>
           </div>
         </div>
+        <section class="track-list" aria-labelledby="tracks-title">
+          <h2 id="tracks-title">曲を選ぶ</h2>
+          <div id="track-picker" role="group" aria-label="選曲"></div>
+        </section>
       </aside>
 
       <section class="deck" aria-label="演奏レーン">
         <div class="transport">
-          <span class="mode-label">7 KEY</span>
+          <span class="mode-label" id="mode-label">4 KEY</span>
           <progress id="song-progress" aria-label="曲の進み具合" max="1" value="0"></progress>
           <time id="song-time">0:00</time>
         </div>
@@ -54,7 +58,10 @@
             <div class="prompt">
               <h2>ノーツに合わせて<br>メロディーを奏でよう</h2>
               <p>光のラインにノーツが重なった瞬間に、対応する鍵盤を押してください。</p>
-              <button class="primary" id="start" type="button">演奏スタート <span aria-hidden="true">▶</span></button>
+              <div class="start-buttons">
+                <button class="primary" id="start" type="button">演奏スタート <span aria-hidden="true">▶</span></button>
+                <button class="primary auto-button" id="auto-start" type="button">自動演奏</button>
+              </div>
               <p id="audio-error" role="alert" hidden></p>
             </div>
           </section>
@@ -62,7 +69,7 @@
             <div class="prompt">
               <h2>一時停止</h2>
               <button class="primary" id="resume" type="button">演奏を再開 <span aria-hidden="true">▶</span></button>
-              <button class="small-button secondary" id="quit" type="button">選曲画面に戻る</button>
+              <button class="small-button secondary" id="quit" type="button">曲選択に戻る</button>
               <p id="resume-error" role="alert" hidden></p>
             </div>
           </section>
@@ -77,18 +84,18 @@
                 <div><dt>GOOD</dt><dd id="result-good">0</dd></div>
                 <div><dt>MISS</dt><dd id="result-miss">0</dd></div>
               </dl>
-              <button class="primary" id="restart" type="button">もう一度演奏 <span aria-hidden="true">↻</span></button>
+              <div class="result-buttons">
+                <button class="primary" id="restart" type="button"><span id="restart-label">もう一度演奏</span> <span aria-hidden="true">↻</span></button>
+                <button class="small-button secondary" id="result-back" type="button">曲選択に戻る</button>
+              </div>
             </div>
           </section>
         </div>
-        <div class="keyboard" role="group" aria-label="演奏する7つの鍵盤">
-          <button class="lane-key" data-lane="0" type="button" aria-label="鍵盤1 S"><kbd>S</kbd></button>
-          <button class="lane-key" data-lane="1" type="button" aria-label="鍵盤2 D"><kbd>D</kbd></button>
-          <button class="lane-key" data-lane="2" type="button" aria-label="鍵盤3 F"><kbd>F</kbd></button>
-          <button class="lane-key" data-lane="3" type="button" aria-label="鍵盤4 Space"><kbd>SPACE</kbd></button>
-          <button class="lane-key" data-lane="4" type="button" aria-label="鍵盤5 J"><kbd>J</kbd></button>
-          <button class="lane-key" data-lane="5" type="button" aria-label="鍵盤6 K"><kbd>K</kbd></button>
-          <button class="lane-key" data-lane="6" type="button" aria-label="鍵盤7 L"><kbd>L</kbd></button>
+        <div class="keyboard" role="group" aria-label="演奏する4つの鍵盤">
+          <button class="lane-key" data-lane="0" type="button" aria-label="鍵盤1 F"><kbd>F</kbd></button>
+          <button class="lane-key" data-lane="1" type="button" aria-label="鍵盤2 G"><kbd>G</kbd></button>
+          <button class="lane-key" data-lane="2" type="button" aria-label="鍵盤3 J"><kbd>J</kbd></button>
+          <button class="lane-key" data-lane="3" type="button" aria-label="鍵盤4 K"><kbd>K</kbd></button>
         </div>
       </section>
 
@@ -110,11 +117,11 @@
         </div>
         <div class="how-to">
           <h2>遊び方</h2>
-          <p>PCは画面に並ぶキー、スマホは下の鍵盤をタップ。伴奏に合わせて押せた音だけが曲に重なります。</p>
+          <p>PCは F・G・J・K、スマホは画面の鍵盤で演奏します。自動演奏では、全ノーツの音を聴けます。</p>
         </div>
       </aside>
     </section>
-    <footer class="credits">ウェブミックス777 · オリジナル楽曲「夜明けのネオン」</footer>
+    <footer class="credits">ウェブミックス777 · オリジナル楽曲</footer>
     <noscript>遊ぶにはJavaScriptを有効にしてください。</noscript>
   </main>
 </body>

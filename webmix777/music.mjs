@@ -1,3 +1,6 @@
+import { techHouseTrack } from './tracks/tech-house.mjs'
+import { technoTrack } from './tracks/techno.mjs'
+
 const bpm = 126
 const beat = 60 / bpm
 const barLength = 4 * beat
@@ -69,7 +72,9 @@ const parts = [
   { from: 32, score: outro, voice: 'bell', title: '余韻' },
 ]
 
-const pitchLanes = { 0: 0, 2: 1, 4: 2, 5: 3, 7: 4, 9: 5, 11: 6 }
+// Fold seven pitch classes into four keys. The original notes and the paired
+// phrases keep their timing, with dyads on two different keys.
+const pitchLanes = { 0: 0, 2: 1, 4: 2, 5: 3, 7: 3, 9: 0, 11: 1 }
 const chart = parts.flatMap(({ from, score, voice }) => score.flatMap((entries, index) =>
   entries.flatMap(([offset, pitches, length]) => (Array.isArray(pitches) ? pitches : [pitches])
     .map(pitch => Object.freeze({
@@ -81,16 +86,6 @@ const chart = parts.flatMap(({ from, score, voice }) => score.flatMap((entries, 
     })))))
 
 chart.sort((left, right) => left.time - right.time || left.lane - right.lane)
-
-export const TRACK = Object.freeze({
-  title: '夜明けのネオン',
-  artist: 'ウェブミックス777',
-  genre: 'SYNTH HOUSE',
-  bpm,
-  duration: measures * barLength,
-  chart: Object.freeze(chart),
-  sections: Object.freeze(parts.map(({ from, title }) => Object.freeze({ time: from * barLength, title }))),
-})
 
 function composeBacking() {
   const events = []
@@ -128,7 +123,20 @@ function composeBacking() {
   return events.sort((left, right) => left.time - right.time)
 }
 
-const backing = composeBacking()
+export const TRACK = Object.freeze({
+  id: 'neon-dawn',
+  title: '夜明けのネオン',
+  artist: 'ウェブミックス777',
+  genre: 'SYNTH HOUSE',
+  art: 'art/neon-dawn.webp',
+  bpm,
+  duration: measures * barLength,
+  chart: Object.freeze(chart),
+  backing: Object.freeze(composeBacking()),
+  sections: Object.freeze(parts.map(({ from, title }) => Object.freeze({ time: from * barLength, title }))),
+})
+
+export const TRACKS = Object.freeze([TRACK, techHouseTrack, technoTrack])
 const lookahead = .185
 const silence = .0001
 const frequency = pitch => 440 * 2 ** ((pitch - 69) / 12)
@@ -175,15 +183,19 @@ export class Music {
     if (this.#master) this.#master.gain.setTargetAtTime(this.#volume, this.context.currentTime, .035)
   }
 
-  start(at = this.context?.currentTime) {
+  start(at = this.context?.currentTime, track = TRACK) {
     if (!this.context || !Number.isFinite(at)) return
     this.stop()
     const context = this.context
+    const mix = track.mix ?? {}
+    const beat = 60 / track.bpm
     const output = context.createGain()
     const accompaniment = context.createGain()
-    accompaniment.gain.value = .61
+    accompaniment.gain.value = mix.bed ?? .61
+    const ducked = context.createGain()
+    ducked.connect(accompaniment)
     const melody = context.createGain()
-    melody.gain.value = .93
+    melody.gain.value = mix.lead ?? .93
     accompaniment.connect(output)
     melody.connect(output)
 
@@ -192,12 +204,15 @@ export class Music {
     const feedback = context.createGain()
     feedback.gain.value = .24
     const wet = context.createGain()
-    wet.gain.value = .16
+    wet.gain.value = mix.echo ?? .16
     melody.connect(echo)
     echo.connect(feedback).connect(echo)
     echo.connect(wet).connect(output)
     output.connect(this.#master)
-    this.#run = { at, cursor: 0, output, accompaniment, melody, feedback, echo, wet, active: new Set() }
+    this.#run = {
+      at, beat, backing: track.backing, pump: mix.pump,
+      cursor: 0, output, accompaniment, ducked, melody, feedback, echo, wet, active: new Set(),
+    }
     this.update()
   }
 
@@ -209,7 +224,7 @@ export class Music {
     for (const source of run.active) {
       try { source.stop(this.context.currentTime) } catch { /* An ended source may still have an event queued. */ }
     }
-    for (const node of [run.accompaniment, run.melody, run.feedback, run.echo, run.wet]) node.disconnect()
+    for (const node of [run.accompaniment, run.ducked, run.melody, run.feedback, run.echo, run.wet]) node.disconnect()
   }
 
   update(songTime = this.context?.currentTime - this.#run?.at) {
@@ -217,8 +232,8 @@ export class Music {
     if (!run || !Number.isFinite(songTime)) return
     const now = this.context.currentTime
     // Late frames skip old events instead of stacking beats on top of one another.
-    while (run.cursor < backing.length && backing[run.cursor].time <= songTime + lookahead) {
-      const event = backing[run.cursor++]
+    while (run.cursor < run.backing.length && run.backing[run.cursor].time <= songTime + lookahead) {
+      const event = run.backing[run.cursor++]
       const when = run.at + event.time
       if (when >= now - .065) this.#playBacking(run, event, Math.max(now, when))
     }
@@ -229,8 +244,13 @@ export class Music {
     if (!run || !Number.isFinite(note?.pitch) || !Number.isFinite(when)) return false
     const onset = Math.max(when, this.context.currentTime)
     const length = Math.min(1, Math.max(.09, note.duration))
-    if (note.voice === 'bell') this.#bell(run, frequency(note.pitch), onset, length)
-    else this.#lead(run, frequency(note.pitch), onset, length)
+    const hz = frequency(note.pitch)
+    switch (note.voice) {
+      case 'bell': this.#bell(run, hz, onset, length); break
+      case 'acid': this.#acid(run, hz, onset, length); break
+      case 'stab': this.#stab(run, hz, onset, length); break
+      default: this.#lead(run, hz, onset, length); break
+    }
     return true
   }
 
@@ -239,8 +259,10 @@ export class Music {
       case 'kick': this.#kick(run, when, detail); break
       case 'clap': this.#noiseHit(run, when, 'bandpass', 2150, .105, detail); break
       case 'hat': this.#noiseHit(run, when, 'highpass', 6800, detail.open ? .115 : .036, detail.peak); break
+      case 'ride': this.#noiseHit(run, when, 'highpass', 8520, .245, detail); break
       case 'bass': this.#bass(run, when, detail); break
       case 'pad': this.#pad(run, when, detail); break
+      case 'rumble': this.#rumble(run, when, detail); break
     }
   }
 
@@ -286,6 +308,12 @@ export class Music {
   }
 
   #kick(run, when, peak) {
+    if (run.pump) {
+      const level = run.ducked.gain
+      level.setValueAtTime(1, when)
+      level.linearRampToValueAtTime(run.pump, when + .01)
+      level.exponentialRampToValueAtTime(1, when + run.beat * .43)
+    }
     const level = this.#envelope(run.accompaniment, when, [.002, peak, .06, peak * .34, .21, silence])
     const osc = this.#osc('sine', 152, level)
     osc.frequency.setValueAtTime(152, when)
@@ -304,8 +332,8 @@ export class Music {
   }
 
   #bass(run, when, { pitch, length, peak }) {
-    const seconds = length * beat
-    const level = this.#envelope(run.accompaniment, when, [.009, peak, seconds * .78, peak * .47, seconds + .12, silence])
+    const seconds = length * run.beat
+    const level = this.#envelope(run.ducked, when, [.009, peak, seconds * .78, peak * .47, seconds + .12, silence])
     const filter = this.#filter(level, 'lowpass', 470)
     filter.frequency.setValueAtTime(690, when)
     filter.frequency.exponentialRampToValueAtTime(260, when + seconds * .75)
@@ -314,8 +342,8 @@ export class Music {
   }
 
   #pad(run, when, { chord, length, peak }) {
-    const seconds = length * beat
-    const level = this.#envelope(run.accompaniment, when, [.04, peak / chord.notes.length, seconds, peak * .063, seconds + .23, silence])
+    const seconds = length * run.beat
+    const level = this.#envelope(run.ducked, when, [.04, peak / chord.notes.length, seconds, peak * .063, seconds + .23, silence])
     const filter = this.#filter(level, 'lowpass', 1430)
     const oscillators = chord.notes.map((pitch, index) => this.#osc(index % 2 ? 'sine' : 'triangle', frequency(pitch), filter, index * 3 - 5))
     this.#play(run, oscillators, [filter, level], when, seconds + .236)
@@ -343,5 +371,37 @@ export class Music {
     modulation.connect(body.frequency)
     const strike = this.#osc('sine', hz * 2.01, modulation)
     this.#play(run, [body, strike], [modulation, level], when, length + .285)
+  }
+
+  #rumble(run, when, peak) {
+    const level = this.#envelope(run.accompaniment, when, [.025, peak, .13, peak * .52, .295, silence])
+    const filter = this.#filter(level, 'lowpass', 125)
+    const shape = this.#osc('triangle', 55, filter)
+    shape.frequency.setValueAtTime(58, when)
+    shape.frequency.exponentialRampToValueAtTime(49, when + .23)
+    this.#play(run, [shape], [filter, level], when, .301)
+  }
+
+  #acid(run, hz, when, length) {
+    const volume = this.#envelope(run.melody, when, [.006, .22, .048, .16, length, .085, length + .12, silence])
+    const filter = this.#filter(volume, 'lowpass', 2800)
+    filter.Q.value = 2.9
+    filter.frequency.setValueAtTime(2800, when)
+    filter.frequency.exponentialRampToValueAtTime(650, when + length)
+    const saw = this.#osc('sawtooth', hz, filter)
+    this.#play(run, [saw], [filter, volume], when, length + .126)
+  }
+
+  #stab(run, hz, when, length) {
+    const volume = this.#envelope(run.melody, when, [.003, .245, .047, .126, length, .061, length + .15, silence])
+    const filter = this.#filter(volume, 'lowpass', 3900)
+    filter.frequency.setValueAtTime(3900, when)
+    filter.frequency.exponentialRampToValueAtTime(1140, when + length)
+    const bright = this.context.createGain()
+    bright.gain.value = .28
+    bright.connect(filter)
+    const body = this.#osc('triangle', hz, filter)
+    const attack = this.#osc('square', hz, bright, 7)
+    this.#play(run, [body, attack], [bright, filter, volume], when, length + .156)
   }
 }

@@ -1,5 +1,5 @@
-import {Music, TRACK} from './music.mjs'
-import {Performance, windows} from './judgement.mjs'
+import {Music, TRACKS} from './music.mjs'
+import {Performance, visitThrough, windows} from './judgement.mjs'
 
 const byId = id => document.getElementById(id)
 const game = byId('game')
@@ -7,24 +7,31 @@ const highway = byId('note-highway')
 const field = highway.querySelector('.note-field')
 const hitLine = highway.querySelector('.hit-line')
 const keys = [...document.querySelectorAll('.lane-key')]
-const keyCodes = ['KeyS', 'KeyD', 'KeyF', 'Space', 'KeyJ', 'KeyK', 'KeyL']
+const keyCodes = ['KeyF', 'KeyG', 'KeyJ', 'KeyK']
 const laneByCode = new Map(keyCodes.map((code, lane) => [code, lane]))
 const music = new Music()
 const activeNotes = new Map()
+const trackButtons = new Map()
 const keyboard = new Set()
 const pointers = new Map()
-const keyFlashes = Array(7).fill(0)
+const keyFlashes = Array(keys.length).fill(0)
 const flightTime = 1.84
 const countIn = 2.45
-const scoreKey = 'tk777.webmix.neon-dawn.best.v1'
+const autoLookahead = .18
+const scoreKey = id => `tk777.webmix.${id}.best.v1`
 const volumeKey = 'tk777.webmix.volume'
-let play = new Performance(TRACK.chart)
+let track = TRACKS[0]
+let play = new Performance(track.chart)
+let mode = 'manual'
+let starting = false
+let nextAutoSound = 0
+let nextAutoDisplay = 0
 let startAt = 0
 let raf = 0
 let hitY = 0
 let judgementUntil = 0
 let settlingPause = null
-let best = savedNumber(scoreKey, 0, TRACK.chart.length * 1000)
+let best = savedNumber(scoreKey(track.id), 0, track.chart.length * 1000)
 
 const playing = () => game.dataset.phase === 'playing' || game.dataset.phase === 'countdown'
 const padded = n => String(n).padStart(6, '0')
@@ -57,6 +64,20 @@ function setPhase(phase) {
   byId('results').hidden = phase !== 'result'
   byId('pause').hidden = phase !== 'countdown' && phase !== 'playing'
   byId('countdown').hidden = phase !== 'countdown'
+  updateAvailability()
+}
+
+function updateAvailability() {
+  const canChoose = !starting && ['ready','result'].includes(game.dataset.phase)
+  for (const button of trackButtons.values()) button.disabled = !canChoose
+  for (const id of ['start','auto-start','restart']) byId(id).disabled = starting
+}
+
+function setMode(next) {
+  mode = next
+  game.dataset.mode = mode
+  setText(byId('mode-label'), mode === 'auto' ? 'AUTO' : '4 KEY')
+  keys.forEach(key => { key.disabled = mode === 'auto' })
 }
 
 function heardTime(at = performance.now()) {
@@ -100,7 +121,7 @@ function updateScore() {
   setText(byId('best-score'), padded(best))
   setText(byId('mix-completion'), `${Math.round(play.completion * 100)}%`)
   setText(byId('mix-combo'), String(play.combo))
-  setText(byId('notes-played'), `${play.hits} / ${TRACK.chart.length} ノーツ`)
+  setText(byId('notes-played'), `${play.hits} / ${track.chart.length} ノーツ`)
   byId('completion-meter').value = play.completion
 }
 
@@ -117,9 +138,10 @@ function showError(node, error) {
   node.hidden = false
 }
 
-async function start(button) {
-  if (button.disabled || (game.dataset.phase !== 'ready' && game.dataset.phase !== 'result')) return
-  button.disabled = true
+async function start(nextMode) {
+  if (starting || (game.dataset.phase !== 'ready' && game.dataset.phase !== 'result')) return
+  starting = true
+  updateAvailability()
   const error = byId('audio-error')
   error.hidden = true
   try {
@@ -129,9 +151,11 @@ async function start(button) {
     cancelAnimationFrame(raf)
     resetKeys()
     clearNotes()
-    play = new Performance(TRACK.chart)
+    setMode(nextMode)
+    play = new Performance(track.chart)
+    nextAutoSound = nextAutoDisplay = 0
     startAt = context.currentTime + countIn
-    music.start(startAt)
+    music.start(startAt, track)
     updateScore()
     byId('song-progress').value = 0
     setText(byId('song-time'), '0:00')
@@ -142,10 +166,14 @@ async function start(button) {
     if (document.hidden) pause()
   } catch (cause) {
     music.stop()
+    setMode('manual')
     setPhase('ready')
     showError(error, cause)
     byId('start').focus({preventScroll: true})
-  } finally { button.disabled = false }
+  } finally {
+    starting = false
+    updateAvailability()
+  }
 }
 
 function pause() {
@@ -187,14 +215,16 @@ function stop() {
 
 function finish() {
   stop()
-  play.advance(TRACK.duration + windows.good)
-  if (play.score > best) {
+  play.advance(track.duration + windows.good)
+  if (mode === 'manual' && play.score > best) {
     best = play.score
-    saveNumber(scoreKey, best)
+    saveNumber(scoreKey(track.id), best)
   }
   updateScore()
+  setText(byId('result-title'), mode === 'auto' ? '自動演奏の結果' : '演奏結果')
+  setText(byId('restart-label'), mode === 'auto' ? 'もう一度自動演奏' : 'もう一度演奏')
   setText(byId('result-score'), padded(play.score))
-  setText(byId('result-summary'), `メロディー ${play.hits} / ${TRACK.chart.length} 音 · 最大コンボ ${play.maxCombo}`)
+  setText(byId('result-summary'), `メロディー ${play.hits} / ${track.chart.length} 音 · 最大コンボ ${play.maxCombo}`)
   for (const [quality, count] of Object.entries(play.counts)) setText(byId(`result-${quality}`), String(count))
   setPhase('result')
   byId('result-title').focus({preventScroll: true})
@@ -207,8 +237,8 @@ function drawNotes(time) {
       note.remove()
     }
   }
-  for (let index = play.firstPending; index < TRACK.chart.length; index++) {
-    const note = TRACK.chart[index]
+  for (let index = play.firstPending; index < track.chart.length; index++) {
+    const note = track.chart[index]
     const remaining = note.time - time
     if (remaining > flightTime) break
     if (play.results[index]) continue
@@ -227,15 +257,35 @@ function drawNotes(time) {
   }
 }
 
+function flashKey(lane, now) {
+  keys[lane].setAttribute('data-hit', '')
+  keyFlashes[lane] = now + 120
+}
+
+function playAutomatically(heard, raw, now) {
+  // Queue sounds on the audio clock, then show each judged note when it is heard.
+  nextAutoSound = visitThrough(track.chart, nextAutoSound, raw + autoLookahead, note => {
+    music.hit(note, startAt + note.time)
+  })
+  const before = nextAutoDisplay
+  nextAutoDisplay = visitThrough(track.chart, nextAutoDisplay, heard, note => {
+    play.strike(note.lane, note.time)
+    flashKey(note.lane, now)
+  })
+  if (nextAutoDisplay !== before) { flash('perfect'); updateScore() }
+}
+
 function frame(now) {
   if (!playing()) return
   const context = music.context
   if (context.state !== 'running') { pause(); return }
   const time = heardTime(now) - startAt
-  music.update(context.currentTime - startAt)
-  if (time >= TRACK.duration) {
+  const raw = context.currentTime - startAt
+  music.update(raw)
+  if (mode === 'auto') playAutomatically(time, raw, now)
+  if (time >= track.duration) {
     byId('song-progress').value = 1
-    setText(byId('song-time'), timeLabel(Math.round(TRACK.duration)))
+    setText(byId('song-time'), timeLabel(Math.round(track.duration)))
     finish()
     return
   }
@@ -253,13 +303,13 @@ function frame(now) {
   }
   if (play.advance(time)) { flash('miss'); updateScore() }
   drawNotes(time)
-  byId('song-progress').value = Math.max(0, time / TRACK.duration)
+  byId('song-progress').value = Math.max(0, time / track.duration)
   setText(byId('song-time'), timeLabel(time))
   raf = requestAnimationFrame(frame)
 }
 
 function strike(lane, event) {
-  if (game.dataset.phase !== 'playing' || music.context.state !== 'running') return
+  if (mode !== 'manual' || game.dataset.phase !== 'playing' || music.context.state !== 'running') return
   const now = performance.now()
   const stamp = Number.isFinite(event.timeStamp) && Math.abs(now - event.timeStamp) < 200 ? event.timeStamp : now
   const time = heardTime(stamp) - startAt
@@ -267,8 +317,7 @@ function strike(lane, event) {
   const hit = play.strike(lane, time)
   if (!hit) return
   music.hit(hit.note, music.context.currentTime + .004)
-  keys[lane].setAttribute('data-hit', '')
-  keyFlashes[lane] = now + 120
+  flashKey(lane, now)
   flash(hit.quality)
   updateScore()
 }
@@ -276,7 +325,7 @@ function strike(lane, event) {
 window.addEventListener('keydown', event => {
   if (event.code === 'Escape' && playing()) { event.preventDefault(); pause(); return }
   const lane = laneByCode.get(event.code)
-  if (lane === undefined || !playing() || event.metaKey || event.ctrlKey || event.altKey ||
+  if (lane === undefined || mode !== 'manual' || !playing() || event.metaKey || event.ctrlKey || event.altKey ||
       (event.target instanceof Element && event.target.closest('button,input,a'))) return
   event.preventDefault()
   if (event.repeat || keyboard.has(lane)) return
@@ -299,7 +348,7 @@ function releasePointer(event) {
 
 keys.forEach((key, lane) => {
   key.addEventListener('pointerdown', event => {
-    if (!playing() || event.button !== 0 || pointers.has(event.pointerId)) return
+    if (mode !== 'manual' || !playing() || event.button !== 0 || pointers.has(event.pointerId)) return
     event.preventDefault()
     pointers.set(event.pointerId, lane)
     key.setPointerCapture?.(event.pointerId)
@@ -316,19 +365,63 @@ window.addEventListener('blur', resetKeys)
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause() })
 window.addEventListener('pagehide', () => { if (playing()) pause() })
 
-byId('start').addEventListener('click', event => { void start(event.currentTarget) })
-byId('restart').addEventListener('click', event => { void start(event.currentTarget) })
+byId('start').addEventListener('click', () => { void start('manual') })
+byId('auto-start').addEventListener('click', () => { void start('auto') })
+byId('restart').addEventListener('click', () => { void start(mode) })
 byId('pause').addEventListener('click', pause)
 byId('resume').addEventListener('click', () => { void resume() })
-byId('quit').addEventListener('click', () => {
+function showTrack(nextTrack) {
+  if (starting) return
   stop()
-  play = new Performance(TRACK.chart)
-  updateScore()
+  track = nextTrack
+  game.dataset.track = track.id
+  setMode('manual')
+  play = new Performance(track.chart)
+  best = savedNumber(scoreKey(track.id), 0, track.chart.length * 1000)
+  for (const [id, button] of trackButtons) button.setAttribute('aria-pressed', String(id === track.id))
+  byId('track-art').src = track.art
+  setText(byId('track-title'), track.title)
+  setText(byId('track-genre'), track.genre)
+  setText(byId('track-bpm'), String(track.bpm))
+  setText(byId('track-length'), timeLabel(Math.round(track.duration)))
   byId('song-progress').value = 0
   setText(byId('song-time'), '0:00')
+  byId('audio-error').hidden = true
+  updateScore()
   setPhase('ready')
+}
+
+function returnToTracks() {
+  showTrack(track)
   byId('start').focus({preventScroll: true})
-})
+}
+
+byId('quit').addEventListener('click', returnToTracks)
+byId('result-back').addEventListener('click', returnToTracks)
+
+for (const entry of TRACKS) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'track-choice'
+  button.dataset.track = entry.id
+  const cover = new Image(36,36)
+  cover.src = entry.art
+  cover.alt = ''
+  const caption = document.createElement('span')
+  const title = document.createElement('strong')
+  title.textContent = entry.title
+  const meta = document.createElement('small')
+  meta.textContent = `${entry.genre} · ${entry.bpm} BPM`
+  caption.append(title, meta)
+  const length = document.createElement('time')
+  const seconds = Math.round(entry.duration)
+  length.dateTime = `PT${seconds}S`
+  length.textContent = timeLabel(seconds)
+  button.append(cover, caption, length)
+  button.addEventListener('click', () => showTrack(entry))
+  trackButtons.set(entry.id, button)
+  byId('track-picker').append(button)
+}
 
 const volume = byId('volume')
 volume.value = savedNumber(volumeKey, 75, 100)
@@ -340,7 +433,4 @@ volume.addEventListener('input', () => {
 })
 window.addEventListener('resize', sizeHighway)
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(sizeHighway).observe(highway)
-setText(byId('track-title'), TRACK.title)
-setText(byId('track-bpm'), String(TRACK.bpm))
-setText(byId('track-length'), timeLabel(Math.round(TRACK.duration)))
-updateScore()
+showTrack(track)

@@ -1,20 +1,21 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { Music, TRACK } from './music.mjs'
+import { Music, TRACK, TRACKS } from './music.mjs'
 
-test('the original chart fits the song and uses all seven lanes', () => {
-  assert.equal(TRACK.bpm, 126)
-  assert.equal(TRACK.duration, 36 * (60 / TRACK.bpm) * 4)
-  assert.deepEqual([...new Set(TRACK.chart.map(note => note.lane))].sort(), [0, 1, 2, 3, 4, 5, 6])
-  let previousTime = 0
-  const laneTimes = new Array(7).fill(-Infinity)
-  for (const note of TRACK.chart) {
-    assert.ok(Number.isInteger(note.pitch) && Number.isInteger(note.lane))
-    assert.ok(note.time >= previousTime)
-    assert.ok(note.time - laneTimes[note.lane] >= .2)
-    assert.ok(note.time + note.duration < TRACK.duration - 1)
-    laneTimes[note.lane] = note.time
-    previousTime = note.time
+test('the three original charts use four lanes with enough space to hit repeated notes', () => {
+  assert.deepEqual(TRACKS.map(track => track.id), ['neon-dawn', 'bass-corridor', 'strobe-after-two'])
+  for (const track of TRACKS) {
+    assert.deepEqual([...new Set(track.chart.map(note => note.lane))].sort(), [0, 1, 2, 3])
+    let previousTime = 0
+    const laneTimes = new Array(4).fill(-Infinity)
+    for (const note of track.chart) {
+      assert.ok(Number.isInteger(note.pitch) && Number.isInteger(note.lane))
+      assert.ok(note.time >= previousTime)
+      assert.ok(note.time - laneTimes[note.lane] >= .2)
+      assert.ok(note.time + note.duration < track.duration - 1)
+      laneTimes[note.lane] = note.time
+      previousTime = note.time
+    }
   }
 })
 
@@ -91,6 +92,34 @@ test('chart instruments are silent without a judged hit, and stop clears schedul
     music.stop()
     assert.ok(context.sources.every(source => source.stopped === context.currentTime))
     assert.equal(music.hit(first), false, 'the last run cannot sound during the results screen')
+  } finally {
+    globalThis.AudioContext = old
+  }
+})
+
+test('changing tracks uses its accompaniment and schedules autoplay instruments on the audio clock', async () => {
+  const old = globalThis.AudioContext
+  globalThis.AudioContext = TestContext
+  try {
+    const music = new Music()
+    const context = await music.unlock()
+    music.start(0, TRACK)
+    assert.ok(context.sources.every(source => source.frequency.value !== 152), 'synth house opens with keys and bass')
+    music.stop()
+
+    const club = TRACKS[1]
+    const from = context.sources.length
+    const start = 2
+    context.currentTime = start
+    music.start(start, club)
+    const backing = context.sources.slice(from)
+    assert.ok(backing.some(source => source.frequency.value === 152), 'tech house opens with its first kick')
+
+    const first = club.chart[0], onset = start + first.time
+    const beforeHit = context.sources.length
+    assert.equal(music.hit(first, onset), true)
+    const keyed = context.sources.slice(beforeHit)
+    assert.ok(keyed.length > 0 && keyed.every(source => source.started === onset))
   } finally {
     globalThis.AudioContext = old
   }

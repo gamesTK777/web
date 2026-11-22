@@ -12,7 +12,7 @@ export class Performance {
   constructor(chart) {
     this.chart = chart
     this.results = Array(chart.length).fill(null)
-    this.lanes = Array.from({length: 7}, () => [])
+    this.lanes = Array.from({length: 4}, () => [])
     chart.forEach((note, index) => this.lanes[note.lane].push(index))
   }
 
@@ -54,4 +54,10 @@ export class Performance {
   get completion() {
     return this.chart.length ? this.hits / this.chart.length : 0
   }
+}
+
+export function visitThrough(chart, start, time, visit) {
+  let next = start
+  while (next < chart.length && chart[next].time <= time) visit(chart[next++])
+  return next
 }
