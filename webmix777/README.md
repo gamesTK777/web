@@ -1,6 +1,14 @@
 # ウェブミックス777
 
-TK777 ARCADEの4鍵リズムゲームです。「曲を選ぶ」から、次のオリジナル曲を選べます。
+TK777 ARCADEの4鍵リズムゲームです。最初の曲一覧で、日本語・英語のオリジナル歌入り曲を各5曲と、インスト曲を3曲選べます。歌入り曲は1曲約2分です。曲を選ぶと演奏画面に切り替わり、手動演奏、自動演奏、曲別TOP10を選べます。
+
+| 日本語 | 英語 |
+| --- | --- |
+| 夜明けの受信機 | Summer Static |
+| 透明なフロア | Orbit on Air |
+| 流星の停留所 | Paper City Lights |
+| 月をアンプに | Bassline Parachute |
+| 波を巻き戻す | No Last Train |
 
 | 曲 | ジャンル | BPM |
 | --- | --- | ---: |
@@ -8,19 +16,25 @@ TK777 ARCADEの4鍵リズムゲームです。「曲を選ぶ」から、次の�
 | 低音回廊 | テックハウス | 128 |
 | 午前二時の閃光 | ピークタイム・テクノ | 138 |
 
-「演奏スタート」では、判定ラインに重なったノーツを押すたびに、シンセやベルの音が伴奏へ加わります。PCは `F G J K`、スマートフォンでは画面下の鍵盤を使います。取り逃したノーツの音は鳴りません。
+「演奏スタート」では、判定ラインに重なったノーツを押すたびに、その区間の歌声や楽器が伴奏へ加わります。PCは `F G J K`、スマートフォンでは画面下の鍵盤を使います。取り逃したノーツに割り当てられた音は鳴りません。タイミングが合うとノーツが光の輪と粒になって消えます。
 
 「自動演奏」では鍵盤の操作を任せて、全ノーツの音が入った曲を聴けます。どちらも一時停止・再開と音量調整ができます。曲の完成度は鳴らせたノーツの割合です。手動演奏の自己ベストは曲ごとにブラウザーへ保存します。
 
-曲を選んで「TOP10」を押すと、選んだ曲の共有ランキングが見られます。手動演奏を最後まで終えたら、結果画面で公開するニックネームを入力して登録できます。開始時の登録受付とスコア送信にはインターネット接続が必要です。登録したニックネームとスコアは、同じ曲のランキングを開いた人に表示されます。
+曲を選んで「TOP10」を押すと、選んだ曲の共有ランキングが見られます。手動演奏を最後まで終えたら、結果画面で公開するニックネームを入力して登録できます。開始時の登録受付とスコア送信にはインターネット接続が必要です。登録したニックネームとスコアは、同じ曲のランキングを開いた人に表示されます。ランキングの登録対象は手動演奏です。
 
-静的配信で動作します。リポジトリのルートからHTTPサーバーを起動し、`/webmix777/` をブラウザーで開いてください。伴奏と楽器の音はWeb Audioで生成します。
+静的配信で動作します。リポジトリのルートからHTTPサーバーを起動し、`/webmix777/` をブラウザーで開いてください。歌入り曲はACE-Step 1.5 Turboでオリジナルの歌詞付き音源を制作し、Hybrid Demucsで分離した常時再生用と鍵盤演奏用の2トラックを収録しています。開始時に選択中の曲だけを読み込み、Web Audioで再生位置を同期します。インスト曲の伴奏と楽器の音はWeb Audioで生成します。
 
 ```sh
-node --test webmix777/*.test.mjs
+node --test webmix777/*.test.mjs webmix777/tracks/*.test.mjs
 ```
 
 ## 楽曲ジャケット
+
+歌入り曲の `art/neon-voices-ja.webp` と `art/neon-voices-en.webp` は、組み込みのImageGenで生成し、WebPに変換したものです。
+
+> Use case: stylized-concept. Square cover art for a playlist of original Japanese vocal club songs, no text. A gleaming handheld chrome stage microphone floats above the neon-soaked rooftop of a dense futuristic Japanese city after rain. Bright fuchsia tube lighting and glacier cyan highlights bloom against deep violet-blue darkness, with fine analog photo grain and thin shafts of light. A single iconic crop-safe silhouette, cinematic photography with polished stylized light, clean editorial composition for a professional rhythm arcade game, no people, logos, letters or watermark.
+
+> Use case: stylized-concept. Square cover art for original English vocal club songs, no text. A single ice-blue glowing chrome microphone surrounded by clean electric chartreuse and violet light rings over an underground club stage, the concrete and light haze just visible behind. Vivid yet precise neon bloom, highly realistic metal, fine analog photo grain, dark indigo base, centered crop-safe subject for a professional rhythm arcade game. No people, logos, letters, watermark or UI.
 
 `art/neon-dawn.webp`、`art/bass-corridor.webp`、`art/strobe-after-two.webp` は、組み込みのImageGenで生成した絵をWebPに変換したものです。生成時のプロンプトを以下に記録します。
 

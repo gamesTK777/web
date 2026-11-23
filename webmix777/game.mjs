@@ -1,16 +1,20 @@
-import {Music, TRACKS} from './music.mjs'
+import {TRACKS as INSTRUMENTALS} from './music.mjs'
 import {Performance, visitThrough, windows} from './judgement.mjs'
 import {SongRanking} from './ranking.mjs'
+import {VocalMusic} from './vocal-music.mjs'
+import {VOCAL_TRACKS} from './tracks/vocals.mjs'
 
 const byId = id => document.getElementById(id)
 const game = byId('game')
 const highway = byId('note-highway')
 const field = highway.querySelector('.note-field')
 const hitLine = highway.querySelector('.hit-line')
+const effects = highway.querySelector('.hit-effects')
 const keys = [...document.querySelectorAll('.lane-key')]
 const keyCodes = ['KeyF', 'KeyG', 'KeyJ', 'KeyK']
 const laneByCode = new Map(keyCodes.map((code, lane) => [code, lane]))
-const music = new Music()
+const TRACKS = [...VOCAL_TRACKS, ...INSTRUMENTALS]
+const music = new VocalMusic()
 const ranking = new SongRanking()
 const activeNotes = new Map()
 const trackButtons = new Map()
@@ -22,6 +26,11 @@ const countIn = 2.45
 const autoLookahead = .18
 const scoreKey = id => `tk777.webmix.${id}.best.v1`
 const volumeKey = 'tk777.webmix.volume'
+const quietEffects = matchMedia('(prefers-reduced-motion: reduce)')
+const trackLanguage = byId('track-language')
+const libraryButton = byId('back-to-library')
+const languageFor = entry => entry.language || 'instrumental'
+const languageLabels = {ja: '日本語', en: '英語'}
 let track = TRACKS[0]
 let play = new Performance(track.chart)
 let mode = 'manual'
@@ -70,9 +79,12 @@ function setPhase(phase) {
 }
 
 function updateAvailability() {
-  const canChoose = !starting && ['ready','result'].includes(game.dataset.phase)
+  const canChoose = !starting && game.dataset.view === 'library'
+  trackLanguage.disabled = !canChoose
   for (const button of trackButtons.values()) button.disabled = !canChoose
   for (const id of ['start','auto-start','restart']) byId(id).disabled = starting
+  libraryButton.disabled = starting
+  byId('result-back').disabled = starting
 }
 
 function setMode(next) {
@@ -98,6 +110,7 @@ function sizeHighway() { hitY = hitLine.offsetTop + 1 }
 function clearNotes() {
   activeNotes.clear()
   field.replaceChildren()
+  effects.replaceChildren()
   judgementUntil = 0
   byId('judgement').textContent = ''
   keyFlashes.fill(0)
@@ -135,21 +148,27 @@ function flash(quality) {
 }
 
 function showError(node, error) {
-  node.textContent = error instanceof Error && error.message.startsWith('このブラウザー') ? error.message :
+  node.textContent = error instanceof Error && /^(このブラウザー|音源|楽曲)/.test(error.message) ? error.message :
     '音声を有効にできませんでした。もう一度ボタンを押してください。'
   node.hidden = false
 }
 
 async function start(nextMode) {
-  if (starting || (game.dataset.phase !== 'ready' && game.dataset.phase !== 'result')) return
+  if (starting || game.dataset.view !== 'arena' || !['ready','result'].includes(game.dataset.phase)) return
   starting = true
   updateAvailability()
   const error = byId('audio-error')
   error.hidden = true
+  const loading = byId('audio-loading')
   try {
     if (settlingPause) { await settlingPause; settlingPause = null }
     const context = await music.unlock()
     if (context.state !== 'running') throw new Error('Audio unavailable')
+    if (track.audio) {
+      loading.textContent = '曲の音源を読み込み中…'
+      loading.hidden = false
+    }
+    await music.prepare(track)
     cancelAnimationFrame(raf)
     resetKeys()
     clearNotes()
@@ -157,7 +176,7 @@ async function start(nextMode) {
     play = new Performance(track.chart)
     nextAutoSound = nextAutoDisplay = 0
     startAt = context.currentTime + countIn
-    music.start(startAt, track)
+    music.start(startAt, track, {automatic: nextMode === 'auto'})
     ranking.begin(nextMode === 'manual')
     updateScore()
     byId('song-progress').value = 0
@@ -174,6 +193,7 @@ async function start(nextMode) {
     showError(error, cause)
     byId('start').focus({preventScroll: true})
   } finally {
+    loading.hidden = true
     starting = false
     updateAvailability()
   }
@@ -227,7 +247,8 @@ function finish() {
   setText(byId('result-title'), mode === 'auto' ? '自動演奏の結果' : '演奏結果')
   setText(byId('restart-label'), mode === 'auto' ? 'もう一度自動演奏' : 'もう一度演奏')
   setText(byId('result-score'), padded(play.score))
-  setText(byId('result-summary'), `メロディー ${play.hits} / ${track.chart.length} 音 · 最大コンボ ${play.maxCombo}`)
+  const part = track.audio ? '歌声・楽器' : 'メロディー'
+  setText(byId('result-summary'), `${part} ${play.hits} / ${track.chart.length} ノーツ · 最大コンボ ${play.maxCombo}`)
   for (const [quality, count] of Object.entries(play.counts)) setText(byId(`result-${quality}`), String(count))
   setPhase('result')
   byId('result-title').focus({preventScroll: true})
@@ -266,15 +287,35 @@ function flashKey(lane, now) {
   keyFlashes[lane] = now + 120
 }
 
-function playAutomatically(heard, raw, now) {
-  // Queue sounds on the audio clock, then show each judged note when it is heard.
-  nextAutoSound = visitThrough(track.chart, nextAutoSound, raw + autoLookahead, note => {
-    music.hit(note, startAt + note.time)
+function burst(lane, quality, y = hitY) {
+  if (quietEffects.matches) return
+  const effect = document.createElement('span')
+  effect.className = 'hit-burst'
+  effect.dataset.lane = lane
+  effect.dataset.quality = quality
+  effect.style.setProperty('--x', `${(lane + .5) * 100 / keys.length}%`)
+  effect.style.setProperty('--y', `${y}px`)
+  const timeout = setTimeout(() => effect.remove(), 700)
+  effect.addEventListener('animationend', event => {
+    if (event.pseudoElement) return
+    clearTimeout(timeout)
+    effect.remove()
   })
+  effects.append(effect)
+}
+
+function playAutomatically(heard, raw, now) {
+  // Recorded tracks already play both layers in sync. Only synth notes need scheduling.
+  if (!track.audio) {
+    nextAutoSound = visitThrough(track.chart, nextAutoSound, raw + autoLookahead, note => {
+      music.hit(note, startAt + note.time)
+    })
+  }
   const before = nextAutoDisplay
   nextAutoDisplay = visitThrough(track.chart, nextAutoDisplay, heard, note => {
     play.strike(note.lane, note.time)
     flashKey(note.lane, now)
+    burst(note.lane, 'perfect')
   })
   if (nextAutoDisplay !== before) { flash('perfect'); updateScore() }
 }
@@ -322,6 +363,7 @@ function strike(lane, event) {
   if (!hit) return
   music.hit(hit.note, music.context.currentTime + .004)
   flashKey(lane, now)
+  burst(lane, hit.quality, hitY * (1 - (hit.note.time - time) / flightTime))
   flash(hit.quality)
   updateScore()
 }
@@ -374,18 +416,20 @@ byId('auto-start').addEventListener('click', () => { void start('auto') })
 byId('restart').addEventListener('click', () => { void start(mode) })
 byId('pause').addEventListener('click', pause)
 byId('resume').addEventListener('click', () => { void resume() })
-function showTrack(nextTrack) {
-  if (starting) return
+function enterArena(nextTrack) {
+  if (starting || game.dataset.view !== 'library') return
   stop()
   track = nextTrack
+  game.dataset.view = 'arena'
   game.dataset.track = track.id
+  game.dataset.language = languageFor(track)
   setMode('manual')
   play = new Performance(track.chart)
   best = savedNumber(scoreKey(track.id), 0, track.chart.length * 1000)
-  for (const [id, button] of trackButtons) button.setAttribute('aria-pressed', String(id === track.id))
+  for (const [id, button] of trackButtons) button.toggleAttribute('data-selected', id === track.id)
   byId('track-art').src = track.art
   setText(byId('track-title'), track.title)
-  setText(byId('track-genre'), track.genre)
+  setText(byId('track-genre'), [languageLabels[track.language], track.genre].filter(Boolean).join(' · '))
   setText(byId('track-bpm'), String(track.bpm))
   setText(byId('track-length'), timeLabel(Math.round(track.duration)))
   byId('song-progress').value = 0
@@ -394,15 +438,31 @@ function showTrack(nextTrack) {
   updateScore()
   setPhase('ready')
   ranking.select(track)
-}
-
-function returnToTracks() {
-  showTrack(track)
+  sizeHighway()
+  window.scrollTo(0, 0)
   byId('start').focus({preventScroll: true})
 }
 
+function returnToTracks() {
+  if (starting || game.dataset.view !== 'arena') return
+  stop()
+  game.dataset.view = 'library'
+  setPhase('ready')
+  const previous = trackButtons.get(track.id)
+  if (previous && !previous.hidden) previous.focus()
+  else trackLanguage.focus()
+}
+
+libraryButton.addEventListener('click', returnToTracks)
 byId('quit').addEventListener('click', returnToTracks)
 byId('result-back').addEventListener('click', returnToTracks)
+
+function filterTracks() {
+  const filter = trackLanguage.value
+  for (const item of TRACKS) {
+    trackButtons.get(item.id).hidden = filter !== 'all' && languageFor(item) !== filter
+  }
+}
 
 for (const entry of TRACKS) {
   const button = document.createElement('button')
@@ -416,17 +476,19 @@ for (const entry of TRACKS) {
   const title = document.createElement('strong')
   title.textContent = entry.title
   const meta = document.createElement('small')
-  meta.textContent = `${entry.genre} · ${entry.bpm} BPM`
+  const language = languageLabels[entry.language]
+  meta.textContent = [language, entry.genre, `${entry.bpm} BPM`].filter(Boolean).join(' · ')
   caption.append(title, meta)
   const length = document.createElement('time')
   const seconds = Math.round(entry.duration)
   length.dateTime = `PT${seconds}S`
   length.textContent = timeLabel(seconds)
   button.append(cover, caption, length)
-  button.addEventListener('click', () => showTrack(entry))
+  button.addEventListener('click', () => enterArena(entry))
   trackButtons.set(entry.id, button)
   byId('track-picker').append(button)
 }
+trackLanguage.addEventListener('change', filterTracks)
 
 const volume = byId('volume')
 volume.value = savedNumber(volumeKey, 75, 100)
@@ -438,4 +500,5 @@ volume.addEventListener('input', () => {
 })
 window.addEventListener('resize', sizeHighway)
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(sizeHighway).observe(highway)
-showTrack(track)
+filterTracks()
+setPhase('ready')
