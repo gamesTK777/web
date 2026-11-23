@@ -46,6 +46,9 @@ progress::-moz-progress-bar { background: var(--mint); border-radius: 20px; }
 .small-button { display: inline-flex; gap: 7px; align-items: center; justify-content: center; min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--paper); background: #1f2230; font-size: .79rem; white-space: nowrap; }
 .small-button kbd { font-size: .68rem; color: var(--muted); }
 .small-button:hover { border-color: #ffffff5a; }
+#ranking-link { color: var(--mint); font: 750 .77rem var(--number); letter-spacing: .04em; text-decoration: none; }
+#game:is([data-phase='countdown'], [data-phase='playing'], [data-phase='paused']) :is(#ranking-link, #ranking),
+#game[data-mode='auto'] #ranking-form { display: none; }
 .studio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 2.08fr) minmax(165px, .77fr); gap: clamp(16px, 2.1vw, 30px); align-items: start; padding: clamp(20px, 4vh, 44px) 0 24px; }
 .track { min-width: 0; }
 .track h1 { display: flex; gap: .075em; align-items: baseline; margin: -.08em 0 .33em; font: 900 clamp(2.05rem, 3.2vw, 3.35rem)/1.05 var(--number); letter-spacing: -.075em; }
@@ -74,7 +77,9 @@ progress::-moz-progress-bar { background: var(--mint); border-radius: 20px; }
 .deck { min-width: 0; overflow: hidden; border: 1px solid #ffffff29; border-radius: 13px; background: #181b26; box-shadow: 0 20px 52px #0809119e; }
 .transport { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; height: 39px; padding-inline: 13px; border-bottom: 1px solid var(--line); }
 .transport time { min-width: 3ch; font: 650 .86rem var(--number); font-variant-numeric: tabular-nums; }
-.deck-stage { position: relative; height: clamp(285px, 59svh, 600px); background: #0f1321; }
+.deck-stage { --deck-height: clamp(285px, 59svh, 600px); position: relative; height: var(--deck-height); background: #0f1321; }
+#game[data-phase='result'] .deck-stage { height: auto; }
+#results { position: relative; min-height: var(--deck-height); }
 #note-highway { position: absolute; inset: 0; overflow: hidden; outline: none; background: linear-gradient(180deg, #161b2c 1%, #101520 76%, #1b2932); }
 .lane-grid, .note-field { position: absolute; inset: 0; pointer-events: none; }
 .lane-grid { background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), #cce2ff25 calc(25% - 1px) 25%),
@@ -115,6 +120,13 @@ progress::-moz-progress-bar { background: var(--mint); border-radius: 20px; }
 .result-counts dt { color: var(--muted); font: 650 clamp(.6rem, 1.48vw, .76rem) var(--number); }
 .result-counts dd { font: 750 1.08rem var(--number); }
 .result-prompt .result-buttons { margin-top: 13px; }
+#ranking-form { display: grid; gap: 6px; margin-top: 14px; padding-top: 11px; border-top: 1px solid var(--line); text-align: left; }
+#ranking-form label { color: #d8d8e1; font-size: .76rem; font-weight: 700; }
+.ranking-form-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+#ranking-nickname { min-width: 0; min-height: 44px; padding: 6px 9px; border: 1px solid #ffffff54; border-radius: 7px; background: #101520; color: var(--paper); font-size: 1rem; }
+#ranking-submit { min-height: 44px; color: var(--mint); border-color: color-mix(in srgb, var(--mint) 48%, transparent); }
+#ranking-submit:disabled { cursor: default; opacity: .72; }
+#ranking-submit-status { margin: 0; font-size: .76rem; }
 .mix { display: grid; gap: 10px; }
 .mix-card { padding: 13px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
 .mix h2 { color: #d1d2df; font-size: .76rem; font-weight: 670; }
@@ -125,6 +137,21 @@ progress::-moz-progress-bar { background: var(--mint); border-radius: 20px; }
 .mix .best { margin-top: 7px; }
 .mix .best span { color: var(--paper); font-family: var(--number); font-variant-numeric: tabular-nums; }
 .combo-card strong { color: var(--hot); }
+#ranking { grid-column: 1 / -1; min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); scroll-margin-top: 12px; }
+#ranking-title { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; color: var(--paper); font-size: .86rem; }
+#ranking-title span { color: var(--mint); font: 750 .73rem var(--number); letter-spacing: .04em; }
+#ranking-track { margin-top: 4px; color: var(--muted); overflow-wrap: anywhere; }
+#ranking-status { margin-top: 7px; }
+#ranking-status:empty { margin-top: 0; }
+#ranking-entries:empty { display: none; }
+#ranking-entries { counter-reset: place; padding: 0; margin: 8px 0 0; list-style: none; }
+#ranking-entries li { counter-increment: place; display: grid; grid-template-columns: 1.45em minmax(0, 1fr) max-content; gap: 7px; align-items: baseline; padding: 5px 0; border-top: 1px solid var(--line); font-size: .77rem; }
+#ranking-entries li::before { content: counter(place); color: var(--muted); font: 700 .76rem var(--number); font-variant-numeric: tabular-nums; }
+#ranking-entries li:first-child::before { color: var(--hot); }
+#ranking-entries li > :first-child { min-width: 0; overflow-wrap: anywhere; }
+#ranking-entries li > :last-child { color: var(--paper); font: 750 .83rem var(--number); font-variant-numeric: tabular-nums; text-align: right; }
+#ranking-entries li[data-mine] > span { color: var(--mint); font-weight: 750; }
+#ranking-retry { margin-top: 8px; }
 .how-to { padding: 4px 2px; }
 .how-to p { margin-top: 5px; line-height: 1.6; }
 .credits { padding-top: 13px; border-top: 1px solid var(--line); color: var(--muted); font-size: .69rem; }
@@ -161,7 +188,7 @@ progress::-moz-progress-bar { background: var(--mint); border-radius: 20px; }
   .track-choice strong { font-size: .72rem; }
   #game:is([data-phase='countdown'], [data-phase='playing'], [data-phase='paused']) .track-list { display: none; }
   .transport { height: 31px; }
-  .deck-stage { height: clamp(234px, 53svh, 482px); }
+  .deck-stage { --deck-height: clamp(234px, 53svh, 482px); }
   .mix { grid-column: 1; gap: 5px; }
   .mix-card { padding: 8px; }
   .mix h2 { font-size: .7rem; }
@@ -174,4 +201,7 @@ progress::-moz-progress-bar { background: var(--mint); border-radius: 20px; }
   .start-buttons .primary { font-size: .87rem; gap: 10px; min-height: 46px; }
   .credits { padding-top: 7px; }
 }
-@media (max-width: 350px) { .jacket { display: none; } }
+@media (max-width: 350px) {
+  .jacket { display: none; }
+  .ranking-form-controls { grid-template-columns: minmax(0, 1fr); }
+}

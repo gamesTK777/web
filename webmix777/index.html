@@ -7,14 +7,15 @@
   <meta name="description" content="流れてくるノーツを合わせて、自分の演奏でオリジナル曲を完成させるリズムゲーム。">
   <title>ウェブミックス777 | TK777 ARCADE</title>
   <link rel="icon" href="./art/neon-dawn.webp" type="image/webp">
-  <link rel="stylesheet" href="./style.css">
-  <script src="./game.mjs" type="module"></script>
+  <link rel="stylesheet" href="./style.css?v=ranking-1">
+  <script src="./game.mjs?v=ranking-1" type="module"></script>
 </head>
 <body>
   <main id="game" data-phase="ready" data-mode="manual">
     <header class="topbar">
       <a href="../index.html" class="portal"><span aria-hidden="true">←</span> TK777 ARCADE</a>
       <div class="top-controls">
+        <a href="#ranking" id="ranking-link" class="small-button" aria-label="選んだ曲のランキング TOP10 へ移動">TOP10</a>
         <label class="volume">音量 <input id="volume" type="range" min="0" max="100" value="75"></label>
         <button id="pause" class="small-button" type="button" hidden>一時停止 <kbd>Esc</kbd></button>
       </div>
@@ -84,6 +85,14 @@
                 <div><dt>GOOD</dt><dd id="result-good">0</dd></div>
                 <div><dt>MISS</dt><dd id="result-miss">0</dd></div>
               </dl>
+              <form id="ranking-form" hidden>
+                <label for="ranking-nickname">公開するニックネーム</label>
+                <div class="ranking-form-controls">
+                  <input id="ranking-nickname" name="nickname" type="text" autocomplete="nickname" maxlength="16" required>
+                  <button class="small-button" id="ranking-submit" type="submit">ランキングに登録</button>
+                </div>
+                <p id="ranking-submit-status" role="status"></p>
+              </form>
               <div class="result-buttons">
                 <button class="primary" id="restart" type="button"><span id="restart-label">もう一度演奏</span> <span aria-hidden="true">↻</span></button>
                 <button class="small-button secondary" id="result-back" type="button">曲選択に戻る</button>
@@ -115,6 +124,13 @@
           <h2>コンボ</h2>
           <strong id="mix-combo">0</strong>
         </div>
+        <section id="ranking" aria-labelledby="ranking-title ranking-track">
+          <h2 id="ranking-title">ランキング <span>TOP10</span></h2>
+          <p id="ranking-track">夜明けのネオン</p>
+          <p id="ranking-status" role="status"></p>
+          <ol id="ranking-entries" role="list"></ol>
+          <button id="ranking-retry" class="small-button" type="button" hidden>再読み込み</button>
+        </section>
         <div class="how-to">
           <h2>遊び方</h2>
           <p>PCは F・G・J・K、スマホは画面の鍵盤で演奏します。自動演奏では、全ノーツの音を聴けます。</p>

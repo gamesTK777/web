@@ -1,5 +1,6 @@
 import {Music, TRACKS} from './music.mjs'
 import {Performance, visitThrough, windows} from './judgement.mjs'
+import {SongRanking} from './ranking.mjs'
 
 const byId = id => document.getElementById(id)
 const game = byId('game')
@@ -10,6 +11,7 @@ const keys = [...document.querySelectorAll('.lane-key')]
 const keyCodes = ['KeyF', 'KeyG', 'KeyJ', 'KeyK']
 const laneByCode = new Map(keyCodes.map((code, lane) => [code, lane]))
 const music = new Music()
+const ranking = new SongRanking()
 const activeNotes = new Map()
 const trackButtons = new Map()
 const keyboard = new Set()
@@ -156,6 +158,7 @@ async function start(nextMode) {
     nextAutoSound = nextAutoDisplay = 0
     startAt = context.currentTime + countIn
     music.start(startAt, track)
+    ranking.begin(nextMode === 'manual')
     updateScore()
     byId('song-progress').value = 0
     setText(byId('song-time'), '0:00')
@@ -228,6 +231,7 @@ function finish() {
   for (const [quality, count] of Object.entries(play.counts)) setText(byId(`result-${quality}`), String(count))
   setPhase('result')
   byId('result-title').focus({preventScroll: true})
+  void ranking.offer(play.score)
 }
 
 function drawNotes(time) {
@@ -389,6 +393,7 @@ function showTrack(nextTrack) {
   byId('audio-error').hidden = true
   updateScore()
   setPhase('ready')
+  ranking.select(track)
 }
 
 function returnToTracks() {
