@@ -1,7 +1,8 @@
 import {Music} from './music.mjs'
 
-// Both files start at the same original sample. The base plays from the
-// beginning while a scored note admits only its corresponding stem interval.
+const hitFrequencies = [220, 420, 560, 710]
+
+// The two layers reconstruct the full song and share a single start time.
 export class VocalMusic extends Music {
   #loaded = null
   #recorded = null
@@ -53,9 +54,9 @@ export class VocalMusic extends Music {
     }
     const output = this.context.createGain()
     output.connect(this.#bus)
-    const run = this.#recorded = {at, output, sources: new Set(), stem: this.#loaded.stem, automatic}
-    this.#play(run, this.#loaded.backing, at, 0, track.duration)
-    if (automatic) this.#play(run, run.stem, at, 0, track.duration)
+    const run = this.#recorded = {output, sources: new Set(), automatic}
+    this.#playLayer(run, this.#loaded.backing, at, track.duration)
+    this.#playLayer(run, this.#loaded.stem, at, track.duration)
   }
 
   update(songTime) {
@@ -65,17 +66,23 @@ export class VocalMusic extends Music {
   hit(note, when = this.context?.currentTime) {
     const run = this.#recorded
     if (!run) return super.hit(note, when)
-    if (run.automatic) return false
-    if (!Number.isFinite(when) || !Number.isFinite(note?.time) || !Number.isFinite(note.duration)) return false
-    const nominal = run.at + note.time
-    // Early input waits for the original beat. Late input catches the phrase
-    // at the current beat and never consumes the next note's audio.
-    const onset = Math.max(nominal, when, this.context.currentTime)
-    const end = Math.min(note.time + note.duration, run.stem.duration)
-    const cut = Math.min(end - note.time, onset - nominal)
-    const offset = note.time + cut
-    if (end - offset < .001) return false
-    this.#play(run, run.stem, onset, offset, end - offset, true)
+    const lane = note?.lane
+    if (run.automatic || !Number.isFinite(when) || !Number.isInteger(lane) || lane < 0 || lane >= hitFrequencies.length) return false
+
+    const context = this.context
+    const onset = Math.max(when, context.currentTime)
+    const end = onset + .034
+    const tap = context.createOscillator()
+    const envelope = context.createGain()
+    tap.frequency.setValueAtTime(hitFrequencies[lane], onset)
+    tap.frequency.exponentialRampToValueAtTime(hitFrequencies[lane] * .6, end)
+    envelope.gain.setValueAtTime(0, onset)
+    envelope.gain.linearRampToValueAtTime(.035, onset + .003)
+    envelope.gain.linearRampToValueAtTime(0, end)
+    tap.connect(envelope).connect(run.output)
+    tap.start(onset)
+    this.#trackSource(run, tap, envelope)
+    tap.stop(end)
     return true
   }
 
@@ -89,27 +96,20 @@ export class VocalMusic extends Music {
     run.sources.clear()
   }
 
-  #play(run, buffer, when, offset, duration, fade = false) {
+  #playLayer(run, buffer, when, duration) {
     const source = this.context.createBufferSource()
     source.buffer = buffer
-    let shape
-    if (fade) {
-      shape = this.context.createGain()
-      const edge = Math.min(.0025, duration / 4)
-      shape.gain.setValueAtTime(0, when)
-      shape.gain.linearRampToValueAtTime(1, when + edge)
-      shape.gain.setValueAtTime(1, when + duration - edge)
-      shape.gain.linearRampToValueAtTime(0, when + duration)
-      source.connect(shape).connect(run.output)
-    } else {
-      source.connect(run.output)
-    }
+    source.connect(run.output)
+    source.start(when, 0, duration)
+    this.#trackSource(run, source)
+  }
+
+  #trackSource(run, source, envelope) {
     source.onended = () => {
       run.sources.delete(source)
       source.disconnect()
-      shape?.disconnect()
+      envelope?.disconnect()
     }
-    source.start(when, offset, duration)
     run.sources.add(source)
   }
 }

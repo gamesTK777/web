@@ -4,7 +4,7 @@ import {VocalMusic} from './vocal-music.mjs'
 
 class Node {
   gain = {value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, setTargetAtTime() {}}
-  connect(peer) { return peer }
+  connect(peer) { this.peer = peer; return peer }
   disconnect() { this.disconnected = true }
 }
 
@@ -14,6 +14,7 @@ class TestContext {
   state = 'suspended'
   destination = new Node()
   sources = []
+  oscillators = []
   createDynamicsCompressor() {
     return Object.assign(new Node(), Object.fromEntries(['threshold', 'knee', 'ratio', 'attack', 'release'].map(key => [key, {value: 0}])))
   }
@@ -25,13 +26,20 @@ class TestContext {
     source.stop = () => { source.stopped = true }
     return source
   }
+  createOscillator() {
+    const oscillator = new Node()
+    oscillator.frequency = {setValueAtTime() {}, exponentialRampToValueAtTime() {}}
+    oscillator.start = when => { oscillator.started = when; this.oscillators.push(oscillator) }
+    oscillator.stop = when => { oscillator.stopped = when }
+    return oscillator
+  }
   async decodeAudioData(asset) { return {duration: 10, asset} }
   async resume() { this.state = 'running' }
 }
 
 const track = {duration: 10, audio: {backing: 'audio/test-base.mp3', stem: 'audio/test-stem.mp3'}}
 
-test('an accepted interval starts its own voice slice with no voice during backing or a missed interval', async t => {
+test('manual playback keeps both full layers in sync through misses and successful key presses', async t => {
   const old = globalThis.AudioContext, oldFetch = globalThis.fetch
   t.after(() => { globalThis.AudioContext = old; globalThis.fetch = oldFetch })
   globalThis.AudioContext = TestContext
@@ -47,21 +55,27 @@ test('an accepted interval starts its own voice slice with no voice during backi
   assert.equal(requested.length, 2)
   music.start(3, track)
   music.update(1.5)
-  assert.deepEqual(context.sources.map(s => s.buffer.asset), ['test-base.mp3'])
-  assert.deepEqual(context.sources[0].started, [3, 0, 10])
+  assert.deepEqual(context.sources.map(s => s.buffer.asset), ['test-base.mp3', 'test-stem.mp3'])
+  assert.deepEqual(context.sources.map(s => s.started), [[3, 0, 10], [3, 0, 10]])
+  assert.equal(context.oscillators.length, 0)
+  const [backing, vocals] = context.sources
+  assert.equal(backing.peer, vocals.peer)
 
-  assert.equal(music.hit({time: 2, duration: .5}, 4.9), true)
-  assert.equal(context.sources[1].buffer.asset, 'test-stem.mp3')
-  assert.deepEqual(context.sources[1].started, [5, 2, .5])
-  assert.equal(music.hit({time: 2.5, duration: .5}, 5.5), true)
-  assert.deepEqual(context.sources[2].started, [5.5, 2.5, .5])
-
-  context.currentTime = 6.125
-  assert.equal(music.hit({time: 3, duration: .5}), true)
-  assert.deepEqual(context.sources[3].started, [6.125, 3.125, .375])
-  assert.equal(music.hit({time: 2, duration: .5}), false, 'audio never extends an expired note into the next slice')
+  context.currentTime = 5
+  assert.equal(music.hit(null), false)
+  assert.equal(music.hit({lane: 0}, 4.9), true)
+  assert.equal(music.hit({lane: 3}, 5.5), true)
+  music.update(7)
+  assert.equal(context.sources.length, 2, 'hits and misses must not schedule new song sources')
+  assert.ok(context.sources.every(source => !source.stopped && !source.disconnected))
+  assert.deepEqual(context.oscillators.map(tap => tap.started), [5, 5.5])
+  const [firstTap, pendingTap] = context.oscillators
+  assert.equal(firstTap.peer.peer, backing.peer, 'the tap mixes into the song without routing either layer through it')
+  firstTap.onended()
+  assert.ok(firstTap.disconnected && firstTap.peer.disconnected)
   music.stop()
   assert.ok(context.sources.every(source => source.stopped))
+  assert.equal(pendingTap.stopped, undefined, 'stopping the song cancels a pending tap immediately')
 })
 
 test('a missing stem blocks playback and can be loaded again on the next attempt', async t => {
@@ -82,14 +96,16 @@ test('a missing stem blocks playback and can be loaded again on the next attempt
   servingStem = true
   await music.prepare(track)
   music.start(3, track)
-  assert.deepEqual(context.sources.map(s => s.buffer.asset), ['test-base.mp3'])
+  assert.deepEqual(context.sources.map(s => s.buffer.asset), ['test-base.mp3', 'test-stem.mp3'])
 
   music.start(4, track, {automatic: true})
-  const [, backing, stem] = context.sources
+  const [firstBacking, firstStem, backing, stem] = context.sources
+  assert.ok(firstBacking.stopped && firstStem.stopped)
   assert.equal(backing.buffer.asset, 'test-base.mp3')
   assert.equal(stem.buffer.asset, 'test-stem.mp3')
   assert.deepEqual(backing.started, [4, 0, 10])
   assert.deepEqual(stem.started, [4, 0, 10])
-  assert.equal(music.hit({time: 2, duration: .5}, 6), false)
-  assert.equal(context.sources.length, 3, 'automatic playback does not also schedule individual slices')
+  assert.equal(music.hit({lane: 0}, 6), false)
+  assert.equal(context.sources.length, 4, 'automatic playback starts only the two full layers')
+  assert.equal(context.oscillators.length, 0, 'automatic playback adds no tap sounds')
 })

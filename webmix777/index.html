@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#09071a">
-  <meta name="description" content="4つの鍵盤で歌声や楽器を重ねて、オリジナル曲を完成させるリズムゲーム。">
+  <meta name="description" content="オリジナル曲に合わせて、4つのレーンを演奏するリズムゲーム。">
   <title>ウェブミックス777 | TK777 ARCADE</title>
   <link rel="icon" href="./art/neon-voices-ja.webp" type="image/webp">
-  <link rel="stylesheet" href="./style.css?v=song-library-1">
-  <script src="./game.mjs?v=song-library-1" type="module"></script>
+  <link rel="stylesheet" href="./style.css?v=deck-controls-1">
+  <script src="./game.mjs?v=deck-controls-1" type="module"></script>
 </head>
 <body>
   <main id="game" data-view="library" data-phase="ready" data-mode="manual" data-language="ja">
@@ -80,8 +80,8 @@
           <section id="ready" class="overlay">
             <div class="prompt">
               <span class="stage-sigil" aria-hidden="true"></span>
-              <h2>ノーツに合わせて<br>曲を完成させよう</h2>
-              <p>光のラインにノーツが重なった瞬間に、対応する鍵盤を押してください。</p>
+              <h2>ノーツに合わせて<br>演奏しよう</h2>
+              <p>ノーツが光のラインに重なったら、対応するデッキや鍵盤を押してください。</p>
               <div class="start-buttons">
                 <button class="primary" id="start" type="button">演奏スタート <span aria-hidden="true">▶</span></button>
                 <button class="primary auto-button" id="auto-start" type="button">自動演奏</button>
@@ -124,11 +124,14 @@
             </div>
           </section>
         </div>
-        <div class="keyboard" role="group" aria-label="演奏する4つの鍵盤">
-          <button class="lane-key" data-lane="0" type="button" aria-label="鍵盤1 F"><kbd>F</kbd></button>
-          <button class="lane-key" data-lane="1" type="button" aria-label="鍵盤2 G"><kbd>G</kbd></button>
-          <button class="lane-key" data-lane="2" type="button" aria-label="鍵盤3 J"><kbd>J</kbd></button>
-          <button class="lane-key" data-lane="3" type="button" aria-label="鍵盤4 K"><kbd>K</kbd></button>
+        <div class="keyboard" role="group" aria-label="演奏する4つの操作ボタン">
+          <button class="lane-key deck-key" data-lane="0" type="button" aria-label="DJデッキ スペースキー" aria-keyshortcuts="Space">
+            <span class="deck-icon" aria-hidden="true"></span>
+            <kbd>Space</kbd>
+          </button>
+          <button class="lane-key" data-lane="1" type="button" aria-label="鍵盤 J" aria-keyshortcuts="J"><kbd>J</kbd></button>
+          <button class="lane-key" data-lane="2" type="button" aria-label="鍵盤 K" aria-keyshortcuts="K"><kbd>K</kbd></button>
+          <button class="lane-key" data-lane="3" type="button" aria-label="鍵盤 L" aria-keyshortcuts="L"><kbd>L</kbd></button>
         </div>
       </section>
 
@@ -139,9 +142,9 @@
           <p class="best">自己ベスト <span id="best-score">000000</span></p>
         </div>
         <div class="mix-card completion-card">
-          <h2>曲の完成度</h2>
+          <h2>演奏達成率</h2>
           <strong id="mix-completion">0%</strong>
-          <progress id="completion-meter" aria-label="鳴らしたノーツの割合" max="1" value="0"></progress>
+          <progress id="completion-meter" aria-label="判定に成功したノーツの割合" max="1" value="0"></progress>
           <p id="notes-played">0 / 0 ノーツ</p>
         </div>
         <div class="mix-card combo-card">
@@ -157,7 +160,7 @@
         </section>
         <div class="how-to">
           <h2>遊び方</h2>
-          <p>PCは F・G・J・K、スマホは画面の鍵盤を使います。タイミングが合うと、歌声や楽器の音が伴奏に重なります。自動演奏では曲全体を聴けます。</p>
+          <p>PCは Space（デッキ）・J・K・L、スマホは画面のボタンを使います。歌入り曲は演奏中も歌声が続き、タイミングが合うと音が重なります。「自動演奏」で操作を任せられます。</p>
         </div>
       </aside>
     </section>

@@ -203,6 +203,37 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--blue), va
 .keyboard { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 6px; background: linear-gradient(100deg, #2f1745, #15122f 54%, #163343); }
 .lane-key { --tone: var(--mint); min-height: 53px; min-width: 0; padding: 0; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; border: 1px solid color-mix(in srgb, var(--tone) 51%, transparent); border-bottom: 3px solid var(--tone); border-radius: 6px; background: linear-gradient(#2a214c, #100d26); color: #fbf8ff; box-shadow: inset 0 -5px 17px color-mix(in srgb, var(--tone) 17%, transparent), 0 0 8px color-mix(in srgb, var(--tone) 23%, transparent); }
 .lane-key kbd { font: 750 clamp(.64rem, 1.45vw, .95rem) var(--number); }
+.deck-key { display: grid; place-content: center; justify-items: center; gap: 3px; }
+.deck-key kbd { font-size: .65rem; line-height: 1; }
+.deck-icon {
+  position: relative;
+  width: 31px;
+  height: 21px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: linear-gradient(currentColor, currentColor) 23px 15px / 5px 1px no-repeat;
+}
+.deck-icon::before {
+  content: '';
+  position: absolute;
+  inset: 2px auto auto 3px;
+  width: 15px;
+  height: 15px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor 0 1px, transparent 1.5px 3px, currentColor 3.5px 4px, transparent 4.5px);
+}
+.deck-icon::after {
+  content: '';
+  position: absolute;
+  inset: 4px 5px auto auto;
+  width: 7px;
+  height: 7px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  border-radius: 0 0 3px;
+  transform: rotate(17deg);
+}
 .lane-key:disabled { cursor: default; }
 .lane-key[data-held] { background: color-mix(in srgb, var(--tone) 28%, #24113f); }
 .lane-key[data-hit] { color: #100b24; border-color: #fff; background: linear-gradient(180deg, #fff 0%, var(--tone) 57%); box-shadow: 0 0 15px var(--tone), inset 0 0 9px #fff9; }

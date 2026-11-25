@@ -1,7 +1,7 @@
 import {TRACKS as INSTRUMENTALS} from './music.mjs'
 import {Performance, visitThrough, windows} from './judgement.mjs'
 import {SongRanking} from './ranking.mjs'
-import {VocalMusic} from './vocal-music.mjs'
+import {VocalMusic} from './vocal-music.mjs?v=continuous-1'
 import {VOCAL_TRACKS} from './tracks/vocals.mjs'
 
 const byId = id => document.getElementById(id)
@@ -11,7 +11,7 @@ const field = highway.querySelector('.note-field')
 const hitLine = highway.querySelector('.hit-line')
 const effects = highway.querySelector('.hit-effects')
 const keys = [...document.querySelectorAll('.lane-key')]
-const keyCodes = ['KeyF', 'KeyG', 'KeyJ', 'KeyK']
+const keyCodes = ['Space', 'KeyJ', 'KeyK', 'KeyL']
 const laneByCode = new Map(keyCodes.map((code, lane) => [code, lane]))
 const TRACKS = [...VOCAL_TRACKS, ...INSTRUMENTALS]
 const music = new VocalMusic()
@@ -247,8 +247,7 @@ function finish() {
   setText(byId('result-title'), mode === 'auto' ? '自動演奏の結果' : '演奏結果')
   setText(byId('restart-label'), mode === 'auto' ? 'もう一度自動演奏' : 'もう一度演奏')
   setText(byId('result-score'), padded(play.score))
-  const part = track.audio ? '歌声・楽器' : 'メロディー'
-  setText(byId('result-summary'), `${part} ${play.hits} / ${track.chart.length} ノーツ · 最大コンボ ${play.maxCombo}`)
+  setText(byId('result-summary'), `成功したノーツ ${play.hits} / ${track.chart.length} · 最大コンボ ${play.maxCombo}`)
   for (const [quality, count] of Object.entries(play.counts)) setText(byId(`result-${quality}`), String(count))
   setPhase('result')
   byId('result-title').focus({preventScroll: true})
@@ -372,7 +371,7 @@ window.addEventListener('keydown', event => {
   if (event.code === 'Escape' && playing()) { event.preventDefault(); pause(); return }
   const lane = laneByCode.get(event.code)
   if (lane === undefined || mode !== 'manual' || !playing() || event.metaKey || event.ctrlKey || event.altKey ||
-      (event.target instanceof Element && event.target.closest('button,input,a'))) return
+      (event.target instanceof Element && event.target.closest('button:not(.lane-key),input,select,textarea,a,[contenteditable="true"]'))) return
   event.preventDefault()
   if (event.repeat || keyboard.has(lane)) return
   keyboard.add(lane)
