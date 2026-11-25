@@ -4,6 +4,15 @@ export {MAX_FLOOR};
 import {BUILDINGS,DAY_TURNS,DAY_WAIT_COST,landCost,rentTotal,landIncome,dividendTotal,dailyIncome,upgradeCost} from './economy.mjs?v=20261108-equipment';
 export {BUILDINGS,DAY_TURNS,DAY_WAIT_COST,landCost,rentTotal,landIncome,dividendTotal,dailyIncome,upgradeCost};
 export const RETURN_FLOORS = Object.freeze([3,6,9]);
+export const APPRAISAL_COST = 25;
+export const SURVEY_RANGE = 3;
+export const TRAP_TYPES = Object.freeze({
+  'salt-bed': Object.freeze({name:'吸塩床', description:'食料の力を吸い、満腹度が下がる。'}),
+  'steam-vent': Object.freeze({name:'蒸気口', description:'熱い蒸気が吹き出し、HPが減る。'}),
+  'bell-sigil': Object.freeze({name:'鳴り紋', description:'大きな音で、離れた魔物まで引き寄せる。'})
+});
+const TRAP_IDS = Object.keys(TRAP_TYPES);
+const MAX_TRAPS = 7;
 export const BAG_UPGRADES = Object.freeze([
   {id:'satchel',name:'旅人の拡張袋',capacity:40,cost:200},
   {id:'rucksack',name:'採集家の拡張袋',capacity:50,cost:500},
@@ -21,7 +30,9 @@ export const ITEMS = Object.freeze([
   {id:'ore',name:'燐鉄鉱',icon:'⬡',kind:'loot',buy:null,sell:40,description:'淡い光を含む加工用の鉱石。'},
   {id:'amber',name:'夕映え琥珀',icon:'◆',kind:'loot',buy:null,sell:85,description:'装飾職人が求める透明な琥珀。'},
   {id:'prism',name:'星彩結晶',icon:'✧',kind:'loot',buy:null,sell:150,description:'深層で育つ貴重な結晶。'},
-  {id:'relic',name:'暁の種',icon:'☀',kind:'loot',buy:null,sell:500,description:'深層の番人が守る、街に光をもたらす宝。'}
+  {id:'relic',name:'暁の種',icon:'☀',kind:'loot',buy:null,sell:500,description:'深層の番人が守る、街に光をもたらす宝。'},
+  {id:'sealed-cache',name:'封蝋の小箱',icon:'▣',kind:'loot',buy:null,sell:30,description:'中身は不明。街で鑑定するか、そのまま売れます。'},
+  {id:'tideglass',name:'潮硝子',icon:'◈',kind:'loot',buy:null,sell:170,description:'潮の記憶を閉じ込めた硝子。街の職人が高値で買い取ります。'}
 ]);
 export const WEAPONS = Object.freeze([
   {id:'starter',name:'採集ナイフ',price:0,attack:0,description:'旅の始まりを支える小さな刃。'},
@@ -60,6 +71,11 @@ const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 export const xpNeeded = level => 12+level*10;
 function rand(s) { s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0; return s.rng/4294967296; }
 function between(s,a,b) { return a+Math.floor(rand(s)*(b-a+1)); }
+function shuffled(s, list) {
+  const items=[...list];
+  for(let i=items.length-1;i>0;i--){const j=between(s,0,i);[items[i],items[j]]=[items[j],items[i]];}
+  return items;
+}
 function log(s,text) { s.log.push(text); if(s.log.length>40)s.log.shift(); return text; }
 function quantity(list,id) { return list.find(v=>v.id===id)?.qty??0; }
 function add(list,id,qty) { const e=list.find(v=>v.id===id); if(e)e.qty=Math.min(MAXSTACK,e.qty+qty); else list.push({id,qty:Math.min(MAXSTACK,qty)}); }
@@ -71,6 +87,7 @@ function gainXp(s,n) { s.xp+=n; while(s.level<30&&s.xp>=xpNeeded(s.level)){s.xp-
 function walkable(s,x,y) {return x>=0&&x<W&&y>=0&&y<H&&s.map.tiles[y][x]!==0;}
 function occupied(s,x,y) {return s.enemies.some(e=>e.x===x&&e.y===y&&e.hp>0);}
 const inRoom=(p,r)=>!!r&&p.x>=r.x&&p.x<r.x+r.width&&p.y>=r.y&&p.y<r.y+r.height;
+const keyOf=p=>`${p.x},${p.y}`;
 const swarmStartMessage='魔物だまり！ 眠っていた魔物が目覚めた。この魔物たちは次の行動から動き出す！';
 const swarmClearMessage=floor=>`魔物だまりを制圧！ 探索金 ${floor*40}G を手に入れた。`;
 function roomDoor(s,p,room){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{const next={x:p.x+dx,y:p.y+dy};return !inRoom(next,room)&&walkable(s,next.x,next.y);});}
@@ -116,6 +133,57 @@ function clearSwarm(s){
   const swarm=s.map?.swarm;if(!swarm||swarm.status==='cleared'||s.enemies.some(e=>swarm.enemyIds.includes(e.id)))return;
   swarm.status='cleared';s.runGold=Math.min(MAXGOLD,s.runGold+s.floor*40);log(s,swarmClearMessage(s.floor));
 }
+
+const roomLinks=[[0,1],[1,2],[2,5],[5,4],[4,3],[0,3],[1,4]];
+
+function variedLinks(s, rng) {
+  if(s.floor<4)return roomLinks;
+  const groups=Array.from({length:6},(_,index)=>index);
+  const essential=[],optional=[];
+  for(const [a,b] of shuffled(rng,roomLinks)){
+    const from=groups[a],to=groups[b];
+    if(from===to){optional.push([a,b]);continue;}
+    essential.push([a,b]);
+    for(let i=0;i<groups.length;i++)if(groups[i]===from)groups[i]=to;
+  }
+  // A connected route every time, with an occasional alternate way back.
+  if(rand(rng)<.65)essential.push(optional[0]);
+  return essential;
+}
+
+function addExpeditionFind(s, rng) {
+  if(s.floor===1){
+    const {x,y}=s.player;
+    const blocked=new Set([...s.loot,...s.enemies].map(keyOf));
+    const nearby=[[-1,0],[0,-1],[0,1],[-2,0],[-1,-1],[-1,1],[0,-2],[0,2],[1,-1],[1,1],[2,0]]
+      .map(([dx,dy])=>({x:x+dx,y:y+dy}));
+    const spot=nearby.find(p=>s.map.tiles[p.y][p.x]===1&&!blocked.has(keyOf(p)));
+    if(spot)s.loot.push({id:'sealed-cache',...spot});
+  }else if(s.loot.length&&rand(rng)<.72){
+    // Replacing a find preserves the original number of drops in a swarm room.
+    s.loot.at(-1).id='sealed-cache';
+  }
+}
+
+function generateTraps(s, end, rng) {
+  const blocked=new Set([...s.loot,...s.enemies].map(keyOf));
+  const swarmRoom=s.map.rooms[s.map.swarm?.roomIndex];
+  const spots=[];
+  for(const room of s.map.rooms){
+    if(room===swarmRoom)continue;
+    // Traps live in rooms, with side paths around them and no blocked doorway.
+    for(let y=room.y+1;y<room.y+room.height-1;y++)for(let x=room.x+1;x<room.x+room.width-1;x++){
+      const p={x,y};
+      if(s.map.tiles[y][x]===1&&dist(p,s.player)>3&&dist(p,end)>3&&!blocked.has(keyOf(p)))spots.push(p);
+    }
+  }
+  const count=Math.min(MAX_TRAPS,s.floor);
+  const kinds=TRAP_IDS.slice(0,s.floor===1?1:s.floor<4?2:undefined);
+  s.map.traps=shuffled(rng,spots).slice(0,count).map(p=>({
+    ...p,kind:kinds[between(rng,0,kinds.length-1)],discovered:false,spent:false
+  }));
+}
+
 function generateFloor(s) {
   const tiles=Array.from({length:H},()=>Array(W).fill(0)),rooms=[];
   for(let row=0;row<2;row++)for(let col=0;col<3;col++){
@@ -123,23 +191,29 @@ function generateFloor(s) {
     const room={x,y,width,height,cx:x+Math.floor(width/2),cy:y+Math.floor(height/2)};rooms.push(room);
     for(let yy=y;yy<y+height;yy++)for(let xx=x;xx<x+width;xx++)tiles[yy][xx]=1;
   }
-  // A spanning path always connects every room. Extra links offer alternative routes.
-  for(const [a,b] of [[0,1],[1,2],[2,5],[5,4],[4,3],[0,3],[1,4]]){
+  // Choose layouts and hazards from a separate deterministic stream.
+  const routeRng={rng:(s.rng^Math.imul(s.floor,0x9e3779b9))>>>0};
+  for(const [a,b] of variedLinks(s,routeRng)){
     let x=rooms[a].cx,y=rooms[a].cy; const target=rooms[b];
-    while(x!==target.cx){tiles[y][x]=1;x+=Math.sign(target.cx-x);}while(y!==target.cy){tiles[y][x]=1;y+=Math.sign(target.cy-y);}tiles[y][x]=1;
+    const horizontal=()=>{while(x!==target.cx){tiles[y][x]=1;x+=Math.sign(target.cx-x);}};
+    const vertical=()=>{while(y!==target.cy){tiles[y][x]=1;y+=Math.sign(target.cy-y);}};
+    if(s.floor>=4&&rand(routeRng)<.5){vertical();horizontal();}else{horizontal();vertical();}
+    tiles[y][x]=1;
   }
   s.map={width:W,height:H,tiles,rooms,seen:Array.from({length:H},()=>Array(W).fill(false)),visible:Array.from({length:H},()=>Array(W).fill(false))};
-  s.player={x:rooms[0].cx,y:rooms[0].cy};s.enemies=[];s.loot=[];
+  const marker=room=>s.floor<4?{x:room.cx,y:room.cy}:{x:room.cx+between(routeRng,-1,1),y:room.cy+between(routeRng,-1,1)};
+  const end=marker(rooms[5]);
+  s.player=marker(rooms[0]);s.enemies=[];s.loot=[];
   tiles[s.player.y][s.player.x]=3;
-  tiles[rooms[5].cy][rooms[5].cx]=2;
+  tiles[end.y][end.x]=2;
   // Milestone exits sit beside the onward stairs; the original entrance stays usable.
-  if(RETURN_FLOORS.includes(s.floor))tiles[rooms[5].cy][rooms[5].cx-1]=4;
+  if(RETURN_FLOORS.includes(s.floor))tiles[end.y][end.x-1]=4;
   const f=s.floor;
   // Show the newly introduced species first, then vary familiar creatures.
   // The count of creatures is unchanged; extra species do not crowd the map.
   const shuffle=list=>{const result=[...list];for(let i=result.length-1;i>0;i--){const j=between(s,0,i);[result[i],result[j]]=[result[j],result[i]];}return result;};
   const pool=enemiesForFloor(f),roster=[...shuffle(pool.filter(type=>type.firstFloor===f)),...shuffle(pool.filter(type=>type.firstFloor<f))];
-  const bossPoint=f===MAX_FLOOR?{x:rooms[5].cx,y:rooms[5].cy-1}:null;
+  const bossPoint=f===MAX_FLOOR?{x:end.x,y:end.y-1}:null;
   for(let i=0;i<normalEnemyCount(f);i++){
     const p=randomFloorPoint(s,true,bossPoint);if(!p)continue;const type=roster[i%roster.length],stats=enemyStats(type.id,f);
     s.enemies.push({id:`${s.stats.runs}-${f}-${i}`,kind:type.id,name:type.name,...p,...stats,maxHp:stats.hp});
@@ -151,12 +225,47 @@ function generateFloor(s) {
   }
   // An immediately visible find teaches collection on the first expedition.
   if(f===1){const x=s.player.x+1,y=s.player.y;if(tiles[y][x]===1&&!s.loot.some(l=>l.x===x&&l.y===y))s.loot.push({id:'herb',x,y});}
+  addExpeditionFind(s,routeRng);
   generateSwarm(s);
+  generateTraps(s,end,routeRng);
   s.maxFloor=Math.max(s.maxFloor,f);reveal(s);
 }
 function collect(s) {
   const here=s.loot.filter(l=>l.x===s.player.x&&l.y===s.player.y);
   for(const l of here){if(s.runLoot.reduce((n,v)=>n+v.qty,0)>=bagCapacity(s)){log(s,`探索袋がいっぱい（${bagCapacity(s)}個）。帰還して品物を整理しよう。`);break;}add(s.runLoot,l.id,1);s.loot.splice(s.loot.indexOf(l),1);log(s,`${itemById[l.id].name}を見つけた。`);}
+}
+
+function triggerTrap(s) {
+  const trap=s.map.traps?.find(p=>!p.spent&&p.x===s.player.x&&p.y===s.player.y);
+  if(!trap)return null;
+  trap.discovered=true;
+  trap.spent=true;
+  const name=TRAP_TYPES[trap.kind].name;
+  let message;
+  if(trap.kind==='salt-bed'){
+    const loss=Math.min(s.hunger,6+Math.floor(s.floor/2));
+    s.hunger=Math.round((s.hunger-loss)*100)/100;
+    message=`${name}が作動！ 満腹度が${loss}減った。`;
+  }else if(trap.kind==='steam-vent'){
+    const damage=3+Math.floor(s.floor/2);
+    s.hp-=damage;
+    message=`${name}が作動！ 蒸気で${damage}ダメージ。`;
+  }else{
+    message=`${name}が作動！ 離れた魔物にも音が届いた。`;
+  }
+  log(s,message);
+  return {...trap,message};
+}
+
+function survey(s) {
+  reveal(s);
+  const discovered=[];
+  for(const trap of s.map.traps||[]){
+    if(trap.discovered||!s.map.visible[trap.y]?.[trap.x]||dist(trap,s.player)>SURVEY_RANGE)continue;
+    trap.discovered=true;
+    discovered.push({...trap});
+  }
+  return discovered;
 }
 function kill(s,e) {s.enemies.splice(s.enemies.indexOf(e),1);s.stats.kills++;s.runGold+=8+s.floor*5;gainXp(s,e.xp);log(s,`${e.name}を倒した！`);if(e.kind==='boss'){s.runRelic=true;add(s.runLoot,'relic',1);log(s,s.floor===MAX_FLOOR?'暁の種を手に入れた！ 階段から帰還しよう。':'暁の種を守り抜いた。さらに下層へ進めます。帰灯石で街に戻ることもできます。');}clearSwarm(s);}
 function advanceDay(s){
@@ -181,7 +290,7 @@ function endRun(s,defeat=false){
   s.runLoot=[];s.runGold=0;s.runRelic=false;s.enemies=[];s.loot=[];s.map=null;s.player={x:0,y:0};
   return defeat?'defeat':clear?'victory':'return';
 }
-function enemyTurn(s,{justAwakened=false}={}){
+function enemyTurn(s,{justAwakened=false,alarm=false}={}){
   let distances=null;
   const swarm=s.map.swarm,members=new Set(swarm?.enemyIds||[]),widePursuit=swarm?.status==='active';
   const hit=(e,ranged=false)=>{const damage=Math.max(1,e.attack-s.defense+between(s,-1,1));s.hp-=damage;log(s,`${e.name}の${ranged?'遠隔':'攻撃'}。${damage}ダメージ。`);return s.hp<=0?endRun(s,true):null;};
@@ -193,7 +302,7 @@ function enemyTurn(s,{justAwakened=false}={}){
     // Cadence uses existing saved turn/ID data rather than adding timers or statuses.
     const phase=[...e.id].reduce((value,c)=>value+c.charCodeAt(0),0);
     if(distance===1){const event=hit(e);if(event)return event;continue;}
-    const radius=behavior==='ambush'?3:behavior==='shy'?6:behavior==='watcher'?10:8;
+    const radius=alarm?14:behavior==='ambush'?3:behavior==='shy'?6:behavior==='watcher'?10:8;
     if(distance>radius&&!(member&&widePursuit))continue;
     if(behavior==='glimmer'&&distance===2&&(e.x===s.player.x||e.y===s.player.y)&&(s.turn+phase)%2===0){
       const x=(e.x+s.player.x)/2,y=(e.y+s.player.y)/2;
@@ -203,7 +312,7 @@ function enemyTurn(s,{justAwakened=false}={}){
     // Breadth-first distances avoid enemies getting stuck on corridor corners.
     if(!distances){
       const queue=[{...s.player}];distances=new Map([[`${s.player.x},${s.player.y}`,0]]);
-      for(let i=0;i<queue.length&&i<(widePursuit?W*H:300);i++){const p=queue[i];const n=distances.get(`${p.x},${p.y}`);if(!widePursuit&&n>=12)continue;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!distances.has(key)){distances.set(key,n+1);queue.push({x,y});}}}
+      for(let i=0;i<queue.length&&i<(widePursuit||alarm?W*H:300);i++){const p=queue[i];const n=distances.get(`${p.x},${p.y}`);if(!widePursuit&&n>=(alarm?18:12))continue;for(const [dx,dy]of [[1,0],[-1,0],[0,1],[0,-1]]){const x=p.x+dx,y=p.y+dy,key=`${x},${y}`;if(walkable(s,x,y)&&!distances.has(key)){distances.set(key,n+1);queue.push({x,y});}}}
     }
     const steps=behavior==='charge'&&(s.turn+phase)%3===0?2:1;let moved=0;
     for(let step=0;step<steps&&dist(e,s.player)>1;step++){
@@ -217,7 +326,16 @@ function enemyTurn(s,{justAwakened=false}={}){
   }
   return null;
 }
-function tick(s){s.turn++;s.runTurns++;advanceClock(s);s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);if(s.hunger===0){s.hp-=2;if(s.hp<=0)return endRun(s,true);}else if(s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);const justAwakened=activateSwarm(s),event=enemyTurn(s,{justAwakened});if(s.mode==='dungeon')reveal(s);return event||(justAwakened?'swarm-start':null);}
+function tick(s,{alarm=false}={}){
+  s.turn++;s.runTurns++;advanceClock(s);
+  s.hunger=Math.max(0,Math.round((s.hunger-.25)*100)/100);
+  if(s.hunger===0)s.hp-=2;
+  if(s.hp<=0)return endRun(s,true);
+  if(s.hunger>0&&s.turn%12===0)s.hp=Math.min(s.maxHp,s.hp+1);
+  const justAwakened=activateSwarm(s),event=enemyTurn(s,{justAwakened,alarm});
+  if(s.mode==='dungeon')reveal(s);
+  return event||(justAwakened?'swarm-start':null);
+}
 export function newGame(seed=Date.now()){
   const n=(Number(seed)>>>0)||1;
   const s={version:1,seed:n,rng:n,day:1,dayTurns:0,gold:180,level:1,xp:0,hp:36,maxHp:36,hunger:100,attack:5,defense:0,weaponId:'starter',shieldId:'none',bagTier:0,inventory:[{id:'potion',qty:3},{id:'ration',qty:2},{id:'recall',qty:1}],stocks:Object.fromEntries(STOCKS.map(v=>[v.id,0])),prices:Object.fromEntries(STOCKS.map(v=>[v.id,v.base])),priceHistory:Object.fromEntries(STOCKS.map(v=>[v.id,[v.base]])),plots:[{building:null,level:1}],mode:'town',floor:1,maxFloor:0,turn:0,player:{x:0,y:0},map:null,enemies:[],loot:[],runLoot:[],runGold:0,runTurns:0,runRelic:false,log:['灯都へようこそ。迷宮の品を持ち帰り、あなたの街を育てよう。'],stats:{runs:0,clears:0,kills:0,earned:0}};
@@ -225,12 +343,15 @@ export function newGame(seed=Date.now()){
 }
 export function act(state,action){
   if(!action||typeof action.type!=='string')return{state,ok:false,message:'操作を選んでください。'};
-  const s=clone(state);let message='',event='';
+  const s=clone(state);let message='',event='',trap=null,detected=null;
   const fail=text=>({state,ok:false,message:text});
   const finish=()=>{
     if(!['defeat','return','victory'].includes(event)&&s.map?.swarm?.status==='cleared'&&state.map?.swarm?.status!=='cleared')event='swarm-clear';
     if(event==='swarm-start')message=swarmStartMessage;else if(event==='swarm-clear')message=swarmClearMessage(s.floor);else if(message)log(s,message);
-    return{state:s,ok:true,message:message||s.log.at(-1)||'',event};
+    const result={state:s,ok:true,message:message||s.log.at(-1)||'',event};
+    if(trap)result.trap=trap;
+    if(detected)result.survey=detected;
+    return result;
   };
   const qty=action.qty??1;
   if(['sell','buyItem','buyStock','sellStock'].includes(action.type)&&(!Number.isInteger(qty)||qty<1||qty>999))return fail('数量は1〜999の整数で指定してください。');
@@ -238,14 +359,37 @@ export function act(state,action){
     if(s.mode!=='town')return fail('すでに探索中です。');if(s.hp<1)return fail('宿で休んでから出発しましょう。');
     s.mode='dungeon';s.floor=1;s.runTurns=0;s.runGold=0;s.runLoot=[];s.runRelic=false;s.stats.runs++;generateFloor(s);message='翠灯の迷宮 B1。歩く・攻撃する・道具を使うと敵も動きます。';event='enter';return finish();
   }
-  if(['move','wait','stairs','return'].includes(action.type)&&s.mode!=='dungeon')return fail('街では探索の操作はできません。');
+  if(['move','wait','survey','stairs','return'].includes(action.type)&&s.mode!=='dungeon')return fail('街では探索の操作はできません。');
   if(action.type==='move'){
     if(!Number.isInteger(action.dx)||!Number.isInteger(action.dy)||Math.abs(action.dx)+Math.abs(action.dy)!==1)return fail('上下左右に1マスずつ移動できます。');
     const x=s.player.x+action.dx,y=s.player.y+action.dy;if(!walkable(s,x,y))return fail('壁があり、進めません。');
-    const enemy=s.enemies.find(e=>e.x===x&&e.y===y);if(enemy){const damage=Math.max(1,s.attack-enemy.defense+between(s,-1,1));enemy.hp-=damage;log(s,`${enemy.name}に${damage}ダメージ。`);if(enemy.hp<=0)kill(s,enemy);event='attack';}else{s.player={x,y};collect(s);event='move';}
-    event=tick(s)||event;return finish();
+    const enemy=s.enemies.find(e=>e.x===x&&e.y===y);
+    if(enemy){
+      const damage=Math.max(1,s.attack-enemy.defense+between(s,-1,1));
+      enemy.hp-=damage;
+      log(s,`${enemy.name}に${damage}ダメージ。`);
+      if(enemy.hp<=0)kill(s,enemy);
+      event='attack';
+    }else{
+      s.player={x,y};trap=triggerTrap(s);
+      if(s.hp>0)collect(s);
+      event='move';
+    }
+    event=tick(s,{alarm:trap?.kind==='bell-sigil'})||event;
+    return finish();
   }
   if(action.type==='wait'){log(s,'周囲の気配をうかがった。');event=tick(s)||'wait';return finish();}
+  if(action.type==='survey'){
+    detected=survey(s);
+    const count=detected.length;
+    const report=count?`灯火で${count}か所の罠を見つけた。`:'灯火をかざした。近くに新しい罠は見つからない。';
+    // Keep the report in the journal even if an enemy acts during this turn.
+    log(s,report);
+    event=tick(s)||'survey';
+    const result=finish();
+    if(event==='survey')result.message=report;
+    return result;
+  }
   if(action.type==='stairs'){
     if(s.map.tiles[s.player.y][s.player.x]!==2)return fail('光る階段の上で使ってください。');
     if(s.floor===MAX_FLOOR){if(!s.runRelic||s.enemies.some(enemy=>enemy.kind==='boss'))return fail('地下10階の灯晶の番人を倒し、暁の種を手に入れよう。');event=endRun(s);return finish();}
@@ -267,6 +411,20 @@ export function act(state,action){
     event=s.mode==='dungeon'?(tick(s)||'use'):'use';return finish();
   }
   if(s.mode!=='town')return fail('取引や建築は帰還後に行えます。');
+  if(action.type==='appraise'){
+    if(qty!==1)return fail('小箱は1つずつ鑑定できます。');
+    if(!quantity(s.inventory,'sealed-cache'))return fail('封蝋の小箱がありません。');
+    if(s.gold<APPRAISAL_COST)return fail(`鑑定には${APPRAISAL_COST}G必要です。`);
+    const roll=rand(s),id=roll<.38?'ore':roll<.82?'amber':'tideglass';
+    const item=itemById[id];
+    if(quantity(s.inventory,id)>=MAXSTACK)return fail(`${item.name}がいっぱいです。品物を整理してから鑑定してください。`);
+    remove(s.inventory,'sealed-cache',1);
+    s.gold-=APPRAISAL_COST;
+    add(s.inventory,id,1);
+    message=`封蝋の小箱から${item.name}が出てきた。鑑定料${APPRAISAL_COST}G。`;
+    event='appraisal';
+    return finish();
+  }
   if(action.type==='nextDay'){
     if(s.gold<DAY_WAIT_COST)return fail(`翌日まで過ごすには生活費${DAY_WAIT_COST}Gが必要です。探索中は費用なしで日が進みます。`);
     s.gold-=DAY_WAIT_COST;s.dayTurns=0;advanceDay(s);message=`街で翌日まで過ごした。生活費${DAY_WAIT_COST}G。HP・満腹度は変わりません。`;event='day';return finish();
@@ -339,6 +497,17 @@ export function validateSave(raw){
   const grid=(value,parse)=>{if(!Array.isArray(value)||value.length!==H)invalid();return value.map(row=>{if(!Array.isArray(row)||row.length!==W)invalid();return row.map(parse);});};
   s.map={width:W,height:H,tiles:grid(m.tiles,n=>num(n,0,4)),seen:grid(m.seen,bool),visible:grid(m.visible,bool),rooms:list(m.rooms,12).map(r=>{if(!obj(r))invalid();return{x:num(r.x,1,W-2),y:num(r.y,1,H-2),width:num(r.width,1,W-2),height:num(r.height,1,H-2),cx:num(r.cx,1,W-2),cy:num(r.cy,1,H-2)};})};
   const point=v=>{if(!obj(v))invalid();const p={x:num(v.x,0,W-1),y:num(v.y,0,H-1)};if(!walkable(s,p.x,p.y))invalid();return p;};
+  if(Object.hasOwn(m,'traps')){
+    const positions=new Set();
+    s.map.traps=list(m.traps,MAX_TRAPS).map(trap=>{
+      const p=point(trap),key=keyOf(p);
+      if(typeof trap.kind!=='string'||!Object.hasOwn(TRAP_TYPES,trap.kind)||s.map.tiles[p.y][p.x]!==1||positions.has(key))invalid();
+      positions.add(key);
+      const discovered=bool(trap.discovered),spent=bool(trap.spent);
+      if(spent&&!discovered)invalid();
+      return {...p,kind:trap.kind,discovered,spent};
+    });
+  }
   s.player=point(source.player);const occupiedPositions=new Set([`${s.player.x},${s.player.y}`]),enemyIds=new Set();
   s.enemies=list(source.enemies,40).map(e=>{const p=point(e);if(typeof e.kind!=='string'||!Object.hasOwn(ENEMY_BY_ID,e.kind))invalid();const key=`${p.x},${p.y}`;if(occupiedPositions.has(key)||enemyIds.has(e.id))invalid();occupiedPositions.add(key);enemyIds.add(e.id);const maxHp=num(e.maxHp,1,1000),hp=num(e.hp,1,maxHp);return{id:str(e.id,80),kind:e.kind,name:str(e.name,40),...p,hp,maxHp,attack:num(e.attack,1,100),defense:num(e.defense,0,100),xp:num(e.xp,1,1000)};});
   s.loot=list(source.loot,100).map(e=>{if(!itemById[e.id])invalid();return{id:e.id,...point(e)};});

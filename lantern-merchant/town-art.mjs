@@ -98,14 +98,25 @@ function paintTerrain(c,state){
 function getTerrain(state){const key=String(state.plots?.length||0)+':'+getEnvironmentRevision();if(!baseCache||baseKey!==key){baseCache=makeCanvas(1040,640);baseKey=key;if(baseCache)paintTerrain(baseCache.getContext('2d'),state);}return baseCache;}
 export function townTransform(w,h,options={}){const zoom=clamp(Number(options.townZoom)||1,1,2.5),fit=Math.min(w/1010,h/590),scale=Math.max(.1,fit)*zoom;const focus=options.townCamera||options.townPlayer||TOWN_SPAWN;const centerX=zoom===1?520:clamp(focus.x,Math.min(520,w/(scale*2)),Math.max(520,1040-w/(scale*2))),centerY=zoom===1?319:clamp(focus.y,Math.min(320,h/(scale*2)),Math.max(320,640-h/(scale*2)));return{scale,offsetX:Math.round(w/2-centerX*scale),offsetY:Math.round(h/2-centerY*scale)};}
 function paintWater(c,time){c.save();c.lineCap='round';for(let i=0;i<64;i++){const x=hash(i,83)*1040,y=hash(i,28)*640;if(inside(x,y)||inside(x-13,y-8))continue;const drift=Math.sin(time/1800+i)*3;c.globalAlpha=.13+.11*Math.sin(time/1900+i);c.strokeStyle='#b9e0cc';c.lineWidth=1.1;c.beginPath();c.moveTo(x+drift,y);c.quadraticCurveTo(x+10+drift,y-2,x+20+drift,y);c.stroke();}for(let i=0;i<ISLAND.length;i++){if(i%3===0)continue;const a=ISLAND[i],b=ISLAND[(i+1)%ISLAND.length],f=.3+(Math.sin(time/2600+i)+1)*.1,x=a[0]+(b[0]-a[0])*f,y=a[1]+(b[1]-a[1])*f,nx=(x-520)*.015,ny=(y-320)*.015+15;c.globalAlpha=.22+.1*Math.sin(time/1700+i);c.strokeStyle='#c4e5cf';c.lineWidth=1.4;c.beginPath();c.moveTo(x+nx,y+ny);c.quadraticCurveTo(x+nx+9,y+ny-2,x+nx+20,y+ny);c.stroke();}c.restore();}
+function dockReflections(c,time){
+  c.save();
+  for(const [center,y,spread] of [[461,590,28],[494,601,36]]){
+    for(let i=0;i<11;i++){
+      const drift=Math.sin(time/1250+i*1.7)*3,x=center+(hash(i,y)-.5)*spread+drift;
+      c.globalAlpha=(.08+hash(i,center)*.14)*(1-i/14);
+      r(c,x,y+i*2.5,4+hash(i,9)*15,1.15,'#f2c986');
+    }
+  }
+  c.restore();
+}
 function screenLabel(c,text,x,y,scale,{selected=false,muted=false,compact=false}={}){const font=Math.max(11,Math.min(13,11*scale));c.font=`600 ${font}px "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif`;c.textAlign='center';c.textBaseline='middle';const tw=c.measureText(text).width+(compact?8:18),height=compact?17:21;const bx=Math.round(x-tw/2),by=Math.round(y-height/2);r(c,bx,by,tw,height,selected?'#4b5138ee':'#122e30de');r(c,bx,by,tw,1,selected?'#e7c37a':'#a1b48b66');if(selected)r(c,bx,by+height-1,tw,1,'#e7c37a');c.fillStyle=muted?'#a8ba96':selected?'#ffe0a1':'#ebdfb8';c.fillText(text,Math.round(x),Math.round(y+.5));return{x:bx,y:by,width:tw,height};}
 function selection(c,b,time,reduced=false){const pulse=reduced?1:.75+Math.sin(time/250)*.25;c.globalAlpha=pulse;const x=b.x-3,y=b.y-3,w=b.width+6,h=b.height+6;for(const [xx,yy,dx,dy]of [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]]){r(c,xx+(dx<0?-12:0),yy,12,2,'#f5d189');r(c,xx,yy+(dy<0?-10:0),2,10,'#f5d189');}c.globalAlpha=1;}
 function buildEffect(c,e,time){const p=getTownPlot(e.index??0),life=clamp((time-e.startedAt)/(e.duration||1100),0,1);if(life>=1)return;const x=p.foot.x,y=p.foot.y;light(c,x,y,60,24,(1-life)*.4);c.globalAlpha=1-life;for(let i=0;i<12;i++){const xx=x+Math.sin(i*2.4)*(10+life*40),yy=y-12-Math.cos(i*1.8)*15-life*42;r(c,xx,yy,2,6,'#ffdfa1');r(c,xx-2,yy+2,6,2,'#ffdfa1');}c.strokeStyle='#f2d18a';c.lineWidth=2;c.beginPath();c.ellipse(x,y+4,20+life*35,7+life*12,0,0,Math.PI*2);c.stroke();c.globalAlpha=1;}
 /** Paints a town without reading or changing persistence. Hitboxes share its camera transform. */
 export function drawTown(c,w,h,state,time=0,options={},drawPlayer=()=>{},drawIcon=()=>{}){
   const tr=townTransform(w,h,options),{scale,offsetX,offsetY}=tr,hero=options.townPlayer||TOWN_SPAWN;
-  const sea=c.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#276c7b');sea.addColorStop(1,'#123c54');c.fillStyle=sea;c.fillRect(0,0,w,h);c.save();c.translate(offsetX,offsetY);c.scale(scale,scale);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
-  const base=getTerrain(state);if(base)c.drawImage(base,0,0);else paintTerrain(c,state);paintWater(c,time);
+  const sea=c.createLinearGradient(0,0,w,h);sea.addColorStop(0,'#3c7980');sea.addColorStop(.49,'#245666');sea.addColorStop(1,'#142e48');c.fillStyle=sea;c.fillRect(0,0,w,h);c.save();c.translate(offsetX,offsetY);c.scale(scale,scale);c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+  const base=getTerrain(state);if(base)c.drawImage(base,0,0);else paintTerrain(c,state);paintWater(c,time);dockReflections(c,time);
   // All shadows fall to the lower right; footprints, not roofs, decide collisions.
   shadow(c,180,282,127,24);shadow(c,222,463,119,22);shadow(c,433,201,88,22);
   for(const [x,y,,s]of TREES)ellipse(c,x+14*s,y+4,30*s,8*s,'#163c2d44');
@@ -118,10 +129,10 @@ export function drawTown(c,w,h,state,time=0,options={},drawPlayer=()=>{},drawIco
   actors.push({depth:hero.y,draw:()=>{light(c,hero.x+16,hero.y-4,44,29,.17);const m=hero.motion||options.townMotion||{};drawPlayer(c,Math.round(hero.x),Math.round(hero.y-13),44,time,{facing:hero.facing||'down',...m});}});
   actors.sort((a,b)=>a.depth-b.depth);for(const actor of actors)actor.draw();
   // Warm glass lights paint the nearby paving; the scene itself stays readable.
-  for(const [x,y]of LAMPS){const pulse=options.reducedMotion?1:.94+Math.sin(time/390+x)*.06;light(c,x,y-34,39,45,.23*pulse);light(c,x+8,y+2,36,12,.17*pulse);r(c,x-2,y-39,3,7,'#fff1c0');}
+  for(const [x,y]of LAMPS){const pulse=options.reducedMotion?1:.94+Math.sin(time/390+x)*.06;light(c,x,y-34,45,49,.27*pulse);light(c,x+8,y+2,46,18,.24*pulse);r(c,x-2,y-39,3,7,'#fff1c0');}
   for(const [x,y]of [[207,233],[277,232],[244,266],[245,437],[311,419]]){light(c,x,y,32,29,.13);poly(c,[[x-7,y+11],[x+7,y+11],[x+22,y+36],[x-2,y+36]],'#f4c2770b');}
   for(let i=0;i<plots.length;i++)if(plots[i]?.building){const p=getTownPlot(i);light(c,p.x+27,p.y+26,27,22,.12);}
-  const gatePulse=options.reducedMotion?1:.83+Math.sin(time/800)*.17;light(c,477,153,43,44,.16*gatePulse);
+  const gatePulse=options.reducedMotion?1:.83+Math.sin(time/800)*.17;light(c,477,153,58,58,.22*gatePulse);
   // A restrained chimney curl, drifting embers and insects supply idle life.
   if(!options.reducedMotion){for(let k=0;k<4;k++){const t=((time/1800+k*.25)%1),xx=282+Math.sin(t*5+k)*4,yy=157-t*30;c.globalAlpha=(1-t)*.17;r(c,xx,yy,4+t*5,3+t*2,'#c9ceb6');}c.globalAlpha=1;for(let i=0;i<9;i++){const x=350+hash(i,4)*225+Math.sin(time/2300+i)*5,y=160+hash(i,5)*320+Math.cos(time/1900+i)*4;c.globalAlpha=.2+.5*Math.max(0,Math.sin(time/1100+i));r(c,x,y,2,2,'#ecd99b');}c.globalAlpha=1;}
   if(Number.isInteger(options.selectedPlot)&&options.selectedPlot>=0&&options.selectedPlot<12)selection(c,getTownPlot(options.selectedPlot),time,options.reducedMotion);

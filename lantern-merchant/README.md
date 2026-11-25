@@ -2,6 +2,26 @@
 
 オリジナルのターン制ダンジョン探索と街づくりゲーム。ビルド不要の静的HTML・CSS・ES modulesで動作します。
 
+## 2026-11-25　翠灯の迷宮の刷新
+
+- Canvas 2Dで石積み、板張り、錆びた銅、水底の書庫、結晶の深殿を描画。壁の前面と側面、足元の陰影、灯火の色、濡れた床を階層ごとに変えています。宝物、魔物、入口、階段、罠は種類ごとに異なるマーカーで表示します。
+- 地下4階から、迷宮の通路の接続や入口・階段の位置が探索ごとに変わります。深い階ほど罠が増えます。Qまたは「灯りで調べる」で、周囲3マス以内に見通せる罠を探します。調査中も敵が1ターン行動します。Mまたは「探索図」は時間を進めずに開けます。地図では探索済みの範囲と、いま見えている敵や宝物を確認できます。
+- 罠は蒸気口、吸塩床、鳴り紋の3種類です。HPや満腹度が減る、または周囲の敵が寄ってきます。作動した罠は同じ探索中に再作動しません。
+- 封蝋の小箱は街で未開封のまま30Gで売却できます。25Gで鑑定すると、燐鉄鉱・夕映え琥珀・潮硝子のどれかを入手できます。素材の一括売却では小箱を手元に残します。
+- 既存のv1セーブに対応します。進行中の階の部屋・敵・宝物や街の所有地を保持し、新しい地形と罠は次の階を生成するときに適用します。調べた罠、作動済みの罠、鑑定後の所持品をセーブに記録します。
+
+### 今回の画像素材
+
+組み込みのImageGenで制作し、同梱WebPに変換しました。
+
+- `assets/environment/underharbor-cover.webp`
+
+  > Use case: stylized-concept. Create an original widescreen 3:2 game illustration for the Japanese indie fantasy game Pal Merchant Diary. An audacious small adult traveling shopkeeper with a chestnut scarf, oversized teal explorer coat, russet leather field bag and an amber caged oil lantern in an immense subterranean archive below a seawalled harbor. Three-quarter high camera with a carved blue-gray granite staircase framed by weathered copper and a huge amber lantern above the stair's far arch. A distant shallow tide pool to the right reflects the lantern; a few moss strands, blue-green mineral glints, one tiny original floating pet like a droplet with brass shell. Amber light and dark petrol teal shadows, sepia slate masonry, physically defined raised stones, visible grains and joints, hand-painted painterly ink and pixels-in-miniature finish. This is a widescreen environment piece intended as a game title panel behind a left-aligned title which will be added by UI later; dark negative space in leftmost 25%, center-to-right focused on the small warm explorer and majestic stair. Sophisticated luminous retro-remaster fantasy atmosphere, crisp silhouette, rich texture, handmade. All character and world designs are wholly original. No lettering, no logos, no UI frame, no existing franchise characters or visual assets.
+
+- `assets/environment/underharbor-stone.webp`
+
+  > Use case: stylized-concept. Generate a single square flat top-down tileable rock material texture for an original HD-2D coastal fantasy dungeon. Uniform tightly packed mottled blue-gray limestone and muted copper oxide with neutral average value, dark hairline veins, tiny crystalline flecks and subtle fine grit. No discrete blocks, no visible grout grid or major seams, no individual rocks with strong shading, no objects, no plants, no landscape, no lettering, no logos, no image borders. Top-down uniformly exposed, matte hand-painted mineral microstructure, touch of pixels in a carefully painted dither, straight seamless repeating material tile all sides approximately. This will be overlaid at low opacity on existing geometrically rendered dungeon wall and floor surfaces. Square full bleed.
+
 ## 2026-11-08：盾・上位武器・ゲーム内の日次収益・深層の強化
 
 道具店に盾5種類を追加しました。若木の盾（140G、防御+2）、燐鉄の盾（420G、+4）、月紋の盾（1,000G、+7）、灯晶の大盾（2,400G、+10）、暁光の守護盾（4,800G、+14）。レベル由来の守備力へ加算し、購入時に自動装備。同等以下の盾の購入は防ぎます。敗北時は武器と同様に盾も失います。袋の拡張と街の財産は維持します。

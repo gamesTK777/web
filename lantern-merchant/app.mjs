@@ -1,7 +1,8 @@
-import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,SHIELDS,DAY_TURNS,DAY_WAIT_COST,dailyIncome,BAG_UPGRADES,bagCapacity,RETURN_FLOORS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR} from './engine.mjs?v=20261108-equipment';
-import {drawScene} from './renderer.mjs?v=20261108-bag-exits';
+import {newGame,act,validateSave,ITEMS,WEAPONS,STOCKS,BUILDINGS,SHIELDS,DAY_TURNS,DAY_WAIT_COST,dailyIncome,BAG_UPGRADES,bagCapacity,RETURN_FLOORS,rentTotal,landCost,upgradeCost,xpNeeded,MAX_FLOOR,APPRAISAL_COST,TRAP_TYPES} from './engine.mjs?v=20261125-depths';
+import {drawScene} from './renderer.mjs?v=20261125-depths';
+import {drawFloorChart} from './expedition-map.mjs';
 import {preloadCharacters,getCharacterAssetStatus} from './anime-characters.mjs?v=20261108-defeat';
-import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261108-anime10';
+import {TOWN_SPAWN,TOWN_LANDMARKS,getTownPlot,isTownWalkable} from './town-art.mjs?v=20261125-depths';
 import {createTownNavigation} from './town-navigation.mjs?v=20261106-art';
 import {createAudioManager} from './audio.mjs?v=20261108-music7';
 import {TRACKS} from './music-score.mjs?v=20261108-music7';
@@ -14,6 +15,7 @@ import {initGameFullscreen} from '../shared/fullscreen.mjs?v=20261108-fullscreen
 
 const $=id=>document.getElementById(id), KEY='tk777-lantern-merchant-v1';
 const money=n=>Number(n).toLocaleString('ja-JP'), esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const depthNames=['石積みの水路','潮鳴りの回廊','錆銅坑','水底の書庫','暁晶の深殿'];
 function showBestiary(){
   held.clear();
   if(!$('bestiaryGrid').childElementCount){
@@ -23,7 +25,7 @@ function showBestiary(){
 }
 let state=newGame(), tab='bag', fresh=true, persistAllowed=true, savedAt=null, saveFailed=false, loadError='', toastTimer, confirmTask=null, frameInfo=null, lastFrame=0;
 const sound=createAudioManager(), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let sessionStarted=false, zoom=3, facing='down', motion=null, effects=[], volume=.35, muted=false;
+let sessionStarted=false, zoom=3, facing='down', motion=null, effects=[], volume=.35, muted=false,showMap=true;
 let townZoom=matchMedia('(max-width:760px)').matches?1.5:1,selectedPlot=-1,selectedBuilding=null,townCamera=null;
 const townNavigation=createTownNavigation({isWalkable:isTownWalkable,spawn:TOWN_SPAWN,reducedMotion:reduced});
 let cloudReady=false,cloudBusy=false,cloudConflict=false,newCloudSlot=false,cloudGeneration=0,cloudReconnectQueued=false;
@@ -31,6 +33,7 @@ try{newCloudSlot=localStorage.getItem('tk777-lantern-new-cloud-slot')==='1';}cat
 const cloud=createCloudSave({endpoint:'https://tk777-neonshift-scores.takesuke.chatgpt.site/api/lantern-save',onStatus:status=>{const line=$('cloudStatus');if(line)line.textContent=status.message;if($('cloudCode'))$('cloudCode').value=cloud.getCode();if(status.phase==='conflict'){cloudReady=false;cloudConflict=true;}else if(status.phase==='error'&&!status.connected)cloudReady=false;}});
 const held=createHoldInput({onMove:moveDirection,canMove:()=>sessionStarted&&!document.querySelector('dialog[open]')&&!document.hidden});
 try{const settings=JSON.parse(localStorage.getItem('tk777-lantern-audio')||'{}');if(typeof settings.muted==='boolean')muted=settings.muted;if(Number.isFinite(settings.volume))volume=Math.max(0,Math.min(1,settings.volume));}catch{}
+try{showMap=localStorage.getItem('tk777-lantern-compact-map')!=='off';}catch{}
 sound.setVolume(volume);sound.setMuted(muted);
 try { const text=localStorage.getItem(KEY); if(text){const data=JSON.parse(text);state=validateSave(data.state??data);savedAt=data.savedAt??null;fresh=false;} } catch {loadError='保存された記録を読み込めませんでした。元の記録は保護しています。保存画面からバックアップを読み込むか、はじめから開始してください。';persistAllowed=false;fresh=false;}
 
@@ -55,7 +58,22 @@ async function connectCloud(localSavedAt=savedAt){
 function restartGame(){held.clear();cloudGeneration++;cloudReady=false;cloudConflict=false;newCloudSlot=true;try{localStorage.setItem('tk777-lantern-new-cloud-slot','1');}catch{}state=newGame();resetTownView();motion=null;effects=[];sessionStarted=false;fresh=true;sound.pause();persistAllowed=true;save();tab='bag';render();if($('saveDialog').open)$('saveDialog').close();if(!$('welcomeDialog').open)showStart();else showStartContents();}
 function count(id){return [...state.inventory,...state.runLoot].filter(i=>i.id===id).reduce((s,i)=>s+i.qty,0);}
 function resetTownView(){townNavigation.reset();selectedPlot=-1;selectedBuilding=null;townCamera=null;}
-function draw(time=performance.now()){frameInfo=drawScene($('world'),state,{time,zoom,motion,effects,reducedMotion:reduced,townZoom,townCamera,townPlayer:townNavigation.getVisual(time),selectedPlot,selectedBuilding});}
+function draw(time=performance.now()){frameInfo=drawScene($('world'),state,{time,zoom,motion,effects,reducedMotion:reduced,townZoom,townCamera,townPlayer:townNavigation.getVisual(time),selectedPlot,selectedBuilding,showMap});}
+function renderFieldMap(){
+  const dialog=$('mapDialog');
+  if(state.mode!=='dungeon'){if(dialog.open)dialog.close();return;}
+  $('mapTitle').textContent=`地下${state.floor}階の探索図`;
+  $('mapProgress').textContent=`確認した通路・部屋 ${state.map.seen.reduce((total,row,y)=>total+row.filter((seen,x)=>seen&&state.map.tiles[y][x]!==0).length,0)} マス`;
+  const canvas=$('surveyMap'),context=canvas.getContext('2d');
+  if(!context)return;
+  const {width,height}=canvas,cell=Math.floor(Math.min(width/state.map.width,height/state.map.height));
+  context.clearRect(0,0,width,height);
+  drawFloorChart(context,state,(width-state.map.width*cell)/2,(height-state.map.height*cell)/2,cell);
+}
+function openFieldMap(){
+  if(!sessionStarted||state.mode!=='dungeon'||document.querySelector('dialog[open]'))return;
+  held.clear();renderFieldMap();$('compactMapToggle').checked=showMap;$('mapDialog').showModal();
+}
 function moveDirection(dx,dy){
   if(!sessionStarted||document.querySelector('dialog[open]'))return;
   if(state.mode==='dungeon'){dispatch({type:'move',dx,dy});return;}
@@ -88,11 +106,15 @@ function visualEvent(previous,action,result){
   if(state.level>previous.level){add('level',`LEVEL ${state.level}`);event='level';}
   if(action.type==='use'&&state.hp>previous.hp){add('heal',`+${state.hp-previous.hp}`);event='heal';}
   if(action.type==='use'&&action.id==='ration')event='heal';
+  if(sameFloor){
+    for(const spot of result.survey??[])add('survey','',spot);
+    if(result.trap)add('trap','',result.trap);
+  }
   if(['swarm-start','swarm-clear'].includes(result.event)){
     held.clear();event=result.event;
     if(!reduced)effects.push({kind:event,...state.player,startedAt:time,duration:1600});
   }
-  effects=effects.slice(-16);sound.setScene(state);sound.play(event||'ui');
+  effects=effects.slice(-16);sound.setScene(state);sound.play(result.trap?'hurt':event||'ui');
 }
 function updateSound(){
   const status=sound.getStatus();$('soundButton').textContent=muted?'♪ OFF':'♪ 音';$('soundButton').classList.toggle('sound-off',muted);$('muteAudio').checked=muted;$('audioVolume').value=Math.round(volume*100);$('volumeValue').textContent=`${Math.round(volume*100)}%`;
@@ -105,9 +127,11 @@ function storeSound(){try{localStorage.setItem('tk777-lantern-audio',JSON.string
 function dispatch(action){
   if(!sessionStarted)return;
   if(state.mode==='town'&&action.type==='wait'){inspectTown();return;}
+  if(action.type==='survey')held.clear();
   const previous=state, result=act(state,action);
   if(!result.ok){toast(result.message);sound.play('error');return;}
   state=result.state;visualEvent(previous,action,result);save();render();
+  if(result.trap){held.clear();const trap=TRAP_TYPES[result.trap.kind];if(trap)toast(`${trap.name}が作動。探索日誌で状況を確認できます。`);}
   if(previous.mode!==state.mode||previous.floor!==state.floor){held.clear();resetTownView();}
   if(!['move','wait','attack'].includes(result.event))toast(result.message);
   if(state.mode==='dungeon'&&state.day>previous.day){const income=dailyIncome(state);toast(`${state.day}日目 · 資産収入 +${income.total}G（家賃${income.rent}・空き地${income.land}・配当${income.dividend}）`);}
@@ -132,15 +156,24 @@ function render(){
   $('attackText').textContent=`攻撃 ${state.attack} · 守備 ${state.defense}`;$('xpText').textContent=`EXP ${state.xp}/${xpNeeded(state.level)}`;
   $('goldValue').textContent=money(state.gold);$('rentValue').textContent=`+${money(income.total)} G`;$('incomeBreakdown').textContent=`家賃 ${income.rent} · 空き地 ${income.land} · 配当 ${income.dividend} G`;$('calendarStatus').textContent=`翌日まで ${DAY_TURNS-state.dayTurns}ターン · 探索中も自動で入金`;$('nextDayButton').disabled=dungeon||state.gold<DAY_WAIT_COST;$('nextDayButton').title=dungeon?'探索中は60ターンごとに日が進みます。':`生活費${DAY_WAIT_COST}Gで翌日へ。HPと満腹度は変わりません。`;
   $('locationTitle').textContent=dungeon?`翠灯の迷宮 ― 地下${state.floor}階`:'水灯りの街';
-  $('locationEyebrow').textContent=dungeon?'THE LANTERN DEPTHS':'YOUR HOMETOWN';
+  $('locationEyebrow').textContent=dungeon?depthNames[Math.floor((state.floor-1)/2)]:'水灯りの港';
   $('locationBadge').textContent=dungeon?`DAY ${state.day} · あと${DAY_TURNS-state.dayTurns}ターン`:`DAY ${state.day} · 安全な拠点`;
   $('sceneCaption').textContent=dungeon?`探索袋 ${state.runLoot.reduce((s,i)=>s+i.qty,0)}/${bagCapacity(state)} · 拾得金 ${state.runGold} G`:`所有地 ${state.plots.length} 区画 · 建物 ${state.plots.filter(p=>p.building).length} 棟 · 袋 ${bagCapacity(state)}個`;
   const checkpointFloor=dungeon&&RETURN_FLOORS.includes(state.floor)&&state.map.tiles.some(row=>row.includes(4)),onReturn=dungeon&&[3,4].includes(state.map.tiles[state.player.y][state.player.x]);
-  $('sceneHint').textContent=dungeon?(onReturn?'ここから無料で街に戻れます。「街へ戻る」を選ぼう。':checkpointFloor?'下り階段の隣に「街へ」の出口。帰灯石なしで帰還できます。':state.floor>=7?'深層の魔物は強敵。上位武器と盾を整えて慎重に。':'一歩ずつ、灯りの届く先へ。'):'施設・区画をタップして選択。WASD / 矢印で街を散歩。';
+  $('sceneHint').textContent=dungeon?(onReturn?'帰還門から、探索品を持って街へ戻れます。':checkpointFloor?'下り階段の隣に無料の帰還口があります。':state.floor>=7?'深層では道具と退路を確保してから進みましょう。':'「灯りで調べる」で近くの罠を見つけられます。'):'市場で売却や鑑定、宿で休息。施設を選ぶと、できることが表示されます。';
   $('returnButton').textContent=onReturn?'街へ戻る · 無料':'街に帰還';
   $('primaryAction').innerHTML=dungeon?'足元を調べる <span>↓</span>':'迷宮へ出発 <span>↗</span>';
   $('dungeonControls').hidden=false;$('townTools').hidden=dungeon;
   $('dungeonControls').querySelector('.quick-actions').hidden=!dungeon;
+  $('mapButton').hidden=!dungeon;$('dungeonReport').hidden=!dungeon;
+  if(dungeon){
+    $('turnNumber').textContent=`${state.runTurns} ターン`;
+    const report=$('dungeonReportLines'),lines=state.log.slice(-2).reverse();
+    if(lines.length!==report.childElementCount||lines.some((line,i)=>report.children[i].textContent!==line)){
+      report.replaceChildren(...lines.map(text=>{const entry=document.createElement('span');entry.textContent=text;return entry;}));
+    }
+  }
+  if($('mapDialog').open)renderFieldMap();
   $('movementHelp').textContent=dungeon?'矢印 / WASD 長押しで移動・攻撃。タップ・スワイプにも対応。':'矢印 / WASD 長押しで散歩。画面スワイプで移動。「調べる」で近くの施設・区画を開く。';
   $('waitButton').setAttribute('aria-label',dungeon?'1ターン待つ':'近くの施設・区画を調べる');$('waitButton').textContent=dungeon?'・':'調べる';$('waitButton').title=dungeon?'1ターン待つ（敵も行動します）':'最も近い施設・区画のメニューを開く（時間は進みません）';
   $('potionButton').innerHTML=`回復薬 <b>${count('potion')}</b>`;$('potionButton').disabled=!count('potion');
@@ -163,16 +196,23 @@ function renderSwarm(){
   text('swarmDescription',swarm.status==='dormant'?'中へ入ると敵が一斉に目覚めます。道具と退路を確認してから進もう。':swarm.status==='active'?'✦印の魔物をすべて倒すと制圧報酬。閃光の実や通路への退却、帰灯石も活用しよう。':`制圧報酬 +${state.floor*40} G を獲得。残った宝物を回収して帰還しよう。`);
   $('swarmBombButton').hidden=swarm.status!=='active';$('swarmBombButton').disabled=count('bomb')<1;text('swarmBombButton',`閃光の実を使う · ${count('bomb')}`);
 }
-function itemRow(item,qty,run=false){return `<div class="item-row"><span class="item-symbol">${esc(item.icon)}</span><div class="item-info"><b>${esc(item.name)} ×${qty}</b><small>${run?'今回の探索品':item.kind==='loot'?`売値 ${item.sell} G / 個`:esc(item.description)}</small></div>${state.mode==='dungeon'?(item.kind==='consumable'?`<button data-use="${item.id}">使う</button>`:''):`<button data-sell="${item.id}" data-qty="${qty}">売る ${money(item.sell*qty)}G</button>`}</div>`;}
+function itemRow(item,qty,run=false){
+  const sealed=item.id==='sealed-cache',inDungeon=state.mode==='dungeon';
+  const market=`<button data-sell="${item.id}" data-qty="${qty}">売る ${money(item.sell*qty)}G</button>`;
+  const appraisal=sealed?`<button data-action="appraise" ${state.gold<APPRAISAL_COST?'disabled':''}>1個鑑定 · ${APPRAISAL_COST}G</button>`:'';
+  const actions=inDungeon?(item.kind==='consumable'?`<button data-use="${item.id}">使う</button>`:''):`<div class="item-actions">${appraisal}${market}</div>`;
+  const details=sealed?(inDungeon?'街へ持ち帰ると鑑定できます':`未開封の売値 ${item.sell} G / 個`):run?'今回の探索品':item.kind==='loot'?`売値 ${item.sell} G / 個`:item.description;
+  return `<div class="item-row${sealed?' sealed-item':''}"><span class="item-symbol">${esc(item.icon)}</span><div class="item-info"><b>${esc(item.name)} ×${qty}</b><small>${esc(details)}</small></div>${actions}</div>`;
+}
 function renderWorkspace(){
   document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',b.dataset.tab===tab);b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false');});
   const locked=state.mode==='dungeon', lock=locked?'<p class="town-lock">街の施設は帰還後に利用できます。</p>':'', disabled=locked?'disabled':'';
   let html='';
   if(tab==='bag'){
-    html=`<div class="workspace-header"><div><h3>${locked?'冒険のかばん':'持ち帰った宝物'}</h3><p>${locked?'探索品は無事に帰還すると持ち物になります。':'素材を売って、次の冒険と街づくりの資金に。'}</p></div>${!locked?'<button data-sell-all>素材をまとめて売る</button>':''}</div>`;
+    html=`<div class="workspace-header"><div><h3>${locked?'冒険のかばん':'持ち帰った宝物'}</h3><p>${locked?'帰還すると拾った品が持ち物に移ります。':'探索品を売却し、封蝋の小箱は鑑定にも出せます。'}</p></div>${!locked?'<button data-sell-all>素材をまとめて売る</button>':''}</div>`;
     const items=locked?[...state.inventory.map(i=>({...i,run:false})),...state.runLoot.map(i=>({...i,run:true}))]:state.inventory;
     html+=items.length?`<div class="item-grid">${items.map(i=>itemRow(ITEMS.find(s=>s.id===i.id),i.qty,i.run)).join('')}</div>`:'<div class="empty-note">持ち物はありません。宿で回復し、道具店で準備してから迷宮へ向かおう。</div>';
-    html+=`<p class="workspace-note">探索袋の上限は${bagCapacity(state)}個。道具店で最大60個まで拡張できます。素材の一括売却では、回復薬・食料などの道具は残ります。迷宮で倒れると、武器・盾と持ち物はすべて失い、レベル1に戻ります。袋の拡張段階は維持します。</p>`;
+    html+=`<p class="workspace-note">探索袋は${bagCapacity(state)}個まで。素材の一括売却後も、道具と封蝋の小箱は手元に残ります。</p>`;
   } else if(tab==='shop'){
     html=lock+`<div class="workspace-header"><div><h3>旅支度の道具店</h3><p>装備中：${WEAPONS.find(v=>v.id===state.weaponId).name} / ${SHIELDS.find(v=>v.id===state.shieldId).name} · 攻撃 ${state.attack} / 防御 ${state.defense}。購入すると自動で装備されます。</p></div>`+'<button data-action="rest" '+disabled+'>宿で休む · 20G</button></div>';
     html+=`<section class="bag-upgrades" aria-labelledby="bagUpgradeTitle"><div class="workspace-header"><div><h3 id="bagUpgradeTitle">探索袋を拡張</h3><p>現在 ${bagCapacity(state)}個まで · ${state.bagTier} / 3段階。順番に購入でき、拡張した容量は倒れても残ります。</p></div></div><div class="item-grid">${BAG_UPGRADES.map((upgrade,index)=>{const owned=state.bagTier>index,next=state.bagTier===index;return `<div class="item-row bag-upgrade ${next?'is-next':''}"><span class="item-symbol" aria-hidden="true">▣</span><div class="item-info"><b>${upgrade.name}</b><small>第${index+1}段階 · 上限${upgrade.capacity}個${next?' · 次の拡張':''}</small></div><button data-bag="${upgrade.id}" aria-label="${upgrade.name}：上限${upgrade.capacity}個、${money(upgrade.cost)}G${owned?'、購入済み':''}" ${locked||owned||!next||state.gold<upgrade.cost?'disabled':''}>${owned?'拡張済み':!next?'前段階が必要':money(upgrade.cost)+' G'}</button></div>`;}).join('')}</div></section><div class="item-grid">`;
@@ -222,7 +262,7 @@ function selectTown(type,value){
   }else{
     const place=TOWN_LANDMARKS.find(b=>b.id===value);if(!place)return;
     selectedBuilding=place.id;selectedPlot=-1;townCamera={x:place.bounds.x+place.bounds.width/2,y:place.bounds.y+place.bounds.height/2};title=place.name;
-    if(value==='trade'){description='旅の収穫を売り、次の冒険の道具を揃える場所。';buttons='<button data-town-workspace="bag">持ち物を売る</button><button data-town-workspace="shop">道具・装備を買う</button>';}
+    if(value==='trade'){description='探索品の売却と鑑定を受け付けます。帰ってきたらここで次の旅支度を。';buttons='<button data-town-workspace="bag">探索品の売却・鑑定</button><button data-town-workspace="shop">道具・装備を買う</button>';}
     else if(value==='inn'){description=state.gold>=20?'20 GでHPと満腹度を全回復。日付は進みません。':'所持金が少ないときは、無料でHPと満腹度を60%まで回復できます。';buttons=`<button data-town-rest ${state.hp===state.maxHp&&state.hunger===100?'disabled':''}>${state.hp===state.maxHp&&state.hunger===100?'すでに元気いっぱいです':state.gold>=20?'宿で休む · 20 G':'救護所で休む · 無料'}</button>`;}
     else{description='灯りを手に、翠灯の迷宮へ。拾った宝物は生きて持ち帰りましょう。';buttons='<button class="primary" data-town-enter>迷宮へ出発する →</button>';}
   }
@@ -253,7 +293,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.action){if(b.dataset.action==='nextDay'){const income=dailyIncome(state);confirm('街で翌日まで過ごしますか？',`生活費${DAY_WAIT_COST}Gを支払い、日収${income.total}Gを受け取ります。HP・満腹度は変わりません。`,()=>dispatch({type:'nextDay'}));}else dispatch({type:b.dataset.action});return;}
   if(b.dataset.use){if(b.dataset.use==='recall')returnHome();else dispatch({type:'use',id:b.dataset.use});return;}
   if(b.dataset.sell){const i=ITEMS.find(i=>i.id===b.dataset.sell);const action={type:'sell',id:i.id,qty:Number(b.dataset.qty)};if(i.kind==='consumable')confirm('道具を売却しますか？',`${i.name} ${action.qty}個を売却します。冒険で使う分が不要か確認してください。`,()=>dispatch(action));else dispatch(action);return;}
-  if(b.hasAttribute('data-sell-all')){const loot=state.inventory.filter(i=>ITEMS.find(s=>s.id===i.id).kind==='loot');if(!loot.length){toast('売却できる素材はまだありません。');return;}const value=loot.reduce((s,i)=>s+ITEMS.find(v=>v.id===i.id).sell*i.qty,0);for(const i of loot){const r=act(state,{type:'sell',id:i.id,qty:i.qty});if(r.ok)state=r.state;}save();render();sound.play('sale');toast(`素材をまとめて売却し、${money(value)} G を受け取りました。`);return;}
+  if(b.hasAttribute('data-sell-all')){const loot=state.inventory.filter(i=>i.id!=='sealed-cache'&&ITEMS.find(s=>s.id===i.id).kind==='loot');if(!loot.length){toast('売却できる素材はまだありません。');return;}const value=loot.reduce((s,i)=>s+ITEMS.find(v=>v.id===i.id).sell*i.qty,0);for(const i of loot){const r=act(state,{type:'sell',id:i.id,qty:i.qty});if(r.ok)state=r.state;}save();render();sound.play('sale');toast(`素材をまとめて売却し、${money(value)} G を受け取りました。`);return;}
   if(b.dataset.buy)dispatch({type:'buyItem',id:b.dataset.buy,qty:1});
   if(b.dataset.bag)dispatch({type:'buyBag',id:b.dataset.bag});
   if(b.dataset.shield)dispatch({type:'buyShield',id:b.dataset.shield});
@@ -264,6 +304,12 @@ document.addEventListener('click',e=>{
   if(b.dataset.upgrade!==undefined)dispatch({type:'upgrade',index:Number(b.dataset.upgrade)});
 });
 $('primaryAction').addEventListener('click',inspectFloor);$('potionButton').addEventListener('click',()=>dispatch({type:'use',id:'potion'}));$('foodButton').addEventListener('click',()=>dispatch({type:'use',id:'ration'}));$('returnButton').addEventListener('click',returnHome);
+$('mapButton').addEventListener('click',openFieldMap);
+$('compactMapToggle').addEventListener('change',event=>{
+  showMap=event.currentTarget.checked;
+  try{localStorage.setItem('tk777-lantern-compact-map',showMap?'on':'off');}catch{}
+  draw();
+});
 for(const id of ['helpButton','tipsButton'])$(id).addEventListener('click',()=>$('helpDialog').showModal());
 $('startButton').addEventListener('click',()=>{const localTime=savedAt;sessionStarted=true;sound.start(state).then(ok=>{updateSound();if(!ok&&!muted)toast('音声を開始できませんでした。「♪ 音」から再生をお試しください。');});$('welcomeDialog').close();save();draw();void connectCloud(localTime);});
 $('startNewButton').addEventListener('click',()=>confirm('初めから冒険しますか？','新しい冒険を始めます。以前のオンライン記録は引き継ぎコードで読み込めます。必要なら先に保存画面でコードを控えてください。',restartGame));
@@ -303,7 +349,16 @@ document.addEventListener('keydown',e=>{
   if(isMovementKey(e.code)){e.preventDefault();held.keyDown(e.code,{repeat:e.repeat});return;}
   if(e.target.closest('button,a')&&(key==='Enter'||key===' '))return;
   if(state.mode==='town'){if(key==='e'||key==='Enter'||key===' '){e.preventDefault();if(!e.repeat)inspectTown();}return;}
-  if([' ','.','e','Enter','h','f','r'].includes(key)){e.preventDefault();if(e.repeat)return;if(key===' '||key==='.')dispatch({type:'wait'});if(key==='e'||key==='Enter')inspectFloor();if(key==='h')dispatch({type:'use',id:'potion'});if(key==='f')dispatch({type:'use',id:'ration'});if(key==='r')returnHome();}
+  if([' ','.','e','Enter','h','f','r','q','m'].includes(key)){
+    e.preventDefault();if(e.repeat)return;
+    if(key===' '||key==='.')dispatch({type:'wait'});
+    if(key==='e'||key==='Enter')inspectFloor();
+    if(key==='h')dispatch({type:'use',id:'potion'});
+    if(key==='f')dispatch({type:'use',id:'ration'});
+    if(key==='r')returnHome();
+    if(key==='q')dispatch({type:'survey'});
+    if(key==='m')openFieldMap();
+  }
 });
 document.addEventListener('keyup',e=>held.keyUp(e.code));
 for(const button of document.querySelectorAll('[data-move]')){button.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();const[dx,dy]=button.dataset.move.split(',').map(Number);button.setPointerCapture(e.pointerId);held.pointerDown(e.pointerId,dx,dy);});for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,e=>held.pointerUp(e.pointerId));button.addEventListener('contextmenu',e=>e.preventDefault());}
@@ -330,7 +385,11 @@ window.addEventListener('blur',()=>{pointer=null;held.clear();});document.addEve
 window.addEventListener('pagehide',()=>{held.clear();sound.pause();});window.addEventListener('pageshow',()=>{held.clear();if(sessionStarted&&!document.hidden)sound.resume().then(updateSound);});
 new ResizeObserver(()=>draw()).observe($('canvasWrap'));
 function animate(time){const active=state.mode==='town'?townNavigation.getVisual(time).motion.kind==='move':motion&&time-motion.startedAt<motion.duration;const interval=reduced?100:active?16:33;if(!document.hidden&&time-lastFrame>interval){effects=effects.filter(e=>time-e.startedAt<e.duration);draw(time);lastFrame=time;}requestAnimationFrame(animate);}
-function showStartContents(){const heading=$('welcomeDialog').querySelector('h2');heading.innerHTML=fresh?'灯りをともして、<br>大きな冒険へ。':`第${state.day}日の旅を、<br>ここからもう一度。`;$('startButton').textContent=fresh?'ゲーム開始 →':'つづきから →';let note=$('welcomeDialog').querySelector('.start-audio-note');if(!note){note=document.createElement('p');note.className='start-audio-note';$('startButton').before(note);}note.textContent=muted?'音はミュート中です。開始後「♪ OFF」で切り替えられます。':'開始ボタンを押すとBGMと効果音が流れます。音量は「♪ 音」で調整できます。';}
+function showStartContents(){
+  $('welcomeDialog').querySelector('h2').textContent=fresh?'灯りを手に、潮の迷宮へ。':`第${state.day}日から再開する`;
+  $('startButton').textContent=fresh?'ゲーム開始 →':'つづきから →';
+  $('startAudioState').textContent=muted?'音声はミュート中です。':'ゲームを開始すると音が流れます。';
+}
 function showStart(){showStartContents();held.clear();$('welcomeDialog').showModal();}
 render();updateSound();requestAnimationFrame(animate);showStart();
 void preloadCharacters({views:['up','left','right']}).then(()=>{document.body.dataset.characterArt=getCharacterAssetStatus().baseReady?'anime':'fallback';draw();});
