@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {VocalMusic} from './vocal-music.mjs'
+import {VocalMusic, comboAccentEvery} from './vocal-music.mjs'
 
 class Node {
-  gain = {value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, setTargetAtTime() {}}
+  gain = {value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime() {}}
   connect(peer) { this.peer = peer; return peer }
   disconnect() { this.disconnected = true }
 }
@@ -19,7 +19,11 @@ class TestContext {
     return Object.assign(new Node(), Object.fromEntries(['threshold', 'knee', 'ratio', 'attack', 'release'].map(key => [key, {value: 0}])))
   }
   createGain() { return new Node() }
-  createBuffer(channels, length) { return {getChannelData: () => new Float32Array(length)} }
+  createDelay() { return Object.assign(new Node(), {delayTime: {value: 0}}) }
+  createBuffer(channels, length, sampleRate) {
+    const samples = new Float32Array(length)
+    return {duration: length / sampleRate, getChannelData: () => samples}
+  }
   createBufferSource() {
     const source = new Node()
     source.start = (...args) => { source.started = args; this.sources.push(source) }
@@ -28,7 +32,8 @@ class TestContext {
   }
   createOscillator() {
     const oscillator = new Node()
-    oscillator.frequency = {setValueAtTime() {}, exponentialRampToValueAtTime() {}}
+    oscillator.frequency = {value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {}}
+    oscillator.detune = {value: 0}
     oscillator.start = when => { oscillator.started = when; this.oscillators.push(oscillator) }
     oscillator.stop = when => { oscillator.stopped = when }
     return oscillator
@@ -37,7 +42,7 @@ class TestContext {
   async resume() { this.state = 'running' }
 }
 
-const track = {duration: 10, audio: {backing: 'audio/test-base.mp3', stem: 'audio/test-stem.mp3'}}
+const track = {duration: 10, bpm: 120, audio: {backing: 'audio/test-base.mp3', stem: 'audio/test-stem.mp3'}}
 
 test('manual playback keeps both full layers in sync through misses and successful key presses', async t => {
   const old = globalThis.AudioContext, oldFetch = globalThis.fetch
@@ -62,20 +67,72 @@ test('manual playback keeps both full layers in sync through misses and successf
   assert.equal(backing.peer, vocals.peer)
 
   context.currentTime = 5
-  assert.equal(music.hit(null), false)
-  assert.equal(music.hit({lane: 0}, 4.9), true)
-  assert.equal(music.hit({lane: 3}, 5.5), true)
+  assert.equal(music.hit(null, 5, {quality: 'miss', combo: 0}), false)
+  assert.equal(music.hit({lane: 0}, 4.9, {quality: 'good', combo: 1}), true)
+  assert.equal(music.hit({lane: 0}, 5.5, {quality: 'perfect', combo: 2}), true)
   music.update(7)
-  assert.equal(context.sources.length, 2, 'hits and misses must not schedule new song sources')
-  assert.ok(context.sources.every(source => !source.stopped && !source.disconnected))
-  assert.deepEqual(context.oscillators.map(tap => tap.started), [5, 5.5])
-  const [firstTap, pendingTap] = context.oscillators
+  assert.equal(context.sources.filter(source => source.buffer.asset).length, 2, 'hits and misses must not schedule new song sources')
+  assert.ok([backing, vocals].every(source => !source.stopped && !source.disconnected))
+  const [, , firstTap, pendingTap] = context.sources
+  assert.equal(context.sources.length, 4)
+  assert.deepEqual([firstTap.started, pendingTap.started], [[5], [5.5]])
   assert.equal(firstTap.peer.peer, backing.peer, 'the tap mixes into the song without routing either layer through it')
+  assert.ok(firstTap.buffer.duration < .11)
+  assert.ok(firstTap.buffer.getChannelData(0).some(sample => sample !== 0))
+  assert.notDeepEqual(firstTap.buffer.getChannelData(0), pendingTap.buffer.getChannelData(0), 'PERFECT uses a different waveform')
+  assert.ok(pendingTap.peer.gain.value > firstTap.peer.gain.value, 'PERFECT gets a stronger accent')
   firstTap.onended()
   assert.ok(firstTap.disconnected && firstTap.peer.disconnected)
   music.stop()
-  assert.ok(context.sources.every(source => source.stopped))
-  assert.equal(pendingTap.stopped, undefined, 'stopping the song cancels a pending tap immediately')
+  assert.ok([backing, vocals, pendingTap].every(source => source.stopped), 'stopping the song cancels pending percussion')
+})
+
+test('combo accents follow chart subdivisions, skipping spent or too-late follow-ups', async t => {
+  const old = globalThis.AudioContext, oldFetch = globalThis.fetch
+  t.after(() => { globalThis.AudioContext = old; globalThis.fetch = oldFetch })
+  globalThis.AudioContext = TestContext
+  globalThis.fetch = async url => ({ok: true, arrayBuffer: async () => url.pathname})
+  const music = new VocalMusic()
+  const context = await music.unlock()
+  await music.prepare(track)
+  music.start(3, track)
+
+  context.currentTime = 5.08
+  assert.equal(music.hit({lane: 1, time: 2}, 5.08, {quality: 'great', combo: comboAccentEvery}), true)
+  const [stroke, firstAccent, secondAccent] = context.sources.slice(2)
+  assert.deepEqual([stroke.started, firstAccent.started, secondAccent.started], [[5.08], [5.125], [5.25]])
+  assert.ok(firstAccent.peer.gain.value < stroke.peer.gain.value && secondAccent.peer.gain.value < firstAccent.peer.gain.value)
+
+  context.currentTime = 5.645
+  assert.equal(music.hit({lane: 3, time: 2.5}, 5.645, {quality: 'good', combo: comboAccentEvery * 2}), true)
+  assert.deepEqual(context.sources.slice(5).map(source => source.started), [[5.645], [5.75]])
+
+  context.currentTime = 6.86
+  assert.equal(music.hit({lane: 2, time: 4}, 6.86, {quality: 'good', combo: comboAccentEvery * 3}), true)
+  assert.deepEqual(context.sources.slice(7).map(source => source.started), [[6.86], [7.125]])
+
+  context.currentTime = 12.92
+  assert.equal(music.hit({lane: 3, time: 9.92}, 12.92, {quality: 'perfect', combo: comboAccentEvery * 4}), true)
+  assert.deepEqual(context.sources.slice(9).map(source => source.started), [[12.92]])
+})
+
+test('instrumental manual accents sit under pitched notes and autoplay adds no accent', async t => {
+  const old = globalThis.AudioContext
+  t.after(() => { globalThis.AudioContext = old })
+  globalThis.AudioContext = TestContext
+  const music = new VocalMusic()
+  const context = await music.unlock()
+  const instrumental = {duration: 9, bpm: 120, backing: []}
+  const note = {lane: 1, time: 2, pitch: 64, duration: .32, voice: 'bell'}
+  music.start(2, instrumental)
+  assert.equal(music.hit(note, 4, {quality: 'perfect', combo: 1}), true)
+  assert.equal(context.oscillators.length, 2, 'the original bell still sounds')
+  assert.equal(context.sources.length, 1)
+  assert.ok(context.sources[0].peer.gain.value < .08)
+  music.start(2, instrumental, {automatic: true})
+  assert.equal(music.hit(note, 4), true)
+  assert.equal(context.oscillators.length, 4)
+  assert.equal(context.sources.length, 1, 'automatic play has no extra percussion')
 })
 
 test('a missing stem blocks playback and can be loaded again on the next attempt', async t => {

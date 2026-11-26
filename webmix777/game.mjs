@@ -1,7 +1,7 @@
 import {TRACKS as INSTRUMENTALS} from './music.mjs'
-import {Performance, visitThrough, windows} from './judgement.mjs'
+import {Performance, visitThrough, windows} from './judgement.mjs?v=hit-impact-1'
 import {SongRanking} from './ranking.mjs'
-import {VocalMusic} from './vocal-music.mjs?v=continuous-1'
+import {VocalMusic, comboAccentEvery} from './vocal-music.mjs?v=hit-impact-1'
 import {VOCAL_TRACKS} from './tracks/vocals.mjs'
 
 const byId = id => document.getElementById(id)
@@ -27,6 +27,7 @@ const autoLookahead = .18
 const scoreKey = id => `tk777.webmix.${id}.best.v1`
 const volumeKey = 'tk777.webmix.volume'
 const quietEffects = matchMedia('(prefers-reduced-motion: reduce)')
+const burstPieces = {good: 4, great: 6, perfect: 9}
 const trackLanguage = byId('track-language')
 const libraryButton = byId('back-to-library')
 const languageFor = entry => entry.language || 'instrumental'
@@ -281,26 +282,59 @@ function drawNotes(time) {
   }
 }
 
-function flashKey(lane, now) {
-  keys[lane].setAttribute('data-hit', '')
-  keyFlashes[lane] = now + 120
-}
-
-function burst(lane, quality, y = hitY) {
-  if (quietEffects.matches) return
+function burst(lane, quality, y, combo) {
+  const reduced = quietEffects.matches
+  const accent = combo % comboAccentEvery === 0
   const effect = document.createElement('span')
   effect.className = 'hit-burst'
   effect.dataset.lane = lane
   effect.dataset.quality = quality
+  if (accent) effect.dataset.accent = String(combo)
   effect.style.setProperty('--x', `${(lane + .5) * 100 / keys.length}%`)
   effect.style.setProperty('--y', `${y}px`)
-  const timeout = setTimeout(() => effect.remove(), 700)
+  if (!reduced) {
+    const impact = document.createElement('span')
+    impact.className = 'lane-impact'
+    effect.append(impact)
+    const pieces = burstPieces[quality] + (accent ? 2 : 0)
+    const range = quality === 'perfect' ? 58 : quality === 'great' ? 44 : 29
+    for (let i = 0; i < pieces; i++) {
+      const shard = document.createElement('span')
+      shard.className = 'hit-shard'
+      const fraction = (i + .5) / pieces
+      const direction = fraction * 2 - 1
+      const spread = (i * 7 + lane * 3 + combo) % 11 / 10
+      shard.style.setProperty('--origin', `${fraction * 100}%`)
+      shard.style.setProperty('--piece-width', `${92 / pieces}%`)
+      shard.style.setProperty('--dx', `${direction * (range + spread * 18)}px`)
+      shard.style.setProperty('--dy', `${-(14 + (range + 12) * spread)}px`)
+      shard.style.setProperty('--spin', `${direction * (37 + spread * 120)}deg`)
+      effect.append(shard)
+    }
+    if (accent) {
+      const label = document.createElement('span')
+      label.className = 'combo-echo'
+      label.textContent = `${combo} COMBO`
+      effect.append(label)
+    }
+  }
+  const timeout = setTimeout(() => effect.remove(), 660)
   effect.addEventListener('animationend', event => {
-    if (event.pseudoElement) return
+    if (event.target !== effect || event.pseudoElement) return
     clearTimeout(timeout)
     effect.remove()
   })
+  if (effects.childElementCount >= 16) effects.firstElementChild.remove()
   effects.append(effect)
+}
+
+function showHit({note, quality, index}, time, now) {
+  activeNotes.get(index)?.remove()
+  activeNotes.delete(index)
+  keys[note.lane].setAttribute('data-hit', quality)
+  keyFlashes[note.lane] = now + (quality === 'perfect' ? 150 : 115)
+  const y = Math.min(hitY + 18, hitY * (1 - (note.time - time) / flightTime))
+  burst(note.lane, quality, y, play.combo)
 }
 
 function playAutomatically(heard, raw, now) {
@@ -312,9 +346,8 @@ function playAutomatically(heard, raw, now) {
   }
   const before = nextAutoDisplay
   nextAutoDisplay = visitThrough(track.chart, nextAutoDisplay, heard, note => {
-    play.strike(note.lane, note.time)
-    flashKey(note.lane, now)
-    burst(note.lane, 'perfect')
+    const hit = play.strike(note.lane, note.time)
+    if (hit) showHit(hit, note.time, now)
   })
   if (nextAutoDisplay !== before) { flash('perfect'); updateScore() }
 }
@@ -360,9 +393,8 @@ function strike(lane, event) {
   if (play.advance(time)) { flash('miss'); updateScore() }
   const hit = play.strike(lane, time)
   if (!hit) return
-  music.hit(hit.note, music.context.currentTime + .004)
-  flashKey(lane, now)
-  burst(lane, hit.quality, hitY * (1 - (hit.note.time - time) / flightTime))
+  music.hit(hit.note, music.context.currentTime + .004, {quality: hit.quality, combo: play.combo})
+  showHit(hit, time, now)
   flash(hit.quality)
   updateScore()
 }

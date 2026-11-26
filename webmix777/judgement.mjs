@@ -48,7 +48,7 @@ export class Performance {
     this.combo++
     this.maxCombo = Math.max(this.combo, this.maxCombo)
     this.hits++
-    return {note: this.chart[closest], quality}
+    return {note: this.chart[closest], quality, index: closest}
   }
 
   get completion() {
