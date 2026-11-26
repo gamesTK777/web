@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1119">
+  <meta name="description" content="月面採掘都市をめぐる、六角マスの作戦とリアルタイムの機体操縦。ブラウザでひとりで遊べる戦略アクション。">
+  <title>機甲群星 オービットフロント | TK777 ARCADE</title>
+  <link rel="icon" href="./assets/emblem.webp">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html"><span aria-hidden="true">↖</span> TK777 ARCADE</a>
+    <span class="gameword">機甲群星 <b>オービットフロント</b></span>
+    <nav aria-label="ゲームメニュー"><button id="help">遊び方</button><button id="settings">音量設定</button><button id="toTitle" hidden>中断</button></nav>
+  </header>
+  <main id="title">
+    <section class="hero">
+      <img class="keyart" src="./assets/moonrise.webp" alt="月面の採掘都市を背に立つ環潮同盟の汎用機リベット">
+      <div class="hero-copy">
+        <span class="hero-over">機 甲 群 星</span>
+        <h1>オービット<br>フロント<span lang="en">ORBIT FRONT</span></h1>
+        <p>月面採掘都市セレノ。<br>部隊を配置し、自らの手で機体を駆れ。</p>
+        <div class="title-actions"><button id="newGame" class="primary">新しく始める <span>→</span></button><button id="continue" disabled>つづきから</button></div>
+        <small id="saveInfo">記録を確認中…</small>
+      </div>
+    </section>
+    <div class="mission-strip"><div><small>作戦区域</small><strong>セレノ採掘市街</strong></div><div><small>対戦形式</small><strong>1人用・CPU対戦</strong></div><div><small>交戦規模</small><strong>最大 3 対 3</strong></div></div>
+  </main>
+  <main id="game" hidden>
+    <header class="mission-head"><div><small>月面作戦</small><h2>セレノ採掘市街</h2></div><div class="telemetry"><div><small>ラウンド</small><b id="round"></b></div><div><small>資金</small><b id="funds"></b></div><div><small>次回収入</small><b id="income"></b></div></div></header>
+    <div class="console">
+      <section class="field"><div class="field-head"><b id="turn"></b><span id="missionGoal"></span></div><div id="board"></div><div class="field-tools"><button id="threat" aria-pressed="false">敵の攻撃範囲</button><button id="opening">包囲の手引き</button><button id="endTurn" class="primary">ターン終了 →</button></div></section>
+      <aside class="orders"><div id="selection" aria-live="polite"></div><div id="roster"></div></aside>
+    </div>
+    <footer class="record"><details><summary>戦況記録</summary><ol id="log"></ol></details><span id="saved" role="status"></span></footer>
+  </main>
+  <section id="arena" aria-label="リアルタイム戦闘" hidden></section>
+  <dialog id="overlay"><div id="sheet"></div></dialog>
+  <noscript>遊ぶには、ブラウザのJavaScriptを有効にしてください。</noscript>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
